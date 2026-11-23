@@ -1,0 +1,62 @@
+---
+title: 'Was läuft'
+description: 'Die Container einer Installation, die Volumes mit ihren Daten und wie die Images abgesichert sind.'
+articleId: 'guide.self-hosting.overview'
+---
+
+Eine Installation ist eine Compose-Datei, `deploy/compose.yaml`: Postgres, die API, ihre Worker,
+der Editor und die Backups, jeweils in einem eigenen Container. Die `compose.yaml` im
+Wurzelverzeichnis des Repositorys dient nur der Entwicklung; installieren Sie nie damit.
+
+## Die Dienste
+
+| Dienst     | Image                       | Was er tut                                                                                             |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `postgres` | `postgres:18.7-alpine`      | Betriebsdaten: Benutzer, Rollen, Sperren, Kommentare, Workflow, das Audit-Log, ein neu baubarer Index. |
+| `api`      | `<OPENFOLIA_IMAGES>/api`    | Die JSON:API mit Git, dem PDF-Renderer, den Schriften und den Datenbankmigrationen.                    |
+| `worker`   | `<OPENFOLIA_IMAGES>/api`    | Die Hintergrundarbeit: Veröffentlichungsdateien, Importe, Webhooks, Benachrichtigungen, Bereinigungen. |
+| `editor`   | `<OPENFOLIA_IMAGES>/editor` | Der Editor hinter nginx, der auch `/api` und die stabilen Adressen `/d/` an die API weitergibt.        |
+| `backup`   | `<OPENFOLIA_IMAGES>/backup` | Geplante, verschlüsselte und geprüfte Backups.                                                         |
+| `mcp`      | `<OPENFOLIA_IMAGES>/mcp`    | Optional (`--profile mcp`): der MCP-Server für KI-Assistenten über veröffentlichte Inhalte.            |
+
+Ein Dienst `restore` (`--profile restore`) stellt ein Backup in einem angehaltenen Stack wieder
+her; siehe [Backups](/de/guide/self-hosting/backups). API und Worker laufen mit demselben Image und
+einer anderen `CCMS_ROLE`; siehe [Worker](/de/guide/self-hosting/workers). Worker lassen sich
+beliebig vervielfachen.
+
+Nur der Editor (Port 8080), die API (Port 3000) und, mit seinem Profil, der MCP-Server (Port 3200)
+werden veröffentlicht, standardmäßig auf `127.0.0.1`. Postgres und die Worker werden nie
+veröffentlicht. Stellen Sie einen Reverse Proxy mit TLS davor: siehe
+[Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy).
+
+## Die Volumes
+
+Vier Volumes halten, was bleibt:
+
+- `postgres`: die Datenbank.
+- `data`, unter `/data` in der API und den Workern:
+  - `/data/content.git`: das Inhalts-Repository, die maßgebliche Quelle der Inhalte
+    ([Inhalts-Repository](/de/guide/self-hosting/content-repository));
+  - `/data/blobs`: Bilder, Anhänge und archivierte PDFs von Veröffentlichungen, mit dem
+    voreingestellten Blob-Speicher im Dateisystem
+    ([Blob-Speicher](/de/guide/self-hosting/blob-store));
+  - `/data/ccms-secret.key`: der geheime Instanzschlüssel, den die API beim ersten Start erzeugt
+    ([Geheimer Instanzschlüssel](/de/guide/self-hosting/secret-key)).
+- `backups`, unter `/backups` im Backup-Dienst: die Backups.
+- `backup-staging`: die unverschlüsselten Teile eines Backup-Laufs, solange er dauert; geleert,
+  sobald der Backup-Dienst startet. Kopieren Sie es nie vom Server.
+
+## Wie die Images abgesichert sind
+
+- Jedes der OpenFolia-Images (API und Worker, Editor, Backup, MCP-Server) läuft unter einem
+  Benutzer ohne Rechte (`node`, UID 1000, oder `nginx`, UID 101). Der Dienst `postgres` nutzt das
+  unveränderte Postgres-Image, ohne die folgenden Einschränkungen.
+- Das Dateisystem ist schreibgeschützt. Schreiben lassen sich nur `/tmp` (ein tmpfs) und das
+  Daten-Volume, im Backup-Dienst außerdem `/backups` und `/staging`.
+- Keine Linux-Capabilities und keine Möglichkeit, Rechte zu erlangen (`no-new-privileges`).
+- API, Editor und MCP-Server haben einen Health-Check: der der API ist `GET /health/ready`
+  (Datenbank und Blob-Speicher antworten), der des Editors `GET /healthz`.
+- Basis-Images sind über Version und Digest festgelegt. Kein Geheimnis steckt in einem Image:
+  Jede Einstellung kommt beim Start des Containers hinzu.
+
+Weiter: der [Schnellstart](/de/guide/self-hosting/quick-start).

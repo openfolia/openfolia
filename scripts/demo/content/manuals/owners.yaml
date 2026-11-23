@@ -1,0 +1,39 @@
+schemaVersion: 1
+title: { en: Owner's manual, de: Betriebsanleitung, fr: Notice d'utilisation }
+audience: owner
+glossary: true
+variants:
+  - { body: hatchback, drive: petrol, market: eu }
+  - { body: estate, drive: electric, market: eu }
+  - { body: hatchback, drive: electric, market: uk }
+attributes:
+  model-name:
+    - { value: Fenna Estate, when: body in (estate) }
+    - value: Fenna Hatchback
+  tyre-size:
+    - { value: 215/55 R17, when: body in (estate) }
+    - value: 205/55 R16
+entries:
+  - module: about-this-manual
+  - module: safety-airbags
+  - module: safety-child-seats
+  - { module: safety-high-voltage, when: drive in (electric) }
+  - module: safety-towing
+  - module: vehicle-overview
+  - module: dashboard
+  - module: starting-and-stopping
+  - module: setting-the-clock
+  - module: filling-up
+  - module: fitting-a-child-seat
+  - module: checking-tyre-pressure
+  - module: changing-a-wheel
+  - module: jump-starting
+  - module: replacing-a-fuse
+  - module: replacing-wiper-blades
+  - module: towing-the-vehicle
+  - module: tyre-pressures
+  - module: fluids-and-capacities
+  - module: dimensions
+  - module: fuses
+  - module: faq
+  - module: customer-service

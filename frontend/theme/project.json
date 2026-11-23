@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "theme",
+  "projectType": "library",
+  "tags": ["scope:frontend", "type:theme"],
+  "targets": {
+    "test": {
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/frontend/ui/src/**/*",
+        "{workspaceRoot}/frontend/editor/src/**/*"
+      ]
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "cwd": "frontend/theme",
+        "commands": [
+          "node -e \"require('node:fs').cpSync('src', 'dist', { recursive: true })\""
+        ]
+      }
+    }
+  }
+}

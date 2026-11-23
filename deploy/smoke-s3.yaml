@@ -1,0 +1,35 @@
+# The smoke test's S3-compatible server (deploy/smoke-test.sh, "backups"): the backup service's
+# off-site location, on the stack's own network only. Not for a deployment.
+services:
+  s3:
+    image: chrislusf/seaweedfs:4.51
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=openfolia-backups
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+    environment:
+      AWS_ACCESS_KEY_ID: ${SMOKE_S3_ACCESS_KEY_ID:?}
+      AWS_SECRET_ACCESS_KEY: ${SMOKE_S3_SECRET_ACCESS_KEY:?}
+    volumes:
+      - s3:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8333/healthz']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # The S3 server is on the stack's own (private) network: allowed for the backup service here
+  # only (CCMS_BACKUP_S3_ALLOW_PRIVATE; link-local and metadata addresses stay refused).
+  backup:
+    environment:
+      CCMS_BACKUP_S3_ALLOW_PRIVATE: 'true'
+  restore:
+    environment:
+      CCMS_BACKUP_S3_ALLOW_PRIVATE: 'true'
+
+volumes:
+  s3:

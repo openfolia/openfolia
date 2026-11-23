@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" width="1000" height="400">
+  <rect width="1000" height="400" fill="#f3f4f6"/>
+  <rect x="40" y="30" width="920" height="350" rx="60" fill="#1f262e" stroke="#2f3a45" stroke-width="6"/>
+  <circle cx="250" cy="190" r="130" fill="#2a333d" stroke="#8796a8" stroke-width="6"/>
+  <path d="M158 282 A130 130 0 1 1 342 282" fill="none" stroke="#5b7fa6" stroke-width="12" stroke-linecap="round"/>
+  <line x1="250" y1="190" x2="170" y2="130" stroke="#e9573f" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="250" cy="190" r="12" fill="#c8ced6"/>
+  <rect x="400" y="110" width="200" height="160" rx="16" fill="#0f141a" stroke="#8796a8" stroke-width="4"/>
+  <rect x="430" y="140" width="140" height="22" rx="6" fill="#5b7fa6"/>
+  <rect x="430" y="180" width="100" height="14" rx="6" fill="#4b5a6a"/>
+  <rect x="430" y="208" width="120" height="14" rx="6" fill="#4b5a6a"/>
+  <rect x="430" y="236" width="80" height="14" rx="6" fill="#4b5a6a"/>
+  <circle cx="750" cy="190" r="130" fill="#2a333d" stroke="#8796a8" stroke-width="6"/>
+  <path d="M658 282 A130 130 0 1 1 842 282" fill="none" stroke="#3f4a56" stroke-width="12" stroke-linecap="round"/>
+  <path d="M658 282 A130 130 0 0 1 700 90" fill="none" stroke="#5fb36b" stroke-width="12" stroke-linecap="round"/>
+  <line x1="750" y1="190" x2="700" y2="108" stroke="#e9573f" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="750" cy="190" r="12" fill="#c8ced6"/>
+  <g>
+    <circle cx="380" cy="344" r="16" fill="#d9534f"/>
+    <circle cx="440" cy="344" r="16" fill="#d9534f"/>
+    <circle cx="500" cy="344" r="16" fill="#f2b632"/>
+    <circle cx="560" cy="344" r="16" fill="#d9534f"/>
+    <circle cx="620" cy="344" r="16" fill="#f2b632"/>
+  </g>
+</svg>

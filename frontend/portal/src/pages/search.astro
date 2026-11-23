@@ -1,0 +1,87 @@
+---
+import Base from '../layouts/Base.astro';
+import SearchField from '../components/SearchField.astro';
+import { textsFor } from '../lib/i18n.ts';
+import { catalogue, href } from '../lib/site.ts';
+
+const { s, products, attributes } = catalogue();
+const t = textsFor(s.lang);
+const texts = {
+  results: t.resultsFor,
+  passages: t.passages,
+  none: t.noResults,
+  empty: t.searchEmpty,
+  failed: t.searchFailed,
+  pageOf: t.pageOf,
+  more: t.moreVariants,
+};
+---
+
+<Base title={t.search} path="search/" current="search">
+  <div class="searchpage" data-search-root data-texts={JSON.stringify(texts)} data-lang={s.lang} data-base={href()} data-product-key={t.product} data-variant-key={t.variant}>
+    <header class="listpage__head">
+      <h1 class="listpage__title">{t.searchTitle}</h1>
+    </header>
+    <form class="searchform" role="search" data-search-form>
+      <SearchField id="search-q" size="page" bare />
+      {
+        (products.length > 1 || attributes.length > 0) && (
+          <details class="filters filters--search" data-filters-panel hidden open>
+            <summary>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+              <span>{t.filtersShort}</span>
+              <span class="filters__count" data-filters-count hidden></span>
+              <svg class="chevron" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </summary>
+          <div class="filterbar filterbar--search">
+            {products.length > 1 && (
+              <label class="field">
+                <span class="field__label">{t.product}</span>
+                <select name={t.product}>
+                  <option value="">{t.allProducts}</option>
+                  {products.map((p) => <option value={p.label}>{p.label}</option>)}
+                </select>
+              </label>
+            )}
+            {attributes.map((a) => (
+              <label class="field">
+                <span class="field__label">{a.label}</span>
+                <select name={a.label}>
+                  <option value="">{t.allValues}</option>
+                  {a.values.map((v) => <option value={v.label}>{v.label}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+          </details>
+        )
+      }
+    </form>
+    <p class="count" data-status role="status" aria-live="polite"></p>
+    <p class="search-hint" data-hint hidden>{t.searchEmpty}</p>
+    <p class="search-none" data-none hidden>
+      <a class="arrow-link" href={href('manuals/')}>{t.allManuals} <span aria-hidden="true">→</span></a>
+    </p>
+    <div class="sheet" data-results-sheet hidden>
+      <div class="scroller" data-results-frame tabindex="0" aria-label={t.search}>
+        <ol class="results" data-results></ol>
+      </div>
+      <nav class="pager" data-pager aria-label={t.pagination} hidden>
+        <button type="button" data-prev disabled>
+          <span aria-hidden="true" class="pager__arrow">←</span>
+          {t.previous}
+        </button>
+        <span class="pager__label" data-page-label></span>
+        <button type="button" data-next>
+          {t.next}
+          <span aria-hidden="true" class="pager__arrow">→</span>
+        </button>
+      </nav>
+    </div>
+    <noscript><p class="empty">{t.searchNoScript} <a href={href('manuals/')}>{t.manuals}</a></p></noscript>
+  </div>
+  <script>
+    import { startSearch } from '../scripts/search.ts';
+    void startSearch(document);
+  </script>
+</Base>

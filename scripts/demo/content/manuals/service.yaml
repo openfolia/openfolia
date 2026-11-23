@@ -1,0 +1,23 @@
+schemaVersion: 1
+title: { en: Service booklet, de: Serviceheft, fr: Carnet d'entretien }
+audience: technician
+variants:
+  - { body: hatchback, drive: petrol, market: eu }
+  - { body: estate, drive: electric, market: eu }
+attributes:
+  model-name:
+    - { value: Fenna Estate, when: body in (estate) }
+    - value: Fenna Hatchback
+  tyre-size:
+    - { value: 215/55 R17, when: body in (estate) }
+    - value: 205/55 R16
+entries:
+  - module: service-introduction
+  - { module: safety-high-voltage, when: drive in (electric) }
+  - module: service-schedule
+  - { module: hv-isolation, when: drive in (electric) }
+  - module: changing-brake-fluid
+  - module: warning-lights
+  - module: tyre-pressures
+  - module: fluids-and-capacities
+  - module: fuses

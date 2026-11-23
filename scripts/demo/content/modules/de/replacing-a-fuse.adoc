@@ -1,0 +1,26 @@
+= Sicherung wechseln
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Sicherung
+
+[#intro]
+Fällt eine Funktion aus, prüfen Sie zuerst ihre Sicherung. Die Sicherungen und was sie absichern finden Sie unter xref:fuses.adoc[].
+
+[#ref-off]
+module::switch-off[]
+
+[procedure#steps]
+.Sicherung wechseln
+. [[step-open]]Öffnen Sie die Abdeckung des Sicherungskastens an der rechten Seite der Armaturentafel.
+. [[step-pull]]Ziehen Sie die Sicherung mit der Kunststoffzange heraus, die in der Abdeckung steckt.
+. [[step-check]]Eine Sicherung mit durchgebranntem Draht ist defekt. Ersetzen Sie sie durch eine Sicherung mit derselben Stärke.
+. [[step-close]]Schließen Sie die Abdeckung.
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Bei Rechtslenkern befindet sich der Sicherungskasten an der linken Seite der Armaturentafel.
+====

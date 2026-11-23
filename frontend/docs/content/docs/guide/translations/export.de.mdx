@@ -1,0 +1,67 @@
+---
+title: 'Einen Delta-Export senden'
+description: 'Nur die Blöcke, die übersetzt werden müssen, als XLIFF 2.0 für eine Übersetzungsagentur exportieren.'
+articleId: 'guide.translations.export'
+---
+
+Ein Delta-Export enthält nur die Blöcke, deren Quelltext sich seit der letzten Übersetzung
+geändert hat oder die noch nie übersetzt wurden. Blöcke, die schon bei der Agentur sind, werden
+nicht erneut gesendet. Die Datei ist XLIFF 2.0, das Übersetzungswerkzeuge lesen.
+
+## Exportieren
+
+1. Wählen Sie **Übersetzungen** in der Seitenleiste, dann **Delta-Export erstellen**.
+2. Wählen Sie unter **Was gesendet wird** eines davon:
+   - **Ausgewählte Module**: die Zeilen, die Sie im Tab **Stand** angehakt haben.
+   - **Ein Handbuch**: jedes Modul, das das Handbuch enthält. Wählen Sie es unter **Handbuch
+     wählen**.
+   - **Ein Ordner**: jedes Modul eines Ordners der Inhaltsliste. Wählen Sie ihn unter **Ordner
+     wählen**.
+3. Haken Sie unter **Nach** die Sprachen an.
+4. Geben Sie bei Bedarf ein **Fälligkeitsdatum (optional)** ein: bis wann die Agentur die
+   Übersetzung zurückschicken soll.
+5. Lesen Sie die Zahlen unten, etwa **6 Module · 21 Blöcke · 120 Wörter**, mit einer Zeile je
+   Sprache. Noch wird nichts gesendet.
+6. Wählen Sie **Exportieren und herunterladen**.
+
+![Delta-Export erstellen mit einem gewählten Handbuch, Deutsch und Französisch angehakt, und den Zahlen](/images/guide/de/translation-export.webp)
+
+Die Datei wird heruntergeladen: eine XLIFF-Datei für eine Sprache, ein ZIP mit einer Datei je
+Sprache für mehrere. Schicken Sie sie an die Agentur. Im Tab **Stand** zeigen die Blöcke nun **Bei
+der Agentur**.
+
+Sagen die Zahlen, dass es nichts zu senden gibt, ist jeder Block schon aktuell oder bei der Agentur.
+
+Seitengestaltungen, Titelbildtexte und Module gehen in getrennte Exporte. Haben Sie Zeilen
+verschiedener Arten gewählt, wählen Sie Zeilen einer Art.
+
+## Ihre Exporte verfolgen
+
+Der Tab **Aufträge** listet jeden Delta-Export, den neuesten zuerst: was gesendet wurde, die
+**Sprachen**, wann und von wem **Exportiert**, das Datum **Fällig** und den **Status**.
+
+![Der Tab Aufträge mit einem Export bei der Agentur](/images/guide/de/translation-jobs.webp)
+
+- **Bei der Agentur**: gesendet, noch nicht zurück.
+- **Importiert**: Jeder Block kam mit einem Import zurück.
+- **Storniert**: Der Export wurde abgesagt.
+
+**Herunterladen** holt die Datei erneut. **Stornieren** sagt einen Export ab, der noch bei der
+Agentur ist: Seine Blöcke werden mit dem nächsten Export erneut gesendet. Eine Meldung bietet kurz
+**Rückgängig** an.
+
+## Als COTI-Paket senden
+
+Ein Übersetzungsmanagementsystem, das COTI unterstützt, den offenen Austauschstandard für
+Übersetzungspakete, nimmt einen Export als ein Paket entgegen und schickt ihn auf demselben Weg
+zurück: Niemand packt Dateien von Hand um.
+
+Wählen Sie im Tab **Aufträge** bei einem Export, der nicht storniert ist, **COTI-Paket**. Eine
+`.coti`-Datei wird heruntergeladen. Sie enthält je Sprache ein Übersetzungsprojekt, jedes mit seiner
+Projektbeschreibung (`COTI.xml`: der Export, seine Sprachen und sein Fälligkeitsdatum) und derselben
+XLIFF-Datei, die **Herunterladen** liefert. Geben Sie sie unverändert an das Übersetzungssystem.
+
+Schickt das System das Paket zurück, importieren Sie es wie eine XLIFF-Datei: Der Import liest das
+Paket, findet den Export an seiner ID und prüft jeden Block auf dieselbe Weise.
+
+Schickt die Agentur die Datei zurück, [importieren Sie sie](/de/guide/translations/import).

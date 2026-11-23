@@ -1,0 +1,64 @@
+---
+title: 'Inhalts-Repository'
+description: 'Wo die Inhalte liegen: ein Bare-Git-Repository auf dem Daten-Volume, wie Sie Ihres dorthin bringen und was der Server hineinschreibt.'
+articleId: 'guide.self-hosting.content-repository'
+---
+
+Die Inhalte (Module, Handbücher, Überarbeitungen, Veröffentlichungen) liegen in einem
+**Bare**-Git-Repository. In der Container-Installation ist das `/data/content.git` auf dem
+Daten-Volume (`CCMS_CONTENT_DIR`). Es ist die maßgebliche Kopie: Die Datenbank hält Betriebsdaten
+und einen Index, der sich daraus neu aufbauen lässt.
+
+Solange kein Repository da ist, startet die API und beantwortet ihren Health-Check, aber jede
+Anfrage nach Inhalten schlägt fehl. Ihr Start-Log nennt den Ordner, den sie liest.
+
+## Ihr Repository dorthin bringen
+
+**Von einem Git-Server:**
+
+```sh
+docker compose run --rm --no-deps api \
+  git clone --bare https://git.example.com/docs/content.git /data/content.git
+```
+
+**Aus einem Bare-Repository auf dem Server:**
+
+```sh
+docker compose run --rm --no-deps -v /srv/content.git:/import:ro api \
+  git -c safe.directory=/import clone --bare /import /data/content.git
+```
+
+`safe.directory` ist nötig, weil Git ein Repository, das einem anderen Benutzer gehört, nicht
+liest.
+
+**Die Beispielinhalte**, zum Ausprobieren:
+
+```sh
+docker compose run --rm --no-deps api node docker/sample-content.mjs
+```
+
+Der Befehl verweigert die Arbeit, wenn unter `/data/content.git` schon etwas liegt; er ersetzt
+also nie echte Inhalte.
+
+Verwenden Sie ein Bare-Repository: Die API verschiebt nie einen Branch, der in einem Arbeitsbaum
+ausgecheckt ist.
+
+## Was der Server schreibt
+
+- **Überarbeitungen** sind Branches, `change-sets/<id>`.
+- **Veröffentlichungen** sind annotierte Tags, benannt nach `CCMS_RELEASE_TAG` (Standard
+  `release/{product}/{revision}`).
+- **Wartungslinien** sind Branches, benannt nach `CCMS_MAINTENANCE_BRANCH` (Standard
+  `maintenance/{product}/{revision}`).
+
+Jeder Schreibvorgang verschiebt einen Branch nur, wenn er noch dorthin zeigt, wo der Server ihn
+zuletzt gelesen hat; zwei Schreibende überschreiben sich also nie.
+
+## Kopien an anderer Stelle
+
+Der Server überträgt von sich aus nichts. Um die Inhalte auf einen anderen Git-Server zu bringen,
+übertragen Sie sie mit `git push` aus diesem Repository, etwa nach einem Zeitplan. Änderungen an
+den Inhalten kommen über Überarbeitungen und die Prüfung im Editor herein.
+
+Sichern Sie das Repository mit dem Rest der Instanz: [Backups](/de/guide/self-hosting/backups).
+Was es enthält und was nicht: [Fast alles ist Inhalt](/de/guide/getting-started/content).

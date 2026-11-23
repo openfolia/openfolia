@@ -1,0 +1,510 @@
+# The container images (Dockerfile, deploy/README.md): CI builds them, servers only run them.
+#
+# - Pull requests: build the affected images and start the compose stack from scratch
+#   (deploy/smoke-test.sh) and with the one self-host command (deploy/self-host-test.sh).
+#   Nothing is pushed.
+# - A merge to main: the same, then push the affected images to the GitHub container
+#   registry of the repository's owner, tagged with the commit SHA and `main`, each with an SBOM
+#   and provenance.
+#   Images the merge did not change get the SHA tag too, so every commit names a whole set.
+# - A release tag vX.Y.Z (on a commit of main): every image, tagged with the SHA, vX.Y.Z and
+#   latest; then the release's files the install guide downloads (compose.yaml, the images'
+#   digests and SHA256SUMS, #739) attached to its GitHub Release, and the deploy webhook.
+#
+# Optional configuration (repository settings): the secrets DEPLOY_WEBHOOK_URL and
+# DEPLOY_WEBHOOK_TOKEN (a Coolify deploy webhook and its API token) to deploy a release. Unset,
+# that step is skipped.
+name: images
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run at a time per ref, so `main` is never moved back by an older run finishing late; a
+  # queued run that a newer one replaces is covered by comparing with the last successful run.
+  group: images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY: ghcr.io
+  NX_DAEMON: 'false'
+  NX_NO_CLOUD: 'true'
+
+jobs:
+  plan:
+    name: affected images
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      images: ${{ steps.affected.outputs.images }}
+      unaffected: ${{ steps.affected.outputs.unaffected }}
+      on-main: ${{ steps.affected.outputs.on-main }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: affected
+        name: which images the change affects
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        # The images and their "affected" rule are in scripts/images-plan.mjs (tested in
+        # scripts/__tests__/images-plan.test.ts): api, backup (the API image plus the Postgres
+        # client, so whatever rebuilds the API rebuilds it), editor, embedder (the local embedding
+        # worker, #532) and mcp.
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            base=$PR_BASE
+          else
+            # A merge to main is compared with the last commit whose images were pushed (the last
+            # successful run on main), not with the commit before it: a run that was cancelled
+            # or failed in between would otherwise leave its changes unbuilt.
+            base=$(gh run list --repo "$REPO" --workflow images.yml --branch main --event push \
+              --status success --limit 1 --json headSha --jq '.[0].headSha // ""' || true)
+          fi
+          # Every image on a release tag, or with no earlier commit to compare with.
+          if [ "$REF_TYPE" = tag ] || [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            plan=$(node scripts/images-plan.mjs)
+          else
+            plan=$(node scripts/images-plan.mjs --base "$(git rev-parse "$base^{commit}")")
+          fi
+          # A release tag on a commit of main moves `latest`; one elsewhere does not.
+          if git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then on_main=true; else on_main=false; fi
+          {
+            echo "on-main=$on_main"
+            echo "$plan"
+          } >>"$GITHUB_OUTPUT"
+          echo "Affected images, then unchanged ones:"
+          echo "$plan"
+
+  build:
+    name: ${{ matrix.image }}
+    needs: plan
+    if: needs.plan.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.plan.outputs.images) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/openfolia/${{ matrix.image }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern=v{{version}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && needs.plan.outputs.on-main == 'true' }}
+          flavor: latest=false
+          labels: |
+            org.opencontainers.image.licenses=AGPL-3.0-only
+      - name: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: ${{ matrix.image }}
+          load: true
+          tags: openfolia-ci/${{ matrix.image }}:check
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+      - if: github.event_name == 'push'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: push, with an SBOM and provenance
+        id: push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: ${{ matrix.image }}
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+      # On a release tag, the digest this leg pushed (#739): release-digests checks the registry
+      # against it, so a tag moved after the push is never recorded as the release's.
+      - name: the pushed digest, for the release's files
+        if: github.ref_type == 'tag'
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p pushed
+          echo "$IMAGE_NAME $DIGEST" > "pushed/$IMAGE_NAME"
+      - if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pushed-digest-${{ matrix.image }}
+          path: pushed/${{ matrix.image }}
+          retention-days: 7
+          overwrite: true
+
+  # On main, an image the merge did not change gets the new commit's tag too (from its current
+  # `main`), so OPENFOLIA_VERSION=<sha> names a whole set for every commit pushed.
+  retag:
+    name: tag unchanged images
+    needs: [plan, build]
+    if: github.ref == 'refs/heads/main' && needs.plan.outputs.unaffected != '[]' && !failure() && !cancelled()
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.plan.outputs.unaffected) }}
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - env:
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/openfolia/${{ matrix.image }}
+        run: docker buildx imagetools create --tag "$IMAGE:$GITHUB_SHA" "$IMAGE:main"
+
+  smoke:
+    name: compose stack from scratch
+    needs: plan
+    if: needs.plan.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Also two workers on one release (#527): no file attempted twice, at most 40 of a release
+      # scheduled at once, both workers alive and the jobs taken by them, none by the API.
+      - name: smoke test, with two workers
+        run: deploy/smoke-test.sh
+
+  # The one command a person runs to self-host (#373; deploy/README.md, "Quick start"), from
+  # scratch: GET /health, the first admin signing in through a test OpenID Connect provider, then
+  # with the password they chose through the one-time link, which works once; a second run makes
+  # no second admin.
+  self-host:
+    name: self-host with one command
+    needs: plan
+    if: needs.plan.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: deploy/self-host.sh, signing in through a test provider and with a password
+        run: deploy/self-host-test.sh
+
+  # The images pinned by their digests (#739; scripts/release-digests.mjs, deploy/README.md):
+  # pushed to a registry of the test's own, recorded, the tag moved, and the install guide's image
+  # check passing the pinned installation and failing one by tag alone.
+  digests:
+    name: images pinned by digest
+    needs: plan
+    if: needs.plan.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @openfolia/workflow --filter @openfolia/docs
+      # The install guide's signature check (#745), offline: no Docker, only the release's files.
+      - name: deploy/signatures-test.sh
+        run: deploy/signatures-test.sh
+      - name: deploy/digests-test.sh
+        run: deploy/digests-test.sh
+
+  # A release's files for the install guide (#423, #739), once every image of the tag is pushed:
+  # the tag's compose.yaml, its images by digest (images.lock, compose.digests.yaml, written by
+  # scripts/release-digests.mjs from the registry, checked against the digests the build legs
+  # pushed) and SHA256SUMS over all three. This job holds no write token; `release-upload` below,
+  # which runs none of the repository's code, attaches them. The docs of the release are built with
+  # DOCS_RELEASE_DIGESTS set to images.lock (CONTRIBUTING.md, "Releases").
+  release-files:
+    name: release files (compose.yaml, digests, SHA256SUMS)
+    needs: [plan, build]
+    if: github.ref_type == 'tag' && needs.plan.outputs.on-main == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      release: ${{ steps.files.outputs.release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @openfolia/workflow
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: pushed-digest-*
+          path: ${{ runner.temp }}/pushed
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: the digests, checked against the pushed ones, and the files
+        id: files
+        env:
+          TAG: ${{ github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+          PUSHED: ${{ runner.temp }}/pushed
+          FILES: ${{ runner.temp }}/release-files
+        run: |
+          # Only a release tag vX.Y.Z gets the files: the guide pins no pre-release.
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "$TAG is no release tag vX.Y.Z: no release files."
+            exit 0
+          fi
+          cat "$PUSHED"/* > "$RUNNER_TEMP/pushed.txt"
+          node scripts/release-digests.mjs --images "$REGISTRY/${OWNER,,}/openfolia" --tag "$TAG" \
+            --compose deploy/compose.yaml --expect "$RUNNER_TEMP/pushed.txt" --out "$FILES"
+          cp deploy/compose.yaml "$FILES/compose.yaml"
+          (cd "$FILES" && sha256sum compose.yaml compose.digests.yaml images.lock > SHA256SUMS && cat SHA256SUMS)
+          # The lock in the run's summary too, to compare with the release's file.
+          { echo '### images.lock'; echo '```'; cat "$FILES/images.lock"; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
+          echo "release=true" >>"$GITHUB_OUTPUT"
+      - if: steps.files.outputs.release == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files
+          retention-days: 7
+          overwrite: true
+
+  # The release's images signed (#745; scripts/release-signatures.mjs, deploy/README.md), only
+  # with the repository variable SIGN_IMAGES set to `true`: unset, this job is skipped and the
+  # release gets the same files as before. cosign keyless: the workflow's own GitHub OIDC identity
+  # (this file at the release's tag) signs each image of images.lock by its digest, and each
+  # signature is recorded in Sigstore's public transparency log. The bundles (`<image>.sigstore.json`),
+  # the trust root they verify against (`trusted_root.json`) and `signatures.sha256` over them go to
+  # `release-upload`. The only job with an OIDC token runs no code of the repository or its
+  # dependencies, only cosign (pinned by its checksum), gh, jq, docker and actions pinned by their
+  # SHA. It takes nothing to sign from images.lock alone (that file was written by a job that ran
+  # the repository's code): each line must name this release's repository, one of its images, its
+  # tag, and the digest its build leg pushed and the registry names for the tag; else it signs
+  # nothing.
+  release-sign:
+    name: sign the images (cosign)
+    needs: release-files
+    if: needs.release-files.outputs.release == 'true' && vars.SIGN_IMAGES == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    env:
+      COSIGN_VERSION: v3.1.4
+      # cosign-linux-amd64 of that release, as its cosign_checksums.txt names it.
+      COSIGN_SHA256: 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files
+      # What each build leg recorded it pushed. Not independent of images.lock (any job of the run
+      # could replace an artifact): the registry's answer below is what bounds what gets signed.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: pushed-digest-*
+          path: ${{ runner.temp }}/pushed
+          merge-multiple: true
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: cosign, verified by its checksum
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL -o "$RUNNER_TEMP/bin/cosign" \
+            "https://github.com/sigstore/cosign/releases/download/$COSIGN_VERSION/cosign-linux-amd64"
+          echo "$COSIGN_SHA256  $RUNNER_TEMP/bin/cosign" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/bin/cosign"
+          echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+      - name: sign each image by its digest, and verify it offline as the install guide does
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+          FILES: ${{ runner.temp }}/release-files
+          PUSHED: ${{ runner.temp }}/pushed
+          OUT: ${{ runner.temp }}/release-signatures
+        run: |
+          fail() {
+            echo "release-sign: $*"
+            exit 1
+          }
+          mkdir -p "$OUT"
+          # `docker buildx imagetools` needs no builder: the runner's buildx, no setup action here.
+          docker buildx version
+          # What to sign is never images.lock's word alone: each line must name this release's
+          # repository (the registry, the owner lowercased, openfolia), one of the release's images,
+          # its tag, and the digest its build leg pushed and the registry names for the tag now.
+          # Anything else, and an image missing or named twice, signs nothing.
+          repository="$REGISTRY/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/openfolia"
+          release_images="api backup editor embedder mcp"
+          targets="$RUNNER_TEMP/targets"
+          : >"$targets"
+          while read -r line; do
+            [[ "$line" =~ ^(.+)/([a-z0-9-]+):([^@/]+)@(sha256:[0-9a-f]{64})$ ]] || fail "no image pinned by its digest: $line"
+            ref_repository=${BASH_REMATCH[1]} image=${BASH_REMATCH[2]} ref_tag=${BASH_REMATCH[3]} digest=${BASH_REMATCH[4]}
+            [ "$ref_repository" = "$repository" ] || fail "not this release's repository $repository: $line"
+            [ "$ref_tag" = "$TAG" ] || fail "not the tag $TAG: $line"
+            case " $release_images " in *" $image "*) ;; *) fail "not an image of the release: $line" ;; esac
+            ! grep -q "^$image " "$targets" || fail "$image is named twice"
+            [ "$(cat "$PUSHED/$image" 2>/dev/null)" = "$image $digest" ] || fail "not the digest the build pushed for $image: $line"
+            registry=$(docker buildx imagetools inspect "$repository/$image:$TAG" --format '{{json .Manifest}}' | jq -r .digest)
+            [ "$registry" = "$digest" ] || fail "the registry names $registry for $image:$TAG, images.lock $digest"
+            echo "$image $digest" >>"$targets"
+          done <"$FILES/images.lock"
+          for image in $release_images; do
+            grep -q "^$image " "$targets" || fail "images.lock names no $image"
+          done
+          # The trust root of Sigstore's public instance, fetched and verified through its TUF
+          # repository by gh: the one the install guide verifies the bundles against, offline.
+          gh attestation trusted-root |
+            jq -c 'select(any(.certificateAuthorities[]?; .uri == "https://fulcio.sigstore.dev"))' >"$OUT/trusted_root.json"
+          [ "$(wc -l <"$OUT/trusted_root.json" | tr -d ' ')" = 1 ] || fail "not one trust root of Sigstore's public instance"
+          # The identity Fulcio writes into the certificate: this workflow at the release's tag.
+          identity="$GITHUB_SERVER_URL/$GITHUB_WORKFLOW_REF"
+          [ "$identity" = "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/.github/workflows/images.yml@refs/tags/$TAG" ] ||
+            fail "unexpected workflow identity $identity"
+          while read -r image digest; do
+            cosign sign --yes --upload=false --bundle "$OUT/$image.sigstore.json" "$repository/$image@$digest" </dev/null
+            cosign verify-blob-attestation --bundle "$OUT/$image.sigstore.json" \
+              --trusted-root "$OUT/trusted_root.json" \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --type https://sigstore.dev/cosign/sign/v1 --digest "${digest#sha256:}" --digestAlg sha256 </dev/null
+          done <"$targets"
+          (cd "$OUT" && sha256sum trusted_root.json *.sigstore.json >signatures.sha256 && cat signatures.sha256)
+          # What the release's docs are built with: DOCS_RELEASE_SIGNATURES (CONTRIBUTING.md, "Releases").
+          {
+            echo '### signatures.sha256'
+            echo '```'
+            cat "$OUT/signatures.sha256"
+            echo '```'
+            echo "Signed by \`$identity\`, issuer \`https://token.actions.githubusercontent.com\`."
+          } >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-signatures
+          path: ${{ runner.temp }}/release-signatures
+          retention-days: 7
+          overwrite: true
+
+  # Attaches the release's files to the tag's GitHub Release (made by release.yml, which this waits
+  # for): the only job with a token that can change the release, and it runs no code of the
+  # repository or its dependencies, only gh. With signing on (SIGN_IMAGES), it waits for the
+  # signatures and attaches them too, and attaches nothing when signing failed.
+  release-upload:
+    name: attach the release files
+    needs: [release-files, release-sign]
+    if: >-
+      !cancelled() && needs.release-files.result == 'success' &&
+      needs.release-files.outputs.release == 'true' &&
+      (needs.release-sign.result == 'success' ||
+      (needs.release-sign.result == 'skipped' && vars.SIGN_IMAGES != 'true'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files
+      - if: needs.release-sign.result == 'success'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-signatures
+          path: ${{ runner.temp }}/release-signatures
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          FILES: ${{ runner.temp }}/release-files
+          SIGNATURES: ${{ runner.temp }}/release-signatures
+          SIGNED: ${{ needs.release-sign.result == 'success' }}
+        run: |
+          # release.yml makes the release; wait for it (at most 30 minutes).
+          for _ in $(seq 60); do
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && break
+            sleep 30
+          done
+          files=("$FILES/compose.yaml" "$FILES/compose.digests.yaml" "$FILES/images.lock" "$FILES/SHA256SUMS")
+          if [ "$SIGNED" = true ]; then
+            files+=("$SIGNATURES/signatures.sha256" "$SIGNATURES/trusted_root.json" "$SIGNATURES"/*.sigstore.json)
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+
+  deploy:
+    name: deploy webhook
+    needs: [build, smoke, self-host]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: the release is on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "The tag names a commit that is not on main: not deployed."
+            exit 1
+          }
+      - name: call the deploy webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "No DEPLOY_WEBHOOK_URL secret: nothing to deploy."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 \
+            --header "Authorization: Bearer $WEBHOOK_TOKEN" "$WEBHOOK_URL" >/dev/null
+          echo "Deploy webhook called."

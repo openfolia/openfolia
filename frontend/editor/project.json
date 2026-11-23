@@ -1,0 +1,209 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "editor",
+  "projectType": "application",
+  "sourceRoot": "frontend/editor/src",
+  "prefix": "of",
+  "tags": ["scope:frontend", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "frontend/editor/dist",
+        "browser": "frontend/editor/src/main.ts",
+        "index": "frontend/editor/src/index.html",
+        "tsConfig": "frontend/editor/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "*",
+            "input": "frontend/theme/src/brand",
+            "output": "assets/brand"
+          },
+          {
+            "glob": "favicon.ico",
+            "input": "frontend/theme/src/brand",
+            "output": "."
+          },
+          {
+            "glob": "manifest.webmanifest",
+            "input": "frontend/editor/src",
+            "output": "."
+          },
+          {
+            "glob": "*.json",
+            "input": "frontend/ui/src/i18n",
+            "output": "i18n/ui"
+          },
+          {
+            "glob": "*.json",
+            "input": "frontend/editor/src/i18n",
+            "output": "i18n/editor"
+          },
+          {
+            "glob": "guide-index.json",
+            "input": "frontend/editor/generated",
+            "output": "help"
+          }
+        ],
+        "styles": ["frontend/editor/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "650kB",
+              "maximumError": "700kB"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kB",
+              "maximumError": "8kB"
+            }
+          ],
+          "outputHashing": "all",
+          "conditions": ["module", "production", "@openfolia/source"]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "conditions": ["module", "development", "@openfolia/source"]
+        }
+      },
+      "defaultConfiguration": "production",
+      "dependsOn": ["guide-index"]
+    },
+    "guide-index": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/frontend/docs/content/docs/guide/**/*",
+        "{workspaceRoot}/frontend/docs/scripts/guide-index.mjs",
+        "{workspaceRoot}/frontend/docs/scripts/lib/guide-index.mjs",
+        "{workspaceRoot}/frontend/docs/scripts/lib/guide-reference-pages.mjs"
+      ],
+      "outputs": ["{projectRoot}/generated"],
+      "options": {
+        "command": "node frontend/docs/scripts/guide-index.mjs frontend/editor/generated/guide-index.json"
+      }
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "continuous": true,
+      "configurations": {
+        "production": {
+          "buildTarget": "editor:build:production"
+        },
+        "development": {
+          "buildTarget": "editor:build:development"
+        }
+      },
+      "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "frontend/editor/proxy.conf.mjs"
+      },
+      "dependsOn": ["guide-index"]
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "frontend/editor/tsconfig.spec.json",
+        "runner": "vitest",
+        "providersFile": "frontend/editor/testing/test-providers.ts",
+        "setupFiles": ["frontend/editor/testing/test-setup.ts"]
+      },
+      "dependsOn": ["^build", "test-i18n", "test-proxy", "guide-index"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "frontend/editor",
+        "commands": [
+          "ngc -p tsconfig.app.json --noEmit",
+          "tsc -p tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["guide-index"]
+    },
+    "test-proxy": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node --test tools/proxy-origin.test.mjs"
+      }
+    },
+    "test-lint-rules": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node --test eslint-rules/*.test.mjs"
+      }
+    },
+    "lint": {
+      "dependsOn": ["test-lint-rules", "check-api-types", "guide-index"]
+    },
+    "api-types": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["api:build"],
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*",
+          "transitive": true
+        },
+        "{projectRoot}/tools/generate-api-types.mjs"
+      ],
+      "cache": false,
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node tools/generate-api-types.mjs"
+      }
+    },
+    "check-api-types": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["api:build"],
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*",
+          "transitive": true
+        },
+        "{projectRoot}/tools/generate-api-types.mjs",
+        "{projectRoot}/src/app/api/schema.d.ts",
+        "{workspaceRoot}/pnpm-lock.yaml"
+      ],
+      "cache": true,
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node tools/generate-api-types.mjs --check"
+      }
+    },
+    "test-i18n": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/frontend/ui/src/i18n/*.json",
+        "{workspaceRoot}/frontend/ui/tools/*.mjs",
+        "{workspaceRoot}/backend/api/src/**/*.ts",
+        "{workspaceRoot}/backend/api/error-codes.yaml",
+        "{workspaceRoot}/frontend/editor/src/**/*"
+      ],
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node --test tools/i18n.test.mjs"
+      }
+    },
+    "perf-scale": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build", "api:build"],
+      "cache": false,
+      "options": {
+        "cwd": "frontend/editor",
+        "command": "node perf/editor-timings.mjs"
+      }
+    }
+  }
+}

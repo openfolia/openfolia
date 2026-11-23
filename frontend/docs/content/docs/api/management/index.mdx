@@ -1,0 +1,16 @@
+---
+title: 'Management API'
+description: 'Every route of the server that is not part of the Delivery API.'
+---
+
+The Management API is everything else the server does: change sets and their review, locks and
+working copies, releases and their outputs, translations, imports, comments, checks, users,
+roles and service accounts, branding, webhooks, backups, the audit log.
+
+It lists each operation once: the read routes of released content are in the
+[Delivery API](/api/delivery), and the server's full document (`GET /openapi.json` on a running
+server) holds both.
+
+The Management API's document, to download:
+
+<OpenAPIDownload api="management" />

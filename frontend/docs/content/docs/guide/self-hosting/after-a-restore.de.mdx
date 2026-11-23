@@ -1,0 +1,45 @@
+---
+title: 'Nach einer Wiederherstellung'
+description: 'Der eine Schritt nach dem Wiederherstellen einer Sicherung auf einem anderen Datenbankserver.'
+articleId: 'guide.self-hosting.after-a-restore'
+---
+
+Eine Sicherung, die auf einem anderen Postgres-Server wiederhergestellt wird (ein neuer Stack aus
+einer Sicherung oder ein Umzug auf einen anderen Host), beginnt dort eine neue Zählung der
+Transaktionen. Die Ereignisse, die auf Benachrichtigungen, Webhooks und den Änderungs-Feed warten,
+tragen die Zählung des alten Servers. Ein neues Ereignis käme so vor bereits bearbeitete und würde
+übersprungen.
+
+Deshalb hält der Server sie an: **Admin, System** zeigt in der Karte Hintergrundarbeit
+„Zustellung nach einer Wiederherstellung angehalten“, der Server protokolliert es als Fehler, und
+der Änderungs-Feed antwortet mit 503 `outbox-blocked`. Bis dahin geht nichts verloren.
+
+## Die Wiederherstellung abschließen
+
+Führen Sie dies einmal als Eigentümer der Datenbank aus, am besten direkt nach der
+Wiederherstellung und vor dem ersten Start, sonst bei angehaltener API und angehaltenem Worker
+(`docker compose stop api worker`). Als Skript (`psql -f` oder über die Standardeingabe), da
+`VACUUM` nicht in einer Transaktion laufen kann. Es braucht keine Angaben; Leser des Änderungs-Feeds synchronisieren danach neu. Bei einer Sicherung
+aus einer Version vor diesem Schritt starten Sie einmal, damit die Migrationen laufen, halten API
+und Worker an und führen es dann aus:
+
+```sql
+-- outbox: after a restore
+BEGIN;
+UPDATE outbox_consumers SET last_tx_id = '1',
+  last_outbox_id = LEAST((SELECT min(o.id) - 1 FROM outbox o
+                          WHERE (o.tx_id, o.id) > (outbox_consumers.last_tx_id, outbox_consumers.last_outbox_id)),
+                         outbox_consumers.last_outbox_id)
+  WHERE last_tx_id <> '0';
+UPDATE outbox SET tx_id = '1';
+UPDATE outbox_consumers SET blocked = false;
+COMMIT;
+VACUUM outbox;
+```
+
+Starten Sie den Stack danach wieder. Benachrichtigungen und Webhooks holen der Reihe nach auf,
+schlimmstenfalls einige doppelt gelesen (Empfänger erkennen Doppelte am `Idempotency-Key`). Leser des Änderungs-Feeds
+erhalten für einen Cursor von vor der Wiederherstellung 410 `cursor-gone` und synchronisieren neu.
+
+Hat das Audit-Log ein Ziel (Sink), braucht dessen Position dasselbe einmal: siehe die
+Betriebsanleitung, `backend/api/README.md`, „Audit log“, „After a restore“.

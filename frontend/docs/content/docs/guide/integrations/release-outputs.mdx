@@ -1,0 +1,102 @@
+---
+title: 'Release outputs for portals'
+description: "Download a release's PDFs, one by one or as a ZIP, its offline packages, and link to stable addresses that always open the newest release."
+articleId: 'guide.integrations.release-outputs'
+---
+
+A release renders a PDF per manual, variant and language in the background. A portal or app
+downloads those files, or links to a manual's stable address, which always opens the newest release.
+The routes are part of the [Delivery API](/api/delivery). What the editor shows of them is under
+[Download the files](/guide/releases/download) and [Stable
+addresses](/guide/releases/stable-addresses).
+
+## Download a release's files
+
+1. Find the release: `GET /releases` lists them, `GET /releases/<releaseId>` gives one with
+   `meta.outputs`, where its files stand (`planning`, `rendering`, `done` or `failed`, with
+   counts). Poll it while it is `planning` or `rendering`.
+2. List its files:
+
+   ```sh
+   curl -gs -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/releases/<releaseId>/outputs?filter[state]=done"
+   ```
+
+   Filters: `filter[manual]`, `filter[lang]`, `filter[kind]` (`pdf`, `offline-package`),
+   `filter[state]` (`queued`, `rendering`, `done`, `failed`). Paged.
+
+3. Download one: `GET /releases/<releaseId>/outputs/<outputId>/file`. Until it is `done`, that is
+   409 `output-not-ready`; a file is never rendered on request.
+4. Or all at once: `GET /releases/<releaseId>/outputs/archive` streams a ZIP of every file that is
+   done, entries named `<manual>/<lang>/<variant>.pdf`. `X-Ccms-Archive-Files` says how many it
+   holds, `X-Ccms-Archive-Left-Out` how many are not done yet. None done is 409
+   `release-archive-empty`; one larger than `CCMS_RELEASE_ARCHIVE_MAX_BYTES` (2 GiB by default) is
+   422 `release-archive-too-large`, and its files still download one by one. The archive holds the
+   PDFs only, never an offline package.
+
+A file's bytes never change: it is `private, max-age=31536000, immutable`, with its hash as the
+ETag. A reader sees a file only when one of their roles covers all of its manual (its audience,
+the language and the source language, every module type and facet); anyone else gets 404, as for
+a missing one. A reader with a narrower scope reads the manual's own PDF route instead, rendered
+for their scope. A withdrawn release's files stay readable, with `meta.withdrawn: true`.
+
+## Offline packages
+
+A release also gets one offline package per configured language and audience level, up to the
+highest level any of its manuals has: a ZIP that opens from the file system with no network, on a
+computer or a phone. It is built once the release's PDFs are done, and listed with its files
+(`filter[kind]=offline-package`): `kind` `offline-package`, its level in `audience`, `manual` and
+`variant` null. Its file route answers `application/zip`, named
+`offline_<audience>_<lang>_<revision>.zip`.
+
+Unpacked, `index.html` lists the manuals that level reads, each variant a page beside its PDF,
+with a search over titles and headings. A package holds only what its level reads: a manual,
+module, image or attached file above it is not in it. `manifest.json` names the release, product,
+revision, language and level, and every file with its size and SHA-256; a manual that could not be
+read at the release's tag is listed under `leftOut`. A reader sees a package only when one of
+their roles reads its whole level in its language; anyone else gets 404.
+
+The pages run no script but the search, and allow nothing from outside the package (a Content
+Security Policy). An SVG image or symbol is written made inert, its drawing only: no script, event
+handler, embedded page, animation or link out of it (a style sheet only when it reaches nothing outside), so it runs nothing even opened
+on its own. One that cannot be read as an SVG is left out (`leftOut`, `unsafe-svg`). An attached
+HTML, XML or script file is kept as `.bin`, so opening it shows no page; its link still saves it
+under its own name. A package larger than `CCMS_RELEASE_ARCHIVE_MAX_BYTES` or with more than 50,000
+files fails with `offline-package-too-large`; the PDFs stay. An operator turns packages off with
+`CCMS_OFFLINE_PACKAGES=false`.
+
+The iiRDS and DITA packages of a release are made on request: see [iiRDS](/guide/releases/iirds)
+and [DITA](/guide/releases/dita).
+
+## Link to the newest release
+
+A stable address is `/d/<product>/<manual>/<variant>/<lang>`: it opens the manual as a web page at
+the product's newest release that is not withdrawn. `…/pdf` is that release's PDF, and `…/qr.svg`
+or `…/qr.png` a QR code of the address. `<lang>@<revision>` pins one release.
+
+`GET /stable-addresses` lists them, one per output of a release the reader may read, with the
+`latest` and `pinned` addresses, each with `html` and `pdf` as a `path` and a full `url` (null
+until the operator sets `CCMS_PUBLIC_URL`). Filters: `filter[release]`, `filter[product]`,
+`filter[manual]`, `filter[lang]`.
+
+What a stable address answers:
+
+| Answer | When                                                                                   |
+| ------ | -------------------------------------------------------------------------------------- |
+| 200    | The page, the PDF or the QR code.                                                      |
+| 301    | A moved address (a new slug, a former one, a language's case), to the canonical one.   |
+| 300    | The release lacks that language: a page linking the languages there are (the default). |
+| 302    | The release lacks that language and the project sends readers to the source language.  |
+| 409    | `output-not-ready`: the PDF is not rendered yet; `Retry-After` says when to ask again. |
+| 410    | A pinned release that was withdrawn: a notice linking the latest address.              |
+| 429    | `rate-limited`: past `CCMS_DELIVERY_PER_MINUTE` pages, PDFs and QR codes a minute.     |
+
+Who may open them is `delivery.access` in `openfolia.yaml`, at most what the operator allows
+(`CCMS_DELIVERY_MAX_ACCESS`): `public` addresses read as the public audience whoever asks, and
+never look at a token; `signed-in` ones need a token or a session; `off` is 404. The pages, PDFs
+and QR codes are `no-cache` with an ETag, so a cache in front revalidates each time and a new
+release or a withdrawal reaches readers at once. Query parameters such as `utm_*` are ignored
+there (`CCMS_DELIVERY_IGNORED_QUERY`); any other is 400.
+
+A static site of the released manuals, built from the API, is the
+[static portal](/guide/integrations/static-portal).

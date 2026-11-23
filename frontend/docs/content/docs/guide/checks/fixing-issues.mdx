@@ -1,0 +1,87 @@
+---
+title: 'Fix what the checks find'
+description: 'What each check means and how to fix it: settings, variants, manuals and derived manuals.'
+articleId: 'guide.checks.fixing-issues'
+---
+
+Each issue on **Checks before release** names its check, such as **Unknown audience**, and says in
+**Details** what it found. **Blocking** issues stop a release; fix them all. **Warnings** are worth
+a look. This page says how to fix each one. [Run the checks](/guide/checks/run-checks) shows how to
+open them.
+
+Checks of their own have pages of their own: [references, images and terms](/guide/checks/references),
+[translations](/guide/checks/translation), [PDF accessibility](/guide/checks/pdf-accessibility) and
+[the page layout](/guide/checks/layout-warnings).
+
+## Content that the settings do not know
+
+All blocking. A module, a block or a condition names something the project settings do not have.
+Choose **Open** or **Go to block** and pick a value that exists, or ask an administrator to add it
+in **Admin** › **Project settings**.
+
+- **Unknown module type**, **Unknown audience**, **Unknown language**: the module's details. A
+  module with an unknown audience is left out of every manual.
+- **Unknown facet**, **Unknown facet value**: the module's details.
+- **Unknown safety symbol**: a safety notice's **Symbols**.
+- **Unknown text attribute**, **Unknown variant attribute**, **Unknown variant value**: a text
+  attribute in the text, or a variant block's condition.
+- **Unknown callout style**: a callout on an image.
+- **Version comparison on a list**, **Invalid version**: a condition compares versions on an
+  attribute that is not a version, or a value is not a version number. Change the condition.
+
+## Variants and text attributes
+
+- **Variant attribute not set** (blocking): one of the manual's variants does not set an attribute
+  a condition tests, so the content under it is left out. Give the variant the attribute.
+- **Text attribute not set** (blocking): a variant has no value for a text attribute the content
+  uses. Give the manual a value for it.
+- **Inconsistent variants** (warning): the manual's variants set different attributes. Let each
+  variant set the same ones.
+
+## Placeholders and unreadable files
+
+- **Placeholder in a module** (blocking): a placeholder belongs only in a page design's text. Take
+  it out of the module.
+- **Unknown placeholder** (blocking): a placeholder names no known value. Correct it.
+- **Unreadable module**, **Unreadable manual** (blocking): the file cannot be read, usually after a
+  change outside the editor. Ask an administrator to repair or remove it.
+
+## Blocks
+
+All warnings.
+
+- **Passthrough content**: kept as it was imported and printed unchecked. Convert it to blocks.
+- **Empty table**: every cell is empty. Fill it in or remove it.
+- **Snippet too large**: a snippet holds a heading or a module reference. Keep snippets to a few
+  blocks of text.
+
+## Manuals
+
+- **Above the manual’s audience** (warning): the module is for a narrower audience and is left out.
+  Check that this is intended.
+- **Address taken** (blocking): one manual's address is another manual's ID, so it opens the wrong
+  manual. Change the slug or the former address in the manual's delivery settings.
+- **Address access capped** (warning): the addresses are opened further than this server allows.
+  They open only as far as the server allows; an administrator decides.
+- **Cover image missing** (warning): choose the image again in the manual's settings.
+- **Cover image without source text** (blocking): write the cover image's alternative text in the
+  source language, in the manual's settings.
+- **Cover image for no variant** (warning): remove the cover image of a variant the manual does
+  not build.
+
+## Derived manuals
+
+A derived manual, such as a safety leaflet, gathers its content from a source manual by a rule. See
+[Make a safety leaflet](/guide/manuals/safety-leaflet).
+
+- **Source manual missing**, **Source is derived** (blocking): name an existing assembled manual
+  as the source.
+- **No module types to gather** (blocking): name the types in the rule, or ask an administrator to
+  mark the safety types in the module types.
+- **Wider audience than its source** (blocking): give the derived manual the source's audience or a
+  narrower one.
+- **Safety module left out**, **Safety notice left out** (warnings): the rule leaves out safety
+  content of the source. Check that this is intended.
+- **Excluded module not in the source** (warning): remove it from the rule.
+- **Nothing gathered** (warning): the rule gathers nothing; it holds only its own front and back
+  matter. Widen the rule.

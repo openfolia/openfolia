@@ -1,0 +1,36 @@
+CREATE TABLE "release_outputs" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"release_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"manual_id" text NOT NULL,
+	"variant" text NOT NULL,
+	"lang" text NOT NULL,
+	"audience" text,
+	"state" text NOT NULL,
+	"sha256" text,
+	"size" bigint,
+	"error_code" text,
+	"error_detail" text,
+	"reused_from_release" uuid,
+	"reused_from_output" uuid,
+	"attempts" integer DEFAULT 0 NOT NULL,
+	"retries" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone NOT NULL,
+	"finished_at" timestamp with time zone,
+	CONSTRAINT "release_outputs_kind" CHECK ("release_outputs"."kind" in ('pdf')),
+	CONSTRAINT "release_outputs_state" CHECK ("release_outputs"."state" in ('queued', 'rendering', 'done', 'failed')),
+	CONSTRAINT "release_outputs_manual_id" CHECK (char_length("release_outputs"."manual_id") between 1 and 200),
+	CONSTRAINT "release_outputs_variant" CHECK (char_length("release_outputs"."variant") between 1 and 1000),
+	CONSTRAINT "release_outputs_lang" CHECK (char_length("release_outputs"."lang") between 1 and 35),
+	CONSTRAINT "release_outputs_audience" CHECK ("release_outputs"."audience" is null or char_length("release_outputs"."audience") between 1 and 64),
+	CONSTRAINT "release_outputs_file" CHECK (("release_outputs"."state" = 'done') = ("release_outputs"."sha256" is not null and "release_outputs"."size" is not null)),
+	CONSTRAINT "release_outputs_sha256" CHECK ("release_outputs"."sha256" is null or "release_outputs"."sha256" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "release_outputs_size" CHECK ("release_outputs"."size" is null or "release_outputs"."size" >= 0),
+	CONSTRAINT "release_outputs_error" CHECK (("release_outputs"."error_code" is null) = ("release_outputs"."error_detail" is null) and ("release_outputs"."error_detail" is null or char_length("release_outputs"."error_detail") <= 1000) and ("release_outputs"."error_code" is null or char_length("release_outputs"."error_code") between 1 and 100)),
+	CONSTRAINT "release_outputs_reused_from" CHECK (("release_outputs"."reused_from_release" is null) = ("release_outputs"."reused_from_output" is null)),
+	CONSTRAINT "release_outputs_counts" CHECK ("release_outputs"."attempts" >= 0 and "release_outputs"."retries" >= 0)
+);
+--> statement-breakpoint
+ALTER TABLE "release_outputs" ADD CONSTRAINT "release_outputs_release_id_releases_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."releases"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "release_outputs_subject_idx" ON "release_outputs" USING btree ("release_id","manual_id","variant","lang","kind");

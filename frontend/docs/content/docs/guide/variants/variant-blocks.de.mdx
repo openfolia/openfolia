@@ -1,0 +1,48 @@
+---
+title: 'Text für einige Varianten'
+description: 'Ein Variantenblock enthält Text, den nur einige Varianten bekommen: einen einfügen und seine Bedingung setzen.'
+articleId: 'guide.variants.variant-blocks'
+---
+
+Ein Produkt gibt es oft in Varianten, etwa ein kleines und ein großes Modell. Der Großteil eines
+Moduls ist für alle gleich. Setzen Sie, was sich unterscheidet, in einen Variantenblock: Nur die
+Varianten, die Sie wählen, bekommen ihn.
+
+Die Variantenmerkmale (etwa **Model**) und ihre Werte (etwa **Small** und **Large**) stehen in den
+Projekteinstellungen. Fragen Sie Ihren Admin, wenn einer fehlt.
+
+## Einen Variantenblock einfügen
+
+1. Setzen Sie die Einfügemarke dorthin, wo der Text stehen soll.
+2. Wählen Sie **Einfügen** und dann **Variantenblock**. Oder tippen Sie `/variante` und drücken Sie
+   <kbd>Eingabe</kbd>.
+3. Der Rahmen zeigt **Noch keine Varianten gewählt**. Wählen Sie die Varianten, die ihn bekommen
+   (siehe unten).
+4. Schreiben Sie den Text in den Rahmen des Blocks.
+
+Der Rahmen sagt, für wen er ist: **Angezeigt für** **Model: Large**.
+
+## Die Varianten wählen
+
+1. Wählen Sie **Varianten wählen** im Rahmen des Blocks, oder **Varianten ändern**, wenn er schon
+   welche hat.
+2. Kreuzen Sie unter **Diesen Block anzeigen für** die Werte jedes Merkmals an. **ist** behält die
+   angekreuzten Werte, **ist nicht** alle anderen. Tippen Sie in **Variantenmerkmal oder Wert
+   suchen**, um einen schnell zu finden.
+3. Bei mehr als einem Merkmal wählen Sie unter **Regel**, ob **Alle Gruppen müssen passen** oder
+   **Eine Gruppe genügt**.
+4. Prüfen Sie, worin der Block landet: **Erscheint in** listet die Builds der Handbücher, die ihn
+   bekommen.
+5. Wählen Sie **Übernehmen**.
+
+![Der Dialog Diesen Block anzeigen für, mit Model ist Large angekreuzt](/images/guide/de/variant-picker.webp)
+
+**Bedingung als Text** zeigt dieselbe Regel ausgeschrieben, etwa `model in (large)`. Sie können
+sie dort auch tippen.
+
+Um den Block wieder für jede Variante zu zeigen, wählen Sie **Bedingung entfernen**.
+
+## Prüfen, was eine Variante bekommt
+
+Öffnen Sie die [Vorschau](/de/guide/writing/preview) und wählen Sie eine Variante. Der Hinweis über
+der Vorschau nennt die Blöcke, die für sie ausgeblendet sind.

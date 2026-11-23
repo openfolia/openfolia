@@ -1,0 +1,153 @@
+---
+title: 'Search and semantic search'
+description: 'Search in Postgres, finding by meaning with an embeddings endpoint and pgvector, and how long the search index keeps text.'
+articleId: 'guide.self-hosting.semantic-search'
+---
+
+By default the server indexes the content in Postgres as readers search: words in any of their
+forms in the content's language, and typos in titles and keywords. Nothing to set up.
+`CCMS_SEARCH_ADAPTER=memory` searches in each server's memory instead, by word matching alone,
+for small installations.
+
+## Find by meaning
+
+Semantic search is off by default, and then no text leaves the server. With it, a search for
+"replace the cell" also finds "change the battery". It needs an embeddings endpoint and pgvector
+in Postgres.
+
+**When it is on, module text leaves the server.** A background job posts every indexed text to
+the endpoint (titles, keywords, block and FAQ text of what readers searched, the drafts of change
+sets included for their authors), and every search posts its query. Run the model yourself,
+beside the API on the same network, unless you accept that the content goes to a hosted provider.
+
+1. **Postgres with pgvector.** `deploy/compose.vector.yaml` builds the same Postgres as
+   `compose.yaml` with pgvector compiled in. It works on the existing `postgres` volume, with
+   nothing to dump or restore:
+
+   ```sh
+   docker compose -f compose.yaml -f compose.vector.yaml up -d --build --wait
+   ```
+
+   Name both files in every later `docker compose` command, or set
+   `COMPOSE_FILE=compose.yaml:compose.vector.yaml` in `deploy/.env`. A managed Postgres needs the
+   `vector` extension available; the API creates it itself.
+
+2. **The endpoint,** in `deploy/api.env`:
+
+   ```sh
+   CCMS_EMBEDDER_URL=http://embedder:8000/v1/embeddings   # the full URL requests are posted to
+   CCMS_EMBEDDER_MODEL=<the model's name>
+   CCMS_EMBEDDER_DIMENSIONS=384                           # the length of the model's vectors
+   ```
+
+   Any endpoint that takes `{ "model", "input": [texts] }` and answers
+   `{ "data": [{ "embedding": [...], "index": 0 }] }` works. If it needs a key, give it from a file,
+   `CCMS_EMBEDDER_API_KEY_FILE`, set under the `api` and `worker` services in a
+   `compose.override.yaml` as the [blob store](/guide/self-hosting/blob-store) shows, never in
+   `api.env`; with a key, the URL must be `https://` (except to localhost). The URL never holds
+   credentials, a query or a fragment. Compose reads the override only when no `-f` and no
+   `COMPOSE_FILE` is given: see [Your own additions](/guide/self-hosting/quick-start#step-by-step).
+
+3. Restart the API and the workers: `docker compose up -d --wait`.
+
+The server embeds the indexed text in the background (the job `search.embed`), creates the vector
+index on the first search, and finds by meaning once the text is embedded. If the endpoint is
+down, search goes on by words and the job tries again. Without pgvector, the API logs it and
+searches by words.
+
+`CCMS_EMBEDDER_TIMEOUT_MS` bounds one request to the endpoint (default 10 s).
+`CCMS_EMBEDDER_MIN_SIMILARITY` (0 to 100, default 50) sets how close a meaning has to be to be
+found by meaning alone: raise it if unrelated results show up, lower it if paraphrases are
+missed. Changing the model or its dimensions embeds everything again.
+
+## The local embedding worker
+
+`deploy/compose.embedder.yaml` runs a small embedding model on the CPU beside the API, so
+semantic search works without any text leaving the installation. The worker makes no network
+call of any kind: you fetch the model once yourself, and it runs on a network with no route out.
+Without the file, nothing changes.
+
+1. **Fetch a model, once.** Any sentence-embedding model exported to ONNX, with its
+   `tokenizer.json`, that is:
+
+   - **multilingual**, covering the languages of your content;
+   - made for **sentence embeddings** (texts that mean the same get close vectors);
+   - of **at most 2,000 dimensions**;
+   - under a licence that lets you run it.
+
+   A small model of about 100 million parameters and 384 dimensions is enough. Its model card
+   says which pooling it uses (`mean` or `cls`) and whether it expects a prefix.
+
+   ```sh
+   cd deploy
+   mkdir -p embedder-model
+   curl -fL -o embedder-model/model.onnx     <the model's ONNX file>
+   curl -fL -o embedder-model/tokenizer.json <its tokenizer.json>
+   sha256sum embedder-model/model.onnx embedder-model/tokenizer.json
+   ```
+
+2. **Pin it,** in `deploy/.env`:
+
+   ```sh
+   CCMS_EMBEDDER_MODEL=<a name for it>
+   CCMS_EMBEDDER_DIMENSIONS=384
+   CCMS_EMBEDDER_MODEL_SHA256=<the checksum of model.onnx>
+   CCMS_EMBEDDER_TOKENIZER_SHA256=<the checksum of tokenizer.json>
+   ```
+
+   Add `CCMS_EMBEDDER_POOLING=cls` or `CCMS_EMBEDDER_PREFIX` if the model card asks for them. A
+   file whose checksum differs is refused, and the worker does not start. The compose file sets
+   the API's `CCMS_EMBEDDER_URL`, `_MODEL` and `_DIMENSIONS` itself; leave them and
+   `CCMS_EMBEDDER_API_KEY` out of `api.env`.
+
+3. **Start** with pgvector and the worker:
+
+   ```sh
+   docker compose -f compose.yaml -f compose.vector.yaml -f compose.embedder.yaml up -d --build --wait
+   ```
+
+   Name all three files in every later command, or set
+   `COMPOSE_FILE=compose.yaml:compose.vector.yaml:compose.embedder.yaml` in `deploy/.env`.
+
+The worker publishes no port: only the API and the workers reach it. It loads the model once,
+embeds one request at a time on `CCMS_EMBEDDER_THREADS` threads (default 2) and lets
+`CCMS_EMBEDDER_QUEUE` requests wait (default 8). `OPENFOLIA_EMBEDDER_MEMORY` (default 2g) and
+`OPENFOLIA_EMBEDDER_CPUS` (default no limit) bound its container. A small model needs about
+500 MB of memory and embeds a query in milliseconds. The [settings reference](/reference/settings),
+"Embedding worker", lists every setting.
+
+## How long the index keeps text
+
+The search index is derived data. A sweep runs every hour on each process that does background
+work (`CCMS_ROLE` `all` or `worker`), bounded per run:
+
+- A commit's index that no reader searched for `CCMS_SEARCH_SWEEP_AFTER_DAYS` (default 7) is
+  dropped, then the documents no index names any more.
+- Text no document uses for that long is dropped too, with its embeddings of every model.
+- So the text of a deleted draft, or of content changed since an old commit, is gone from the
+  database about twice that period after it was last searched.
+- After the model changes or semantic search is turned off, the old model's embeddings are kept
+  for `CCMS_SEARCH_MODEL_KEPT_DAYS` (default 7), so switching back embeds nothing again. Then the
+  sweep drops them and logs it.
+
+A commit's index is stored as member sets shared with the commits before it, so a new commit
+stores only the sets its changes touch, not a row per document.
+
+## Rebuild the index
+
+```sh
+docker compose exec api node dist/modules/index-rebuild.main.js
+```
+
+This rebuilds the module index and empties the search index; the next search of each commit
+writes it again. It keeps the texts and their embeddings, so only new text is embedded. With
+`--drop-embeddings`, every embedding goes too: everything searched afterwards is sent to the
+endpoint again, and paid for again with a hosted one.
+
+## Limits
+
+`CCMS_SEARCH_PER_MINUTE` (searches per reader and minute), `CCMS_SEARCH_TIMEOUT_MS` (the time
+one search may spend in the database) and `CCMS_SEARCH_CONCURRENCY` (searches at once per
+server) protect the server. Each server counts its own. The
+[settings reference](/reference/settings) gives their ranges and defaults, and
+[Search API](/guide/integrations/search) what a client sees.

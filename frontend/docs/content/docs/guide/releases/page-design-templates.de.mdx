@@ -1,0 +1,84 @@
+---
+title: 'Eigene Vorlagen'
+description: 'Die Typst-Dateien einer eigenen Vorlage für Seitengestaltungen im Editor bearbeiten, mit Live-Vorschau und den Fehlern des Compilers an ihrer Zeile.'
+articleId: 'guide.releases.page-design-templates'
+---
+
+Eine eigene Vorlage setzt das PDF eines Handbuchs mit eigenen Typst-Dateien statt mit denen des
+Layouts (siehe [Seitengestaltungen](/de/guide/releases/page-designs#eigene-vorlagen)). Ihre
+Dateien sind Inhalt: Sie ändern sie in einer eigenen Überarbeitung, im Editor oder indem Sie sie
+in das Inhalts-Repository übertragen, und sie gelten, sobald die Überarbeitung übernommen ist.
+
+## Eine Vorlage öffnen
+
+1. Beginnen Sie eine eigene Überarbeitung im Entwurf, oder wählen Sie eine.
+2. Wählen Sie in der Seitenleiste **Verwaltung**, dann **Seitengestaltung**.
+3. Wählen Sie unter **Eigene Vorlagen** die Vorlage. Aus einer Gestaltung, die sie nutzt, öffnet
+   sie auch **Dateien der Vorlage bearbeiten** neben **Vorlage**.
+
+Die Ansicht zeigt links die Dateien der Vorlage, in der Mitte die gewählte Datei und rechts eine
+Live-Vorschau. Eine Vorlage zu ändern braucht eine Rolle, die alle Inhalte bearbeiten darf, wie
+bei einer Seitengestaltung; alle anderen sehen sie schreibgeschützt, mit dem Grund.
+
+## Eine neue Vorlage beginnen
+
+1. Wählen Sie unter **Eigene Vorlagen** **Neue Vorlage**.
+2. Geben Sie ihr einen Namen: Kleinbuchstaben, Ziffern und Bindestriche, etwa `hausstil`. Er
+   wird der Ordner `templates/<Name>/`.
+3. Wählen Sie **Anlegen**. Die neue Vorlage beginnt als Kopie der Beispielvorlage, des Layouts
+   **Klassisch** als eigene Dateien: `manual.typ`, `design.typ` und `default.typ`. Sie druckt
+   genau, was **Klassisch** druckt, bis Sie sie ändern.
+
+Um sie zu nutzen, wählen Sie sie in einer Seitengestaltung unter **Vorlage** (**Layout**).
+
+## Eine Datei bearbeiten
+
+Wählen Sie eine Datei in der Liste. Der Code-Editor färbt Typst (und YAML, JSON und SVG) und
+nummeriert die Zeilen.
+
+- **Tab** rückt die Zeile oder die gewählten Zeilen ein, **Umschalt+Tab** nimmt den Einzug
+  zurück, und **Eingabe** behält den Einzug der Zeile. Um den Editor mit der Tastatur zu
+  verlassen, drücken Sie **Escape** und dann **Tab**.
+- Was Sie tippen, wird kurz nach dem Tippen in Ihrer Überarbeitung gespeichert, und die Vorschau
+  aktualisiert sich. **Strg+S** (**Cmd+S** auf dem Mac) macht es sofort zu einem
+  Speicherpunkt der Überarbeitung; das geschieht auch nach einer kurzen Pause und wenn Sie die
+  Ansicht verlassen.
+- Ein Punkt in der Liste markiert die Dateien, die Ihre Überarbeitung geändert hat.
+- Bilder und Schriften im Ordner der Vorlage werden aufgeführt, aber hier nicht bearbeitet:
+  Übertragen Sie sie in das Inhalts-Repository.
+
+Eine Datei fasst höchstens 256 KiB Text. Eine größere wird erst wieder gespeichert, wenn sie
+kleiner ist.
+
+## Eine Datei hinzufügen oder löschen
+
+- **Neue Datei** fragt nach ihrem Pfad im Ordner der Vorlage, etwa `parts/notice.typ`. Ein Pfad
+  hat Ordner und einen Namen aus Buchstaben, Ziffern, `_`, `.` und `-`, höchstens 8 Namen tief (der eigene mitgezählt)
+  und 150 Zeichen lang, und endet mit einer Text-Endung: `.typ`, `.yaml`, `.yml`, `.json`,
+  `.toml`, `.csv`, `.txt`, `.xml`, `.svg` oder `.bib`.
+- **Löschen** entfernt die geöffnete Datei in Ihrer Überarbeitung aus der Vorlage. `manual.typ`,
+  der Einstieg der Vorlage, kann nicht gelöscht werden.
+
+## Die Live-Vorschau
+
+Die Vorschau setzt ein kleines Handbuch, das jede Funktion nutzt, die eine Vorlage festlegt: die
+Titelseite, Fließtext mit jeder Auszeichnung, jede Gefahrenstufe und jeden Hinweis, Schritte,
+eine Liste, eine Tabelle, einen Abschnitt, einen FAQ-Eintrag. Blättern Sie mit den Pfeilen durch
+die Seiten. Sie nutzt die Einstellungen der ersten Gestaltung, die die Vorlage nennt (sonst die
+der eingebauten Gestaltung); wählen Sie unter **Vorschau mit** eine andere.
+
+## Wenn die Vorlage einen Fehler hat
+
+Wenn sich die Vorlage nicht setzen lässt, wird die Vorschau grau, und unter dem Code stehen
+die Probleme: Datei, Zeile und Spalte und die Meldung des Compilers. Die Zeilen sind im Editor
+markiert und die Datei in der Liste. Wählen Sie ein Problem, um seine Datei an seiner Zeile zu
+öffnen.
+
+Die Prüfungen der Überarbeitung melden **Vorlage der Seitengestaltung fehlerhaft** an jeder
+Gestaltung, die die Vorlage nennt, und die Überarbeitung lässt sich erst übernehmen, wenn die
+Vorlage behoben ist. Bis dahin bleibt die veröffentlichte
+Vorlage in Gebrauch.
+
+Eine Vorlage liest nur die Dateien ihres eigenen Ordners und die der Gestaltung, nie Dateien des
+Servers, eine andere Vorlage oder das Netz. Eine Vorlage, die zu lange läuft oder zu viel
+Speicher braucht, wird angehalten, und die Vorschau nennt das als ihr Problem.

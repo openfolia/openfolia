@@ -1,0 +1,66 @@
+---
+title: 'Variantenmerkmale'
+description: 'Die Merkmale, in denen sich Varianten unterscheiden, und ihre Werte: in einer Überarbeitung anlegen, umbenennen, ordnen und archivieren.'
+articleId: 'guide.variants.attributes'
+---
+
+Varianten unterscheiden sich in Merkmalen, etwa dem Modell. Ein Merkmal ist entweder eine Menge
+von Werten, etwa „Small“ und „Large“, oder eine Version, die als Zahl verglichen wird.
+Variantenblöcke und Handbücher nennen sie in ihren Bedingungen. Die Merkmale gehören zu den
+Projekteinstellungen: Eine Änderung kommt in eine Überarbeitung und wird geprüft wie jede andere.
+
+## Die Merkmale öffnen
+
+Öffnen Sie **Verwaltung**, dann **Projekteinstellungen**, dann **Variantenmerkmale**. **Verwaltung
+› Varianten** enthält denselben Editor auf einer eigenen Seite (siehe
+[Die Seite Varianten](/de/guide/admin/variants)).
+
+Links stehen die Merkmale, jedes mit seinen Werten und wie viele Inhalte jeden Wert nutzen. Wählen
+Sie eines, um es rechts zu sehen: die Felder **Name** und **Schlüssel im Inhalt** und die Liste
+**Wo es verwendet wird**.
+
+![Das Thema Variantenmerkmale mit dem gewählten Wert Large, den Inhalten, die ihn nutzen, und seinen Builds](/images/guide/de/admin-variant-attributes.webp)
+
+Um etwas zu ändern, wählen oder beginnen Sie zuerst eine Überarbeitung. Jede Änderung wird sofort
+darin gespeichert.
+
+## Einen Wert hinzufügen
+
+1. Wählen Sie das Merkmal, dann **Wert hinzufügen**.
+2. Füllen Sie **Name** aus. Der **Schlüssel im Inhalt** entsteht daraus und lässt sich später
+   nicht ändern.
+3. Wählen Sie **Hinzufügen**.
+
+## Ein Merkmal hinzufügen
+
+1. Wählen Sie **Neues Merkmal**.
+2. Füllen Sie **Name** aus und wählen Sie die **Art**: **Menge von Werten** oder **Version**.
+3. Füllen Sie bei einer Menge von Werten **Erster Wert** aus. Eine Version hat keine festen Werte:
+   Bedingungen vergleichen sie als Zahl, etwa 2.10 nach 2.9.
+4. Wählen Sie **Hinzufügen**.
+
+## Umbenennen und ordnen
+
+- Ändern Sie das Feld **Name** eines Merkmals oder Werts und drücken Sie <kbd>Eingabe</kbd> oder
+  verlassen Sie das Feld. Der Schlüssel bleibt gleich, Inhalte funktionieren also weiter.
+- Ziehen Sie ein Merkmal oder einen Wert an seinem Griff, um die Reihenfolge zu ändern, oder
+  drücken Sie auf dem Griff <kbd>Alt</kbd> mit einer Pfeiltaste.
+
+## Einen Wert archivieren oder entfernen
+
+**Wo es verwendet wird** listet die Handbücher und Module, die den Wert nennen (**Inhalt**), und
+die Builds, in denen er vorkommt (**Builds**).
+
+- Einen Wert, den keine Inhalte nutzen, können Sie entfernen: **Entfernen**.
+- Einen Wert, den Inhalte noch nutzen, können Sie nicht entfernen. Wählen Sie stattdessen
+  **Archivieren**: Inhalte, die ihn nutzen, bleiben gültig, und Auswahllisten bieten ihn nicht
+  mehr an. **Wiederherstellen** bietet ihn wieder an.
+
+Auch ein Merkmal, das Inhalte noch nutzen, lässt sich nicht entfernen.
+
+## Die Änderung zur Prüfung geben
+
+Reichen Sie die Überarbeitung wie gewohnt zur Prüfung ein. Eine Änderung der Projekteinstellungen
+braucht unter Umständen eine Freigabe für jeden eingeschränkten Modultyp. Siehe
+[Einstellungen und Begriffe prüfen](/de/guide/review/configuration-changes). Wie Inhalte die Werte
+nutzen: [Text für einige Varianten](/de/guide/variants/variant-blocks).

@@ -1,0 +1,66 @@
+languages:
+  source: en
+  targets: [de, fr]
+moduleTypes:
+  - id: concept
+    label: { en: Concept, de: Konzept, fr: Concept }
+  - id: procedure
+    label: { en: Procedure, de: Handlungsanleitung, fr: Procédure }
+  - id: reference
+    label: { en: Reference, de: Referenz, fr: Référence }
+  - id: safety
+    label: { en: Safety information, de: Sicherheitshinweise, fr: Consignes de sécurité }
+    safety: true
+  - id: snippet
+    label: { en: Snippet, de: Textbaustein, fr: Fragment de texte }
+    snippet: true
+audiences:
+  - id: owner
+    label: { en: Owners, de: Fahrzeughalter, fr: Propriétaires }
+  - id: technician
+    label: { en: Service technicians, de: Servicetechniker, fr: Techniciens de maintenance }
+facets:
+  - id: product
+    label: { en: Product, de: Produkt, fr: Produit }
+    values:
+      - id: fenna
+        label: { en: Orvik Fenna, de: Orvik Fenna, fr: Orvik Fenna }
+variantAttributes:
+  - id: body
+    label: { en: Body style, de: Karosserie, fr: Carrosserie }
+    kind: enum
+    values:
+      - id: hatchback
+        label: { en: Hatchback, de: Schrägheck, fr: Berline à hayon }
+      - id: estate
+        label: { en: Estate, de: Kombi, fr: Break }
+  - id: drive
+    label: { en: Drive, de: Antrieb, fr: Motorisation }
+    kind: enum
+    values:
+      - id: petrol
+        label: { en: Petrol, de: Benzin, fr: Essence }
+      - id: electric
+        label: { en: Electric, de: Elektro, fr: Électrique }
+  - id: market
+    label: { en: Market, de: Markt, fr: Marché }
+    kind: enum
+    values:
+      - id: eu
+        label: { en: EU (left-hand drive), de: EU (Linkslenker), fr: UE (conduite à gauche) }
+      - id: uk
+        label: { en: UK (right-hand drive), de: UK (Rechtslenker), fr: Royaume-Uni (conduite à droite) }
+textAttributes:
+  - id: model-name
+    label: { en: Model name, de: Modellname, fr: Nom du modèle }
+  - id: tyre-size
+    label: { en: Tyre size, de: Reifengröße, fr: Dimension des pneus }
+safetySymbols:
+  - id: w001
+    label: { en: General warning, de: Allgemeines Warnzeichen, fr: Avertissement général }
+  - id: w012
+    label: { en: Electricity, de: Warnung vor elektrischer Spannung, fr: Danger électrique }
+  - id: w017
+    label: { en: Hot surface, de: Warnung vor heißer Oberfläche, fr: Surface chaude }
+release:
+  productFacet: product

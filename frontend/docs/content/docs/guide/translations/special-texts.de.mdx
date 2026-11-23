@@ -1,0 +1,78 @@
+---
+title: 'Texte von Seitengestaltung, Handbuch und Bezeichnungen'
+description: 'Texte außerhalb eines Moduls, die ebenfalls übersetzt werden: Titel- und Rückseitentexte einer Seitengestaltung, Legenden von Bildlegenden, Titel, Gruppentitel und Titelbildtext eines Handbuchs und die Bezeichnungen des Projekts.'
+articleId: 'guide.translations.special-texts'
+---
+
+Die meisten Texte stehen in Modulen. Einige stehen woanders und werden genauso übersetzt: Sie
+erscheinen im Übersetzungsstand, gehen in einem Delta-Export hinaus und kommen mit einem Import
+zurück.
+
+## Text einer Seitengestaltung
+
+Freier Text einer Seitengestaltung, etwa ein Untertitel oder ein Impressum auf der Rückseite, ist
+eine eigene Zeile im Tab **Stand**. Unter ihrem Namen steht **Seitengestaltung**.
+
+1. Wählen Sie **Übersetzungen** in der Seitenleiste.
+2. Wählen Sie die Zelle einer Seitengestaltung, etwa Classic in der Spalte DE.
+3. Die Details listen jeden Text, der Arbeit braucht, mit Quelle und Übersetzung. Platzhalter wie
+   `{product-name}` bleiben, wie sie sind.
+4. **Seitengestaltung öffnen** öffnet sie, um einen Text dort selbst zu übersetzen.
+
+![Die Details der Seitengestaltung Classic auf Deutsch: ihre Texte der Titelseite](/images/guide/de/translation-special-texts.webp)
+
+Hat eine Seitengestaltung einen Text in einer Sprache nicht, druckt sie dort den Text der
+Quellsprache. Die Prüfungen eines Handbuchs melden das.
+
+## Legenden von Bildlegenden
+
+Die Legende einer Bildlegende gehört zu ihrem Modul. Sie wird mit den anderen Blöcken des Moduls
+übersetzt und braucht nichts weiter.
+
+## Text des Handbuchs
+
+Der Titel eines Handbuchs, die Titel seiner Gruppen und der Alternativtext seines Titelbilds (für
+Screenreader) sind eine eigene Zeile, markiert mit **Text des Handbuchs**. Ihre Details nennen
+jeden Text: **Titel**, **Gruppentitel**, **Titelbild des Handbuchs** oder das Titelbild einer
+Variante. **Handbuch öffnen** öffnet das Handbuch. Dort können Sie eine Übersetzung auch selbst
+eingeben: siehe [Einstellungen des Handbuchs](/de/guide/manuals/settings).
+
+## Projekt-Bezeichnungen
+
+Die Bezeichnungen der Projekteinstellungen sind eine Zeile für das ganze Projekt,
+**Projekt-Bezeichnungen**, ganz oben in der Tabelle: Modultypen, Zielgruppen, Facetten und ihre
+Werte, Variantenattribute und ihre Werte, Textattribute und Sicherheitssymbole. PDFs und das Portal
+zeigen sie in der Sprache des Handbuchs, der Editor in der Oberflächensprache jeder Person. Ihre
+Details nennen jede Bezeichnung; **Projekteinstellungen öffnen** öffnet sie, um eine Übersetzung
+selbst einzugeben: siehe [Projekteinstellungen](/de/guide/admin/project-settings).
+
+Eine Bezeichnung, die in jeder Sprache gleich ist, etwa ein Produktname, gilt als nicht übersetzt,
+bis eine Übersetzung sie unverändert zurückbringt.
+
+## Exportieren und importieren
+
+Seitengestaltungen, Texte von Handbüchern, die Projekt-Bezeichnungen und Module gehen in getrennte
+Exporte. Wählen Sie im Tab **Stand** die Zeilen einer Art, dann **Delta-Export erstellen**. Die
+Zeile über der Tabelle nennt, was Sie gewählt haben, etwa **1 Seitengestaltung gewählt** oder
+**Projekt-Bezeichnungen gewählt**. Der Import bringt die Texte zurück in die Gestaltung, das
+Handbuch oder die Projekteinstellungen; die Bezeichnungen zu exportieren
+und zu importieren erfordert das Recht, die Projekteinstellungen zu ändern.
+
+Ändert sich der Quelltext, melden die Prüfungen des Handbuchs, wie viele Texte der
+Seitengestaltung oder des Handbuchs neu zu übersetzen sind. Der [Übersetzungsbericht](/de/guide/translations/reports) zählt diese Texte ebenfalls.
+
+## Wer einen Übersetzungsnachweis ändern darf
+
+Eine Seitengestaltung, ein Handbuch und die Projekteinstellungen führen je einen Nachweis, aus welchem Quelltext jede
+Übersetzung entstand. Der Import schreibt ihn. Nur wer Übersetzungen in eine Sprache verwaltet,
+darf den Eintrag dieser Sprache ändern. Das gilt für jeden Weg, auf dem eine Änderung in eine
+Überarbeitung gelangt: Speichern, ein Speicherpunkt, **Von main aktualisieren**, das Fortführen
+einer Überarbeitung und das Einreichen.
+
+Würde eine Änderung von jemand anderem den Eintrag einer Sprache ändern, die diese Person nicht
+verwaltet, wird sie abgelehnt und nichts gespeichert. Der Editor meldet **Die Anfrage war
+ungültig.** Lassen Sie den Nachweis, wie er ist, oder fragen Sie jemanden, der die Übersetzungen
+verwaltet.
+
+Die Seitengestaltung oder das Handbuch aus der Überarbeitung zu nehmen (**Aus dieser Überarbeitung
+nehmen** in **Prüfung**) ist immer erlaubt: Es stellt den Nachweis so wieder her, wie main ihn hat.

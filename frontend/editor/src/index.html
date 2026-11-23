@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Editor</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // The theme before the first paint, so a reload never flashes the other one. The same
+      // rule as ThemeService (@openfolia/ui): the remembered choice, else the device's setting.
+      (function () {
+        var choice = null;
+        try {
+          choice = localStorage.getItem('of-theme');
+        } catch (e) {}
+        var dark =
+          choice === 'dark' ||
+          (choice !== 'light' &&
+            !!window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
+  </head>
+  <body>
+    <of-root></of-root>
+  </body>
+</html>

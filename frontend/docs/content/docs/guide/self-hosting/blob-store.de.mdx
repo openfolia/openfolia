@@ -1,0 +1,95 @@
+---
+title: 'Blob-Speicher'
+description: 'Wo Bilder, Anhänge und Dateien der Veröffentlichungen liegen: in einem Ordner auf dem Daten-Volume oder in einem S3-kompatiblen Bucket.'
+articleId: 'guide.self-hosting.blob-store'
+---
+
+Binärdateien (Bilder, Anhänge, archivierte PDFs der Veröffentlichungen) liegen nach ihrem SHA-256
+in einem Blob-Speicher, nie in Git: Ein Modul verweist über den Hash auf ein Bild, sodass ein Tag
+einer Veröffentlichung genau seine Bilder festhält. Zwei Speicher sind eingebaut, gewählt mit
+`CCMS_BLOB_DRIVER`.
+
+## Ein Ordner (`fs`)
+
+Die Container-Images setzen standardmäßig `CCMS_BLOB_DRIVER=fs` mit
+`CCMS_BLOB_FS_ROOT=/data/blobs` auf dem Volume `data`. Es ist nichts einzurichten. Das passt für
+eine Maschine: API und Worker müssen alle denselben Ordner sehen. Der
+[Backup-Dienst](/de/guide/self-hosting/backups) sichert ihn mit der Datenbank.
+
+## S3-kompatibler Speicher (`s3`)
+
+Für mehrere Hosts, oder um die Dateien von der Platte des Servers fernzuhalten, nehmen Sie einen
+beliebigen S3-kompatiblen Dienst.
+
+1. Legen Sie einen Bucket an und halten Sie ihn privat: Die API liefert jede Datei selbst aus,
+   nachdem sie geprüft hat, wer sie lesen darf, nie über eine Bucket-URL.
+2. Legen Sie einen Zugriffsschlüssel an, mit `s3:GetObject`, `s3:PutObject` und
+   `s3:DeleteObject` auf den Objekten des Buckets und `s3:ListBucket` auf dem Bucket.
+3. Tragen Sie die Einstellungen in `deploy/api.env` ein (API und Worker lesen sie beide):
+
+   ```sh
+   CCMS_BLOB_DRIVER=s3
+   CCMS_S3_ENDPOINT=https://s3.example.com     # leer für AWS S3 selbst
+   CCMS_S3_REGION=us-east-1                    # der Standard; die meisten Dienste nehmen jede an
+   CCMS_S3_BUCKET=docs-blobs
+   CCMS_S3_FORCE_PATH_STYLE=true               # die meisten selbst betriebenen Dienste brauchen Pfad-URLs
+   ```
+
+   Geben Sie den Schlüssel aus Dateien, als Compose-Secrets in einer `compose.override.yaml` neben
+   `compose.yaml`. Nennen Sie die `_FILE`-Einstellungen dort, unter den Diensten `api` und `worker`,
+   nie in `api.env`: Auch der Backup-Dienst liest `api.env` und hält an, wenn er eine dort genannte
+   `_FILE`-Datei nicht lesen kann. Die Datei gehört dem Benutzer des Containers und ist für
+   niemanden sonst lesbar (`chown 1000` und `chmod 400` für jede Datei, `chmod 700` für
+   `/srv/secrets`). Compose liest die Ergänzung nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben
+   ist: siehe [Eigene Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt).
+
+   ```yaml
+   services:
+     api:
+       environment:
+         CCMS_S3_ACCESS_KEY_ID_FILE: /run/secrets/s3-access-key-id
+         CCMS_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3-secret-access-key
+       secrets: [s3-access-key-id, s3-secret-access-key]
+     worker:
+       environment:
+         CCMS_S3_ACCESS_KEY_ID_FILE: /run/secrets/s3-access-key-id
+         CCMS_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3-secret-access-key
+       secrets: [s3-access-key-id, s3-secret-access-key]
+   secrets:
+     s3-access-key-id:
+       file: /srv/secrets/s3-access-key-id
+     s3-secret-access-key:
+       file: /srv/secrets/s3-secret-access-key
+   ```
+
+   Oder setzen Sie `CCMS_S3_ACCESS_KEY_ID` und `CCMS_S3_SECRET_ACCESS_KEY` in `api.env` (beide
+   oder keinen). Mit keinem gilt die Kette des SDK:
+   `AWS_*`-Variablen, gemeinsame Zugangsdateien, eine Instanz- oder Task-Rolle. Die
+   Endpunkt-URL enthält nie Zugangsdaten.
+
+4. Starten Sie neu: `docker compose up -d --wait`.
+
+Jeder Upload geht mit seiner SHA-256-Prüfsumme hinaus; der Dienst weist Bytes ab, die nicht
+passen.
+
+**Backups:** Mit `s3` bleiben die Blobs in ihrem Bucket und sind nicht Teil der Backups des
+Servers. Schalten Sie für den Bucket die Versionierung (oder Object Lock) ein.
+
+## Zustand
+
+`GET /health` meldet `"blobs": "unavailable"`, wenn der Speicher nicht binnen 2 Sekunden
+antwortet, und `GET /health/ready` antwortet dann mit 503 `blob-store-unavailable`, sodass ein
+Load Balancer die Instanz aus der Rotation nimmt ([Datenbank](/de/guide/self-hosting/database),
+„Zustand“).
+
+## Bilder aus dem alten Ablageformat
+
+Inhalte von vor dem Blob-Speicher legten Bilder unter `assets/<sha256>` im Repository ab. Die API
+liest diese weiterhin. Um sie in den Speicher zu kopieren, führen Sie aus:
+
+```sh
+docker compose exec api node dist/blobs/import-git-assets.main.js
+```
+
+Das kopiert jede `assets/`-Datei am Stand jedes Branches und Tags, ändert nichts in Git und lässt
+sich wiederholen.

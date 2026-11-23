@@ -1,0 +1,21 @@
+= Warnleuchten
+:schema-version: 1
+:module-type: reference
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Warnleuchten
+
+[#intro]
+Eine rote Leuchte bedeutet: Halten Sie an, sobald es sicher möglich ist. Eine gelbe Leuchte bedeutet: Lassen Sie das Fahrzeug bald prüfen.
+
+[#lights-table,cols="1,2",options=header]
+.Warnleuchten und was zu tun ist
+|===
+|[[wl-h-light]]Leuchte |[[wl-h-do]]Was zu tun ist
+|[[wl-brake]]Bremsanlage (rot) |[[wl-brake-do]]Halten Sie an. Prüfen Sie den Bremsflüssigkeitsstand. Fahren Sie nicht weiter.
+|[[wl-airbag]]Airbag (rot) |[[wl-airbag-do]]Lassen Sie das Airbagsystem sofort prüfen.
+|[[wl-tyre]]Reifendruck (gelb) |[[wl-tyre-do]]Prüfen und korrigieren Sie den Reifendruck.
+|[[wl-battery]]12-V-Batterie (rot) |[[wl-battery-do]]Halten Sie an und rufen Sie die Pannenhilfe.
+|[[wl-power]]Reduzierte Leistung (gelb) |[[wl-power-do]]Fahren Sie vorsichtig weiter und lassen Sie das Fahrzeug prüfen.
+|===

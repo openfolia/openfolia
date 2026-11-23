@@ -1,0 +1,59 @@
+---
+title: 'Sehen, was übersetzt werden muss'
+description: 'Der Übersetzungsstand: jedes Modul, jede Seitengestaltung und jeder Titelbildtext je Sprache, und die Blöcke, die Arbeit brauchen.'
+articleId: 'guide.translations.status'
+---
+
+**Übersetzungen** zeigt, wie weit jede Übersetzung ist. Jedes Quellmodul ist eine Zeile, jede
+Übersetzungssprache eine Spalte. Jede Zelle sagt, ob die Übersetzung aktuell ist und wie viele
+Blöcke Arbeit brauchen.
+
+## Den Stand öffnen
+
+1. Wählen Sie **Übersetzungen** in der Seitenleiste. Der Tab **Stand** öffnet sich.
+2. Lesen Sie die Zellen. Die Legende über der Tabelle nennt die vier Zustände:
+   - **Aktuell**: Jeder Block ist aus dem aktuellen Quelltext übersetzt.
+   - **Veraltet**, etwa **2 veraltet**: Der Quelltext einiger Blöcke hat sich seit ihrer
+     Übersetzung geändert.
+   - **Bei der Agentur**: Die Blöcke wurden in einem Delta-Export gesendet und sind noch nicht
+     zurück.
+   - **Nicht übersetzt**: Es gibt noch keine Fassung in dieser Sprache.
+
+Ein Strich bedeutet, dass es in dieser Zelle nichts zu zeigen gibt.
+
+![Der Tab Stand mit der Matrix und den Details des Moduls Charging auf Deutsch](/images/guide/de/translation-status.webp)
+
+## Eingrenzen
+
+- **Handbuch**, **Ordner**, **Sprache** und **Anzeigen** filtern die Zeilen. **Anzeigen** wählt
+  einen Zustand, etwa **Veraltet**. **Filter zurücksetzen** zeigt wieder alles.
+- **Module suchen** findet eine Zeile über ihren Titel oder ihre ID.
+
+Der Stand folgt der oben gewählten Überarbeitung. Wählen Sie eine Überarbeitung im Entwurf, um zu
+sehen, wie ihre Änderungen die Übersetzungen betreffen.
+
+## Eine Übersetzung ansehen
+
+1. Wählen Sie eine Zelle. Die **Übersetzungsdetails** öffnen sich neben der Tabelle.
+2. Lesen Sie die Zusammenfassung, etwa **1 von 2 Blöcken braucht Arbeit**.
+3. Jeder Block, der Arbeit braucht, zeigt seinen Zustand, den Quelltext und die aktuelle
+   Übersetzung. Ein Block ohne Übersetzung zeigt **Noch nicht übersetzt**.
+
+Von hier öffnen **Quelle (Englisch) öffnen** und **Fassung (Deutsch) öffnen** das Modul im
+Editor. Für eine Sprache ohne Fassung beginnt **Übersetzung beginnen** eine. Siehe
+[Eine Sprachfassung beginnen](/de/guide/translations/new-language).
+
+Mit den Pfeiltasten wechseln Sie zwischen den Zellen. **Details schließen** schließt den Bereich.
+
+## Zeilen für den Export wählen
+
+Setzen Sie das Häkchen vor einer Zeile, um sie zu wählen, oder das in der Kopfzeile für alle
+Zeilen der Seite. Die Zeile über der Tabelle zählt sie, etwa **2 Module ausgewählt**.
+**Delta-Export erstellen** sendet dann nur diese. Siehe
+[Einen Delta-Export senden](/de/guide/translations/export).
+
+Auch Seitengestaltungen und Titelbildtexte sind Zeilen. Siehe
+[Texte von Seitengestaltung, Handbuch und Bezeichnungen](/de/guide/translations/special-texts).
+
+**Übersetzungen** gibt es für eine Rolle, die Übersetzungen verwaltet. Sie sehen die Sprachen, die
+Ihre Rolle verwaltet.

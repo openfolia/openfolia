@@ -1,0 +1,85 @@
+---
+title: 'Email'
+description: 'Send email through your own SMTP server: the settings, TLS, the password from a file, branded emails, checking it.'
+articleId: 'guide.self-hosting.email'
+---
+
+The server sends email through your own mail server (SMTP): invites, password reset links,
+sign-in codes and other messages. Without a mail server nothing is emailed, and the editor offers
+sign-in links to copy instead.
+
+Each email carries the product name, logo and colour from **Admin › Branding**, is written in the
+person's language (English or German), and has an HTML part and a plain-text part. Its links all
+start with `CCMS_PUBLIC_URL`.
+
+## Set it up
+
+1. Put the settings into `deploy/.env` (`compose.yaml` passes them to the API and to the workers,
+   which send the email):
+
+   ```sh
+   CCMS_MAIL_URL=smtp://mail.example.com:587        # or smtps://mail.example.com:465
+   CCMS_MAIL_FROM=docs@example.com                  # a bare address; the sender's name is the product name
+   CCMS_MAIL_USER=docs@example.com                  # only when the server wants a sign-in
+   CCMS_MAIL_PASSWORD_FILE=/run/secrets/mail-password
+   CCMS_PUBLIC_URL=https://docs.example.com/        # the base of every link in an email
+   ```
+
+   The URL holds the host and port only: never a user, a password, a path or a query.
+
+2. Give the containers the password file as a Compose secret, in a `compose.override.yaml`
+   beside `compose.yaml`:
+
+   ```yaml
+   services:
+     api:
+       secrets: [mail-password]
+     worker:
+       secrets: [mail-password]
+   secrets:
+     mail-password:
+       file: /srv/secrets/mail-password
+   ```
+
+   The containers' user must be able to read the file; keep it unreadable for others on the host.
+   `CCMS_MAIL_PASSWORD` works too, but the file wins when both are set. Compose reads the override
+   only when no `-f` and no `COMPOSE_FILE` is given: see [Your own
+   additions](/guide/self-hosting/quick-start#step-by-step).
+
+3. Start again: `docker compose up -d --wait`.
+
+## TLS
+
+- `smtps://` uses TLS from the first byte (port 465 by default).
+- On `smtp://` (port 587 by default), STARTTLS is required (`CCMS_MAIL_REQUIRE_TLS`, default
+  `true`): a server that offers no STARTTLS gets nothing, not even the sign-in. Set it to `false`
+  only for a relay on a network you trust.
+- The server's certificate is always checked. If a private authority signed it, set
+  `CCMS_MAIL_CA_FILE` to that authority's PEM file.
+
+## The secret key
+
+A queued email is sealed under the [instance secret key](/guide/self-hosting/secret-key), as it
+may hold a sign-in link. Without a key, email stays off: the API logs this at start-up, and
+**Admin › System** says why.
+
+## Language
+
+An email goes out in the person's language when the server knows it, otherwise in
+`CCMS_MAIL_LANGUAGE` (`en` or `de`, default `en`).
+
+## Check it
+
+1. Open **Admin › System**. The **Email** card shows the server, the TLS mode and the sender,
+   never the user or the password.
+2. Choose **Send a test email**. It goes to your own address.
+
+Emails are sent in the background and retried, six times at growing intervals; a refusal by the
+mail server is final at once. An email that fails for good is recorded in the
+[audit log](/guide/admin/audit-log) as `mail.failed`, with the reason, never its address or
+content.
+
+## What is kept
+
+A queued email waits in the database, sealed, until it is sent or has failed for good. Then it is
+deleted, so no email body stays stored.

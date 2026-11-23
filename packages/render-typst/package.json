@@ -1,0 +1,64 @@
+{
+  "name": "@openfolia/render-typst",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "render-typst",
+    "targets": {
+      "test": {
+        "inputs": [
+          "default",
+          "^production",
+          {
+            "fileset": "{projectRoot}/tsconfig.spec.json",
+            "dependencies": true
+          },
+          {
+            "json": "{workspaceRoot}/tsconfig.json",
+            "fields": [
+              "compilerOptions"
+            ]
+          },
+          {
+            "externalDependencies": [
+              "vitest"
+            ]
+          },
+          {
+            "env": "CI"
+          },
+          {
+            "dependentTasksOutputFiles": "**/*.js",
+            "transitive": true
+          },
+          "{workspaceRoot}/packages/render-html/src/render-html.css"
+        ]
+      }
+    }
+  },
+  "dependencies": {
+    "@openfolia/content-model": "workspace:*",
+    "@openfolia/theme": "workspace:*",
+    "@myriaddreamin/typst-ts-node-compiler": "0.7.0",
+    "@resvg/resvg-js": "2.6.2",
+    "qrcode-generator": "2.0.4",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "jsqr": "1.4.0"
+  }
+}

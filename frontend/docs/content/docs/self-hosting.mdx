@@ -1,0 +1,58 @@
+---
+title: Self-hosting
+description: Run OpenFolia on your own server with containers, Postgres and a Git repository you own.
+---
+
+OpenFolia runs as a few containers and Postgres, from one Compose file: `deploy/compose.yaml`.
+The full operator guide, with every option, is `deploy/README.md` in the repository; this page
+is its outline, and the [operator guide](/guide/self-hosting) has a page for each part.
+
+## What runs
+
+| Service    | What it is                                                                           |
+| ---------- | ------------------------------------------------------------------------------------ |
+| `postgres` | Operational state: users, roles, locks, comments, workflow, the audit log, an index. |
+| `api`      | The JSON:API, with Git, the PDF renderer, the fonts and the migrations.              |
+| `worker`   | Background work: release files, imports, webhooks, sweeps. Scales out.               |
+| `editor`   | The editor's static build behind nginx, which also proxies `/api` to the API.        |
+| `mcp`      | Optional: the MCP server for AI assistants over released content.                    |
+| `backup`   | Scheduled, encrypted, verified backups.                                              |
+
+Everything that persists is in three volumes: the database, the data volume (the content
+repository, the files and the instance secret key) and the backups.
+
+## Quick start
+
+A coding agent can do all of it for you, asking you at every decision: it follows the
+[install guide for agents](/agents), pinned to this release.
+
+<AgentInstall />
+
+You need Docker with Compose 2.24 or newer.
+
+1. **Settings:** create `deploy/.env` with at least `POSTGRES_PASSWORD` (generate it, for
+   example with `openssl rand -hex 24`), and keep the file: Postgres reads the password only on
+   its first start.
+2. **Images:** pull the published images for a pinned version (`OPENFOLIA_IMAGES`,
+   `OPENFOLIA_VERSION`), or build them from a checkout.
+3. **Content:** put your content repository on the data volume, or the sample content to try it.
+4. **Start:** `docker compose up -d --wait`, then check `GET /health`.
+5. **A first token** for API clients: a service account's token, printed once.
+
+## Settings
+
+The server is configured through its environment. Every setting, its format and its default is
+in the [settings reference](/reference/settings); [Configuration](/configuration) says which to
+look at first. Secrets can come from files (`<NAME>_FILE`), for example Compose secrets.
+
+## Operating it
+
+The operator guide (`deploy/README.md`) covers each of these in full:
+
+- **Content repository:** a bare Git repository on the data volume, the source of truth.
+- **Signing in:** service accounts and tokens; demo mode only for demonstrations.
+- **Backups:** scheduled, encrypted and verified, to a volume or S3-compatible storage.
+- **Upgrades:** read the [changelog](/changelog)'s upgrade notes, back up, pull the next pinned
+  version, start; migrations run on start.
+- **Reverse proxy with TLS:** the containers listen on `127.0.0.1` only, for a proxy in front.
+- **Workers:** the background roles and how to scale them.

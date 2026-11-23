@@ -1,0 +1,41 @@
+---
+title: 'PDF accessibility'
+description: 'Why a manual’s PDF is refused under PDF/UA-1, and what “not checked” means.'
+articleId: 'guide.checks.pdf-accessibility'
+---
+
+Every manual's PDF is made to PDF/UA-1, the standard for accessible PDF: tagged, so a screen reader
+can follow it, with a text for every image. A PDF that cannot meet it is not made. The checks of a
+manual try each variant in each language, so you learn of it before a release.
+
+## Run the PDF check
+
+Open the manual under **Manuals**, choose ⋯ at the top right, then **Run checks**. The checks of a
+revision do the same for each manual the revision changes. Making every PDF takes a moment; a
+manual with many variants and languages takes longer.
+
+## PDF not accessible
+
+**PDF not accessible** (blocking): the PDF of a variant in a language cannot meet PDF/UA-1. The
+details say why, for example **The PDF cannot meet PDF/UA-1: missing alt text**: an image without a
+text for screen readers. The issue names the variants it was found in.
+
+Fix it where the details point, often an image's alternative text in one language, and choose
+**Run again**. Until then the manual's PDF is refused with **The PDF cannot be made accessible
+(PDF/UA-1): the manual’s checks say why.**
+
+## PDF not checked
+
+**PDF not checked** (warning): the PDF could not be made at all, because it took too long or the
+template has an error. Its accessibility was therefore not checked. Open the manual's PDF to see
+the reason, then run the checks again.
+
+If the PDF service is busy, the checks do not pass over the PDF silently. They say **The PDF
+service is busy. Try again in a moment.**
+
+## When the project makes plain PDFs
+
+An administrator can set the project to make plain PDFs instead (`pdf.standard: none` in the
+project configuration). The PDFs are then not checked against PDF/UA-1. A manual with a page
+design is still made once to check its layout; see
+[Layout and page design warnings](/guide/checks/layout-warnings).

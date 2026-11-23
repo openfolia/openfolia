@@ -1,0 +1,22 @@
+= Remorquer le véhicule
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: remorquage
+
+[#intro]
+L'anneau de remorquage se trouve avec le cric sous le plancher du coffre.
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Ne remorquez le modèle électrique que sur un plateau, les quatre roues décollées du sol. S'il est remorqué sur ses roues, le moteur produit une tension qui peut endommager le véhicule.
+====
+
+[procedure#steps]
+.Monter l'anneau de remorquage
+. [[step-cover]]Appuyez sur le cache du pare-chocs au niveau de son repère jusqu'à ce qu'il se dégage.
+. [[step-screw]]Vissez l'anneau de remorquage à fond, dans le sens inverse des aiguilles d'une montre.
+. [[step-neutral]]Mettez le véhicule en marche et sélectionnez [.ui]##N##.

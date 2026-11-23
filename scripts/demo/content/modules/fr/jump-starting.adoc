@@ -1,0 +1,29 @@
+= Démarrage avec une batterie de secours
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: batterie, démarrage de secours
+
+[#intro]
+Si la batterie 12 V est déchargée, le véhicule ne démarre pas. Vous pouvez le démarrer avec des câbles de démarrage branchés sur un autre véhicule.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+La batterie 12 V se trouve dans le compartiment moteur, à gauche. Branchez les câbles de démarrage directement sur celle-ci.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Le modèle électrique possède lui aussi une batterie 12 V : elle met le système haute tension en marche. Branchez les câbles de démarrage uniquement sur les deux points de démarrage sous le capot, jamais sur le système haute tension.
+====
+
+[procedure#steps]
+.Démarrer le véhicule avec des câbles
+. [[step-red]]Branchez le câble rouge sur la borne positive ou le point de démarrage de votre véhicule, puis sur la borne positive de l'autre batterie.
+. [[step-black]]Branchez le câble noir sur la borne négative de l'autre batterie, puis sur le point de démarrage négatif ou sur une partie métallique nue de votre véhicule, à l'écart de la batterie.
+. [[step-start]]Démarrez l'autre véhicule, puis le vôtre.
+. [[step-remove]]Retirez les câbles dans l'ordre inverse.

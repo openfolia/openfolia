@@ -1,0 +1,130 @@
+---
+title: 'Self-hosting and operations'
+description: 'Running and maintaining an instance.'
+articleId: 'guide.self-hosting'
+---
+
+This section is for the person who runs the server. Writers, reviewers, translators and admins do
+not need it. Start with [What runs](/guide/self-hosting/overview) and the
+[Quick start](/guide/self-hosting/quick-start).
+
+Two references are generated from the source code: the [settings reference](/reference/settings)
+lists every setting, its format and its default, and the [error codes](/reference/errors) say
+what each error the server answers means. [Configuration](/configuration) tells the server's
+settings apart from each content repository's `openfolia.yaml`.
+
+What an admin does in the editor (users, backups, the system page) is under
+[Admin](/guide/admin).
+
+<Cards>
+  <Card
+    title="What runs"
+    href="/guide/self-hosting/overview"
+    description="The containers, the volumes, the locked-down images."
+  />
+  <Card
+    title="Quick start"
+    href="/guide/self-hosting/quick-start"
+    description="One command, or step by step, and the first admin."
+  />
+  <Card
+    title="Workers"
+    href="/guide/self-hosting/workers"
+    description="The API and the background work, scaled apart."
+  />
+  <Card
+    title="Content repository"
+    href="/guide/self-hosting/content-repository"
+    description="The bare Git repository on the data volume."
+  />
+  <Card
+    title="Authentication modes"
+    href="/guide/self-hosting/authentication"
+    description="Sign-in methods, token mode and demo mode."
+  />
+  <Card
+    title="Sign-in with OpenID Connect"
+    href="/guide/self-hosting/oidc"
+    description="Your identity provider, groups and sessions."
+  />
+  <Card
+    title="Sign-in with email and password"
+    href="/guide/self-hosting/password-sign-in"
+    description="Passwords, invites, reset links and lockout."
+  />
+  <Card
+    title="Sign-in with a code by email"
+    href="/guide/self-hosting/email-code-sign-in"
+    description="One-time codes by email, with or without passwords."
+  />
+  <Card
+    title="Reverse proxy with TLS"
+    href="/guide/self-hosting/reverse-proxy"
+    description="TLS, the client address, stable addresses and caches."
+  />
+  <Card
+    title="Coolify, a worked example"
+    href="/guide/self-hosting/coolify"
+    description="The Compose file as one resource, with a deploy webhook."
+  />
+  <Card
+    title="Email"
+    href="/guide/self-hosting/email"
+    description="Your SMTP server, TLS and the test email."
+  />
+  <Card
+    title="Blob store"
+    href="/guide/self-hosting/blob-store"
+    description="Files on the data volume or in an S3-compatible bucket."
+  />
+  <Card
+    title="Database"
+    href="/guide/self-hosting/database"
+    description="Postgres, migrations, readiness and the pool."
+  />
+  <Card
+    title="Instance secret key"
+    href="/guide/self-hosting/secret-key"
+    description="The key that seals stored secrets, and rotating it."
+  />
+  <Card
+    title="Backups on the server"
+    href="/guide/self-hosting/backups"
+    description="The backup service, verifying, restoring, S3."
+  />
+  <Card
+    title="After a restore"
+    href="/guide/self-hosting/after-a-restore"
+    description="The one step after a restore onto another database server."
+  />
+  <Card
+    title="Audit log sink and retention"
+    href="/guide/self-hosting/audit-log"
+    description="A sink for the audit log, and retention."
+  />
+  <Card
+    title="Search and semantic search"
+    href="/guide/self-hosting/semantic-search"
+    description="Search in Postgres, by meaning, and index retention."
+  />
+  <Card
+    title="Sizing and limits"
+    href="/guide/self-hosting/sizing"
+    description="Memory and CPU, benchmarks, package download bounds."
+  />
+  <Card
+    title="Upgrades"
+    href="/guide/self-hosting/upgrades"
+    description="Back up, pull, start: migrations run on start."
+  />
+  <Card
+    title="Smoke test"
+    href="/guide/self-hosting/smoke-test"
+    description="Checking a deployment, and the test scripts."
+  />
+  <Card
+    title="Licence and source"
+    href="/guide/self-hosting/licence"
+    description="The AGPL, the source offer and GET /about."
+  />
+</Cards>

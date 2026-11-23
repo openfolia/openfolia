@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmap PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap id="pump-manual" xml:lang="de">
+  <booktitle>
+    <mainbooktitle>Betriebsanleitung Gartenpumpe</mainbooktitle>
+  </booktitle>
+  <frontmatter>
+    <booklists>
+      <toc/>
+    </booklists>
+    <mapref href="keys.ditamap" processing-role="resource-only"/>
+  </frontmatter>
+  <chapter href="../topics/overview.dita">
+    <topicref href="../topics/specs.dita"/>
+  </chapter>
+  <chapter href="../topics/install.dita"/>
+  <chapter href="../topics/fault.dita" product="pro"/>
+</bookmap>

@@ -1,0 +1,94 @@
+---
+title: 'DITA-Import'
+description: 'Ein DITA-1.3-Projekt als Module, Handbücher, Varianten, Übersetzungen und Dateien übernehmen und lesen, was kein Gegenstück hatte.'
+articleId: 'guide.integrations.dita-import'
+---
+
+Ein in DITA gepflegtes Projekt kommt über denselben Import wie das
+[Importformat](/de/guide/integrations/import-format), mit dem Importer `dita`: Ein ZIP eines
+DITA-1.3-Projekts wird zu Modulen, Handbüchern, Varianten, Übersetzungen und Dateien, in einer
+neuen Überarbeitung zur Prüfung.
+
+## Zuerst das Projekt abbilden
+
+Wie die Namen von DITA auf Ihr Projekt abgebildet werden, steht unter `dita` in `openfolia.yaml`; nichts
+über das DITA eines Projekts steht im Code. Jeder Schlüssel ist optional:
+
+```yaml
+dita:
+  moduleTypes: { task: procedure } # Topic-Typ → Modultyp
+  outputclasses: { howto: procedure } # ein @outputclass-Token → Modultyp; geht moduleTypes vor
+  defaultModuleType: concept # jedes andere Topic
+  profiling:
+    product: { variantAttribute: model, values: { compact: small } }
+    audience: { audience: { user: public } }
+  textKeys: { prodname: product-name } # ein leeres <ph keyref="prodname"/> → ein Textattribut
+  hazardSymbols: { hot-surface.svg: w001 } # ein <hazardsymbol> → ein Sicherheitssymbol
+  ditavalDefault: none # eine DITAVAL-Datei, die keine Map nennt: none (Standard) oder all
+```
+
+Ohne Abbildung wird ein Profiling-Attribut, das wie ein Variantenmerkmal heißt, auf dieses
+abgebildet, und `audience` auf die Zielgruppen mit denselben IDs. Ein Wert, der nichts
+Konfiguriertes nennt, wird nicht abgewiesen: `GET /config` listet ihn in `meta.ditaIssues`, und der
+Import verwendet dort seinen Standard. Die [Referenz von `openfolia.yaml`](/de/reference/project-config)
+listet jeden Schlüssel.
+
+## Importieren
+
+1. Packen Sie das Projekt in ein ZIP: Maps, Topics, Bilder und DITAVAL-Dateien, in beliebigen
+   Ordnern. Legen Sie Übersetzungen in Ordner der obersten Ebene, die wie konfigurierte Sprachen
+   heißen (`de/`, `fr/`); alles andere ist die Ausgangssprache.
+2. Prüfen Sie es mit einem Probelauf, wie jeden Import, und nennen Sie den Importer. Wie jeder
+   Import geschieht er mit der Sitzung einer angemeldeten Person in `cookies.txt`, nicht mit dem
+   Token eines Service-Accounts. Machen Sie diese Datei nur für Sie lesbar, melden Sie sich ab und
+   löschen Sie sie, wenn Sie fertig sind:
+   [Für den Import anmelden](/de/guide/integrations/import-format#für-den-import-anmelden) zeigt,
+   wie.
+
+   ```sh
+   curl -s -b cookies.txt -H "X-Ccms-Request: 1" \
+     -F file=@project.zip -F importer=dita -F dryRun=true \
+     https://docs.example.com/api/imports
+   ```
+
+3. Lesen Sie `meta.report.converterReport`: was kein Gegenstück hatte, jeder Eintrag mit einem
+   festen Code in eckigen Klammern beginnend, etwa `[dropped-element]`. Nichts wird stillschweigend
+   verworfen.
+4. Laden Sie es ohne `dryRun` erneut hoch und übernehmen Sie es dann
+   (`POST /imports/<importId>/apply`), wie unter
+   [Importformat](/de/guide/integrations/import-format). Ein Topic, das der Import abweist (etwa
+   weil es zu groß ist), lässt sich mit `skipRefused` auslassen, wenn nichts anderes es braucht,
+   wie bei jedem Importer.
+
+## Wie abgebildet wird
+
+| DITA                                                         | Wird zu                                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| eine Root-Map oder Bookmap in der Ausgangssprache            | ein Handbuch                                                                   |
+| jede DITAVAL-Datei, die eine Root-Map nennt (`<ditavalref>`) | eine Variante dieses Handbuchs                                                 |
+| ein Topic der obersten Ebene                                 | ein Modul, seine ID aus seinem Pfad (`topics/install.dita` → `topics-install`) |
+| ein Topic am selben Pfad in einem Sprachordner               | die Übersetzung dieses Moduls                                                  |
+| Filterattribute (`@product`, `@audience`, …)                 | Variantenblöcke, nach der Profiling-Abbildung                                  |
+| Inhaltsverweise und Schlüssel                                | aufgelöst; ein leeres `<ph keyref>` ein Textattribut                           |
+| Bilder                                                       | Dateien                                                                        |
+
+Dasselbe Projekt ergibt immer dieselben IDs; ein erneuter Import aktualisiert also, was sich
+geändert hat, und überspringt den Rest. `docs/dita-import.md` im Repository enthält die ganze
+Abbildungstabelle und jeden Code des Berichts.
+
+## Was abgewiesen oder ausgelassen wird
+
+- **Sicheres Lesen:** Keine DTD wird gelesen oder abgerufen, keine Entität aufgelöst, und nur UTF-8
+  wird gelesen. Eine Datei, die der Leser abweist (`not-well-formed`, `dtd-subset`,
+  `unsupported-encoding`, `too-large`), wird gemeldet und ausgelassen; die übrigen werden
+  importiert.
+- **Nichts außerhalb des Archivs:** Ein Verweis, der das Archiv verlässt, führt ins Leere
+  (`outside-archive`), und nichts wird abgerufen (`external-reference`).
+- **Begrenzt:** Inhaltsverweisen, Schlüsseln und Maps wird nur bis zu einer festen Tiefe und Breite
+  gefolgt (`expansion-limit`). Die Umwandlung läuft in einem eigenen Prozess, begrenzt durch
+  `CCMS_IMPORT_CONVERT_MAX_MEMORY_MB` und `CCMS_IMPORT_CONVERT_TIMEOUT_MS`; wird eine Grenze
+  überschritten, ist der Import 422 `import-too-large`.
+- **Kein Gegenstück:** Indexeinträge, Beziehungstabellen, Bedingungen im Fließtext und Ähnliches
+  werden ausgelassen oder ohne ihre Aussage behalten, jeweils gemeldet.
+
+Der Weg zurück ist der [DITA-Export](/de/guide/releases/dita) einer Veröffentlichung.

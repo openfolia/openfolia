@@ -1,0 +1,18 @@
+= Prévenir les autres usagers
+:schema-version: 1
+:module-type: snippet
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[variant#eu,when="market in (eu)"]
+====
+[#text]
+Enfilez un gilet de haute visibilité et placez le [.term.warning-triangle]##triangle de présignalisation## à au moins 50 m derrière le véhicule, ou à 100 m sur autoroute.
+====
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Enfilez un gilet de haute visibilité. Sur autoroute, ne placez pas de [.term.warning-triangle]##triangle de présignalisation## : quittez le véhicule et attendez derrière la glissière de sécurité. Ailleurs, placez-le à au moins 45 m derrière le véhicule.
+====

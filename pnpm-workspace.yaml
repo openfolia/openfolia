@@ -1,0 +1,22 @@
+packages:
+  - 'packages/*'
+  - 'backend/*'
+  - 'frontend/*'
+  - 'scripts'
+  - 'connectors/*'
+allowBuilds:
+  # Usage telemetry pulled in by swagger-ui-dist; not needed.
+  '@scarf/scarf': false
+  '@swc/core': true
+  nx: true
+  # Angular's build (and drizzle-kit) use esbuild, Angular a file watcher; both ship prebuilt binaries.
+  esbuild: true
+  '@parcel/watcher': true
+  # Image renditions (backend/api); its install script only checks the prebuilt libvips binary.
+  sharp: false
+  # The embedding worker's ONNX runtime (backend/embedder): its install script downloads GPU libraries over
+  # the network; the CPU runtime it needs is in the package itself.
+  onnxruntime-node: false
+  # Optional caches; not needed.
+  lmdb: false
+  msgpackr-extract: false

@@ -1,0 +1,136 @@
+---
+title: 'Backups on the server'
+description: 'What the backup service saves and checks, its settings from the environment, restoring a backup, S3 targets and sizing.'
+articleId: 'guide.self-hosting.backups'
+---
+
+The `backup` service of `deploy/compose.yaml` makes encrypted, checked backups on a schedule. An
+admin sets it up in the editor ([Backups](/guide/admin/backups)): the backup key, the schedule,
+what to keep and where. This page is the server's side.
+
+## What a backup holds
+
+The content repository holds almost everything people make; the database holds the operational
+state. See [Almost everything is content](/guide/getting-started/content).
+
+| What                                                      | Where                                    |
+| --------------------------------------------------------- | ---------------------------------------- |
+| Content: modules, manuals, change sets, releases          | `/data/content.git` on the `data` volume |
+| Users, roles, comments, workflow, the audit log, jobs     | the `postgres` volume                    |
+| Images, attachments, archived release PDFs                | `/data/blobs` on the `data` volume       |
+| The [instance secret key](/guide/self-hosting/secret-key) | `/data/ccms-secret.key`                  |
+
+With the S3 blob store (`CCMS_BLOB_DRIVER=s3`), the blobs stay in their bucket and are not part of
+the backup: turn on versioning for that bucket. Keep `deploy/.env` safe as well: it holds the
+Postgres password. The module index and the search index are rebuilt from the content and need
+no backup.
+
+## What a run does
+
+1. Dumps the database (`pg_dump`) from one snapshot, with every table's row count and the blobs
+   it refers to.
+2. Bundles the content repository (`git bundle create --all`).
+3. Streams the dump, the bundle, the blobs and the instance secret key in one archive into
+   [age](https://age-encryption.org) encryption to the backup key. A run without a backup key is
+   refused; nothing unencrypted is written outside the `backup-staging` volume, which is emptied
+   whenever the service starts. Never copy that volume off the host.
+4. Checks the backup (below), stores it at its location and prunes old ones by the retention.
+
+A backup is named `openfolia-backup-<UTC time>-<run>.tar.age`. Only one run happens at a time,
+also across several backup services.
+
+```sh
+docker compose run --rm backup now    # a backup at once
+docker compose run --rm backup list   # the backups at the location in force
+```
+
+## Settings from the environment
+
+Every setting of the page can also come from a `CCMS_BACKUP_*` variable in `deploy/backup.env`
+(`CCMS_BACKUP_ENABLED`, `CCMS_BACKUP_SCHEDULE`, `CCMS_BACKUP_TIME_ZONE`, the
+`CCMS_BACKUP_RETENTION_*` counts, `CCMS_BACKUP_LOCATION` with its `CCMS_BACKUP_S3_*` settings,
+`CCMS_BACKUP_VERIFY`, `CCMS_BACKUP_VERIFY_BY_DECRYPTING`). A variable that is set wins: the page
+shows that field read-only and names the variable. An unset variable leaves the page's value,
+read at every pass without a restart. `CCMS_BACKUP_KEY_FILE` takes the backup key from an age
+identity file (`age-keygen -o key.txt`) instead of the page. Keep that file readable by the
+service's user only, and an offline copy of it, never at the backup location or in the `backups`
+volume. The [settings reference](/reference/settings) lists each with its format.
+
+## The check
+
+With **Verify after each run** on (the default), a backup counts only once it was restored
+somewhere safe: the dump into a throwaway database (always dropped afterwards), the row counts
+compared, the bundle cloned and checked with `git fsck`, and every blob's SHA-256 compared.
+
+- The database user needs `CREATEDB` (the compose user has it), or set
+  `CCMS_BACKUP_VERIFY_DATABASE_URL` to another server. That server needs about as much free
+  disk as the database.
+- **Verify by decrypting** (the default) decrypts the finished file. For that, the server keeps
+  the backup key's private half, sealed under the instance secret key: whoever holds the
+  database, the instance secret key and a backup can read the backup. Turned off, the server
+  keeps no private key and checks the parts before they are encrypted, and the file only by its
+  header, size and SHA-256.
+
+## Restore a backup
+
+Restore onto a fresh stack with the same `deploy/.env`. The restore refuses an instance that
+holds anything, unless given `--force`, and refuses while a backup runs. On a new host, restore
+before the first start: the first start makes the first admin, and the instance is then no
+longer empty.
+
+1. On a running stack, stop it first: `docker compose stop api worker backup`.
+2. Start the database alone: `docker compose up -d --wait postgres`.
+3. Restore, with the backup key on stdin:
+
+   ```sh
+   docker compose run --rm -T restore openfolia-backup-20261120T020000Z-72ad5ad9.tar.age --key-file - < key.txt
+   ```
+
+   From the S3 location instead of the backups volume, add `--s3` (it needs
+   `CCMS_BACKUP_LOCATION=s3` and its settings in `backup.env`).
+
+4. Finish the restore as [After a restore](/guide/self-hosting/after-a-restore) says, and, with
+   an audit log sink, its own step ([Audit log](/guide/self-hosting/audit-log)).
+5. Start the stack: `docker compose up -d --wait`.
+
+The restore checks the archive before writing anything, restores the database, clones the
+content repository from the bundle (an existing one is set aside as
+`content.git.before-restore-<time>`) and copies the blobs and the instance secret key.
+
+Restore only backups from your own location: anyone who knows the backup key's public half can
+make a file that decrypts. Keep the location writable only by the backup service (object lock or
+versioning on S3).
+
+## An S3 server on your own network
+
+The backup service refuses an S3 endpoint that resolves to a private or loopback address, and
+always a link-local or cloud metadata address. For an S3 server beside the stack, set
+`CCMS_BACKUP_S3_ALLOW_PRIVATE=true` in `backup.env`; the `restore` service reads it too.
+
+## Sizing
+
+A backup is about the size of the dump plus the content repository plus the blobs. With the
+default retention (7 daily, 4 weekly, 12 monthly: at most 23 backups), plan for 25 times a backup
+at the location. During a run the staging volume needs about twice a backup's size. Keep a copy
+off the host: an S3 location, or a copy of the `backups` volume.
+
+## A restore drill
+
+Once a quarter, restore the newest backup onto a second machine (or with another
+`COMPOSE_PROJECT_NAME`): sign in, open a manual, render a PDF, then remove that stack. So that
+the drill sends nothing to your systems, leave `CCMS_AUDIT_SINK_URL` unset there, skip the
+"After a restore" step and turn the webhooks off (`UPDATE webhooks SET active = false`).
+
+## By hand
+
+Without the backup service, the same parts with the stack running, the dump first:
+
+```sh
+umask 077
+docker compose exec -T postgres pg_dump -U openfolia -Fc openfolia > /srv/backups/openfolia/openfolia.dump
+docker compose exec -T api tar -C /data -cf - . > /srv/backups/openfolia/data.tar
+```
+
+`data.tar` holds the instance secret key, and the dump holds the users, the audit log and the
+sealed secrets: encrypt both before they leave the host (for example with `age -r <recipient>`),
+and keep them apart.

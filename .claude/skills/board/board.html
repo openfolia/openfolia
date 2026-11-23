@@ -1,0 +1,2939 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Working board</title>
+    <!-- One file on purpose: no build step, no CDN (the design's constraint), so its CSS and JS
+         are inline and it is longer than a component would be. -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f6d74'/%3E%3Crect x='7' y='8' width='8' height='16' rx='2' fill='%23fff'/%3E%3Crect x='17' y='8' width='8' height='7' rx='2' fill='%23fff' opacity='.75'/%3E%3Crect x='17' y='17' width='8' height='7' rx='2' fill='%23fff' opacity='.5'/%3E%3C/svg%3E"
+    />
+    <style>
+      /* Tokens. A cool, quiet operations palette: one ink-teal for actions, amber for what waits,
+         red only for critical findings. */
+      :root {
+        --bg: #eceff0;
+        --panel: #ffffff;
+        --ink: #172026;
+        --muted: #5d6970;
+        --faint: #8b969c;
+        --rule: #dde2e4;
+        --act: #0f6d74;
+        --act-ink: #ffffff;
+        --act-soft: #e1eff0;
+        --wait: #a86512;
+        --wait-soft: #f6ead8;
+        --crit: #c23a2b;
+        --major: #d08a1c;
+        --clean: #3f8f63;
+        --track: #e6eaeb;
+        --pause: #9aa5ab;
+        /* The lanes chart's two phases, checked with the dataviz palette validator. */
+        --c-build: #00809a;
+        --c-review: #b0620a;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1416;
+          --panel: #161e21;
+          --ink: #dfe6e8;
+          --muted: #9aa7ac;
+          --faint: #6d7a80;
+          --rule: #263236;
+          --act: #4fb0b6;
+          --act-ink: #08191b;
+          --act-soft: #173236;
+          --wait: #e3a85a;
+          --wait-soft: #33281a;
+          --crit: #f0705f;
+          --major: #e8a842;
+          --clean: #67c08d;
+          --track: #222d31;
+          --pause: #56646a;
+          --c-build: #1597a3;
+          --c-review: #c4831c;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 12px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.45 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        font-variant-numeric: tabular-nums;
+      }
+      main {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 16px 16px 48px;
+      }
+      a {
+        color: var(--act);
+      }
+      :focus-visible {
+        outline: 2px solid var(--act);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+
+      /* Header. */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 19px;
+        font-weight: 650;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .live {
+        color: var(--muted);
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .live i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--faint);
+      }
+      .live.on i {
+        background: var(--clean);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--clean) 22%, transparent);
+      }
+      /* The three views, one tab each, with what needs a look counted on the tab. */
+      nav.tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 12px 0 16px;
+        border-bottom: 1px solid var(--rule);
+      }
+      nav.tabs button {
+        all: unset;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 14px;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font-weight: 550;
+      }
+      nav.tabs button[aria-selected='true'] {
+        color: var(--ink);
+        border-bottom-color: var(--act);
+      }
+      nav.tabs button:focus-visible {
+        outline: 2px solid var(--act);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      nav.tabs small {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      nav.tabs .badge {
+        min-width: 20px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--act);
+        color: var(--panel);
+        font-size: 12px;
+        font-weight: 650;
+        text-align: center;
+      }
+      .all-clear {
+        padding: 14px 16px;
+        color: var(--muted);
+      }
+
+      /* Layout: two columns from 1000px, one below. */
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (min-width: 1000px) {
+        .grid.top {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          align-items: start;
+        }
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+        padding: 4px 18px 16px;
+        min-width: 0;
+      }
+      .panel + .panel,
+      .grid + .panel {
+        margin-top: 16px;
+      }
+      .stack > .panel + .panel {
+        margin-top: 16px;
+      }
+      h2 {
+        font-size: 15px;
+        font-weight: 650;
+        margin: 14px 0 8px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      h2 small,
+      h3 small {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 18px 0 6px;
+        color: var(--muted);
+      }
+      .quiet {
+        color: var(--muted);
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .wrap {
+        overflow-wrap: anywhere;
+        min-width: 0;
+      }
+
+      /* Rows (the "for you" column, waiting, sent). */
+      ol.rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ol.rows > li {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        gap: 4px 10px;
+        padding: 10px 0;
+        border-top: 1px solid var(--rule);
+        align-items: start;
+      }
+      ol.rows > li:first-child {
+        border-top: 0;
+      }
+      .mark {
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        border-radius: 5px;
+        border: 1.5px solid var(--faint);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--act);
+      }
+      .mark.q {
+        border-color: var(--act);
+        border-radius: 50%;
+      }
+      .mark.ok {
+        background: var(--clean);
+        border-color: var(--clean);
+        color: var(--panel);
+      }
+      .detail {
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+      }
+      .answer {
+        grid-column: 2 / -1;
+      }
+      button {
+        font: inherit;
+        font-size: 13px;
+        border-radius: 7px;
+        border: 1px solid var(--rule);
+        background: var(--panel);
+        color: var(--ink);
+        padding: 4px 11px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--act);
+      }
+      button.primary {
+        background: var(--act);
+        border-color: var(--act);
+        color: var(--act-ink);
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0 6px;
+      }
+      .options button {
+        white-space: normal;
+        text-align: left;
+      }
+      .compose {
+        position: relative;
+        margin-top: 6px;
+      }
+      textarea {
+        display: block;
+        width: 100%;
+        font: inherit;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        padding: 8px 10px 38px;
+        resize: vertical;
+        min-height: 64px;
+      }
+      textarea:focus {
+        border-color: var(--act);
+        outline: none;
+        background: var(--panel);
+      }
+      .compose .send {
+        position: absolute;
+        right: 6px;
+        bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      kbd {
+        font: inherit;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .request {
+        margin-top: 14px;
+        padding-top: 4px;
+      }
+      .request textarea {
+        min-height: 84px;
+      }
+      .sent li .said {
+        color: var(--ink);
+      }
+      .reply {
+        margin-top: 4px;
+        padding-left: 10px;
+        border-left: 2px solid var(--clean);
+        color: var(--ink);
+      }
+      .waiting-tag {
+        color: var(--wait);
+        font-size: 12px;
+      }
+      .kind {
+        font-size: 11.5px;
+        color: var(--faint);
+        margin-right: 6px;
+      }
+
+      /* Lanes: one compact row each. */
+      ol.lanes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ol.lanes > li {
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+        gap: 2px 10px;
+        padding: 9px 0;
+        border-top: 1px solid var(--rule);
+      }
+      ol.lanes > li:first-child {
+        border-top: 0;
+      }
+      .letter {
+        grid-row: span 2;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: var(--act-soft);
+        color: var(--act);
+        font-weight: 700;
+        font-size: 13px;
+        display: grid;
+        place-items: center;
+      }
+      .idle .letter {
+        background: var(--track);
+        color: var(--muted);
+      }
+      .lane-title {
+        font-weight: 600;
+      }
+      .lane-title .num {
+        color: var(--muted);
+        font-weight: 500;
+        margin-right: 4px;
+      }
+      .lane-time {
+        text-align: right;
+        color: var(--muted);
+        font-size: 12.5px;
+        white-space: nowrap;
+      }
+      .lane-meta {
+        grid-column: 2 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .pill {
+        display: inline-block;
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 0 8px;
+        border-radius: 999px;
+        line-height: 19px;
+        background: var(--track);
+        color: var(--muted);
+      }
+      .pill.building {
+        background: var(--act-soft);
+        color: var(--act);
+      }
+      .pill.review {
+        background: var(--wait-soft);
+        color: var(--wait);
+      }
+      .pill.merging {
+        background: color-mix(in srgb, var(--clean) 18%, transparent);
+        color: var(--clean);
+      }
+      .meter {
+        display: inline-flex;
+        gap: 2px;
+        align-items: flex-end;
+        vertical-align: middle;
+      }
+      .meter i {
+        width: 5px;
+        height: 12px;
+        border-radius: 1.5px;
+        background: var(--clean);
+      }
+      .meter i.major {
+        background: var(--major);
+      }
+      .meter i.critical {
+        background: var(--crit);
+      }
+      .lane-next {
+        grid-column: 2 / -1;
+        font-size: 12px;
+        color: var(--faint);
+      }
+
+      /* Waiting on the client. */
+      .age {
+        font-size: 12.5px;
+        color: var(--muted);
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .age.old {
+        color: var(--wait);
+        font-weight: 600;
+      }
+      .age.old::after {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--wait);
+      }
+      .dash {
+        width: 18px;
+        height: 2px;
+        background: var(--faint);
+        margin-top: 9px;
+        border-radius: 1px;
+      }
+
+      /* Groups (a sprint): a segmented bar, what's left by status, done folded. */
+      .seg {
+        display: flex;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--track);
+        margin: 4px 0 8px;
+      }
+      .seg span {
+        min-width: 3px;
+      }
+      .seg span + span {
+        border-left: 2px solid var(--panel);
+      }
+      .b-done {
+        background: var(--clean);
+      }
+      .b-review {
+        background: var(--wait);
+      }
+      .b-progress {
+        background: var(--act);
+      }
+      .b-ready {
+        background: color-mix(in srgb, var(--act) 40%, var(--track));
+      }
+      .b-backlog {
+        background: color-mix(in srgb, var(--pause) 55%, var(--track));
+      }
+      .seg-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 16px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .seg-legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        margin-right: 6px;
+        vertical-align: -1px;
+      }
+      .seg-legend b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .pace {
+        margin: 10px 0 2px;
+        font-size: 13px;
+      }
+      .pace b {
+        font-weight: 600;
+      }
+      .pace span[title] {
+        text-decoration: underline dotted var(--faint);
+        text-underline-offset: 3px;
+        cursor: help;
+      }
+      .left {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 4px 24px;
+        margin-top: 8px;
+      }
+      .left h3 {
+        margin: 10px 0 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      ol.issues {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+      ol.issues li {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 3px 0;
+        font-size: 13px;
+        align-items: start;
+      }
+      ol.issues .n {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      ol.issues .letter {
+        grid-row: auto;
+        width: 20px;
+        height: 20px;
+        font-size: 11.5px;
+      }
+      details.done-list summary,
+      details.sent-earlier summary {
+        cursor: pointer;
+        color: var(--muted);
+        padding: 10px 0 4px;
+      }
+
+      /* Lanes over time: a swimlane chart, scrolled to now. */
+      .tl-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .range {
+        display: inline-flex;
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .range button {
+        border: 0;
+        border-radius: 0;
+        padding: 3px 12px;
+      }
+      .range button + button {
+        border-left: 1px solid var(--rule);
+      }
+      .range button[aria-pressed='true'] {
+        background: var(--act-soft);
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .tl {
+        position: relative;
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        margin-top: 8px;
+      }
+      .tl-labels {
+        padding-top: 30px;
+      }
+      .tl-labels div {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .tl-labels .letter {
+        grid-row: auto;
+      }
+      .tl-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-left: 1px solid var(--rule);
+      }
+      .tl-scroll svg {
+        display: block;
+      }
+      .tl svg text {
+        font:
+          11px system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        fill: var(--muted);
+      }
+      .tl svg text.lbl {
+        fill: var(--ink);
+        font-weight: 600;
+      }
+      .tl svg text.day {
+        fill: var(--ink);
+        font-weight: 600;
+      }
+      .tl .span {
+        cursor: pointer;
+        outline: none;
+      }
+      .tl .span:hover .hit,
+      .tl .span:focus-visible .hit {
+        fill: color-mix(in srgb, var(--ink) 7%, transparent);
+        stroke: var(--act);
+        stroke-width: 1.5;
+      }
+      #tl-tip {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+        background: var(--panel);
+        border: 1px solid var(--rule);
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--ink) 14%, transparent);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12.5px;
+        max-width: 300px;
+        display: none;
+      }
+      #tl-tip b {
+        font-weight: 650;
+      }
+      #tl-tip dl {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 2px 10px;
+        margin: 6px 0 0;
+      }
+      #tl-tip dt {
+        color: var(--muted);
+      }
+      #tl-tip dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      .tl-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+      .tl-legend svg {
+        vertical-align: -2px;
+        margin-right: 5px;
+      }
+      .bars > li.flash {
+        background: var(--act-soft);
+        transition: background 600ms ease-out;
+      }
+
+      /* Today: a strip of the day, then the events. */
+      .strip {
+        position: relative;
+        height: 34px;
+        margin: 8px 0 4px;
+      }
+      .strip .track {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 15px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--track);
+      }
+      .strip .band {
+        position: absolute;
+        top: 6px;
+        height: 22px;
+        border-radius: 4px;
+        background: repeating-linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--pause) 55%, transparent) 0 3px,
+          transparent 3px 7px
+        );
+        border: 1px solid color-mix(in srgb, var(--pause) 60%, transparent);
+      }
+      .strip .tick {
+        position: absolute;
+        top: 10px;
+        width: 14px;
+        height: 14px;
+        margin-left: -7px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 3px solid var(--act);
+      }
+      .strip .tick.merge {
+        background: var(--act);
+      }
+      .strip .now {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        width: 2px;
+        margin-left: -1px;
+        background: var(--ink);
+        opacity: 0.5;
+      }
+      .axis {
+        position: relative;
+        height: 16px;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .axis span {
+        position: absolute;
+        transform: translateX(-50%);
+      }
+      @media (max-width: 720px) {
+        .axis span.odd {
+          display: none;
+        }
+      }
+      ol.events {
+        list-style: none;
+        margin: 8px 0 0;
+        padding: 0;
+        columns: 1;
+        column-gap: 32px;
+      }
+      @media (min-width: 1000px) {
+        ol.events {
+          columns: 2;
+        }
+      }
+      ol.events li {
+        break-inside: avoid;
+        display: grid;
+        grid-template-columns: 44px 14px minmax(0, 1fr);
+        gap: 8px;
+        padding: 4px 0;
+        align-items: start;
+      }
+      ol.events time {
+        color: var(--muted);
+        font-size: 12.5px;
+        padding-top: 1px;
+      }
+      ol.events .dot {
+        width: 10px;
+        height: 10px;
+        margin-top: 5px;
+        border-radius: 50%;
+        border: 2.5px solid var(--act);
+      }
+      ol.events li.merge .dot {
+        background: var(--act);
+      }
+      ol.events li.pause .dot {
+        border-radius: 2px;
+        border: 0;
+        height: 14px;
+        margin-top: 3px;
+        background: repeating-linear-gradient(
+          135deg,
+          var(--pause) 0 2px,
+          transparent 2px 4px
+        );
+      }
+      ol.events li.pause {
+        color: var(--muted);
+      }
+      .ref {
+        color: var(--muted);
+        font-weight: 600;
+        margin-right: 4px;
+      }
+      details.day {
+        border-top: 1px solid var(--rule);
+        margin-top: 10px;
+      }
+      details.day summary {
+        cursor: pointer;
+        padding: 8px 0 2px;
+        color: var(--muted);
+      }
+
+      /* Timings and friction: bars. */
+      .bars {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .bars > li {
+        display: grid;
+        grid-template-columns: minmax(150px, 260px) minmax(0, 1fr) 250px;
+        gap: 4px 14px;
+        align-items: center;
+        padding: 7px 0;
+        border-top: 1px solid var(--rule);
+      }
+      .bars > li:first-child {
+        border-top: 0;
+      }
+      .bar {
+        position: relative;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--track);
+        overflow: hidden;
+      }
+      .bar span {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+      }
+      .bar .wall {
+        background: repeating-linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--pause) 70%, transparent) 0 3px,
+          transparent 3px 6px
+        );
+        border-radius: 3px;
+      }
+      .bar .active {
+        background: color-mix(in srgb, var(--act) 30%, var(--track));
+        border-radius: 3px 0 0 3px;
+      }
+      .bar .worked {
+        background: var(--act);
+        border-radius: 3px 0 0 3px;
+      }
+      .bar.open .wall {
+        border-right: 2px dashed var(--act);
+      }
+      .bar .fr {
+        background: var(--wait);
+        border-radius: 3px;
+      }
+      .figures {
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .figures b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .figures .c {
+        color: var(--crit);
+        font-weight: 600;
+      }
+      .bar .sev-critical {
+        background: var(--crit);
+      }
+      .bar .sev-major {
+        background: var(--wait);
+      }
+      .bar .sev-minor {
+        background: color-mix(in srgb, var(--muted) 45%, var(--track));
+      }
+      .bar.stacked {
+        display: flex;
+      }
+      .bar.stacked span {
+        position: static;
+        height: 100%;
+      }
+      .sw-critical {
+        background: var(--crit);
+      }
+      .sw-major {
+        background: var(--wait);
+      }
+      .sw-minor {
+        background: color-mix(in srgb, var(--muted) 45%, var(--track));
+      }
+      .linkish {
+        all: unset;
+        cursor: pointer;
+        border-bottom: 1px dotted currentColor;
+      }
+      .linkish[aria-pressed='true'] {
+        font-weight: 600;
+        border-bottom-style: solid;
+      }
+      .linkish:focus-visible {
+        outline: 2px solid var(--act);
+        outline-offset: 2px;
+      }
+      .findings-list {
+        list-style: none;
+        margin: 8px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+        max-height: 420px;
+        overflow-y: auto;
+      }
+      .findings-list li {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .findings-list .meta {
+        grid-column: 2;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .sev {
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 4px;
+        padding: 0 6px;
+        align-self: start;
+        margin-top: 2px;
+      }
+      .sev.critical {
+        color: var(--crit);
+        border: 1px solid var(--crit);
+      }
+      .sev.major {
+        color: var(--wait);
+        border: 1px solid var(--wait);
+      }
+      .sev.minor {
+        color: var(--muted);
+        border: 1px solid var(--rule);
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 6px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 18px;
+        height: 9px;
+        border-radius: 2px;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+      .sw-worked {
+        background: var(--act);
+      }
+      .sw-active {
+        background: color-mix(in srgb, var(--act) 30%, var(--track));
+      }
+      .sw-paused {
+        background: repeating-linear-gradient(
+          135deg,
+          var(--pause) 0 2px,
+          transparent 2px 4px
+        );
+      }
+      @media (max-width: 720px) {
+        .bars > li {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .figures {
+          white-space: normal;
+        }
+      }
+      .empty {
+        color: var(--muted);
+        padding: 6px 0 2px;
+        margin: 0;
+      }
+
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        background: var(--ink);
+        color: var(--panel);
+        padding: 8px 14px;
+        border-radius: 8px;
+        opacity: 0;
+        transition: opacity 150ms ease-out;
+        pointer-events: none;
+        max-width: calc(100vw - 32px);
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #toast {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="project">Working board</h1>
+        <span class="live" id="live"
+          ><i></i><span id="updated">Connecting…</span></span
+        >
+      </header>
+      <nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav>
+      <div id="board"></div>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script>
+      'use strict';
+      const drafts = new Map(); // typed text per box, kept across live re-renders
+      const sending = new Set(); // keys of sends in flight
+      const openDays = new Set(); // earlier days the person unfolded
+      let data = null;
+      let connected = false;
+
+      // ---- helpers ------------------------------------------------------------------------
+      function h(tag, props, ...children) {
+        const el = document.createElement(tag);
+        for (const [key, value] of Object.entries(props || {})) {
+          if (value === undefined || value === null || value === false)
+            continue;
+          if (key === 'class') el.className = value;
+          else if (key === 'style') el.setAttribute('style', value);
+          else if (key.startsWith('on'))
+            el.addEventListener(key.slice(2), value);
+          else el.setAttribute(key, value === true ? '' : String(value));
+        }
+        for (const child of children.flat(Infinity)) {
+          if (child === null || child === undefined || child === false)
+            continue;
+          el.append(
+            child instanceof Node
+              ? child
+              : document.createTextNode(String(child)),
+          );
+        }
+        return el;
+      }
+      const pad = (n) => String(n).padStart(2, '0');
+      const dayKey = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const todayKey = () => dayKey(new Date());
+      const isToday = (iso) => !!iso && dayKey(new Date(iso)) === todayKey();
+      function clock(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+      function stamp(iso) {
+        if (!iso) return '';
+        if (isToday(iso)) return clock(iso);
+        const d = new Date(iso);
+        return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${clock(iso)}`;
+      }
+      function duration(ms) {
+        if (ms === null || ms === undefined) return '–';
+        const minutes = Math.round(ms / 60000);
+        if (minutes < 60) return `${minutes} m`;
+        const hours = minutes / 60;
+        if (hours < 10) return `${Math.round(hours * 10) / 10} h`;
+        if (hours < 48) return `${Math.round(hours)} h`;
+        return `${Math.round(hours / 24)} d`;
+      }
+      const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      function link(item) {
+        return typeof item.link === 'string' && /^https?:\/\//.test(item.link)
+          ? h(
+              'a',
+              { href: item.link, target: '_blank', rel: 'noopener noreferrer' },
+              linkLabel(item.link),
+            )
+          : null;
+      }
+      function linkLabel(url) {
+        const m = url.match(/\/(issues|pull)\/(\d+)/);
+        return m ? ` #${m[2]}` : ' open';
+      }
+      let toastTimer = null;
+      function toast(text) {
+        const el = document.getElementById('toast');
+        el.textContent = text;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+      }
+      function issueRow(issue) {
+        if (issue === null || issue === undefined || issue === '') return null;
+        return (
+          data.timings.issues.find((r) => r.issue === String(issue)) || null
+        );
+      }
+
+      // ---- sending ------------------------------------------------------------------------
+      async function send(key, body, okText) {
+        if (sending.has(key)) return;
+        sending.add(key);
+        render();
+        try {
+          const res = await fetch('/api/inbox', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const result = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+          drafts.delete(key);
+          toast(okText);
+          await load();
+        } catch (error) {
+          toast(`Not sent: ${error.message}. Your text is kept.`);
+        } finally {
+          sending.delete(key);
+          render();
+        }
+      }
+      // Refs already sent: waiting ones, and (for "done") ones the session has replied to but
+      // not yet removed, so a second click can't send the same tick again.
+      function sentRefs(kind, includeAnswered) {
+        const items = includeAnswered
+          ? [...data.inbox.pending, ...data.inbox.answered]
+          : data.inbox.pending;
+        return new Set(items.filter((i) => i.kind === kind).map((i) => i.ref));
+      }
+      function compose(key, placeholder, label, onSend) {
+        const busy = sending.has(key);
+        return h(
+          'div',
+          { class: 'compose' },
+          h('textarea', {
+            'data-key': key,
+            placeholder,
+            maxlength: 4000,
+            'aria-label': placeholder,
+            oninput: (e) => drafts.set(key, e.target.value),
+            onkeydown: (e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                onSend();
+              }
+            },
+          }),
+          h(
+            'div',
+            { class: 'send' },
+            h('kbd', {}, '⌘/Ctrl ↵'),
+            h(
+              'button',
+              {
+                class: 'primary',
+                'data-focus': `${key}:send`,
+                disabled: busy,
+                onclick: onSend,
+              },
+              busy ? 'Sending…' : label,
+            ),
+          ),
+        );
+      }
+      function sendDraft(key, emptyText, body, okText) {
+        const text = (drafts.get(key) || '').trim();
+        if (!text) return toast(emptyText);
+        send(key, { ...body, text }, okText);
+      }
+
+      // ---- helpers ------------------------------------------------------------------------
+      function waitingLabel(state) {
+        return state.client
+          ? `waiting on ${state.client}`
+          : 'waiting on the client';
+      }
+      function busyLanes(state) {
+        return state.lanes.filter((l) => phase(l) !== 'idle').length;
+      }
+      function mergedToday() {
+        return data.timings.issues.filter((r) => isToday(r.merged)).length;
+      }
+      // ---- tabs ---------------------------------------------------------------------------
+      // Now: what needs the person and who works on what. Sprint: progress and time.
+      // Learnings: what reviews and friction teach for the template.
+      const TABS = ['now', 'sprint', 'learnings'];
+      let tab = (() => {
+        const fromHash = location.hash.slice(1);
+        if (TABS.includes(fromHash)) return fromHash;
+        try {
+          const saved = localStorage.getItem('board:tab');
+          if (TABS.includes(saved)) return saved;
+        } catch {}
+        return 'now';
+      })();
+      function showTab(next, focus) {
+        if (!TABS.includes(next)) return;
+        if (next === 'sprint' && tab !== 'sprint') tlScrollToEnd = true;
+        tab = next;
+        try {
+          localStorage.setItem('board:tab', next);
+        } catch {}
+        history.replaceState(null, '', `#${next}`);
+        render();
+        window.scrollTo(0, 0);
+        if (focus) document.getElementById(`tab-${next}`)?.focus();
+      }
+      function tabs(state) {
+        const forYouCount = state.needsYou.length + state.questions.length;
+        const left = data.groups.reduce((sum, g) => sum + (g.left || 0), 0);
+        const items = [
+          [
+            'now',
+            'Now',
+            forYouCount
+              ? h('span', { class: 'badge', title: 'for you' }, forYouCount)
+              : null,
+          ],
+          [
+            'sprint',
+            'Sprint',
+            data.groups.length ? h('small', {}, `${left} left`) : null,
+          ],
+          ['learnings', 'Learnings', null],
+        ];
+        return items.map(([key, label, extra], i) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'tab',
+              id: `tab-${key}`,
+              'data-focus': `tab-${key}`,
+              'aria-selected': String(tab === key),
+              'aria-controls': 'board',
+              tabindex: tab === key ? '0' : '-1',
+              onclick: () => showTab(key),
+              onkeydown: (evt) => {
+                const step =
+                  evt.key === 'ArrowRight'
+                    ? 1
+                    : evt.key === 'ArrowLeft'
+                      ? -1
+                      : 0;
+                if (!step) return;
+                evt.preventDefault();
+                showTab(TABS[(i + step + TABS.length) % TABS.length], true);
+              },
+            },
+            label,
+            extra,
+          ),
+        );
+      }
+      window.addEventListener('hashchange', () =>
+        showTab(location.hash.slice(1)),
+      );
+
+      // ---- for you ------------------------------------------------------------------------
+      function forYou(state) {
+        const done = sentRefs('done', true);
+        const answered = sentRefs('answer');
+        const todo = state.needsYou.map((item) => {
+          const key = `done:${item.id}`;
+          const sent = done.has(item.id);
+          return h(
+            'li',
+            {},
+            h(
+              'span',
+              { class: sent ? 'mark ok' : 'mark', 'aria-hidden': 'true' },
+              sent ? '✓' : '',
+            ),
+            h(
+              'div',
+              { class: 'wrap' },
+              item.text,
+              link(item),
+              item.detail ? h('div', { class: 'detail' }, item.detail) : null,
+            ),
+            h(
+              'button',
+              {
+                class: sent ? '' : 'primary',
+                'data-focus': key,
+                disabled: sent || sending.has(key),
+                onclick: () =>
+                  send(key, { kind: 'done', ref: item.id }, 'Marked done'),
+              },
+              sent ? 'Sent' : 'Done',
+            ),
+          );
+        });
+        const questions = state.questions.map((q) => {
+          const key = `answer:${q.id}`;
+          const busy = sending.has(key);
+          const options = Array.isArray(q.options) ? q.options : [];
+          return h(
+            'li',
+            {},
+            h('span', { class: 'mark q', 'aria-hidden': 'true' }, '?'),
+            h(
+              'div',
+              { class: 'wrap' },
+              h('div', {}, q.text, link(q)),
+              q.context ? h('div', { class: 'detail' }, q.context) : null,
+              answered.has(q.id)
+                ? h('div', { class: 'waiting-tag' }, 'Answer sent')
+                : null,
+            ),
+            h('span'),
+            h(
+              'div',
+              { class: 'answer' },
+              options.length
+                ? h(
+                    'div',
+                    { class: 'options' },
+                    options.map((option, i) =>
+                      h(
+                        'button',
+                        {
+                          'data-focus': `${key}:option:${i}`,
+                          disabled: busy,
+                          onclick: () =>
+                            send(
+                              key,
+                              {
+                                kind: 'answer',
+                                ref: q.id,
+                                text: String(option),
+                              },
+                              'Answer sent',
+                            ),
+                        },
+                        String(option),
+                      ),
+                    ),
+                  )
+                : null,
+              compose(
+                key,
+                options.length ? 'Or answer in your own words' : 'Your answer',
+                'Send answer',
+                () =>
+                  sendDraft(
+                    key,
+                    'Type an answer first.',
+                    { kind: 'answer', ref: q.id },
+                    'Answer sent',
+                  ),
+              ),
+            ),
+          );
+        });
+        const nothing = !todo.length && !questions.length;
+        return h(
+          'section',
+          { class: 'panel', id: 'for-you', 'aria-labelledby': 'for-you-h' },
+          h(
+            'h2',
+            { id: 'for-you-h' },
+            'For you',
+            nothing
+              ? null
+              : h(
+                  'small',
+                  {},
+                  [
+                    plural(todo.length, 'to-do', 'to-dos'),
+                    plural(questions.length, 'question', 'questions'),
+                  ].join(', '),
+                ),
+          ),
+          nothing
+            ? h(
+                'p',
+                { class: 'empty' },
+                'Nothing waits on you. Send a request below when you want something done.',
+              )
+            : h('ol', { class: 'rows' }, todo, questions),
+          h(
+            'div',
+            { class: 'request' },
+            h('h3', {}, 'New request'),
+            compose(
+              'request',
+              'Tell the session what to do next, as you would in the terminal',
+              'Send',
+              () =>
+                sendDraft(
+                  'request',
+                  'Type a request first.',
+                  { kind: 'request' },
+                  'Request sent',
+                ),
+            ),
+          ),
+          sentList(state),
+        );
+      }
+
+      function refText(state, item) {
+        if (!item.ref) return null;
+        const list = item.kind === 'answer' ? state.questions : state.needsYou;
+        const found = list.find((x) => x.id === item.ref);
+        return found ? found.text : null;
+      }
+      // Answered items: the newest few, the rest folded (kept open across live re-renders).
+      const SENT_SHOWN = 3;
+      let sentOpen = false;
+      function sentList(state) {
+        const { pending, answered } = data.inbox;
+        if (!pending.length && !answered.length) return null;
+        const kindLabel = {
+          answer: 'Answer',
+          done: 'Done',
+          request: 'Request',
+        };
+        const row = (item, reply) => {
+          const about = refText(state, item);
+          return h(
+            'li',
+            {},
+            h('span', { class: 'dash', 'aria-hidden': 'true' }),
+            h(
+              'div',
+              { class: 'wrap' },
+              h(
+                'span',
+                { class: 'kind' },
+                `${kindLabel[item.kind] || item.kind} ${clock(item.at)}`,
+              ),
+              h('span', { class: 'said' }, item.text || about || ''),
+              item.text && about
+                ? h('div', { class: 'detail' }, `On: ${about}`)
+                : null,
+              reply
+                ? h('div', { class: 'reply' }, reply.text)
+                : h('div', { class: 'waiting-tag' }, 'Waiting for the session'),
+            ),
+            h('span'),
+          );
+        };
+        return h(
+          'div',
+          { class: 'sent' },
+          h(
+            'h3',
+            {},
+            'Sent',
+            pending.length
+              ? h('small', {}, ` ${pending.length} waiting`)
+              : null,
+          ),
+          h(
+            'ol',
+            { class: 'rows' },
+            pending.map((i) => row(i, null)),
+            answered.slice(0, SENT_SHOWN).map((i) => row(i, i.reply)),
+          ),
+          answered.length > SENT_SHOWN
+            ? h(
+                'details',
+                {
+                  class: 'sent-earlier',
+                  open: sentOpen,
+                  ontoggle: (evt) => (sentOpen = evt.currentTarget.open),
+                },
+                h('summary', {}, `Earlier (${answered.length - SENT_SHOWN})`),
+                h(
+                  'ol',
+                  { class: 'rows' },
+                  answered.slice(SENT_SHOWN).map((i) => row(i, i.reply)),
+                ),
+              )
+            : null,
+        );
+      }
+
+      // ---- lanes --------------------------------------------------------------------------
+      // A lane's phase: its own `phase`, else read from its status text.
+      // The server sets each lane's phase (lib.mjs lanePhase), one rule for the page and the pace.
+      function phase(lane) {
+        return lane.phase || 'building';
+      }
+      function meter(marks) {
+        const shown = marks.slice(-20);
+        return h(
+          'span',
+          { class: 'meter', 'aria-hidden': 'true' },
+          marks.length > shown.length
+            ? h('span', { class: 'small' }, '…')
+            : null,
+          shown.map((m) => h('i', { class: m === 'clean' ? '' : m })),
+        );
+      }
+      function lanes(state) {
+        if (!state.lanes.length) return null;
+        return h(
+          'section',
+          { class: 'panel', id: 'lanes', 'aria-labelledby': 'lanes-h' },
+          h(
+            'h2',
+            { id: 'lanes-h' },
+            'Lanes',
+            h('small', {}, `${busyLanes(state)} of ${state.lanes.length} busy`),
+          ),
+          h(
+            'ol',
+            { class: 'lanes' },
+            state.lanes.map((lane) => {
+              const p = phase(lane);
+              const row = issueRow(lane.issue);
+              const letter = String(lane.name || lane.id)
+                .replace(/^lane\s+/i, '')
+                .slice(0, 2);
+              const marks = row ? row.roundMarks || [] : [];
+              return h(
+                'li',
+                { class: p === 'idle' ? 'idle' : '' },
+                h(
+                  'span',
+                  { class: 'letter', title: lane.name || lane.id },
+                  letter,
+                ),
+                h(
+                  'div',
+                  { class: 'lane-title wrap' },
+                  lane.issue
+                    ? h('span', { class: 'num' }, `#${lane.issue}`)
+                    : null,
+                  lane.title || row?.title || (p === 'idle' ? 'Idle' : ''),
+                ),
+                h(
+                  'span',
+                  {
+                    class: 'lane-time',
+                    title:
+                      row && row.wallMs !== null
+                        ? `${row.workedMs === null ? 'No agent time recorded' : `${duration(row.workedMs)} worked`}, ${duration(row.activeMs)} active, ${duration(row.wallMs)} since it started`
+                        : '',
+                  },
+                  row && row.workedMs !== null
+                    ? `${duration(row.workedMs)} worked`
+                    : row
+                      ? '–'
+                      : '',
+                ),
+                h(
+                  'div',
+                  { class: 'lane-meta' },
+                  h('span', { class: `pill ${p}` }, p),
+                  marks.length
+                    ? h(
+                        'span',
+                        {
+                          title: `${row.critical} critical, ${row.major} major, ${row.minor} minor`,
+                        },
+                        meter(marks),
+                        ` round ${marks.length}`,
+                      )
+                    : null,
+                  lane.status && lane.status.toLowerCase() !== p
+                    ? h('span', { class: 'wrap' }, lane.status)
+                    : null,
+                ),
+                lane.next
+                  ? h('div', { class: 'lane-next wrap' }, `Next: ${lane.next}`)
+                  : null,
+              );
+            }),
+          ),
+        );
+      }
+
+      // ---- waiting on the client ----------------------------------------------------------
+      function waiting(state) {
+        const items = state.waitingOnClient;
+        if (!items.length) return null;
+        const now = Date.now();
+        const sorted = [...items].sort((a, b) =>
+          (a.since || '~').localeCompare(b.since || '~'),
+        );
+        const title = state.client
+          ? `Waiting on ${state.client}`
+          : 'Waiting on the client';
+        return h(
+          'section',
+          { class: 'panel', id: 'waiting', 'aria-labelledby': 'waiting-h' },
+          h('h2', { id: 'waiting-h' }, title, h('small', {}, 'oldest first')),
+          h(
+            'ol',
+            { class: 'rows' },
+            sorted.map((item) => {
+              const age = item.since ? now - Date.parse(item.since) : null;
+              return h(
+                'li',
+                {},
+                h('span', { class: 'dash', 'aria-hidden': 'true' }),
+                h(
+                  'div',
+                  { class: 'wrap' },
+                  item.text,
+                  link(item),
+                  item.detail
+                    ? h('div', { class: 'detail' }, item.detail)
+                    : null,
+                ),
+                age !== null && Number.isFinite(age)
+                  ? h(
+                      'span',
+                      {
+                        class: age > 86400000 ? 'age old' : 'age',
+                        title: `Since ${stamp(item.since)}`,
+                      },
+                      duration(Math.max(0, age)),
+                    )
+                  : h('span'),
+              );
+            }),
+          ),
+        );
+      }
+
+      // ---- groups (a sprint) --------------------------------------------------------------
+      const BUCKETS = [
+        ['done', 'Done'],
+        ['review', 'In review'],
+        ['progress', 'In progress'],
+        ['ready', 'Ready'],
+        ['backlog', 'Backlog'],
+      ];
+      const openGroups = new Set(); // groups whose done list the person unfolded
+      function issueList(items) {
+        return h(
+          'ol',
+          { class: 'issues' },
+          items.map((issue) =>
+            h(
+              'li',
+              {},
+              h('span', { class: 'n' }, `#${issue.number}`),
+              h('span', { class: 'wrap' }, issue.title),
+              issue.lane
+                ? h(
+                    'span',
+                    { class: 'letter', title: `Lane ${issue.lane}` },
+                    issue.lane,
+                  )
+                : h('span'),
+            ),
+          ),
+        );
+      }
+      function paceLine(pace) {
+        if (!pace) return null;
+        const days =
+          pace.days < 1
+            ? 'less than a working day'
+            : `about ${Math.round(pace.days * 2) / 2} working days`;
+        const measure =
+          pace.basis === 'worked' ? 'agent working time' : 'active time';
+        const inputs =
+          `Median ${measure} of ${pace.sample} done issues: ${duration(pace.medianMs)}. ` +
+          (pace.basis === 'active'
+            ? `Active time, because only ${pace.workedSample} done issues have agent working time (3 needed); it counts nights and waits, so it runs high. `
+            : '') +
+          `Open issues: ${pace.open}. Busy lanes: ${pace.busyLanes}. ` +
+          `${duration(pace.medianMs)} × ${pace.open} ÷ ${pace.busyLanes} = ${duration(pace.hours * 3600000)}, ` +
+          `in working days of 8 hours.`;
+        return h(
+          'p',
+          { class: 'pace' },
+          'At the current pace: ',
+          h(
+            'span',
+            { title: inputs, tabindex: '0' },
+            h('b', {}, days),
+            ' left',
+          ),
+          h(
+            'span',
+            { class: 'small' },
+            pace.basis === 'worked'
+              ? '  (a rough estimate, from agent working time)'
+              : '  (a rough estimate, from active time: high until 3 done issues have agent time)',
+          ),
+        );
+      }
+      function group(g, i) {
+        const pct = (n) => `${((n / Math.max(1, g.total)) * 100).toFixed(2)}%`;
+        const key = `${g.name}`;
+        return h(
+          'section',
+          {
+            class: 'panel',
+            id: `group-${i}`,
+            'aria-labelledby': `group-${i}-h`,
+            style: 'margin-bottom:16px',
+          },
+          h(
+            'h2',
+            { id: `group-${i}-h` },
+            g.name,
+            h(
+              'small',
+              {},
+              `${g.counts.done} of ${g.total} done, ${g.left} left`,
+              g.syncedAt ? `, synced ${stamp(g.syncedAt)}` : '',
+            ),
+          ),
+          h(
+            'div',
+            {
+              class: 'seg',
+              role: 'img',
+              'aria-label': BUCKETS.map(([b, l]) => `${l} ${g.counts[b]}`).join(
+                ', ',
+              ),
+            },
+            BUCKETS.filter(([b]) => g.counts[b]).map(([b, l]) =>
+              h('span', {
+                class: `b-${b}`,
+                style: `width:${pct(g.counts[b])}`,
+                title: `${l}: ${g.counts[b]}`,
+              }),
+            ),
+          ),
+          h(
+            'div',
+            { class: 'seg-legend' },
+            BUCKETS.map(([b, l]) =>
+              h(
+                'span',
+                {},
+                h('i', { class: `b-${b}` }),
+                `${l} `,
+                h('b', {}, g.counts[b]),
+              ),
+            ),
+          ),
+          paceLine(g.pace),
+          g.left
+            ? h(
+                'div',
+                { class: 'left' },
+                BUCKETS.filter(
+                  ([b]) => b !== 'done' && g.buckets[b].length,
+                ).map(([b, l]) =>
+                  h(
+                    'div',
+                    {},
+                    h(
+                      'h3',
+                      {},
+                      h('i', {
+                        class: `b-${b}`,
+                        style:
+                          'width:10px;height:10px;border-radius:3px;display:inline-block',
+                      }),
+                      l,
+                      h('small', {}, g.buckets[b].length),
+                    ),
+                    issueList(g.buckets[b]),
+                  ),
+                ),
+              )
+            : h('p', { class: 'empty' }, 'Nothing left: every issue is done.'),
+          g.counts.done
+            ? h(
+                'details',
+                {
+                  class: 'done-list',
+                  open: openGroups.has(key),
+                  ontoggle: (e) =>
+                    e.target.open
+                      ? openGroups.add(key)
+                      : openGroups.delete(key),
+                },
+                h('summary', {}, `Done (${g.counts.done})`),
+                issueList(g.buckets.done),
+              )
+            : null,
+        );
+      }
+
+      // ---- today --------------------------------------------------------------------------
+      function pausesOn(key) {
+        const now = new Date().toISOString();
+        return data.timings.pauses
+          .map((p) => ({ ...p, to: p.to || now, open: !p.to }))
+          .filter(
+            (p) =>
+              dayKey(new Date(p.from)) === key ||
+              dayKey(new Date(p.to)) === key,
+          );
+      }
+      function eventRows(entries, pauses) {
+        const rows = [
+          ...entries.map((e) => ({ at: e.at, entry: e })),
+          ...pauses.map((p) => ({ at: p.from, pause: p })),
+        ].sort((a, b) => a.at.localeCompare(b.at));
+        return h(
+          'ol',
+          { class: 'events' },
+          rows.map((r) => {
+            if (r.pause) {
+              const p = r.pause;
+              return h(
+                'li',
+                { class: 'pause' },
+                h('time', { datetime: p.from }, clock(p.from)),
+                h('span', { class: 'dot', 'aria-hidden': 'true' }),
+                h(
+                  'span',
+                  { class: 'wrap' },
+                  `${p.reason || 'Paused'}, ${p.open ? 'still paused' : `until ${clock(p.to)}`} (${duration(Date.parse(p.to) - Date.parse(p.from))})`,
+                ),
+              );
+            }
+            const e = r.entry;
+            return h(
+              'li',
+              { class: /\bmerged?\b/i.test(e.text) ? 'merge' : '' },
+              h('time', { datetime: e.at }, clock(e.at)),
+              h('span', { class: 'dot', 'aria-hidden': 'true' }),
+              h(
+                'span',
+                { class: 'wrap' },
+                e.issue ? h('span', { class: 'ref' }, `#${e.issue}`) : null,
+                e.text,
+              ),
+            );
+          }),
+        );
+      }
+      function strip(entries, pauses) {
+        const now = Date.now();
+        const midnight = new Date();
+        midnight.setHours(0, 0, 0, 0);
+        const times = [
+          ...entries.map((e) => Date.parse(e.at)),
+          ...pauses.map((p) => Date.parse(p.from)),
+        ];
+        const first = Math.min(midnight.getTime() + 7 * 3600000, ...times);
+        const start = Math.max(
+          midnight.getTime(),
+          Math.floor(first / 3600000) * 3600000,
+        );
+        const end = Math.max(
+          start + 3 * 3600000,
+          Math.ceil((now + 1) / 3600000) * 3600000,
+        );
+        const x = (t) =>
+          `${(((Math.min(Math.max(t, start), end) - start) / (end - start)) * 100).toFixed(2)}%`;
+        const hours = [];
+        const step = end - start > 10 * 3600000 ? 2 : 1;
+        for (let t = start; t <= end; t += step * 3600000) hours.push(t);
+        return [
+          h(
+            'div',
+            { class: 'strip', 'aria-hidden': 'true' },
+            h('div', { class: 'track' }),
+            pauses.map((p) =>
+              h('div', {
+                class: 'band',
+                title: `${p.reason || 'Paused'} ${clock(p.from)}–${p.open ? 'now' : clock(p.to)}`,
+                style: `left:${x(Date.parse(p.from))};width:calc(${x(Date.parse(p.to))} - ${x(Date.parse(p.from))})`,
+              }),
+            ),
+            entries.map((e) =>
+              h('div', {
+                class: /\bmerged?\b/i.test(e.text) ? 'tick merge' : 'tick',
+                title: `${clock(e.at)} ${e.text}`,
+                style: `left:${x(Date.parse(e.at))}`,
+              }),
+            ),
+            h('div', { class: 'now', style: `left:${x(now)}` }),
+          ),
+          h(
+            'div',
+            { class: 'axis', 'aria-hidden': 'true' },
+            hours.map((t, i) =>
+              h(
+                'span',
+                { class: i % 2 ? 'odd' : '', style: `left:${x(t)}` },
+                clock(new Date(t).toISOString()),
+              ),
+            ),
+          ),
+        ];
+      }
+      function today() {
+        const byDay = new Map();
+        for (const entry of data.log) {
+          const key = dayKey(new Date(entry.at));
+          if (!byDay.has(key)) byDay.set(key, []);
+          byDay.get(key).push(entry);
+        }
+        const key = todayKey();
+        const entries = byDay.get(key) || [];
+        const pauses = pausesOn(key);
+        const earlier = [...byDay.keys()]
+          .filter((k) => k !== key)
+          .sort()
+          .reverse();
+        return h(
+          'section',
+          { class: 'panel', id: 'today', 'aria-labelledby': 'today-h' },
+          h(
+            'h2',
+            { id: 'today-h' },
+            'Today',
+            h(
+              'small',
+              {},
+              [
+                plural(entries.length, 'thing done', 'things done'),
+                plural(mergedToday(), 'merge', 'merges'),
+              ].join(', '),
+            ),
+          ),
+          entries.length || pauses.length
+            ? [strip(entries, pauses), eventRows(entries, pauses)]
+            : h('p', { class: 'empty' }, 'Nothing logged yet today.'),
+          earlier.map((k) => {
+            const list = byDay.get(k);
+            const label = new Date(list[0].at).toLocaleDateString(undefined, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            });
+            return h(
+              'details',
+              {
+                class: 'day',
+                open: openDays.has(k),
+                ontoggle: (e) =>
+                  e.target.open ? openDays.add(k) : openDays.delete(k),
+              },
+              h(
+                'summary',
+                {},
+                `${label}, ${plural(list.length, 'thing', 'things')} done`,
+              ),
+              eventRows([...list].reverse(), pausesOn(k)),
+            );
+          }),
+        );
+      }
+
+      // ---- lanes over time ------------------------------------------------------------------
+      const SVG = 'http://www.w3.org/2000/svg';
+      function sv(tag, attrs, ...children) {
+        const el = document.createElementNS(SVG, tag);
+        for (const [k, v] of Object.entries(attrs || {})) {
+          if (v === undefined || v === null || v === false) continue;
+          if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+          else el.setAttribute(k, String(v));
+        }
+        for (const c of children.flat(Infinity)) {
+          if (c === null || c === undefined || c === false) continue;
+          el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+        }
+        return el;
+      }
+      const RANGES = [
+        ['today', 'Today'],
+        ['2d', '2 days'],
+        ['sprint', 'Sprint'],
+      ];
+      let tlRange = 'today';
+      try {
+        tlRange = localStorage.getItem('board:tl-range') || 'today';
+      } catch {
+        // No storage (private window): today.
+      }
+      let tlScrollToEnd = true; // on first render and on a range change
+      let tlWidth = 900; // the scroller's last measured width
+      const AXIS_H = 30;
+      const ROW_H = 34;
+      function tlWindow(tl) {
+        const end = Date.parse(data.now);
+        const midnight = new Date(end);
+        midnight.setHours(0, 0, 0, 0);
+        let start = midnight.getTime();
+        if (tlRange === '2d') start -= 86400000;
+        if (tlRange === 'sprint')
+          start = Math.min(start, Math.floor(tl.start / 3600000) * 3600000);
+        const hours = (end - start) / 3600000;
+        const want = tlRange === 'today' ? 64 : tlRange === '2d' ? 34 : 18;
+        const pxh = Math.max(want, (tlWidth - 8) / Math.max(1, hours));
+        return { start, end, pxh, width: Math.ceil(hours * pxh) + 8 };
+      }
+      function spanText(span, row) {
+        const to = span.open ? 'now' : stamp(new Date(span.to).toISOString());
+        return [
+          [`#${span.issue}`, span.title],
+          [
+            'Held by',
+            `${row.name}, ${stamp(new Date(span.from).toISOString())} to ${to} (${duration(span.to - span.from)})`,
+          ],
+          [
+            'Worked',
+            span.workedMs === null ? 'not recorded' : duration(span.workedMs),
+          ],
+          [
+            'Rounds',
+            `${span.rounds}${span.rounds ? ` (${span.critical} critical, ${span.major} major)` : ''}`,
+          ],
+          span.merged
+            ? ['Merged', stamp(new Date(span.merged).toISOString())]
+            : null,
+        ].filter(Boolean);
+      }
+      function showTip(evt, span, row) {
+        const tip = document.getElementById('tl-tip');
+        const box = document.querySelector('.tl');
+        if (!tip || !box) return;
+        const [head, ...rest] = spanText(span, row);
+        tip.replaceChildren(
+          h('div', {}, h('b', {}, head[0]), ' ', head[1]),
+          h(
+            'dl',
+            {},
+            rest.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]),
+          ),
+        );
+        tip.style.display = 'block';
+        const outer = box.getBoundingClientRect();
+        const target = evt.currentTarget.getBoundingClientRect();
+        const x =
+          evt.clientX !== undefined && evt.type.startsWith('pointer')
+            ? evt.clientX
+            : target.left + target.width / 2;
+        let left = x - outer.left + 12;
+        if (left + tip.offsetWidth > outer.width)
+          left = Math.max(0, x - outer.left - tip.offsetWidth - 12);
+        tip.style.left = `${left}px`;
+        tip.style.top = `${target.bottom - outer.top + 6}px`;
+      }
+      function hideTip() {
+        const tip = document.getElementById('tl-tip');
+        if (tip) tip.style.display = 'none';
+      }
+      function jumpToIssue(issue) {
+        if (tab !== 'learnings') showTab('learnings');
+        const row = document.getElementById(`timing-${issue}`);
+        if (!row) return;
+        row.scrollIntoView({ block: 'center' });
+        row.classList.add('flash');
+        setTimeout(() => row.classList.remove('flash'), 1500);
+      }
+      function timeline() {
+        const tl = data.laneTimeline;
+        if (!tl || !tl.rows.some((r) => r.spans.length)) return null;
+        const win = tlWindow(tl);
+        const x = (t) =>
+          ((Math.min(Math.max(t, win.start), win.end) - win.start) / 3600000) *
+            win.pxh +
+          4;
+        const height = AXIS_H + tl.rows.length * ROW_H + 4;
+        const steps = [1, 2, 3, 6, 12, 24];
+        const step = steps.find((s) => s * win.pxh >= 64) || 24;
+        const ticks = [];
+        const first = new Date(win.start);
+        first.setMinutes(0, 0, 0);
+        for (let t = first.getTime(); t <= win.end; t += 3600000) {
+          const d = new Date(t);
+          if (d.getHours() % step === 0) ticks.push(t);
+        }
+        const nowISO = data.now;
+        const pauses = data.timings.pauses.map((p) => ({
+          from: Date.parse(p.from),
+          to: p.to ? Date.parse(p.to) : Date.parse(nowISO),
+          reason: p.reason,
+        }));
+        const svg = sv(
+          'svg',
+          {
+            width: win.width,
+            height,
+            role: 'img',
+            'aria-label': 'Which lane held which issue over time',
+          },
+          sv(
+            'defs',
+            {},
+            sv(
+              'pattern',
+              {
+                id: 'tl-hatch',
+                width: 6,
+                height: 6,
+                patternUnits: 'userSpaceOnUse',
+                patternTransform: 'rotate(45)',
+              },
+              sv('rect', {
+                width: 2,
+                height: 6,
+                fill: 'var(--pause)',
+                opacity: 0.55,
+              }),
+            ),
+          ),
+          // Grid and axis: recessive.
+          ticks.map((t) => {
+            const d = new Date(t);
+            const day = d.getHours() === 0;
+            return sv(
+              'g',
+              {},
+              sv('line', {
+                x1: x(t),
+                x2: x(t),
+                y1: AXIS_H - 6,
+                y2: height,
+                stroke: 'var(--rule)',
+                'stroke-width': day ? 1.5 : 1,
+              }),
+              sv(
+                'text',
+                { x: x(t) + 3, y: 14, class: day ? 'day' : '' },
+                day
+                  ? d.toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                    })
+                  : clock(d.toISOString()),
+              ),
+            );
+          }),
+          // Board-wide pauses: a hatched band across every row.
+          pauses
+            .filter((p) => p.to > win.start && p.from < win.end)
+            .map((p) =>
+              sv(
+                'rect',
+                {
+                  x: x(p.from),
+                  y: AXIS_H - 4,
+                  width: Math.max(1, x(p.to) - x(p.from)),
+                  height: height - AXIS_H + 4,
+                  fill: 'url(#tl-hatch)',
+                },
+                sv(
+                  'title',
+                  {},
+                  `${p.reason || 'Paused'}, ${clock(new Date(p.from).toISOString())} to ${clock(new Date(p.to).toISOString())}`,
+                ),
+              ),
+            ),
+          tl.rows.map((row, i) => {
+            const top = AXIS_H + i * ROW_H;
+            const barY = top + 16;
+            const mid = barY + 6;
+            return sv(
+              'g',
+              {},
+              row.idle
+                .filter((g) => g.to > win.start && g.from < win.end)
+                .map((g) =>
+                  sv('line', {
+                    x1: x(g.from) + 2,
+                    x2: x(g.to) - 2,
+                    y1: mid,
+                    y2: mid,
+                    stroke: 'var(--faint)',
+                    'stroke-width': 1.5,
+                    'stroke-dasharray': '1 4',
+                    'stroke-linecap': 'round',
+                  }),
+                ),
+              row.spans
+                .filter((sp) => sp.to > win.start && sp.from < win.end)
+                .map((sp) => {
+                  const x0 = x(sp.from) + 1;
+                  const x1 = Math.max(x0 + 3, x(sp.to) - 1); // a 2px gap between neighbours
+                  const fade = (phase) =>
+                    sp.hasWork ? 0.3 : phase === 'review' ? 0.55 : 1;
+                  const color = (phase) =>
+                    phase === 'review' ? 'var(--c-review)' : 'var(--c-build)';
+                  const phaseOf = (t) =>
+                    (
+                      sp.segments.find((s) => t >= s.from && t <= s.to) ||
+                      sp.segments[0] || { phase: 'building' }
+                    ).phase;
+                  return sv(
+                    'g',
+                    {
+                      class: 'span',
+                      tabindex: 0,
+                      role: 'link',
+                      'aria-label': spanText(sp, row)
+                        .map(([k, v]) => `${k} ${v}`)
+                        .join(', '),
+                      onpointerenter: (e) => showTip(e, sp, row),
+                      onpointermove: (e) => showTip(e, sp, row),
+                      onpointerleave: hideTip,
+                      onfocus: (e) => showTip(e, sp, row),
+                      onblur: hideTip,
+                      onclick: () => jumpToIssue(sp.issue),
+                      onkeydown: (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          jumpToIssue(sp.issue);
+                        }
+                      },
+                    },
+                    sv('rect', {
+                      class: 'hit',
+                      x: x0 - 2,
+                      y: top + 2,
+                      width: Math.max(10, x1 - x0 + 4),
+                      height: ROW_H - 4,
+                      rx: 5,
+                      fill: 'transparent',
+                    }),
+                    sp.segments.map((seg) =>
+                      sv('rect', {
+                        x: Math.max(x0, x(seg.from)),
+                        y: barY,
+                        width: Math.max(
+                          0,
+                          Math.min(x1, x(seg.to)) - Math.max(x0, x(seg.from)),
+                        ),
+                        height: 12,
+                        rx: 3,
+                        fill: color(seg.phase),
+                        opacity: fade(seg.phase),
+                      }),
+                    ),
+                    sp.worked.map((w) =>
+                      sv('rect', {
+                        x: Math.max(x0, x(w.from)),
+                        y: barY,
+                        width: Math.max(
+                          2,
+                          Math.min(x1, x(w.to)) - Math.max(x0, x(w.from)),
+                        ),
+                        height: 12,
+                        rx: 2,
+                        fill: color(phaseOf((w.from + w.to) / 2)),
+                      }),
+                    ),
+                    sp.merged
+                      ? sv('circle', {
+                          cx: x(sp.merged),
+                          cy: mid,
+                          r: 5,
+                          fill: 'var(--ink)',
+                          stroke: 'var(--panel)',
+                          'stroke-width': 2,
+                        })
+                      : null,
+                    x1 - x0 >= 34
+                      ? sv(
+                          'text',
+                          { x: x0 + 1, y: barY - 4, class: 'lbl' },
+                          `#${sp.issue}`,
+                        )
+                      : null,
+                  );
+                }),
+            );
+          }),
+          sv('line', {
+            x1: x(win.end),
+            x2: x(win.end),
+            y1: AXIS_H - 6,
+            y2: height,
+            stroke: 'var(--ink)',
+            'stroke-width': 1.5,
+            opacity: 0.5,
+          }),
+        );
+        const swatch = (draw) =>
+          sv('svg', { width: 18, height: 10, 'aria-hidden': 'true' }, draw);
+        return h(
+          'section',
+          { class: 'panel', id: 'lanes-over-time', 'aria-labelledby': 'tl-h' },
+          h(
+            'div',
+            { class: 'tl-head' },
+            h(
+              'h2',
+              { id: 'tl-h' },
+              'Lanes over time',
+              h('small', {}, 'which lane held which issue'),
+            ),
+            h(
+              'div',
+              { class: 'range', role: 'group', 'aria-label': 'Time range' },
+              RANGES.map(([key, label]) =>
+                h(
+                  'button',
+                  {
+                    'aria-pressed': tlRange === key ? 'true' : 'false',
+                    'data-focus': `tl-range:${key}`,
+                    onclick: () => {
+                      tlRange = key;
+                      tlScrollToEnd = true;
+                      try {
+                        localStorage.setItem('board:tl-range', key);
+                      } catch {
+                        // No storage: the choice lasts until reload.
+                      }
+                      render();
+                    },
+                  },
+                  label,
+                ),
+              ),
+            ),
+          ),
+          h(
+            'div',
+            { class: 'tl' },
+            h(
+              'div',
+              { class: 'tl-labels', 'aria-hidden': 'true' },
+              tl.rows.map((r) =>
+                h(
+                  'div',
+                  { title: r.name },
+                  h('span', { class: 'letter' }, r.letter),
+                ),
+              ),
+            ),
+            h('div', { class: 'tl-scroll', 'data-scroll': 'timeline' }, svg),
+            h('div', { id: 'tl-tip', role: 'tooltip' }),
+          ),
+          h(
+            'div',
+            { class: 'tl-legend' },
+            h(
+              'span',
+              {},
+              swatch(
+                sv('rect', {
+                  width: 18,
+                  height: 10,
+                  rx: 2,
+                  fill: 'var(--c-build)',
+                }),
+              ),
+              'building',
+            ),
+            h(
+              'span',
+              {},
+              swatch(
+                sv('rect', {
+                  width: 18,
+                  height: 10,
+                  rx: 2,
+                  fill: 'var(--c-review)',
+                }),
+              ),
+              'in review',
+            ),
+            h(
+              'span',
+              {},
+              swatch([
+                sv('rect', {
+                  width: 18,
+                  height: 10,
+                  rx: 2,
+                  fill: 'var(--c-build)',
+                  opacity: 0.3,
+                }),
+                sv('rect', {
+                  x: 5,
+                  width: 8,
+                  height: 10,
+                  rx: 1,
+                  fill: 'var(--c-build)',
+                }),
+              ]),
+              'light: held, solid: an agent ran (when recorded)',
+            ),
+            h(
+              'span',
+              {},
+              swatch(sv('circle', { cx: 9, cy: 5, r: 4, fill: 'var(--ink)' })),
+              'merged',
+            ),
+            h(
+              'span',
+              {},
+              swatch(
+                sv('rect', { width: 18, height: 10, fill: 'url(#tl-hatch)' }),
+              ),
+              'paused',
+            ),
+            h(
+              'span',
+              {},
+              swatch(
+                sv('line', {
+                  x1: 1,
+                  x2: 17,
+                  y1: 5,
+                  y2: 5,
+                  stroke: 'var(--faint)',
+                  'stroke-width': 1.5,
+                  'stroke-dasharray': '1 4',
+                  'stroke-linecap': 'round',
+                }),
+              ),
+              'idle',
+            ),
+          ),
+        );
+      }
+
+      // ---- timings and friction -----------------------------------------------------------
+      function timings() {
+        const { issues, friction } = data.timings;
+        if (!issues.length) return null;
+        const maxWall = Math.max(1, ...issues.map((r) => r.wallMs || 0));
+        const pct = (v) => `${((v / maxWall) * 100).toFixed(2)}%`;
+        const rows = issues.map((r) =>
+          h(
+            'li',
+            { id: `timing-${r.issue}` },
+            h(
+              'div',
+              { class: 'wrap' },
+              h('span', { class: 'ref' }, `#${r.issue}`),
+              r.title,
+              h(
+                'div',
+                { class: 'small' },
+                r.merged
+                  ? `merged ${stamp(r.merged)}`
+                  : r.pr
+                    ? `PR since ${stamp(r.pr)}`
+                    : r.started
+                      ? `started ${stamp(r.started)}`
+                      : 'not started',
+                r.paused ? ', paused now' : '',
+              ),
+            ),
+            h(
+              'div',
+              {
+                class: r.merged ? 'bar' : 'bar open',
+                title:
+                  r.wallMs === null
+                    ? 'Not started'
+                    : `${r.workedMs === null ? 'No work recorded' : `${duration(r.workedMs)} worked`}, ${duration(r.activeMs)} active, ${duration(r.wallMs)} wall`,
+              },
+              r.wallMs
+                ? h('span', { class: 'wall', style: `width:${pct(r.wallMs)}` })
+                : null,
+              r.activeMs
+                ? h('span', {
+                    class: 'active',
+                    style: `width:${pct(r.activeMs)}`,
+                  })
+                : null,
+              r.workedMs
+                ? h('span', {
+                    class: 'worked',
+                    style: `width:${pct(Math.min(r.workedMs, r.wallMs || r.workedMs))}`,
+                  })
+                : null,
+            ),
+            h(
+              'div',
+              { class: 'figures' },
+              r.workedMs === null
+                ? h(
+                    'span',
+                    {
+                      title:
+                        'No agent working time recorded (board.mjs worked)',
+                    },
+                    'not recorded',
+                  )
+                : [h('b', {}, duration(r.workedMs)), ' worked'],
+              r.wallMs === null
+                ? ', not started, '
+                : `, ${duration(r.activeMs)} active of ${duration(r.wallMs)}, `,
+              h('b', {}, r.rounds),
+              ` ${r.rounds === 1 ? 'round' : 'rounds'}`,
+              r.critical
+                ? [', ', h('span', { class: 'c' }, `${r.critical} critical`)]
+                : null,
+              r.major ? `, ${r.major} major` : null,
+              r.friction ? `, ${plural(r.friction, 'snag', 'snags')}` : null,
+            ),
+          ),
+        );
+        const maxMinutes = Math.max(1, ...friction.map((f) => f.minutes));
+        const fr = friction.length
+          ? h(
+              'div',
+              { id: 'friction' },
+              h(
+                'h3',
+                {},
+                'Friction',
+                h('small', {}, ' most time lost first, from all issues above'),
+              ),
+              h(
+                'ol',
+                { class: 'bars' },
+                friction.map((f) =>
+                  h(
+                    'li',
+                    {},
+                    h('div', { class: 'wrap' }, f.category),
+                    h(
+                      'div',
+                      { class: 'bar' },
+                      f.minutes
+                        ? h('span', {
+                            class: 'fr',
+                            style: `width:${((f.minutes / maxMinutes) * 100).toFixed(2)}%`,
+                          })
+                        : null,
+                    ),
+                    h(
+                      'div',
+                      { class: 'figures' },
+                      h(
+                        'b',
+                        {},
+                        f.minutes
+                          ? duration(f.minutes * 60000)
+                          : 'no time noted',
+                      ),
+                      `, ${plural(f.issues, 'issue', 'issues')}, ${plural(f.rounds, 'round', 'rounds')}`,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null;
+        return h(
+          'section',
+          { class: 'panel', id: 'timings', 'aria-labelledby': 'timings-h' },
+          h(
+            'h2',
+            { id: 'timings-h' },
+            'Timings',
+            h('small', {}, 'estimates, for planning'),
+          ),
+          h(
+            'div',
+            { class: 'legend' },
+            h(
+              'span',
+              {},
+              h('i', { class: 'sw-worked' }),
+              'worked (agent time)',
+            ),
+            h(
+              'span',
+              {},
+              h('i', { class: 'sw-active' }),
+              'active, no agent working',
+            ),
+            h('span', {}, h('i', { class: 'sw-paused' }), 'paused'),
+            h('span', {}, 'dashed end: still open'),
+          ),
+          h('ol', { class: 'bars' }, rows),
+          fr,
+        );
+      }
+
+      // ---- review findings ----------------------------------------------------------------
+      const SOURCE_LABEL = {
+        'agent-review': 'agent review',
+        'coordinator-review': 'coordinator review',
+        'security-review': 'security hook',
+      };
+      let findingKind = null;
+      let findingsOpen = false;
+      function findings() {
+        const f = data.timings.findings;
+        if (!f || !f.kinds.length) return null;
+        const max = Math.max(
+          1,
+          ...f.kinds.map((k) => k.critical + k.major + k.minor),
+        );
+        const pct = (v) => `${((v / max) * 100).toFixed(2)}%`;
+        const shown = findingKind
+          ? f.list.filter((x) => x.kind === findingKind)
+          : f.list;
+        const outcomes = (o) =>
+          Object.entries(o)
+            .map(([k, n]) => `${n} ${k}`)
+            .join(', ');
+        return h(
+          'section',
+          { class: 'panel', id: 'findings', 'aria-labelledby': 'findings-h' },
+          h(
+            'h2',
+            { id: 'findings-h' },
+            'Review findings',
+            h(
+              'small',
+              {},
+              ` ${plural(f.list.length, 'finding', 'findings')}, most serious kind first`,
+            ),
+          ),
+          h(
+            'div',
+            { class: 'legend' },
+            h('span', {}, h('i', { class: 'sw-critical' }), 'critical'),
+            h('span', {}, h('i', { class: 'sw-major' }), 'major'),
+            h('span', {}, h('i', { class: 'sw-minor' }), 'minor'),
+            h('span', {}, 'click a kind to list its findings'),
+          ),
+          h(
+            'ol',
+            { class: 'bars' },
+            f.kinds.map((k) =>
+              h(
+                'li',
+                {},
+                h(
+                  'div',
+                  { class: 'wrap' },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      class: 'linkish',
+                      'data-focus': `finding-${k.kind}`,
+                      'aria-pressed': String(findingKind === k.kind),
+                      onclick: () => {
+                        findingKind = findingKind === k.kind ? null : k.kind;
+                        findingsOpen = !!findingKind || findingsOpen;
+                        render();
+                      },
+                    },
+                    k.kind,
+                  ),
+                ),
+                h(
+                  'div',
+                  { class: 'bar stacked', title: outcomes(k.sources) },
+                  k.critical
+                    ? h('span', {
+                        class: 'sev-critical',
+                        style: `width:${pct(k.critical)}`,
+                      })
+                    : null,
+                  k.major
+                    ? h('span', {
+                        class: 'sev-major',
+                        style: `width:${pct(k.major)}`,
+                      })
+                    : null,
+                  k.minor
+                    ? h('span', {
+                        class: 'sev-minor',
+                        style: `width:${pct(k.minor)}`,
+                      })
+                    : null,
+                ),
+                h(
+                  'div',
+                  { class: 'figures' },
+                  k.critical
+                    ? [
+                        h('span', { class: 'c' }, `${k.critical} critical`),
+                        ', ',
+                      ]
+                    : null,
+                  h('b', {}, k.major),
+                  ` major, ${k.minor} minor in ${plural(k.issues, 'issue', 'issues')}; ${outcomes(k.outcomes)}`,
+                ),
+              ),
+            ),
+          ),
+          h(
+            'details',
+            {
+              class: 'done-list',
+              open: findingsOpen ? true : null,
+              ontoggle: (e) => {
+                findingsOpen = e.currentTarget.open;
+              },
+            },
+            h(
+              'summary',
+              {},
+              findingKind
+                ? `${plural(shown.length, 'finding', 'findings')} of kind ${findingKind}`
+                : `All ${plural(shown.length, 'finding', 'findings')}, newest first`,
+            ),
+            h(
+              'ul',
+              { class: 'findings-list' },
+              shown.map((x) =>
+                h(
+                  'li',
+                  {},
+                  h('span', { class: `sev ${x.severity}` }, x.severity),
+                  h(
+                    'span',
+                    {},
+                    h('span', { class: 'ref' }, `#${x.issue}`),
+                    ' ',
+                    x.summary,
+                  ),
+                  h(
+                    'span',
+                    { class: 'meta' },
+                    [
+                      x.kind,
+                      SOURCE_LABEL[x.source] || x.source,
+                      x.round ? `round ${x.round}` : null,
+                      x.outcome,
+                      x.file || null,
+                      stamp(x.at),
+                    ]
+                      .filter(Boolean)
+                      .join(' · '),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // ---- render -------------------------------------------------------------------------
+      function view(state) {
+        if (tab === 'sprint')
+          return [...data.groups.map(group), today(), timeline() || ''];
+        if (tab === 'learnings') {
+          const parts = [findings(), timings()].filter(Boolean);
+          return parts.length
+            ? parts
+            : [
+                h(
+                  'p',
+                  { class: 'panel all-clear' },
+                  'No review findings or timings yet.',
+                ),
+              ];
+        }
+        const side = [lanes(state), waiting(state)].filter(Boolean);
+        return [
+          h(
+            'div',
+            { class: 'grid top' },
+            forYou(state),
+            side.length ? h('div', { class: 'stack' }, side) : null,
+          ),
+        ];
+      }
+      function render() {
+        if (!data) return;
+        const focused = document.activeElement;
+        const focusKey =
+          focused && focused.getAttribute && focused.getAttribute('data-key');
+        const selection = focusKey
+          ? [focused.selectionStart, focused.selectionEnd]
+          : null;
+        // A focused button survives the rebuild too.
+        const focusId =
+          !focusKey &&
+          focused &&
+          focused.getAttribute &&
+          focused.getAttribute('data-focus');
+        const state = data.state;
+        document.getElementById('project').textContent =
+          state.project || 'Working board';
+        document.title = state.project
+          ? `${state.project}: board`
+          : 'Working board';
+        document.getElementById('tabs').replaceChildren(...tabs(state));
+        const root = document.getElementById('board');
+        root.setAttribute('role', 'tabpanel');
+        root.setAttribute('aria-labelledby', `tab-${tab}`);
+        const scrolls = [...root.querySelectorAll('[data-scroll]')].map(
+          (el) => [el.getAttribute('data-scroll'), el.scrollLeft],
+        );
+        root.replaceChildren(...view(state));
+        // The timeline scrolls to now on first render and on a range change, else keeps its place.
+        for (const el of root.querySelectorAll('[data-scroll]')) {
+          const saved = scrolls.find(
+            ([key]) => key === el.getAttribute('data-scroll'),
+          );
+          if (el.getAttribute('data-scroll') === 'timeline') {
+            // Fill the scroller's real width: measured once it exists, then drawn again.
+            const measured = el.clientWidth;
+            if (measured && Math.abs(measured - tlWidth) > 40) {
+              tlWidth = measured;
+              requestAnimationFrame(() => {
+                tlScrollToEnd = true;
+                render();
+              });
+            }
+            if (tlScrollToEnd || !saved) el.scrollLeft = el.scrollWidth;
+            else el.scrollLeft = saved[1];
+          } else if (saved) el.scrollLeft = saved[1];
+        }
+        tlScrollToEnd = false;
+        for (const el of root.querySelectorAll('textarea[data-key]')) {
+          const key = el.getAttribute('data-key');
+          if (drafts.has(key)) el.value = drafts.get(key);
+          if (key === focusKey) {
+            el.focus();
+            if (selection) el.setSelectionRange(selection[0], selection[1]);
+          }
+        }
+        if (focusId)
+          root.querySelector(`[data-focus="${CSS.escape(focusId)}"]`)?.focus();
+        renderLive();
+      }
+      function renderLive() {
+        const live = document.getElementById('live');
+        live.classList.toggle('on', connected);
+        const updated =
+          data && data.state.updatedAt
+            ? `updated ${stamp(data.state.updatedAt)}`
+            : 'no updates yet';
+        document.getElementById('updated').textContent = connected
+          ? `live, ${updated}`
+          : `offline, ${updated}`;
+      }
+
+      async function load() {
+        const res = await fetch('/api/board', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+        render();
+      }
+
+      function connect() {
+        const events = new EventSource('/api/events');
+        events.addEventListener('changed', () => load().catch(() => {}));
+        events.onopen = () => {
+          connected = true;
+          if (data) renderLive();
+        };
+        events.onerror = () => {
+          connected = false;
+          if (data) renderLive();
+        };
+      }
+
+      load().catch(() => {
+        document.getElementById('updated').textContent =
+          'Board server not reachable';
+      });
+      connect();
+      // Ages, open pauses and the day strip move on even without a change.
+      setInterval(() => load().catch(() => {}), 60000);
+    </script>
+  </body>
+</html>

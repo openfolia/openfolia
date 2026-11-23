@@ -1,0 +1,19 @@
+= Système haute tension
+:schema-version: 1
+:module-type: safety
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: haute tension, électrique
+
+[safety#hv-shock,severity=danger,symbols=w012]
+.Électrocution par le système haute tension
+====
+[#hv-shock-text]
+Le [.term.high-voltage-system]##système haute tension## fonctionne sous une tension allant jusqu'à 400 V. Toucher ses composants peut entraîner des blessures mortelles.
+
+[#hv-shock-measures]
+* [[hv-shock-m1]]N'ouvrez, ne déposez et ne réparez jamais de pièces munies de câbles orange ou de caches orange.
+* [[hv-shock-m2]]Après un accident, éteignez le véhicule et tenez-vous à l'écart des composants haute tension endommagés.
+* [[hv-shock-m3]]Confiez toute intervention sur le système haute tension à un atelier qualifié.
+====

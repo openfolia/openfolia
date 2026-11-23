@@ -1,0 +1,15 @@
+= About this manual
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+This manual describes the {model-name} with all its equipment. Some equipment may not be fitted to your vehicle.
+
+[#keep]
+Keep this manual in the vehicle, and hand it over with the vehicle when you sell it.
+
+[#notices]
+Safety notices are marked with a signal word: DANGER for a hazard that kills or seriously injures, WARNING for one that can, and CAUTION for minor injuries.

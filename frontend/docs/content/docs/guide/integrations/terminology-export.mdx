@@ -1,0 +1,40 @@
+---
+title: 'Terminology export'
+description: 'Download the terminology as TBX or CSV through the API, for a translation tool or a spreadsheet.'
+articleId: 'guide.integrations.terminology-export'
+---
+
+`GET /terms/export` downloads every term at a ref as one file: TBX for a translation tool, or CSV
+for a spreadsheet. It is part of the [Delivery API](/api/delivery) and needs `content.read`.
+Terms carry no audience, so every reader of the ref gets every term.
+
+## Download it
+
+```sh
+# TBX, every language
+curl -s -OJ -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/terms/export?format=tbx"
+
+# CSV, German only, at a release's tag
+curl -s -OJ -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/terms/export?format=csv&lang=de&ref=<tag>"
+```
+
+| Parameter | What                                                                                 |
+| --------- | ------------------------------------------------------------------------------------ |
+| `format`  | Required: `tbx` or `csv`.                                                            |
+| `lang`    | Optional: one language. A term without it is left out.                               |
+| `ref`     | Optional: a branch, tag or commit to read at (default: the server's default branch). |
+
+- **TBX** is TBX-Basic (ISO 30042:2019), `application/x-tbx+xml`.
+- **CSV** has one row per term and language, `text/csv`. A cell a spreadsheet would run as a formula
+  starts with `'`, so opening the file runs nothing.
+
+The answer is a download (`Content-Disposition: attachment`), named `terms.<format>`, or
+`terms-<lang>.<format>` with `lang`, with `X-Ccms-Terms` saying how many
+terms it holds. Its errors are JSON:API documents: 400 `invalid-parameter` for no or an unknown
+`format` or a malformed `lang`, 400 `unsupported-parameter` for any other parameter. A file in
+`terms/` that is no term is left out.
+
+There is no TBX import: terms are edited in the editor, through a revision. To read single terms
+as JSON:API, use `GET /terms` and `GET /terms/<termId>`.

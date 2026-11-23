@@ -1,0 +1,49 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/content-model"
+    },
+    {
+      "path": "./packages/render-typst"
+    },
+    {
+      "path": "./packages/render-html"
+    },
+    {
+      "path": "./packages/xml"
+    },
+    {
+      "path": "./packages/xliff"
+    },
+    {
+      "path": "./packages/dita"
+    },
+    {
+      "path": "./packages/content-repo"
+    },
+    {
+      "path": "./packages/content-editor-model"
+    },
+    {
+      "path": "./backend/api"
+    },
+    {
+      "path": "./backend/mcp"
+    },
+    {
+      "path": "./connectors/wiki-markup"
+    },
+    {
+      "path": "./connectors/tracker"
+    },
+    {
+      "path": "./frontend/theme"
+    },
+    {
+      "path": "./backend/embedder"
+    }
+  ]
+}

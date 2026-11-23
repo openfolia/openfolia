@@ -1,0 +1,12 @@
+{
+  "title": "Prüfungen",
+  "pages": [
+    "run-checks",
+    "fixing-issues",
+    "references",
+    "writing",
+    "translation",
+    "pdf-accessibility",
+    "layout-warnings"
+  ]
+}

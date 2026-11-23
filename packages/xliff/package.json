@@ -1,0 +1,30 @@
+{
+  "name": "@openfolia/xliff",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "xliff"
+  },
+  "dependencies": {
+    "@openfolia/content-model": "workspace:*",
+    "@openfolia/xml": "workspace:*",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "xmllint-wasm": "5.2.0"
+  }
+}

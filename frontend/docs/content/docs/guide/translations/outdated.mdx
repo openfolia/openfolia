@@ -1,0 +1,52 @@
+---
+title: 'Outdated and missing translations'
+description: 'What the translation badges mean, when a translation becomes outdated, and where the editor tells you.'
+articleId: 'guide.translations.outdated'
+---
+
+A translation is compared with its source block by block. When the source text of a block
+changes, that block's translation is outdated. The rest of the module stays up to date.
+
+## What the badges mean
+
+The translation status and the reports use the same four states. Each has its
+own dot, so the word and the shape say it, not only the colour.
+
+| Badge              | Meaning                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| **Up to date**     | Every block is translated from the source text as it is now.  |
+| **Outdated**       | The source of some blocks changed since they were translated. |
+| **At agency**      | The blocks were sent in a delta export and are not back yet.  |
+| **Not translated** | There is no version in this language.                         |
+
+In the matrix, an outdated cell counts its blocks: **2 outdated** means two blocks need
+translating again.
+
+## When a block becomes outdated
+
+- Its text changed in the source language: a word, a sentence, a cross-reference.
+- A change that only reformats the text, without changing it, does not count.
+- A language version started in the editor has no record yet of the source it was translated
+  from. It counts as outdated in every block until a translation of it is imported.
+
+Changing a module's ID keeps its translations as they were. See
+[Rename or delete a translated module](/guide/translations/rename-and-delete).
+
+## Where you see it
+
+- **Translations**: the **Status** tab. Choose **Show**, **Outdated** to list only those. See
+  [See what needs translating](/guide/translations/status).
+- The checks of a manual report **Outdated translation** and **Missing translation** for each
+  language. A missing translation means the manual shows the source language there. See
+  [Translation checks](/guide/checks/translation).
+- **Reports**: the **Translations** tab counts them per manual and language. See
+  [Translation reports](/guide/translations/reports).
+
+In **Content**, the **Languages** column shows only whether a module has a version in each
+language, not whether it is outdated.
+
+## Bring it up to date
+
+Send the outdated blocks in a [delta export](/guide/translations/export), and
+[import](/guide/translations/import) what comes back. Or open the language version and change the
+text yourself.

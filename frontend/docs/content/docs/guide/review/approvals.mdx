@@ -1,0 +1,48 @@
+---
+title: 'Approvals and sign-offs'
+description: 'What a revision needs before it can be merged, and what happens when an approver loses their role.'
+articleId: 'guide.review.approvals'
+---
+
+The **Approvals** card on the right of the **Review** page lists what a revision needs, in order,
+and who gave it. A ring marks what it waits for now, a tick what is given.
+
+![Approvals: the review given, a sign-off for procedures waiting, then the merge](/images/guide/en/review-approvals.webp)
+
+## What a revision needs
+
+- **Review**: always. A reviewer gives it with **Approve**.
+- **Sign-off: Procedure** (or another type): for every restricted module type among the modules it
+  changes. An approver of that type gives it with **Sign off**.
+- **Merge**: once everything above is given. A publisher merges it.
+
+A change to the project settings needs every sign-off there is. A module type is restricted when
+an administrator marks it **Restricted** under **Admin** › **Project settings** › **Module types**.
+A type restricted after the revision was submitted needs its sign-off too.
+
+## Read a line
+
+- **Waiting for a reviewer**, **Waiting for an approver of this type**: what it waits for now.
+- **Needed once it is submitted**: the revision is still a draft.
+- **Approved by Sample Reviewer**, with when.
+- **Into main once approved**, then **Ready to merge into main**.
+
+## Who may give what
+
+- The same person may give the review and a sign-off.
+- Nobody approves, signs off or returns a revision they wrote, or wrote part of. Someone who
+  carried a fix forward or moved it is not its only author: the fix's writer counts too. See
+  [Approve your own revision](/guide/review/self-approval) for the exception.
+- A sign-off needs an approver whose role covers every changed module of that type.
+
+## When an approver loses their role
+
+An approval counts only while its approver still has the role that gave it. If an administrator
+takes the role away, or narrows it, the line says **Approved by Sample Reviewer, which no longer
+counts: they lost the role**, and the step waits again.
+
+Someone else with the role can then give it. Until then **Merge** is refused: **An approval it needs
+no longer counts: its approver lost the role. Return it to be reviewed again.** A reviewer returns
+it with **Request changes**, and the author submits it again.
+
+[Roles](/guide/reference/roles) lists which role may review, approve and merge.

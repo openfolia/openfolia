@@ -1,0 +1,41 @@
+---
+title: 'Von main aktualisieren'
+description: 'Holen Sie, was andere in die veröffentlichten Inhalte zusammengeführt haben, in Ihre Überarbeitung.'
+articleId: 'guide.change-sets.update-from-main'
+---
+
+Während Sie in einer Überarbeitung arbeiten, führen andere ihre Überarbeitungen mit **main**
+zusammen, den veröffentlichten Inhalten. Ihre Überarbeitung sieht deren Änderungen erst, wenn Sie
+sie aktualisieren.
+
+## Ihre Überarbeitung aktualisieren
+
+Hat main Änderungen, die Ihre Überarbeitung noch nicht hat, zeigt eine Schaltfläche neben dem
+Überarbeitungsmenü, wie viele: **Von main aktualisieren (2 Änderungen)**.
+
+![Ein Modul in einer Überarbeitung, oben rechts Von main aktualisieren (2 Änderungen)](/images/guide/de/update-from-main.webp)
+
+1. Wählen Sie **Von main aktualisieren**.
+2. Der Editor holt die Änderungen herein. Eine Meldung sagt, wenn Ihre Überarbeitung auf dem
+   aktuellen Stand ist.
+
+## Wenn eine Änderung mit Ihrer kollidiert
+
+Manchmal wurde eine Datei auf main und auch in Ihrer Überarbeitung geändert. Dann kann der Editor
+beides nicht von selbst verbinden. Die Schaltfläche zeigt **Konflikte lösen**, und ein Dialog
+listet die Dateien: **Änderungen auf main stehen im Konflikt mit dieser Überarbeitung**.
+
+Tun Sie für jede Datei in der Liste eines davon:
+
+- Wählen Sie **Öffnen**, ändern Sie die Datei so, wie sie lauten soll, und lassen Sie sie
+  speichern.
+- Wählen Sie **Meine Fassung behalten**. Ihre Fassung bleibt, wie sie ist, und die Änderung von
+  main an dieser Datei entfällt. **Rückgängig** nimmt das zurück.
+
+Ist jede Datei erledigt, wählen Sie **Erneut aktualisieren**. **Später** schließt den Dialog; die
+Schaltfläche zählt die Konflikte weiter.
+
+## Wenn die Schaltfläche „Aktualisieren von main nicht möglich“ zeigt
+
+Main wurde ersetzt, seit Ihre Überarbeitung begonnen hat. Siehe
+[Wenn main ersetzt wurde](/de/guide/change-sets/base-rewritten).

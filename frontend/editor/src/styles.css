@@ -1,0 +1,8 @@
+/* Tailwind, the design tokens and the component styles all come in through the UI library. */
+@import '../../ui/src/styles/ui.css';
+
+/* Dragging a block in the editor: the lifted copy lives outside the editor's own styles. */
+@import './app/doc-editor/block-drag.css';
+
+/* The utility classes used by the app's own templates. */
+@source './';

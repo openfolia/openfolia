@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="install" xml:lang="en">
+  <title>Installing the pump</title>
+  <shortdesc>Set the pump up next to the rain barrel.</shortdesc>
+  <taskbody>
+    <prereq id="before">
+      <note conref="warehouse.dita#warehouse/unplug"/>
+    </prereq>
+    <steps id="install-steps">
+      <step id="place">
+        <cmd>Place the pump on a level surface.</cmd>
+      </step>
+      <step id="connect">
+        <cmd>Connect the hose to the outlet.</cmd>
+        <info>
+          <hazardstatement id="hot" type="caution">
+            <messagepanel>
+              <typeofhazard>Hot surface.</typeofhazard>
+              <consequence>The motor housing gets hot in use.</consequence>
+              <howtoavoid>Let the pump cool down before you touch it.</howtoavoid>
+            </messagepanel>
+            <hazardsymbol href="../../images/hot-surface.png"/>
+          </hazardstatement>
+        </info>
+      </step>
+      <step id="timer" product="pro">
+        <cmd>Set the <uicontrol>Timer</uicontrol> switch.</cmd>
+      </step>
+    </steps>
+    <result id="done">
+      <p>The pump is ready.</p>
+    </result>
+  </taskbody>
+</task>

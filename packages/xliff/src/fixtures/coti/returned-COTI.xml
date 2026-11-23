@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- An invented project description as a translation system returns it: its own ID (tms-id) and
+     the status set, a preview added as a reference file; everything else as it was sent. -->
+<coti xmlns="http://www.dercom.de/COTI/2013/1.0/namespace" version="1.1" level="1" creator="OpenFolia" creation-date="2026-11-20T09:30:15Z" package-id="01938a2e-7d3c-7b11-8a00-000000000001">
+  <project name="Translation job 01938a2e-7d3c-7b11-8a00-000000000001" project-id="01938a2e-7d3c-7b11-8a00-000000000001-de" checkout-date="2026-11-20T09:00:00Z" proposal="no" due-date="2026-12-01T00:00:00Z" tms-id="TMS-20931">
+    <subject>Modules charging</subject>
+    <meta name="job" value="01938a2e-7d3c-7b11-8a00-000000000001"/>
+    <meta name="commit" value="4b825dc642cb6eb9a060e54bf8d69288fbee4904"/>
+    <meta name="ref" value="main"/>
+    <translation name="translation-01938a2e-7d3c-7b11-8a00-000000000001-de" source-language="en-US" target-language="de-DE" status="final">
+      <translation-file file-ref="translation files/translation-01938a2e-7d3c-7b11-8a00-000000000001-de.xlf" mime-type="application/xliff+xml" encoding="UTF-8" creation-date="2026-11-20T09:30:15Z" tms-id="F-1"/>
+      <reference-file file-ref="reference files/preview.pdf" mime-type="application/pdf" external="no" type="other" description="Preview"/>
+    </translation>
+  </project>
+</coti>

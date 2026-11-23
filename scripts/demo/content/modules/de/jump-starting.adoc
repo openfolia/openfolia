@@ -1,0 +1,29 @@
+= Starthilfe
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Batterie, Starthilfe
+
+[#intro]
+Ist die 12-V-Batterie entladen, startet das Fahrzeug nicht. Sie können es mit einem Starthilfekabel von einem anderen Fahrzeug starten.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Die 12-V-Batterie befindet sich links im Motorraum. Schließen Sie das Starthilfekabel direkt an sie an.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Auch das Elektromodell hat eine 12-V-Batterie: Sie schaltet das Hochvoltsystem ein. Schließen Sie das Starthilfekabel nur an die beiden Starthilfepunkte unter der Motorhaube an, niemals an das Hochvoltsystem.
+====
+
+[procedure#steps]
+.Starthilfe geben
+. [[step-red]]Klemmen Sie das rote Kabel an den Pluspol oder Starthilfepunkt Ihres Fahrzeugs, dann an den Pluspol der anderen Batterie.
+. [[step-black]]Klemmen Sie das schwarze Kabel an den Minuspol der anderen Batterie, dann an den Minus-Starthilfepunkt oder an blankes Metall Ihres Fahrzeugs, entfernt von der Batterie.
+. [[step-start]]Starten Sie zuerst das andere Fahrzeug, dann Ihres.
+. [[step-remove]]Nehmen Sie die Kabel in umgekehrter Reihenfolge ab.

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declarationMap": false,
+    "allowJs": true,
+    "checkJs": false,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["vitest/globals", "node"],
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "vitest.config.mts",
+    "tests/**/*.ts",
+    "scripts/**/*.mjs",
+    "e2e/**/*.ts"
+  ]
+}

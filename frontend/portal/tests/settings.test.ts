@@ -1,0 +1,144 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { readSettings, SettingsError } from '../build/settings.ts';
+
+const TOKEN = `ccms_sat_${'a'.repeat(16)}_${'b'.repeat(64)}`;
+const settingsOf = (over: Record<string, string | undefined> = {}) => ({
+  CCMS_PORTAL_API_URL: 'https://docs-api.example.com/api',
+  CCMS_PORTAL_TOKEN: TOKEN,
+  CCMS_PORTAL_AUDIENCE: 'public',
+  ...over,
+});
+
+describe('portal settings', () => {
+  it('reads the defaults', () => {
+    const s = readSettings(settingsOf(), '/work');
+    expect(s.apiUrl.href).toBe('https://docs-api.example.com/api/');
+    expect(s).toMatchObject({
+      audience: 'public',
+      languages: undefined,
+      releases: undefined,
+      outDir: '/work/dist',
+      basePath: '/',
+      branding: true,
+    });
+  });
+
+  it('turns the branding off', () => {
+    expect(
+      readSettings(settingsOf({ CCMS_PORTAL_BRANDING: 'off' }), '/work')
+        .branding,
+    ).toBe(false);
+    expect(
+      readSettings(settingsOf({ CCMS_PORTAL_BRANDING: 'on' }), '/work')
+        .branding,
+    ).toBe(true);
+  });
+
+  it('reads the lists, the folder and the path', () => {
+    const s = readSettings(
+      settingsOf({
+        CCMS_PORTAL_LANGUAGES: 'en, de,en',
+        CCMS_PORTAL_RELEASES: '0193a8d0-0000-7000-8000-000000000001',
+        CCMS_PORTAL_OUT_DIR: 'site',
+        CCMS_PORTAL_BASE_PATH: '/docs/',
+      }),
+      '/work',
+    );
+    expect(s).toMatchObject({
+      languages: ['en', 'de'],
+      releases: ['0193a8d0-0000-7000-8000-000000000001'],
+      outDir: '/work/site',
+      basePath: '/docs/',
+    });
+  });
+
+  it.each([
+    [{ CCMS_PORTAL_API_URL: undefined }, 'CCMS_PORTAL_API_URL: is required'],
+    [{ CCMS_PORTAL_TOKEN: '' }, 'CCMS_PORTAL_TOKEN: is required'],
+    [
+      { CCMS_PORTAL_TOKEN: 'not-a-token' },
+      'CCMS_PORTAL_TOKEN: a service account token',
+    ],
+    [{ CCMS_PORTAL_AUDIENCE: 'Public!' }, 'CCMS_PORTAL_AUDIENCE'],
+    [
+      { CCMS_PORTAL_API_URL: 'http://api.example.com' },
+      'https, or http only to this machine',
+    ],
+    [{ CCMS_PORTAL_API_URL: 'ftp://127.0.0.1' }, 'http or https only'],
+    [
+      { CCMS_PORTAL_API_URL: 'https://user:pw@api.example.com' },
+      'no user, password',
+    ],
+    [{ CCMS_PORTAL_LANGUAGES: 'en,../x' }, 'CCMS_PORTAL_LANGUAGES'],
+    [{ CCMS_PORTAL_RELEASES: 'v1' }, 'CCMS_PORTAL_RELEASES'],
+    [{ CCMS_PORTAL_BASE_PATH: 'docs' }, 'CCMS_PORTAL_BASE_PATH'],
+    [{ CCMS_PORTAL_OUT_DIR: '.' }, 'CCMS_PORTAL_OUT_DIR: a folder of its own'],
+    [{ CCMS_PORTAL_OUT_DIR: '..' }, 'CCMS_PORTAL_OUT_DIR'],
+    [{ CCMS_PORTAL_OUT_DIR: '/' }, 'CCMS_PORTAL_OUT_DIR'],
+    [{ CCMS_PORTAL_LANGUAGES: 'en,de,EN' }, 'differ only in case'],
+    [{ CCMS_PORTAL_BRANDING: 'yes' }, 'CCMS_PORTAL_BRANDING: on or off'],
+  ])('refuses %o', (over, message) => {
+    expect(() => readSettings(settingsOf(over), '/work')).toThrow(
+      SettingsError,
+    );
+    expect(() => readSettings(settingsOf(over), '/work')).toThrow(message);
+  });
+
+  it('tells a folder named "..x" from a parent folder', () => {
+    // The build runs in a child folder named `..x` of the output folder: refused, it holds it.
+    expect(() =>
+      readSettings(
+        settingsOf({ CCMS_PORTAL_OUT_DIR: '/work/site' }),
+        '/work/site/..x',
+      ),
+    ).toThrow('CCMS_PORTAL_OUT_DIR: a folder of its own');
+    // A child folder named `..x` of the current folder is a folder of its own.
+    expect(
+      readSettings(settingsOf({ CCMS_PORTAL_OUT_DIR: '..x' }), '/work').outDir,
+    ).toBe('/work/..x');
+    expect(
+      readSettings(settingsOf({ CCMS_PORTAL_OUT_DIR: '../site' }), '/work/a')
+        .outDir,
+    ).toBe('/work/site');
+  });
+
+  it('never names the token in a message', () => {
+    const bad = `${TOKEN}x`;
+    expect(() =>
+      readSettings(settingsOf({ CCMS_PORTAL_TOKEN: bad }), '/work'),
+    ).toThrow(SettingsError);
+    try {
+      readSettings(settingsOf({ CCMS_PORTAL_TOKEN: bad }), '/work');
+    } catch (error) {
+      expect(String(error)).not.toContain(bad.slice(10));
+    }
+  });
+
+  it('allows http to this machine only', () => {
+    for (const host of ['127.0.0.1', 'localhost', '[::1]'])
+      expect(
+        readSettings(
+          settingsOf({ CCMS_PORTAL_API_URL: `http://${host}:3103` }),
+          '/',
+        ).apiUrl.protocol,
+      ).toBe('http:');
+  });
+
+  it('documents every setting in .env.example', () => {
+    const example = readFileSync(
+      join(import.meta.dirname, '..', '..', '..', '.env.example'),
+      'utf8',
+    );
+    for (const key of [
+      'CCMS_PORTAL_API_URL',
+      'CCMS_PORTAL_TOKEN',
+      'CCMS_PORTAL_AUDIENCE',
+      'CCMS_PORTAL_LANGUAGES',
+      'CCMS_PORTAL_RELEASES',
+      'CCMS_PORTAL_OUT_DIR',
+      'CCMS_PORTAL_BASE_PATH',
+    ])
+      expect(example).toMatch(new RegExp(`^${key}=$`, 'm'));
+  });
+});

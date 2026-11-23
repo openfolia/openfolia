@@ -1,0 +1,84 @@
+---
+title: 'iiRDS-Pakete'
+description: 'Eine Ausgabe einer Veröffentlichung als iiRDS-Paket erhalten, in openfolia.yaml auf das Vokabular des Standards abgebildet.'
+articleId: 'guide.releases.iirds'
+---
+
+Eine Ausgabe einer Veröffentlichung (ein Handbuch in einer Variante und einer Sprache) lässt sich
+als **iiRDS-Paket** herunterladen, dem Standardformat für den Austausch technischer Dokumentation
+(iiRDS 1.3). Das Paket entsteht auf Anfrage aus der Veröffentlichung, so wie sie veröffentlicht
+wurde: Dieselbe Ausgabe ergibt für alle Lesenden dasselbe Paket. Eine Ansicht im Editor gibt es
+dafür noch nicht: Es kommt über die [Delivery-API](/de/guide/integrations/delivery-api), mit einem
+Token, das `content.read` enthält.
+
+## Das Projekt auf iiRDS abbilden
+
+Der Export braucht eine Abbildung in `openfolia.yaml`, unter `iirds`. Ohne sie wird das Paket mit 422
+`iirds-not-configured` abgelehnt. Sie ist Inhalt: Ändern Sie sie in einer Überarbeitung; sie gilt
+für Veröffentlichungen, die danach entstehen.
+
+```yaml
+iirds:
+  baseIri: https://docs.example.com/iirds/ # alle IRIs entstehen darunter, mit "/" am Ende
+  documentTypes: [OperatingInstructions] # für jedes Handbuch, mindestens einer
+  manualDocumentTypes: { service: [MaintenanceInstructions] } # stattdessen die eigenen eines Handbuchs
+  moduleTypes:
+    task: GenericTask
+    safety: { topicType: GenericConcept, subjects: [SafetyInstruction] }
+  audiences: { operator: Role, technician: SkillLevel }
+  facets: { region: ProductVariant }
+  variantAttributes: { model: ProductVariant }
+  lifecyclePhases: { facet: phase, values: { use: Operation } }
+```
+
+Die Werte sind die Namen des Standards; ein Name, den er nicht kennt, wird abgelehnt. Jede Zuordnung
+ist optional: Was die Abbildung auslässt, fehlt in den Metadaten des Pakets, mit einer Warnung, nie
+mit einer Ablehnung. `GET /config` nennt in `meta.iirdsIssues`, was nicht abgebildet ist. Jeder
+Schlüssel steht in der [Referenz von `openfolia.yaml`](/de/reference/project-config).
+
+## Ein Paket herunterladen
+
+1. Finden Sie die Veröffentlichung: `GET /releases` listet sie auf, die neueste zuerst, mit ihren
+   IDs.
+2. Listen Sie ihre Pakete auf: `GET /releases/{releaseId}/iirds-packages`, eines je Ausgabe, die Sie
+   lesen dürfen, gefiltert mit `filter[manual]` und `filter[lang]`. Jedes hat `manual`, `variant`,
+   `lang` und `fileName` der Ausgabe. Das Auflisten erzeugt nichts.
+3. Wahlweise erzeugt `GET /releases/{releaseId}/iirds-packages/{packageId}` das Paket und beschreibt
+   es: `meta.size`, `meta.topics`, `meta.media` und `meta.warnings`.
+4. Laden Sie es herunter: `GET /releases/{releaseId}/iirds-packages/{packageId}/file`, eine Datei
+   vom Typ `application/iirds+zip` mit dem Namen `<manual>_<variant>_<lang>_<revision>.iirds`. Der
+   Header `X-Ccms-Iirds-Warnings` nennt die Zahl der Warnungen.
+
+```sh
+curl -sf -o operating.iirds \
+  -H "Authorization: Bearer $DOCS_TOKEN" \
+  "https://docs.example.com/api/releases/$RELEASE/iirds-packages/$PACKAGE/file"
+```
+
+## Was das Paket enthält
+
+- `META-INF/metadata.rdf`: die Metadaten. Das Handbuch als Dokument, jedes Modul als Topic, das
+  Inhaltsverzeichnis sowie Zielgruppen, Facetten, Werte der Variantenmerkmale und
+  Lebenszyklusphasen, wie die Abbildung sie benennt.
+- `content/<module>.html`: jedes Modul des Handbuchs als eigene HTML-Seite.
+- `media/` und `symbols/`: die Bilder und Anhänge, die die Topics zeigen, und die Grafiken der
+  Sicherheitssymbole.
+- `pdf/<file>`: das PDF der Ausgabe, sobald es gerendert ist. Bis dahin kommt das Paket ohne, mit
+  der Warnung `pdf-not-included`.
+
+Ein Handbuch ohne ein Modul, das seine Zielgruppe in dieser Variante liest, ergibt ein Paket nur mit
+seinem Dokument, mit der Warnung `manual-empty`.
+
+## Wenn es abgelehnt wird
+
+| Status | `code`                    | Warum                                                                                                                                                                  |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 404    | `not-found`               | Keine solche Veröffentlichung, oder eine Ausgabe, die nicht zu ihr gehört oder die Sie nicht lesen dürfen.                                                             |
+| 422    | `iirds-not-configured`    | `openfolia.yaml` beim Tag der Veröffentlichung hat keine Abbildung unter `iirds`.                                                                                      |
+| 422    | `iirds-package-too-large` | Das Paket ist größer als die Grenze für Archive.                                                                                                                       |
+| 422    | `expansion-too-large`     | Mit seinen Modulverweisen überschreitet das Handbuch die Grenzen eines Handbuchs (siehe [Retrieval-Chunks](/de/guide/integrations/chunks)): Nichts davon wird erzeugt. |
+| 429    | `rate-limited`            | Zu viele Pakete werden erzeugt oder gesendet; warten Sie, bis `Retry-After` abläuft.                                                                                   |
+| 503    | `blob-store-unavailable`  | Der Blob-Speicher antwortet nicht; warten Sie, bis `Retry-After` abläuft.                                                                                              |
+
+Wie viele Pakete gleichzeitig gesendet werden, ist je Server und je Lesendem begrenzt: siehe
+[Dimensionierung](/de/guide/self-hosting/sizing).

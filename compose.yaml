@@ -1,0 +1,64 @@
+# Postgres for running the API locally: `docker compose up -d`, then
+# `pnpm nx run api:setup-local` (creates this checkout's database) and
+# `pnpm nx run api:serve-local`. Tests never need it: they run on PGlite.
+# Local credentials only; bound to 127.0.0.1, never reachable from outside.
+# One stack ("ccms") for every checkout; each has its own database in it.
+# Compatibility: keeps the working name from before the product was named OpenFolia: the stack, its
+# database, user, bucket and credentials, so running checkouts and slots keep their data.
+name: ccms
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ccms
+      POSTGRES_PASSWORD: ccms
+      POSTGRES_DB: ccms
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ccms -d ccms']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # S3-compatible object storage for the blob store (images, files): SeaweedFS (Apache-2.0),
+  # in its single-process "mini" mode. S3 API on 127.0.0.1:8333; local credentials only.
+  # The main checkout's bucket "ccms" is created on start; setup-local creates a slot's
+  # "ccms-<slot>" bucket, and `pnpm slot remove` deletes it.
+  s3:
+    image: chrislusf/seaweedfs:4.51
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=ccms
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+    environment:
+      AWS_ACCESS_KEY_ID: ccms
+      AWS_SECRET_ACCESS_KEY: ccms-local-secret
+    ports:
+      - '127.0.0.1:8333:8333'
+    volumes:
+      - s3:/data
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:8333/healthz',
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  postgres:
+  s3:

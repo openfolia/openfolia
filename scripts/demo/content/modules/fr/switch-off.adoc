@@ -1,0 +1,9 @@
+= Éteindre le véhicule
+:schema-version: 1
+:module-type: snippet
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Éteignez le véhicule : appuyez sur le bouton [.ui]##START/STOP## et attendez que le combiné d'instruments s'éteigne.

@@ -1,0 +1,17 @@
+= Making the high-voltage system safe
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: technician
+:facet-product: fenna
+:keywords: high voltage, isolation
+
+[#intro]
+Isolate the high-voltage system before any work on high-voltage parts, and before work near them that uses heat or cutting tools.
+
+[procedure#steps]
+.Isolate the high-voltage system
+. [[step-off]]Switch the vehicle off and keep the key at least 5 m away.
+. [[step-12v]]Disconnect the negative terminal of the 12 V battery.
+. [[step-plug]]Pull the orange service plug under the rear seat and lock it away.
+. [[step-wait]]Wait 5 minutes, then check with a two-pole tester that the system is free of voltage.

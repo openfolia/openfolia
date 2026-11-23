@@ -1,0 +1,86 @@
+---
+title: 'Inhalte importieren'
+description: 'Inhalte aus einem anderen System in eine Überarbeitung übernehmen: Importer wählen, Datei hochladen, Probelauf lesen, dann importieren und prüfen.'
+articleId: 'guide.admin.import'
+---
+
+Die Seite **Import** übernimmt Inhalte von anderswo ohne Terminal in das Projekt: ein Importpaket
+im [Importformat](/de/guide/integrations/import-format) oder ein
+[DITA-Projekt](/de/guide/integrations/dita-import). Bis Sie importieren, ändert sich nichts, und
+ein Import landet in einer neuen Überarbeitung, die wie jede andere geprüft wird.
+
+Dafür ist eine Rolle mit **admin.roles** nötig; zum Importieren zusätzlich **content.edit**. Jeder
+Eintrag wird gegen Ihren Leseumfang geprüft, so wie beim Speichern: Was Ihre Rollen nicht ändern
+dürfen, wird abgelehnt und nie geschrieben. Ohne **admin.roles** fehlt die Seite in der Leiste der
+Verwaltung.
+
+![Die Seite Import mit dem Bericht eines Probelaufs: die Zahlen, die Einträge mit ihrem Ergebnis und die Schaltfläche zum Importieren](/images/guide/de/admin-import.webp)
+
+## Die Datei mit einem Probelauf prüfen
+
+1. Öffnen Sie **Verwaltung**, dann **Import**.
+2. Wählen Sie unter **1. Importer**, was die Datei ist. **Import bundle**, das dokumentierte
+   Format, steht zuerst; **So schreiben Sie ein Importpaket** öffnet seine Seite im Handbuch.
+3. Legen Sie unter **2. Datei** die ZIP-Datei auf der Seite ab oder wählen Sie sie aus. Die Seite
+   nennt, wie groß eine Datei sein darf; eine größere wird sofort abgewiesen, bevor etwas gesendet
+   wird.
+4. Füllen Sie unter **3. Optionen** die eigenen Optionen des Importers aus, falls er welche hat.
+   Mit **Vorhandene Module und Handbücher aktualisieren** wird Vorhandenes aktualisiert; ohne diese
+   Option wird es übersprungen.
+5. Wählen Sie **Probelauf starten**. Die Seite zeigt den Fortschritt des Hochladens, dann den
+   Bericht.
+
+Alle Schritte gehen allein mit der Tastatur: Tab wechselt zwischen ihnen, die Pfeiltasten wählen
+einen Importer, und Eingabe oder Leertaste im Dateifeld öffnet die Dateiauswahl.
+
+## Den Bericht lesen
+
+- **Die Zahlen:** wie viele Einträge neu angelegt, aktualisiert, übersprungen und abgelehnt
+  würden, und wie viele Blöcke unverändert übernommen werden (Inhalt, den der Konverter nicht
+  abbilden konnte und so belässt, wie er war).
+- **Zum Importpaket:** Befunde zur Datei als Ganzes und die Hinweise des Konverters zu Quellelementen,
+  aus denen nichts wurde. Der Abschnitt öffnet sich von selbst, wenn das Paket einen Fehler
+  enthält.
+- **Die Einträge:** jedes Modul (je Sprache), jedes Handbuch und jede Datei, mit Ergebnis, neuer
+  ID neben der ID im Quellsystem sowie Gründen und Hinweisen. **Anzeigen** filtert nach Ergebnis;
+  die Tabelle ist in Seiten geteilt, Filter und Seite bleiben in der Adresse.
+
+Der Probelauf wird eine Stunde aufbewahrt. Danach prüft **Probelauf erneut ausführen** dieselbe
+Datei mit einem Klick erneut. **Datei oder Optionen ändern** führt zurück zu den Schritten; **Neu
+beginnen** fängt von vorn an.
+
+## Importieren
+
+Wählen Sie **6 Einträge importieren** (die Zahl ist das, was geschrieben würde). Die Seite folgt
+dem Import beim Schreiben: hochgeladene Dateien, gespeicherte Module und Handbücher, angelegte
+Speicherpunkte. Ein großer Import wird zu mehreren Speicherpunkten in einer Überarbeitung.
+
+Danach öffnet **In der Prüfung öffnen** die neue Überarbeitung, benannt nach der Datei. Prüfen Sie
+sie und reichen Sie sie ein wie jede andere Überarbeitung.
+
+Schlägt der Import fehl, nennt die Seite den Grund, etwa wenn eine andere Überarbeitung ein Modul
+daraus hält oder sich das Projekt seit dem Probelauf geändert hat. Führen Sie den Probelauf erneut
+aus, sobald das geklärt ist.
+
+## Abgelehnte Einträge
+
+Ein Eintrag wird abgelehnt, wenn er sich nicht importieren lässt: Sein Modultyp ist nicht
+eingerichtet, er verweist auf eine Datei, die das Paket nicht enthält, oder er liegt außerhalb
+Ihres Leseumfangs. Seine Zeile nennt den Grund.
+
+- **Braucht nichts anderes sie**, bietet der Bericht **6 Einträge ohne die abgelehnten
+  importieren** an, bei jedem Importer. Nachdem Sie mit **Den Rest importieren** bestätigt haben,
+  lässt der Server genau die abgelehnten Einträge aus und importiert den Rest so, wie der Probelauf
+  entschieden hat. Die Beschreibung der Überarbeitung und jeder ihrer Speicherpunkte nennen, was
+  ausgelassen wurde und warum, und der Bericht des Probelaufs zeigt es weiterhin.
+- **Braucht etwas anderes sie** (ein Handbuch, das ein abgelehntes Modul nennt, ein Modul, das eine
+  abgelehnte Datei zeigt) oder hat die Datei einen eigenen Fehler, lässt sich nichts teilweise
+  importieren: Der Import ist mit seinem Grund gesperrt. Beheben Sie die Quelle und führen Sie den
+  Probelauf erneut aus.
+
+Der Server hat beim Probelauf geprüft, dass der Rest ohne die abgelehnten Einträge besteht, und
+prüft es beim Import erneut. Hat sich das Projekt dazwischen geändert, schlägt der Import fehl und
+sagt das: Führen Sie den Probelauf dann erneut aus.
+
+Wer die Seite mit ausgewählter Datei oder einem nicht importierten Probelauf verlässt, wird einmal
+gefragt.

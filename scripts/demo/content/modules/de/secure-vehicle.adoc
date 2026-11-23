@@ -1,0 +1,9 @@
+= Fahrzeug sichern
+:schema-version: 1
+:module-type: snippet
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Halten Sie auf festem, ebenem Untergrund abseits des Verkehrs, ziehen Sie die [.term.parking-brake]##Feststellbremse## an und schalten Sie die Warnblinkanlage ein.

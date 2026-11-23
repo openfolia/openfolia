@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map xml:lang="de">
+  <title>Schlüssel</title>
+  <keydef keys="prodname">
+    <topicmeta>
+      <keywords>
+        <keyword>Gartenpumpe GP-2</keyword>
+      </keywords>
+    </topicmeta>
+  </keydef>
+  <keydef keys="prodname">
+    <topicmeta>
+      <keywords>
+        <keyword>Overridden by the first definition</keyword>
+      </keywords>
+    </topicmeta>
+  </keydef>
+</map>

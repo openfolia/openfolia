@@ -1,0 +1,3 @@
+ALTER TABLE "webhook_deliveries" ADD COLUMN "sent_headers" text[];--> statement-breakpoint
+ALTER TABLE "webhooks" ADD COLUMN "headers" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_headers" CHECK (jsonb_typeof("webhooks"."headers") = 'array' and jsonb_array_length("webhooks"."headers") <= 20 and octet_length("webhooks"."headers"::text) <= 65536);

@@ -1,0 +1,105 @@
+---
+title: 'Senke und Aufbewahrung des Audit-Logs'
+description: 'Das Audit-Log laufend an einen HTTPS-Endpunkt oder einen Syslog-Server kopieren, alte Ereignisse nach einer Frist entfernen und das Log in der Datenbank schützen.'
+articleId: 'guide.self-hosting.audit-log'
+---
+
+Personen mit Verwaltungsrechten lesen das Audit-Log im Editor
+([Audit-Log](/de/guide/admin/audit-log)). Als Betreiber können Sie es laufend an einen eigenen Ort
+kopieren (eine Senke) und alte Ereignisse nach einer Frist entfernen lassen. Beides sind
+Einstellungen in `deploy/api.env`, gelesen beim Start des Servers; sie laufen im Worker (oder im
+einzigen Prozess mit `CCMS_ROLE=all`).
+
+## Eine Senke
+
+| Einstellung                  | Was                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `CCMS_AUDIT_SINK_URL`        | `https://host[:port]/pfad` oder `syslog+tls://host[:port]` (Standard-Port 6514). Keine Zugangsdaten darin.     |
+| `CCMS_AUDIT_SINK_SECRET`     | Das Signaturgeheimnis der HTTPS-Senke: `whsec_` und 64 Hex-Ziffern in Kleinbuchstaben. Pflicht bei `https://`. |
+| `CCMS_AUDIT_SINK_CA_FILE`    | Eine PEM-Datei mit Zertifikaten statt der des Systems (eine private CA), im Worker eingehängt.                 |
+| `CCMS_AUDIT_SINK_POLL_MS`    | Wie oft neue Ereignisse hinausgehen (Standard 3000 ms).                                                        |
+| `CCMS_AUDIT_SINK_TIMEOUT_MS` | Die gesamte Zeit einer Zustellung (Standard 10000 ms).                                                         |
+
+Erzeugen Sie das Geheimnis mit `openssl rand -hex 32` und setzen Sie `whsec_` davor. Geben Sie es
+aus einer Datei: `CCMS_AUDIT_SINK_SECRET_FILE`, ein Compose-Secret unter `/run/secrets/`, gesetzt
+unter den Diensten `api` und `worker` in einer `compose.override.yaml`, wie es der
+[Blob-Speicher](/de/guide/self-hosting/blob-store) für seinen Schlüssel zeigt, nie in `api.env`
+(auch der Backup-Dienst liest diese Datei und hält bei einer `_FILE`-Datei an, die er nicht lesen
+kann). Compose liest die Ergänzung nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben ist: siehe
+[Eigene Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt). Das Zertifikat der
+Senke wird immer geprüft.
+
+**Was die Senke zusichert:** jedes Ereignis mindestens einmal, in Reihenfolge. Ihre Position steht
+in der Datenbank; ein Neustart macht dort weiter, wo er aufhörte. Eine gescheiterte Zustellung wird
+nach 30 s erneut versucht, mit sich verdoppelnder Pause bis 10 Minuten, bis sie gelingt, und nichts
+danach geht vor. Ein Ereignis kann zweimal ankommen: Entfernen Sie Doppelte anhand seiner `id`
+zusammen mit seinem `at`. Eine Senke auf einer Installation mit Verlauf sendet zuerst das ganze
+Log.
+
+- **HTTPS:** Stapel von bis zu 100 Ereignissen, jeder als `{"events": [...]}` per `POST` gesendet,
+  jedes Ereignis so, wie der JSON-Lines-Export es schreibt. Der Inhalt ist im Header
+  `X-Ccms-Signature` signiert (`t=<Unix-Sekunden>,v1=<hex>`: HMAC-SHA256 von `<t>.<Inhalt>` mit dem
+  Geheimnis), wie bei Webhooks: Prüfen Sie es so, wie [Webhooks](/de/guide/integrations/webhooks)
+  beschreibt. Antworten Sie mit einem beliebigen 2xx; alles andere, auch eine Weiterleitung, gilt
+  als gescheitert. Die URL darf in Ihrem eigenen Netz liegen.
+- **Syslog über TLS:** eine RFC-5424-Nachricht pro Ereignis, gerahmt nach RFC 5425, APP-NAME
+  `openfolia`, MSGID die Aktion des Ereignisses, die Nachricht das Ereignis als JSON. Syslog kennt keine
+  Bestätigung: Ein Ereignis gilt als zugestellt, sobald es in die Verbindung geschrieben ist.
+  Erhöhen Sie die Nachrichtengrenze des Collectors (manche schneiden bei 8 KiB ab), da die Details
+  eines Ereignisses bis zu 64 KiB groß sein können.
+
+## Aufbewahrung
+
+`CCMS_AUDIT_KEEP_DAYS` (1 bis 36500; nicht gesetzt: für immer aufbewahrt) entfernt Ereignisse, die
+älter als so viele Tage sind, beim Start und täglich, in Stapeln. Jede Entfernung steht selbst im
+Log, als `audit-log.prune`, mit Stichtag, Anzahl und erster und letzter ID. Mit einer Senke
+entfernt sie nie ein Ereignis, das die Senke noch nicht gesendet hat.
+
+## Das Log in der Datenbank schützen
+
+Die Datenbank verweigert jede Änderung eines Audit-Ereignisses und jede Entfernung außer der durch
+die Aufbewahrung, die über die Datenbankfunktion `audit_events_prune` läuft. Mit einer
+Datenbankrolle, der alles gehört, wie `deploy/compose.yaml` es betreibt, gelten diese Sperren.
+Damit auch die Rechte schützen, führen Sie die Migrationen als Eigentümer aus und die API als
+eigene Rolle, ohne `DELETE` auf der Tabelle:
+
+```sql
+-- als Eigentümer, nach den Migrationen; ccms_app ist die Rolle der API
+GRANT SELECT, INSERT ON audit_events TO ccms_app;          -- nie UPDATE, DELETE oder TRUNCATE
+GRANT EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) TO ccms_app;
+```
+
+Die API braucht ihre üblichen Rechte auf allen anderen Tabellen, auch auf `audit_sink`
+(`SELECT`, `INSERT`, `UPDATE`).
+
+## Nach einer Wiederherstellung
+
+Nach einer [Wiederherstellung](/de/guide/self-hosting/backups) auf einem anderen Datenbankserver
+mit gesetzter Senke (gleich oder später) sendet die Senke nichts und protokolliert einen Fehler,
+bis ihre Position einmal richtiggestellt ist. Führen Sie dies als Eigentümer der Datenbank aus, am
+besten direkt nach der Wiederherstellung und vor dem ersten Start, sonst bei angehaltener API und
+angehaltenem Worker, als Skript (`psql -f` oder über die Standardeingabe), und setzen Sie die
+höchste Ereignis-ID ein, die Ihr Collector hat:
+
+```sql
+BEGIN;
+UPDATE audit_sink SET last_tx_id = '1',
+  last_id = LEAST((SELECT min(e.id) - 1 FROM audit_events e
+                   WHERE (e.tx_id, e.id) > (audit_sink.last_tx_id, audit_sink.last_id)),
+                  audit_sink.last_id)
+  WHERE last_tx_id <> '0';
+UPDATE audit_sink SET blocked = false;
+ALTER TABLE audit_events DISABLE TRIGGER audit_events_append_only;
+UPDATE audit_events SET tx_id = '1';
+ALTER TABLE audit_events ENABLE TRIGGER audit_events_append_only;
+SELECT setval(pg_get_serial_sequence('audit_events', 'id'),
+              GREATEST(<highest id the collector holds>, (SELECT max(id) FROM audit_events)));
+COMMIT;
+VACUUM audit_events;
+```
+
+Eine Wiederherstellung entfernt auch die Rechte einer eigenen API-Rolle: Führen Sie die `GRANT`s
+oben erneut aus, und
+`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`.
+Eine Wiederherstellungsübung darf nicht an Ihren Collector senden: Lassen Sie dort
+`CCMS_AUDIT_SINK_URL` leer und diesen Schritt aus.

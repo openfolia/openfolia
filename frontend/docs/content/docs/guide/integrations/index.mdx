@@ -1,0 +1,91 @@
+---
+title: 'Integrations'
+description: 'Webhooks, the change feed, the MCP server and exports.'
+articleId: 'guide.integrations'
+---
+
+This section is for developers who connect other systems to the released content: a portal, an
+app, a search index or an AI assistant. Writing and reviewing do not need it. Start with
+[The Delivery API](/guide/integrations/delivery-api).
+
+The [API reference](/api) has a page per route, generated from the server, and both OpenAPI
+documents to download. Two guides cover a whole integration:
+[Integrating with a RAG pipeline](/guides/rag) and [the MCP server](/guides/mcp) for AI
+assistants. A release output as an [iiRDS package](/guide/releases/iirds) or a
+[DITA project](/guide/releases/dita) is under Releases.
+
+In the editor, an admin sets up what integrations use: service accounts and their tokens, and
+webhooks. See [Admin](/guide/admin).
+
+<Cards>
+  <Card
+    title="The Delivery API"
+    href="/guide/integrations/delivery-api"
+    description="What the read routes give, and a first request."
+  />
+  <Card
+    title="Authenticate with a service account token"
+    href="/guide/integrations/authentication"
+    description="Service account tokens and refused ones."
+  />
+  <Card
+    title="JSON:API conventions"
+    href="/guide/integrations/json-api"
+    description="Media type, paging, refs and errors."
+  />
+  <Card
+    title="Change feed"
+    href="/guide/integrations/change-feed"
+    description="What changed, page by page with a cursor."
+  />
+  <Card
+    title="Receiving webhooks"
+    href="/guide/integrations/webhooks"
+    description="Signed events, checking signatures, retries."
+  />
+  <Card
+    title="Search API"
+    href="/guide/integrations/search"
+    description="The query, filters, order and limits."
+  />
+  <Card
+    title="Retrieval chunks"
+    href="/guide/integrations/chunks"
+    description="Ready-made pieces for a retrieval index."
+  />
+  <Card
+    title="Release outputs for portals"
+    href="/guide/integrations/release-outputs"
+    description="PDFs and ZIPs of a release, and stable addresses."
+  />
+  <Card
+    title="HTML preview routes"
+    href="/guide/integrations/html-preview"
+    description="A module or manual as a web page."
+  />
+  <Card
+    title="The static portal"
+    href="/guide/integrations/static-portal"
+    description="A static site per audience, and hosting it."
+  />
+  <Card
+    title="Import format"
+    href="/guide/integrations/import-format"
+    description="Import bundles, dry runs and applying them."
+  />
+  <Card
+    title="DITA import"
+    href="/guide/integrations/dita-import"
+    description="A DITA 1.3 project brought in as content."
+  />
+  <Card
+    title="Import connectors"
+    href="/guide/integrations/connectors"
+    description="A wiki moved in once, tracker items on a schedule."
+  />
+  <Card
+    title="Terminology export"
+    href="/guide/integrations/terminology-export"
+    description="Terminology as TBX or CSV."
+  />
+</Cards>

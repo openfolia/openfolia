@@ -1,0 +1,100 @@
+---
+title: 'Upgrades'
+description: 'Move to a new version: read the upgrade notes, back up, pull, start; the migrations run on start.'
+articleId: 'guide.self-hosting.upgrades'
+---
+
+## Upgrade
+
+1. **Read the upgrade notes** of every release since yours, in the [changelog](/changelog) (also
+   `CHANGELOG.md` and the releases on GitHub): migrations, settings added, changed or removed, and
+   breaking changes.
+2. **Take a backup:**
+
+   ```sh
+   docker compose run --rm backup now
+   ```
+
+   See [Backups](/guide/self-hosting/backups).
+
+3. **Set the new version.** Set `OPENFOLIA_VERSION` in `deploy/.env` to it, then:
+
+   ```sh
+   git fetch --tags && git checkout vX.Y.Z
+   docker compose pull
+   docker compose up -d --wait
+   ```
+
+   The checkout moves to the same version (`vX.Y.Z`, as in `OPENFOLIA_VERSION`), so `compose.yaml`
+   is the new version's too. `docker compose pull` fetches every image of that version, the backup
+   image included; add `--profile mcp` when you run the MCP server.
+
+   When you build from source: `git pull`, then
+   `docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait`, or run
+   `deploy/self-host.sh` again (it keeps the settings, the volumes and the content).
+
+4. **Check the log.** The API applies pending migrations when it starts, before it answers
+   requests, and logs `Migrations applied`. The workers start once it has.
+
+Migrations only go forward. To go back to an older version, restore the backup from step 2.
+
+## Several API servers on one database
+
+Upgrade them together. Or set `CCMS_DATABASE_MIGRATE=false` on all of them and run the migrations
+once yourself:
+
+```sh
+docker compose run --rm api node dist/database/migrate.main.js
+```
+
+How long a migration statement waits for a table lock is `CCMS_DATABASE_LOCK_TIMEOUT_MS` (default
+10 s); see [Database](/guide/self-hosting/database).
+
+## Switching to Postgres with pgvector
+
+Semantic search needs Postgres with pgvector ([Semantic
+search](/guide/self-hosting/semantic-search)). `deploy/compose.vector.yaml` builds the same Postgres
+18.7 with pgvector added, on the same volume, so switching needs no dump or restore. Take the backup
+first anyway:
+
+```sh
+docker compose -f compose.yaml -f compose.vector.yaml up -d --build --wait
+```
+
+Name both files in every later `docker compose` command, or set
+`COMPOSE_FILE=compose.yaml:compose.vector.yaml` in `deploy/.env`.
+
+## Moving to separate workers
+
+Versions before the worker role ran everything in the `api` service. Now `deploy/compose.yaml`
+starts the API with `CCMS_ROLE=api` and the background work in `worker`. Both read `api.env`, so a
+`CCMS_PDF_WORKERS` there now sizes the API's own pool too: move it, with `CCMS_RENDER_CONCURRENCY`,
+into `deploy/worker.env`. See [Workers](/guide/self-hosting/workers).
+
+## From a version before the name OpenFolia
+
+Versions before the product was named OpenFolia keep working after the upgrade, with these
+differences:
+
+- **Settings:** unchanged. The API's, the workers' and the MCP server's settings keep their
+  `CCMS_` prefix, the secret key stays in `/data/ccms-secret.key` and the databases keep their
+  names.
+- **The configuration file** of a content repository is `openfolia.yaml`. A repository that still
+  has `ccms.yaml` is read from it for one more release, with a deprecation warning in the log
+  (`OPENFOLIA_LEGACY_CONFIG`); the first change to the settings in the editor writes
+  `openfolia.yaml`, which wins from then on. Rename the file in the repository (`git mv ccms.yaml
+openfolia.yaml`) to be done with it, best when no change set still changes the settings: a merge
+  refuses such a change set's change to `ccms.yaml` as a conflict.
+- **Commands:** `openfolia-mcp`, `openfolia-tracker-connector` and `openfolia-wiki-markup`; the
+  `ccms-*` names still start them for one release.
+- **Own templates and styles:** the names a Typst template reads (`sys.inputs.at("openfolia-design")`,
+  the states `"openfolia-labels"`, `"openfolia-document"` and `"openfolia-design"`, the compiler's
+  folder `openfolia/`) and the classes of the HTML output (`of-content`, `of-safety`, …) changed
+  with the name: replace `ccms-` and `ccms/` in an own template, and `.ccms-` in your own styles.
+- **Monitoring:** the audit log's syslog messages name the application `openfolia` and webhook
+  deliveries send `User-Agent: openfolia-webhooks/1`: update a rule or an allow-list that matches
+  the earlier `ccms` names. The `X-Ccms-*` headers, a webhook's signature among them, stay.
+- **Sign-in:** everyone signs in once more after the upgrade (the session cookie is
+  `__Host-openfolia-session` now).
+- **What the editor kept in the browser** (the colour scheme, a collapsed sidebar, recently opened
+  content, dismissed tips) starts afresh after the upgrade; unsaved drafts stay.

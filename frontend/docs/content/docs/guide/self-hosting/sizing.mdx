@@ -1,0 +1,83 @@
+---
+title: 'Sizing and limits'
+description: 'Memory and CPU for PDFs, the scale benchmarks and their profiles, and the bounds on package downloads.'
+articleId: 'guide.self-hosting.sizing'
+---
+
+Most of the memory and CPU goes into rendering PDFs. The rest of the server reads Git and
+Postgres, and stays small.
+
+## PDFs
+
+Each PDF worker process takes up to about 450 MB. They start with the first PDF.
+
+| Setting                   | What                                                                                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_PDF_WORKERS`        | PDF worker processes, 1 to 64. Default: one per spare CPU; with `CCMS_ROLE=api` at most 2, for readers' PDFs only.                                        |
+| `CCMS_PDF_QUEUE`          | PDFs that may wait for a free worker before requests get 503 with `Retry-After` (default 4 per worker).                                                   |
+| `CCMS_PDF_TIMEOUT_MS`     | The deadline for one PDF, waiting included (default 60 s). A reverse proxy in front must allow at least that.                                             |
+| `CCMS_RENDER_CONCURRENCY` | Release files one server renders at once on those workers. Default: half of them; on a worker (`CCMS_ROLE=worker`), which serves no readers, all of them. |
+
+Readers' PDFs and previews go ahead of release files waiting for a worker. With the API and the
+workers apart, they have the API's pool to themselves: measured on the `large` profile while a
+backlog rendered, a preview took a median 1.1 s instead of 6.8 s in one process, on one busy test machine.
+
+**An example:** with the API and the workers apart ([Workers](/guide/self-hosting/workers)),
+memory for PDFs is about `workers × CCMS_PDF_WORKERS × 450 MB`, plus the API's 2 × 450 MB. On one
+server with 8 CPUs and 8 GB, set `CCMS_PDF_WORKERS=3` in `deploy/worker.env` and
+`OPENFOLIA_WORKER_CPUS=3` in `deploy/.env`, and run 2 workers: about 3.6 GB at the peak, and 2 CPUs
+stay the API's. With a CPU limit, give each worker as many PDF workers as CPUs: the default counts
+the host's CPUs, not the limit.
+
+**Signs it is too small:** readers get 503 for PDFs (the queue is full), or release files take
+long to appear. **Admin › System** shows the jobs waiting, and warns when jobs wait and no worker
+took one for 5 minutes. Add workers then, on more hosts if need be, against the same Postgres and
+an S3 [blob store](/guide/self-hosting/blob-store).
+
+## The database and the disk
+
+- The database pool and its saturation: [Database](/guide/self-hosting/database).
+- Backups need about 25 times a backup at their location with the default retention:
+  [Backups on the server](/guide/self-hosting/backups).
+
+## The scale benchmarks
+
+The product is measured at a set size, with tooling in the repository (`scripts/perf/README.md`).
+A generator makes a content repository, media and a database of a profile:
+
+| Profile | Modules | Manuals | Languages |  Media | Commits | Releases | Open change sets | Audit events |
+| ------- | ------: | ------: | --------: | -----: | ------: | -------: | ---------------: | -----------: |
+| `small` |     400 |      20 |         4 |    170 |   1,000 |        5 |               15 |        5,000 |
+| `large` |   5,000 |     300 |         8 |  3,000 |  20,000 |       50 |              200 |      100,000 |
+| `xl`    |  20,000 |   1,200 |         8 | 12,000 |  80,000 |      200 |              800 |      400,000 |
+
+`large` is the size the product must stay fast at; `xl` is four times that, to find where it
+stops scaling. To measure on your own hardware, from a checkout with the development Postgres
+running (`docker compose up -d` at the repository root):
+
+```sh
+pnpm perf:seed --profile large
+pnpm nx run api:perf-scale -- --profile large
+```
+
+The benchmark measures every list, read, PDF, import, translation round trip, MCP tool and a run
+with 20 and 50 readers at once, and writes a Markdown and JSON report to
+`.local/perf/<profile>/reports/`. Measure on a quiet machine: a row taken while the load is above
+the core count is marked busy and says nothing about the product.
+
+## Package downloads
+
+iiRDS and DITA packages are large files, so their downloads are bounded. The server sends at most
+4 of each kind at once, and one reader may hold `CCMS_PACKAGE_SENDS_PER_ACTOR` of them (default
+1, at most 3). Past either, the request gets 429 `rate-limited` before any of the file is sent.
+A download is cut:
+
+- when no byte of it is read for `CCMS_PACKAGE_SEND_IDLE_TIMEOUT_MS` (default 60 s);
+- when it is read more slowly than `CCMS_PACKAGE_SEND_MIN_BYTES_PER_SECOND` on average (default
+  16384), once that first idle time has passed;
+- when it is still going after `CCMS_PACKAGE_SEND_TIMEOUT_MS` (default half an hour).
+
+The old names, `CCMS_DITA_SEND_IDLE_TIMEOUT_MS`, `CCMS_DITA_SEND_TIMEOUT_MS`,
+`CCMS_DITA_SEND_MIN_BYTES_PER_SECOND` and `CCMS_DITA_SENDS_PER_ACTOR`, are still read when the new
+name is unset, with a warning at start-up. Set beside it, each must hold the same value. Rename
+them.

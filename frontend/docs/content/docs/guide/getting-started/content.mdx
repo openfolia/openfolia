@@ -1,0 +1,72 @@
+---
+title: 'Almost everything is content'
+description: 'What lives in the content repository, what lives in the database, and what that means for you.'
+articleId: 'guide.getting-started.content'
+---
+
+Almost everything you make in OpenFolia is content. That covers the modules, and also the
+manuals, the project settings, the page designs and the terms. Content is a set of files in one
+Git repository. Every change to it goes into a revision, is reviewed and checked, and applies once
+the revision is merged. A release freezes all of it at one point.
+
+## What is content
+
+| What                                                                                                                                                                                   | Where it is kept                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Modules and their blocks, one file per language                                                                                                                                        | `modules/<language>/<id>.adoc`                                                                                     |
+| Snippets: modules of a type marked as snippets                                                                                                                                         | `modules/…`, as any module                                                                                         |
+| Manuals: their modules, chapters, variants and audience                                                                                                                                | `manuals/<id>.yaml`                                                                                                |
+| The project settings: languages, module types, audiences, facets, variant attributes, text attributes, safety symbols, output labels, and how releases and the stable addresses behave | `openfolia.yaml`                                                                                                   |
+| Terms, which the glossary is made from                                                                                                                                                 | `terms/<id>.yaml`, one per term                                                                                    |
+| Page designs, with their texts and the translations of them                                                                                                                            | `design/<id>.yaml`                                                                                                 |
+| A page design's own Typst template                                                                                                                                                     | `templates/<name>/`, with its entry file `manual.typ`                                                              |
+| What each translated block was translated from                                                                                                                                         | `modules/<language>/<id>.translation.yaml`, beside the translation; a page design's and a manual's in its own file |
+| The artwork of the safety symbols                                                                                                                                                      | `symbols/<id>.svg` or `.png`                                                                                       |
+| Images, attachments, and a page design's fonts, logos and cover images                                                                                                                 | named in the content by their SHA-256 hash; the files are in the blob store                                        |
+
+Revisions are branches of the same repository, and releases are tags in it.
+
+## What is not content
+
+The database holds what the work needs while it runs, beside the content:
+
+- the people, their roles, service accounts and sign-in sessions;
+- comments, locks, and the editor's autosaves until the next save point;
+- the workflow: the state of each revision, its approvals and sign-offs, and the translation jobs
+  at the agency;
+- a release's notes and whether it was withdrawn (its PDFs are in the blob store);
+- notifications, webhooks, branding, backup settings and the **Review** setting of the
+  installation (the one topic of the project settings outside a revision);
+- the audit log, which is only ever added to.
+
+The module index and the search index are in the database too. They are made from the content and
+can be made again from it at any time.
+
+## What follows for you
+
+- **Every change has a history.** Git keeps every version of every file. A
+  [module's history](/guide/writing/history) and a [manual's history](/guide/manuals/history)
+  show each version and compare two of them.
+- **A change to the settings, a term, a page design or its template is reviewed like a module.** It goes into a
+  revision, shows in the review as an item of its own, and applies only once merged. See
+  [Review settings and terms](/guide/review/configuration-changes). The manual's checks check the
+  page design and its template too: a template that does not compile blocks the merge.
+- **A release pins all of it.** A release tags one commit: the modules, manuals, settings, page
+  designs and terms as they were then, and through their hashes the exact images. See
+  [Releases and PDFs](/guide/releases).
+- **Translation covers more than modules.** Page design texts and a manual's cover image text
+  show in the translation status and go out in a delta export, as modules do. See
+  [Translations](/guide/translations).
+- **A copy of the repository is a copy of the content.** Keep the blob store, the database and
+  the instance secret key with it: the blob store holds the images and attachments, the database
+  the people, the workflow and the audit log, and the key seals the secrets the server stores. See [Backups on the server](/guide/self-hosting/backups).
+- **Any Git tool can read it.** The files are plain text, AsciiDoc and YAML. Clone the repository
+  to read it, compare two versions or keep a copy. Changes come in through revisions: in the
+  editor, or through the API with a [service account's](/guide/admin/service-accounts) token, for
+  a pipeline or an agent.
+
+## What comes next
+
+- [Concepts](/guide/getting-started/concepts): module, variant, manual, revision, review and
+  release.
+- [Sign in](/guide/getting-started/sign-in)

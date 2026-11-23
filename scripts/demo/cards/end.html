@@ -1,0 +1,196 @@
+<!doctype html>
+<!--
+  The hero's end card (#441, docs/demo-videos.md): about 6.6 s on the same graphite. The mark
+  builds, its green leaf lands about 1.6 s in, then the name and the intro's line. No call to
+  action: the landing page has its own buttons.
+
+  A template: `cards.mjs` fills the {{…}} slots and `render.mjs` renders it frame by frame.
+-->
+<html lang="{{lang}}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{product}} end card</title>
+    <style>
+      {{fonts}}
+      :root {
+        --ink: {{ink}};
+        --muted: {{muted}};
+        --settle: cubic-bezier(0.22, 0.9, 0.3, 1);
+        --glide: cubic-bezier(0.65, 0, 0.25, 1);
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+      /* The intro's background and grain: the film ends where it began. */
+      body {
+        position: relative;
+        color: var(--ink);
+        font-family: 'Geist', sans-serif;
+        background: {{background}};
+      }
+
+      .stage {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 48%;
+        animation: push 6.6s cubic-bezier(0.3, 0, 0.4, 1) both;
+      }
+      .content {
+        position: absolute;
+        inset: 0;
+        animation:
+          in 0.5s ease-out both,
+          out 1s ease-in 5.1s forwards;
+      }
+
+      .logo {
+        position: absolute;
+        left: 660px;
+        top: 400px;
+        width: 600px;
+      }
+      .logo svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .logo .spine {
+        transform-box: fill-box;
+        transform-origin: 50% 100%;
+        animation: build 0.6s var(--settle) 0.35s both;
+      }
+      .logo .leaf {
+        transform-box: fill-box;
+        transform-origin: 0% 100%;
+      }
+      .logo .leaf.back {
+        animation: fan 0.7s var(--settle) 0.85s both;
+      }
+      /* The one moment of colour: the green leaf lands. */
+      .logo .leaf.signal {
+        animation: catch 0.55s cubic-bezier(0.2, 1.4, 0.35, 1) 1.1s both;
+      }
+      .logo .word {
+        animation: wipe 0.8s var(--glide) 1.85s both;
+      }
+
+      .line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 585px;
+        margin: 0;
+        text-align: center;
+        font-size: 46px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+      }
+      .line span {
+        display: inline-block;
+        animation: focus 0.8s var(--settle) both;
+      }
+      .line .first {
+        color: var(--muted);
+        animation-delay: 2.6s;
+      }
+      .line .second {
+        color: var(--ink);
+        animation-delay: 3.2s;
+      }
+
+      @keyframes push {
+        from {
+          transform: scale(1);
+        }
+        to {
+          transform: scale(1.04);
+        }
+      }
+      @keyframes in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes focus {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+          filter: blur(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes build {
+        from {
+          opacity: 0;
+          transform: translateY(30px) scale(0.94);
+          filter: blur(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes fan {
+        from {
+          opacity: 0;
+          transform: rotate(-38deg);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes catch {
+        from {
+          opacity: 0;
+          transform: rotate(-30deg) scale(0.6);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes wipe {
+        from {
+          clip-path: inset(0 100% 0 0);
+          opacity: 0.4;
+        }
+        to {
+          clip-path: inset(0 0 0 0);
+          opacity: 1;
+        }
+      }
+      @keyframes out {
+        to {
+          opacity: 0;
+          filter: blur(4px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {{grain}}
+    <div class="stage">
+      <div class="content">
+        <div class="logo">{{logo}}</div>
+        <p class="line">
+          <span class="first">{{first}}</span>
+          <span class="second">{{second}}</span>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

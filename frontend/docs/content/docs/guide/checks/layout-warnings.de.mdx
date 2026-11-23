@@ -1,0 +1,65 @@
+---
+title: 'Layout- und Seitengestaltungswarnungen'
+description: 'Abgeschnittene oder gekürzte Texte im PDF, auf mehrere Seiten verteilte Sicherheitshinweise und fehlende Texte der Seitengestaltung.'
+articleId: 'guide.checks.layout-warnings'
+---
+
+Die Prüfungen eines Handbuchs erstellen sein PDF und sehen nach, was nicht in die Seitengestaltung
+passte: ein abgeschnittener Text, ein gekürzter Kolumnentitel, eine zu lange Legende. Außerdem
+prüfen sie die eigenen Texte der Seitengestaltung bei jedem Handbuch, das sie verwendet, in jeder
+Variante und Sprache.
+
+## Text, der nicht passt
+
+Alle Warnungen: Das PDF entsteht, aber nicht wie gedacht.
+
+- **Text der Seitengestaltung abgeschnitten**: Ein Text der Seitengestaltung passt nicht an seinen
+  Platz auf der Titel- oder Rückseite. Kürzen Sie den Text in der Seitengestaltung oder seine
+  Übersetzung.
+- **Kolumnentitel gekürzt**: Eine Kopf- oder Fußzeile passt selbst in der kleinsten Schriftgröße
+  nicht in eine Zeile und endet daher mit Auslassungspunkten. Kürzen Sie den Kapiteltitel oder den
+  Kopf- oder Fußzeilentext der Seitengestaltung.
+- **Legende einer Positionsnummer abgeschnitten**: Die Legende neben einem Bild ist höher als das
+  Bild. Kürzen Sie die Legende oder ihre Übersetzung, setzen Sie sie unter das Bild, oder bitten Sie
+  die Administration, die kleinste Größe zu verringern.
+- **Sicherheitshinweis auf mehrere Seiten verteilt**: Ein Sicherheitshinweis ist höher als eine
+  ganze Seite der Seitengestaltung und wird daher auf mehrere Seiten verteilt. Kürzen Sie ihn,
+  teilen Sie ihn auf, oder verwenden Sie eine Seitengestaltung mit größerer Seite oder kleinerer
+  Schrift.
+
+## Die Texte der Seitengestaltung
+
+Geprüft bei jedem Handbuch, das die Seitengestaltung verwendet, in jeder Variante und Sprache.
+
+- **Text der Seitengestaltung nicht übersetzt** (Warnung): Ein Text hat keine Fassung in der
+  Sprache des Handbuchs, daher steht dort die Quellsprache. Übersetzen Sie ihn in der
+  Seitengestaltung.
+- **Text der Seitengestaltung entfällt** (Warnung): Ein Text hat weder in der Sprache des Handbuchs
+  noch in der Quellsprache eine Fassung, daher lässt das PDF ihn weg. Ergänzen Sie ihn in der
+  Quellsprache.
+- **Übersetzung der Seitengestaltung weicht ab** (Warnung): Die Übersetzung eines Bereichs hat
+  andere Blöcke als ihre Quelle. Geben Sie der Übersetzung dieselben Blöcke.
+- **Wert der Seitengestaltung fehlt** (Warnung): Ein Platzhalter oder ein Feld der Titelseite hat
+  keinen Wert für dieses Handbuch und diese Variante. Der Platzhalter bleibt stehen, das Feld
+  entfällt. Geben Sie dem Handbuch den Wert, oder nehmen Sie ihn aus der Seitengestaltung.
+- **Textattribut der Seitengestaltung fehlt** (blockierend): Ein Text der Seitengestaltung
+  verwendet ein Textattribut, für das diese Variante keinen Wert hat. Geben Sie dem Handbuch einen
+  Wert.
+- **Bedingung der Seitengestaltung unbekannt** (blockierend): Eine Bedingung der Seitengestaltung
+  prüft ein Variantenmerkmal, das diese Variante nicht setzt, daher entfällt, was sie enthält.
+- **Schrift der Seitengestaltung fehlt** (Warnung): Eine Schriftdatei ist nicht gespeichert oder
+  keine Schrift, daher verwendet das PDF die Standardschrift. Laden Sie die Schrift in der
+  Seitengestaltung erneut hoch.
+
+Wie Sie eine Seitengestaltung ändern, steht unter
+[Seitengestaltungen](/de/guide/releases/page-designs).
+
+## Wenn das Layout nicht geprüft werden konnte
+
+**Layout nicht geprüft** (Warnung): In einem Projekt mit einfachen PDFs ließ sich das PDF eines
+Handbuchs mit Seitengestaltung nicht erstellen, weil es zu lange gedauert hat oder die Vorlage einen
+Fehler hat. Was nicht passt, wurde daher nicht geprüft. Öffnen Sie das PDF, um den Grund zu sehen.
+Mit PDF/UA-1 heißt dasselbe **PDF nicht geprüft**.
+
+Ein PDF, das PDF/UA-1 ablehnt, wird trotzdem zuerst gesetzt: Seine Layoutwarnungen stehen neben den
+Problemen **PDF nicht barrierefrei**. Siehe [Barrierefreiheit des PDFs](/de/guide/checks/pdf-accessibility).

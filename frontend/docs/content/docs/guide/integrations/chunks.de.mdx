@@ -1,0 +1,100 @@
+---
+title: 'Retrieval-Chunks'
+description: 'Die Inhalte als fertige Chunks für einen Retrieval-Index lesen: was ein Chunk enthält, die Filter, alle Seiten in einem Commit lesen und zu große Module, die ausgelassen werden.'
+articleId: 'guide.integrations.chunks'
+---
+
+`GET /chunks` gibt einer Retrieval-Pipeline die Inhalte als fertige Chunks, mit den Metadaten zum
+Filtern und einem Hash, sodass Sie das Embedding eines Chunks nur neu berechnen, wenn er sich
+geändert hat. Die Route gehört zur [Delivery API](/de/api/delivery) und braucht `content.read`.
+Um einen Index dauerhaft aktuell zu halten, lesen Sie den
+[Änderungs-Feed](/de/guide/integrations/change-feed).
+
+## Was ein Chunk ist
+
+- **Ein Chunk je Modul und Sprache**, das Modul als Markdown: der Titel als Überschrift `#`,
+  Abschnitte als tiefere Überschriften, Listen, nummerierte Schritte, Tabellen,
+  Sicherheitshinweise und Hinweise als Zitate mit ihrem Signalwort, Bilder als Zeilen `*Figure:*`
+  mit ihrem Alternativtext.
+- **Ein weiterer Chunk je FAQ-Eintrag**, nach dem seines Moduls: die Frage als Überschrift, dann
+  ihre Antwort.
+- **Modulverweise** werden eingefügt, aber nur Module, die der Leser sehen darf und die nicht
+  stärker eingeschränkt sind als das einschließende Modul. Die `audience` eines Chunks gilt so für
+  seinen ganzen Text.
+- **Variantenblöcke** sind Zitate mit `**when**` und ihrer Bedingung. Mit
+  `filter[variant]=model=large` werden sie stattdessen für diese Variante aufgelöst.
+
+Die `id` eines Chunks ist `<lang>/<moduleId>` (die eines FAQ-Eintrags
+`<lang>/<moduleId>/<blockId>`). Seine `attributes` enthalten `moduleId`, `lang`, `title`,
+`moduleType`, `audience`, `facets`, `keywords`, `manuals` (die Handbücher, die ihn einschließen),
+`conditions`, `text`, `sourceHash` und `contentHash` (der SHA-256 von `text`). `meta` enthält
+`commit`, `sources` und `release` (die neueste Veröffentlichung, die das Modul enthält). Ändert sich
+nur die Formatierung einer Datei, ändern sich weder `text` noch `contentHash`.
+
+## Alle Chunks lesen
+
+1. Fragen Sie die erste Seite bei `main` ab:
+
+   ```sh
+   curl -gs -i -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/chunks?ref=main&page[size]=200"
+   ```
+
+2. Behalten Sie den Commit, den die Antwort in `X-Ccms-Commit` nennt, und lesen Sie jede weitere
+   Seite bei `?ref=<dieser Commit>`, damit alle Seiten aus einem Commit stammen. Das Token eines
+   Abnehmers darf diesen Commit nur lesen, solange `main` (oder ein Tag) noch auf ihn zeigt:
+   Rückt `main` während des Lesens weiter, antwortet eine spätere Seite 404 `not-found`; beginnen
+   Sie dann wieder mit Schritt 1. Um eine Veröffentlichung unabhängig von späteren zu lesen, lesen
+   Sie stattdessen jede Seite bei ihrem Tag.
+3. Speichern Sie jeden Chunk nach `id`. Berechnen Sie sein Embedding nur, wenn sein `contentHash`
+   neu ist.
+4. Filtern Sie beim Abruf nach `audience`, `facets`, `manuals`, `lang` und `meta.release`.
+
+Beim nächsten Mal listet `filter[changedSince]=<der behaltene Commit>` nur die Chunks, die sich
+seitdem unterscheiden können. Gelöschtes und was den Leseumfang des Lesers verlassen hat, listet es
+nicht: Dafür folgen Sie dem Änderungs-Feed, oder Sie lesen ab und zu alles neu (und nach jeder
+Veröffentlichung, wegen `meta.release`).
+
+**Filter**, alle optional: `filter[module]`, `filter[lang]`, `filter[manual]`, `filter[variant]`,
+`filter[changedSince]` und die Modulfilter der [Suche](/de/guide/integrations/search)
+(`filter[type]`, `filter[audience]`, `filter[facet]`, `filter[keyword]`). Ein Chunk außerhalb des
+Leseumfangs des Lesers wird nie gelistet, gezählt oder eingefügt. Entwürfe (jede Referenz außer
+`main` und Tags) brauchen `content.read.draft`, das das Token eines Abnehmers nicht hat.
+
+## Zu große Module werden ausgelassen
+
+Modulverweise, die sich vervielfachen, können ein Modul zu groß zum Zerlegen machen. Die Chunks
+eines Moduls, die seiner FAQ-Einträge eingeschlossen, unterliegen denselben Grenzen wie ein
+Handbuch: 500.000 Inhaltsknoten, 12.000.000 Zeichen, 1.000.000 Tabellenzellen (Zeilen × Spalten),
+100 Ebenen tief. Überschreitet es eine davon, wird nur dieses Modul ausgelassen:
+
+- es hat keinen Chunk, die anderen werden wie gewohnt geliefert;
+- `meta.leftOut` nennt es, mit `moduleId`, `lang` und `reason` (`size` oder `depth`), nur Lesern,
+  die es sehen dürfen;
+- der Änderungs-Feed führt die Veröffentlichung ohne seine Chunks;
+- vor der Veröffentlichung zeigen die Prüfungen des Moduls ein blockierendes
+  `expansion-too-large`, damit die schreibende Person es beheben kann (siehe
+  [Beheben, was die Prüfungen finden](/de/guide/checks/fixing-issues)).
+
+## Die Chunks eines Commits zusammen zu groß
+
+Jedes Modul kann unter den Grenzen liegen, während viele zusammen sie überschreiten (hundert
+kleine Module, die jeweils auf eines verweisen, das sich vervielfacht). Deshalb teilen sich die
+Chunks eines Commits, so wie eine lesende Person sie sieht, ein Budget: das Vierfache der Inhalte,
+aus denen sie entstehen, plus Platz für 32 Module an den Grenzen eines einzelnen. Darüber hinaus
+ist jede Anfrage nach den Chunks dieses Commits, jede Seite und jeder Filter, 422
+`chunk-set-too-large`:
+
+- `meta` nennt das Budget und `meta.largest` die bis zu fünf Module (unter denen, die die
+  lesende Person sehen darf), deren Chunks sich am stärksten ausgedehnt haben, mit `moduleId`,
+  `lang`, `chars` und `nodes`;
+- es gilt nur für diesen Commit und diese lesende Person: andere Commits und Lesende, die die
+  sich vervielfachenden Module nicht sehen dürfen, werden wie gewohnt bedient;
+- der Änderungs-Feed überspringt eine solche Veröffentlichung;
+- vor der Veröffentlichung zeigen die Prüfungen einer Überarbeitung an diesen Modulen ein
+  blockierendes `chunk-set-too-large` (siehe
+  [Verweise, Bilder und Begriffe](/de/guide/checks/references)). Die Abhilfe liegt in den
+  Inhalten: auf weniger Module verweisen, über weniger Wege.
+
+Die ganze Schleife eines Retrieval-Index beschreibt
+[Anbindung an eine RAG-Pipeline](/de/guides/rag).

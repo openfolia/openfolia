@@ -1,0 +1,36 @@
+# The build context of the container images (Dockerfile at the repository root).
+# Only the sources go in: never dependencies, builds, local data, settings or secrets.
+**/node_modules
+**/dist
+**/out-tsc
+**/coverage
+**/*.tsbuildinfo
+**/.angular
+**/.vitest
+# Third-party files the API tests fetch, never redistributed (backend/api/tests/iirds/fetch-validator.ts)
+backend/api/.cache
+.git
+.nx
+.local
+.claude
+.review
+.factory-tmp
+.impeccable
+.idea
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+!.env.example
+docs/internal
+# The embedding worker's model files: mounted at run time, never in the build context.
+deploy/embedder-model
+frontend/editor-e2e/test-results
+frontend/editor-e2e/playwright-report
+# A deployment's own files beside deploy/compose.yaml (settings with secrets, backups):
+# never in a build context or a commit (deploy/README.md).
+deploy/api.env
+deploy/worker.env
+deploy/*.env
+deploy/backups/
+**/*.dump

@@ -1,0 +1,24 @@
+---
+title: 'The MCP server'
+description: 'Give AI assistants and agents the released content through the MCP server.'
+---
+
+The MCP server (`backend/mcp`) lets AI assistants and agents search and read the released
+documentation. It is a client of the API: every tool call is a read through the API with the
+server's service account token, so an agent sees exactly what that account may read, and
+nothing writes.
+
+## Running it
+
+It speaks MCP over stdio (a desktop assistant starts it) or over Streamable HTTP (`--http`). It
+needs the API's base URL (`CCMS_MCP_API_URL`) and a service account token whose roles hold
+`content.read` alone (`CCMS_MCP_API_TOKEN`); over HTTP, also the bearer token its callers send
+(`CCMS_MCP_HTTP_TOKEN`). The [settings reference](/reference/settings) describes each, and the
+container setup runs it as the optional `mcp` service ([Self-hosting](/self-hosting)).
+
+A token whose roles hold anything besides `content.read` makes every call fail: the server only
+ever reads released content.
+
+## The tools
+
+The [MCP tools reference](/reference/mcp-tools) lists each tool and its arguments.

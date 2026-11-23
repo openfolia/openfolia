@@ -1,0 +1,63 @@
+---
+title: 'Users and roles'
+description: 'Add people, give them roles, limit a role to part of the content, and deactivate someone who left.'
+articleId: 'guide.admin.users-and-roles'
+---
+
+Each person has a user and holds one or more roles. A role is a set of permissions, and a scope
+says where they apply. Changes apply at once and are written to the audit log.
+
+## Add a person
+
+1. Open **Admin**, then **Users**.
+2. Choose **New user**.
+3. Fill in **Name** and **Email address**. The **User ID** is made from the address. It cannot be
+   changed later.
+4. Under **Roles**, choose the roles the person holds.
+5. Choose **Add user**.
+
+![The New user dialog with a name, an email address, the user ID and the roles](/images/guide/en/admin-user-new.webp)
+
+The list shows each person's email address and ID under their name. It searches name, email and
+ID (press <kbd>/</kbd>), and **All**, **Active** and **Deactivated** filter it. **Edit** and
+**Deactivate** are at the end of each row; in a narrow window, scroll the list sideways to reach them.
+
+## How a person signs in
+
+How people sign in is set up on the server: with an identity provider, with a password, with a
+code by email, or several of these. When sign-in with a password is on, the Users page shows more:
+
+- A **Sign-in** column says how each person signs in: **Password**, **Provider**, **Password and
+  provider**, **Invited, not yet signed in**, **Invite ran out** or **Not yet**.
+- A new person gets an invite at once: a one-time link, shown once to copy. When email is set up,
+  it is emailed to them too.
+- **Invite** makes a new invite, **Withdraw invite** ends an open one, and **Reset link** makes a
+  password reset link for someone who has a password. Each link works once, for a limited time,
+  and replaces any earlier one.
+
+A person without an email address gets no link. Codes by email need no work here: the person asks
+for one on the sign-in page.
+
+## Make or change a role
+
+1. Open **Roles**. Choose a role on the left, or **New role**.
+2. Fill in **Role name** and **Description**, and tick its **Permissions**.
+3. Under **Scope**, limit where they apply: the **Module types**, the **Audience levels**, the
+   **Languages** and each facet. A line left at **All** applies to all of it.
+4. Choose **Save changes**, or **Create role** for a new one.
+
+![The Roles page with the Author role, its permissions, its scope and who holds it](/images/guide/en/admin-roles.webp)
+
+**admin.roles**, **admin.branding** and **webhook.manage** always apply everywhere. Under **Who
+holds it**, add or remove people and service accounts. A role with **admin.roles** cannot go to a
+service account. **Delete role** works once nobody holds it.
+
+[Roles and permissions](/guide/reference/roles) lists every permission.
+
+## Deactivate a person
+
+1. In **Users**, choose **Deactivate** in the person's row, and confirm.
+2. The person can no longer act. Approvals they gave stop counting, and every lock they hold is
+   released. Their roles stay.
+
+**Reactivate** brings them back.

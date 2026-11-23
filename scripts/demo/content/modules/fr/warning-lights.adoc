@@ -1,0 +1,21 @@
+= Témoins d'alerte
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: témoins
+
+[#intro]
+Un témoin rouge signifie : arrêtez-vous dès que possible en toute sécurité. Un témoin jaune signifie : faites contrôler le véhicule rapidement.
+
+[#lights-table,cols="1,2",options=header]
+.Témoins d'alerte et conduite à tenir
+|===
+|[[wl-h-light]]Témoin |[[wl-h-do]]Que faire
+|[[wl-brake]]Système de freinage (rouge) |[[wl-brake-do]]Arrêtez-vous. Vérifiez le niveau de liquide de frein. Ne repartez pas.
+|[[wl-airbag]]Airbag (rouge) |[[wl-airbag-do]]Faites contrôler immédiatement le système d'airbags.
+|[[wl-tyre]]Pression des pneus (jaune) |[[wl-tyre-do]]Vérifiez et corrigez la pression des pneus.
+|[[wl-battery]]Batterie 12 V (rouge) |[[wl-battery-do]]Arrêtez-vous et appelez l'assistance dépannage.
+|[[wl-power]]Puissance réduite (jaune) |[[wl-power-do]]Roulez prudemment et faites contrôler le véhicule.
+|===

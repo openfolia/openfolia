@@ -1,0 +1,71 @@
+---
+title: 'Image callouts'
+description: 'Numbered markers on a picture with a legend, references to them in the text, and how they show in the preview and in translations.'
+articleId: 'guide.writing.image-callouts'
+---
+
+Callouts are numbered markers on a picture. The legend says what each number is, and the text can
+refer to a number: "Press the power switch (2)".
+
+## Add callouts
+
+1. Under the image, choose **Edit callouts**.
+2. Click the picture where the callout should point. A numbered marker appears there, and its legend
+   field opens.
+3. Type the legend, such as "Power switch", and press <kbd>Enter</kbd>.
+4. Add the next one the same way. **Add callout** puts one in the middle of the picture instead.
+5. Choose **Done**.
+
+![Callouts being edited: the markers on the picture, the list of legends, and the preview with the legend](/images/guide/en/writing-callouts.webp)
+
+## Move or delete a callout
+
+While you edit the callouts:
+
+- Drag a number or its anchor point to a new place.
+- Or select a marker and move it with the arrow keys; with <kbd>Shift</kbd> in larger steps.
+- Press <kbd>Delete</kbd> on a selected marker, or choose the bin in its row, to delete it. **Undo**
+  in the message brings it back.
+
+An image has at most 100 callouts.
+
+## Change the order of the numbers
+
+The callouts are numbered in reading order, from the top of the picture down. To number them your
+own way, drag a row of the list by its grip (or press <kbd>Alt</kbd> <kbd>↑</kbd> or <kbd>Alt</kbd> <kbd>↓</kbd> on it). The list then says **Numbered in the order set here.**
+**Number in reading order** goes back.
+
+## Show a callout for some variants only
+
+1. In the list, choose the callout's legend. Its settings open below it.
+2. Choose **Variants** and tick the variants it is for, then **Apply**.
+
+Without a choice it says **Shown in every variant**. A callout hidden in a variant shows "–"
+instead of a number, and the others close up. The header says which variant the numbers are for:
+**numbered across all variants**, or numbered as in the variant the preview shows.
+
+**Leader line** in the same place sets the number off from its point, joined by a line.
+
+## Refer to a callout in the text
+
+1. Put the caret in the text, for example after "Press the power switch ".
+2. Type <kbd>/</kbd>, then `callout`, and choose **Callout reference**.
+3. Choose the callout by its number and legend.
+
+The reference shows the callout's number and follows it when the numbers change. A reference marked
+"?" has no number: **The callout is gone: its image or the callout was removed**, or **Hidden in the
+chosen variant: it has no number there**. Click it to choose another callout.
+
+## See what belongs together
+
+Point at a marker, a row of the list or a reference: the others for the same callout light up. The
+preview does the same with its markers, legend entries and references.
+
+## In the outputs and in translations
+
+The preview and the PDF draw the markers on the picture and the legend under or beside it. A legend
+beside an image that is longer than the image is high gets smaller type, then is cut off; the checks
+then report **Callout legend cut off**. Shorten the legend.
+
+The legends are text like any other: they go to translation with the module, and come back in its
+other languages. See [Export for translation](/guide/translations/export).

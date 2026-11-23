@@ -1,0 +1,28 @@
+= Anheben und heiße Bauteile
+:schema-version: 1
+:module-type: safety
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Wagenheber, heiße Bremsen
+
+[safety#jack,severity=danger,symbols=w001]
+.Fahrzeug rutscht vom Wagenheber
+====
+[#jack-text]
+Ein Fahrzeug auf dem Wagenheber kann abrutschen und Personen darunter einklemmen.
+
+[#jack-measures]
+* [[jack-m1]]Legen Sie sich niemals unter ein Fahrzeug, das nur auf dem Wagenheber steht, und greifen Sie nicht darunter.
+* [[jack-m2]]Setzen Sie den Wagenheber nur an den markierten [.term.jacking-point]##Wagenheberaufnahmen## am Schweller an.
+====
+
+[safety#hot-brakes,severity=caution,symbols=w017]
+.Heiße Bremsen und Abgasanlage
+====
+[#hot-brakes-text]
+Nach der Fahrt können Bremsscheiben und beim Benziner die Abgasanlage so heiß sein, dass sie die Haut verbrennen.
+
+[#hot-brakes-measures]
+* [[hot-brakes-m1]]Lassen Sie die Räder abkühlen, bevor Sie die Bremsen berühren.
+====

@@ -1,0 +1,58 @@
+---
+title: 'HTML-Vorschau-Routen'
+description: 'Ein Modul oder ein Handbuch aus der API als Webseite anzeigen: die Routen, ihre Parameter, das Design und die Header, die die Seite sicher halten.'
+articleId: 'guide.integrations.html-preview'
+---
+
+Zwei Routen antworten mit einer vollständigen HTML-Seite, um Inhalte in einem Portal, einer App
+oder einem Frame anzuzeigen:
+
+| Route                                              | Was                                                                |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| `GET /modules/<lang>/<id>/preview`                 | ein Modul, für sich allein                                         |
+| `GET /manuals/<id>/variants/<variant>/<lang>/html` | ein Handbuch in einer Variante und Sprache, aufgelöst wie sein PDF |
+
+Beide gehören zur [Delivery API](/de/api/delivery), brauchen `content.read` und lesen nur, was der
+Leser sehen darf. Ein Modul oder Handbuch, das der Leser nicht sehen darf, antwortet mit 404, genau
+wie ein fehlendes.
+
+## Eine Seite abrufen
+
+```sh
+curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: text/html" \
+  "https://docs.example.com/api/manuals/<id>/variants/model=large/de/html?ref=<tag>"
+```
+
+| Parameter | Was                                                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ref`     | Ein Zweig, Tag oder Commit (Standard: der Standardzweig des Servers). Für veröffentlichte Inhalte beim Tag einer Veröffentlichung lesen.                  |
+| `theme`   | `auto` (Standard: folgt der hellen oder dunklen Einstellung des Betrachters, ohne Skript), `light` oder `dark`, für eine Umgebung mit eigenem Umschalter. |
+| `variant` | Nur bei der Modulroute: ein Varianten-Slug wie `model=large`. Ohne ihn trifft keine Bedingung auf ein Variantenmerkmal zu.                                |
+| `view`    | Nur bei der Handbuchroute: `reader` (Standard), das HTML für Lesende, oder `editor`, das zusätzlich jeden Seitenumbruch des PDFs markiert.                |
+
+Jeder andere Parameter ist 400 `unsupported-parameter`; ein `Accept`, das `text/html` ausschließt,
+ist 406. Nur ein Erfolg ist HTML: Jeder Fehler ist ein JSON:API-Fehlerdokument.
+
+Stylesheets, Schriften und Bilder der Seite sind relativ zur URL der Seite verlinkt, beim selben
+`ref`, und funktionieren so, wo auch immer die API eingebunden ist. Sie brauchen dasselbe Token:
+Liefern Sie die Seite über einen eigenen Server aus, der es hinzufügt, nie mit einem Token in der
+URL.
+
+## Zwischenspeichern
+
+Bei einer Commit-ID ist die Antwort `private, max-age=31536000, immutable`. Bei einem Zweig oder Tag
+ist sie `private, no-cache` mit einem ETag, und `If-None-Match` erhält ein günstiges 304.
+`X-Ccms-Commit` nennt den gelesenen Commit.
+
+## Was sie sicher hält
+
+- `Content-Security-Policy` erlaubt keinerlei Skript und nichts von einem anderen Origin.
+- Nur der eigene Origin der API und die in `CCMS_EDITOR_ORIGINS` dürfen sie in einen Frame laden
+  (`frame-ancestors`): Um sie anderswo einzubetten, trägt der Betrieb diesen Origin dort ein.
+- `X-Content-Type-Options: nosniff` und `Referrer-Policy: no-referrer`.
+
+Text wird vom Renderer maskiert, sodass kein Inhalt zu Markup wird. Was die Variantenbedingungen aus
+einer Seite auslassen, listen `GET /modules/<lang>/<id>/hidden-content` und
+`GET /manuals/<id>/variants/<variant>/<lang>/hidden-content`. Für ein Handbuch unter seiner
+veröffentlichten Adresse siehe [Veröffentlichte Dateien für
+Portale](/de/guide/integrations/release-outputs).

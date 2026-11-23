@@ -1,0 +1,26 @@
+{
+  "01a": {
+    "en": "A reader's question the manual can't answer",
+    "de": "Eine Frage, und die Anleitung schweigt"
+  },
+  "02a": {
+    "en": "Two manuals, every variant, three languages",
+    "de": "Zwei Anleitungen, alle Varianten, drei Sprachen"
+  },
+  "02b": {
+    "en": "Each piece written once, as a module",
+    "de": "Jeder Text nur einmal geschrieben, als Modul"
+  },
+  "03a": {
+    "en": "Mira adds the missing torque, once",
+    "de": "Mira trägt das fehlende Anzugsmoment ein, nur einmal"
+  },
+  "04a": {
+    "en": "Reviewed by Jonas, released by Ada",
+    "de": "Jonas gibt frei, Ada veröffentlicht"
+  },
+  "06a": {
+    "en": "The answer, in every PDF, the portal and AI assistants",
+    "de": "Die Antwort steht im PDF, im Portal und beim KI-Assistenten"
+  }
+}

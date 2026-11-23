@@ -1,0 +1,80 @@
+---
+title: 'Own templates'
+description: 'Edit the Typst files of an own page design template in the editor, with a live preview and the compiler’s errors at their lines.'
+articleId: 'guide.releases.page-design-templates'
+---
+
+An own template lays a manual's PDF out with Typst files of your own in place of the layout's
+(see [Page designs](/guide/releases/page-designs#own-templates)). Its files are content: you
+change them in a revision of your own, in the editor or by pushing them to the content
+repository, and they apply once the revision is merged.
+
+## Open a template
+
+1. Start or choose a draft revision of your own.
+2. Choose **Admin** in the sidebar, then **Page design**.
+3. Under **Own templates**, choose the template. From a design that uses it, **Edit the
+   template's files** next to **Template** opens it too.
+
+The screen shows the template's files on the left, the file you chose in the middle and a live
+preview on the right. Changing a template needs a role that may edit all content, as changing a
+page design does; everyone else sees it read-only, with why.
+
+## Start a new template
+
+1. Under **Own templates**, choose **New template**.
+2. Give it a name: lowercase letters, digits and hyphens, such as `house-style`. It becomes the
+   folder `templates/<name>/`.
+3. Choose **Create**. The new template starts as a copy of the example template, the **Classic**
+   layout as files of its own: `manual.typ`, `design.typ` and `default.typ`. It prints exactly
+   what **Classic** prints until you change it.
+
+To use it, choose it under **Template** in a page design (**Layout**).
+
+## Edit a file
+
+Choose a file in the list. The code editor colours Typst (and YAML, JSON and SVG) and numbers
+the lines.
+
+- **Tab** indents the line or the selected lines, **Shift+Tab** takes the indent back, and
+  **Enter** keeps the line's indent. To leave the editor with the keyboard, press **Escape** and
+  then **Tab**.
+- What you type is saved in your revision shortly after you stop, and the preview updates.
+  **Ctrl+S** (**Cmd+S** on a Mac) makes it a save point of the revision at once; this also
+  happens after a short pause and when you leave the screen.
+- A dot in the list marks the files your revision changed.
+- Images and fonts in the template's folder are listed but not edited here: push them to the
+  content repository.
+
+A file holds at most 256 KiB of text. A larger one is not saved until it is smaller again.
+
+## Add or delete a file
+
+- **New file** asks for its path in the template's folder, such as `parts/notice.typ`. A path
+  has folders and a name of letters, digits, `_`, `.` and `-`, at most 8 names deep (the file's own included) and 150
+  characters long, and ends with a text extension: `.typ`, `.yaml`, `.yml`, `.json`, `.toml`,
+  `.csv`, `.txt`, `.xml`, `.svg` or `.bib`.
+- **Delete** removes the file open from the template in your revision. `manual.typ`, the
+  template's entry, cannot be deleted.
+
+## The live preview
+
+The preview lays out a small manual that uses every function a template defines: the title page,
+running text with each inline mark, every safety severity and admonition, steps, a list, a
+table, a section, an FAQ entry. Step through its pages with the arrows. By default it uses the
+settings of the first design that names the template (else the built-in design's); choose
+another design under **Preview with**.
+
+## When the template has an error
+
+When the template does not compile, the preview turns grey and the problems are listed under the
+code: the file, line and column, and the compiler's message. The lines are marked in the
+editor, and the file in the list. Choose a problem to open its file at its line.
+
+The revision's checks report **Page design template does not compile** at each design that names
+the template, and the revision cannot be merged until the template is fixed. Until then the
+published template stays in use.
+
+A template reads only its own folder's files and the design's files, never the server's files,
+another template or the network. A template that runs too long or needs too much memory is
+stopped, and the preview says so as its problem.

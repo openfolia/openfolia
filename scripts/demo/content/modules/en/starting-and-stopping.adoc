@@ -1,0 +1,25 @@
+= Starting and switching off
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: start, ignition
+
+[#intro]
+The vehicle starts with the key in your pocket: no key needs to be inserted.
+
+[procedure#start]
+.Start the vehicle
+. [[start-brake]]Press the brake pedal and hold it.
+. [[start-button]]Press the [.ui]##START/STOP## button.
++
+[#start-ready]
+The petrol engine starts. On the electric model, the display shows [.ui]##READY##: the vehicle is ready to drive, without a sound.
+. [[start-gear]]Select [.ui]##D## or [.ui]##R## and release the parking brake.
+
+[procedure#stop]
+.Switch the vehicle off
+. [[stop-park]]Stop and select [.ui]##P##.
+. [[stop-brake]]Apply the [.term.parking-brake]##parking brake##.
+. [[stop-off]]Press the [.ui]##START/STOP## button.

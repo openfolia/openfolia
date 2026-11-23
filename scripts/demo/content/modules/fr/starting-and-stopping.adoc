@@ -1,0 +1,25 @@
+= Démarrer et éteindre
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: démarrage, contact
+
+[#intro]
+Le véhicule démarre avec la clé dans votre poche : inutile d'insérer une clé.
+
+[procedure#start]
+.Démarrer le véhicule
+. [[start-brake]]Appuyez sur la pédale de frein et maintenez-la enfoncée.
+. [[start-button]]Appuyez sur le bouton [.ui]##START/STOP##.
++
+[#start-ready]
+Le moteur essence démarre. Sur le modèle électrique, l'écran affiche [.ui]##READY## : le véhicule est prêt à rouler, sans aucun bruit.
+. [[start-gear]]Sélectionnez [.ui]##D## ou [.ui]##R## et desserrez le frein de stationnement.
+
+[procedure#stop]
+.Éteindre le véhicule
+. [[stop-park]]Arrêtez-vous et sélectionnez [.ui]##P##.
+. [[stop-brake]]Serrez le [.term.parking-brake]##frein de stationnement##.
+. [[stop-off]]Appuyez sur le bouton [.ui]##START/STOP##.

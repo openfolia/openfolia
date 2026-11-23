@@ -1,0 +1,88 @@
+---
+title: 'Blob store'
+description: 'Where images, attachments and release files are stored: a folder on the data volume, or an S3-compatible bucket.'
+articleId: 'guide.self-hosting.blob-store'
+---
+
+Binary files (images, attachments, archived release PDFs) are kept by their SHA-256 in a blob
+store, never in Git: a module refers to an image by its hash, so a release tag pins exactly its
+images. Two stores are built in, chosen by `CCMS_BLOB_DRIVER`.
+
+## A folder (`fs`)
+
+The container images default to `CCMS_BLOB_DRIVER=fs` with `CCMS_BLOB_FS_ROOT=/data/blobs`, on
+the `data` volume. Nothing to set up. It suits one machine: the API and the workers must all see
+the same folder. The [backup service](/guide/self-hosting/backups) backs it up with the database.
+
+## S3-compatible storage (`s3`)
+
+For several hosts, or to keep files off the server's disk, use any S3-compatible service.
+
+1. Create a bucket, and keep it private: the API serves every file itself, after checking who
+   may read it, never by a bucket URL.
+2. Create an access key with `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on the bucket's
+   objects, and `s3:ListBucket` on the bucket.
+3. Put the settings into `deploy/api.env` (the API and the workers both read it):
+
+   ```sh
+   CCMS_BLOB_DRIVER=s3
+   CCMS_S3_ENDPOINT=https://s3.example.com     # unset for AWS S3 itself
+   CCMS_S3_REGION=us-east-1                    # the default; most services accept any
+   CCMS_S3_BUCKET=docs-blobs
+   CCMS_S3_FORCE_PATH_STYLE=true               # most self-hosted services need path-style URLs
+   ```
+
+   Give the key from files, as Compose secrets in a `compose.override.yaml` next to `compose.yaml`.
+   Name the `_FILE` settings there, under the `api` and `worker` services, never in `api.env`: the
+   backup service reads `api.env` too, and stops when a `_FILE` it names cannot be read. Make the
+   file the container user's and no one else's (`chown 1000` and `chmod 400` on each file,
+   `chmod 700` on `/srv/secrets`). Compose reads the override only when no `-f` and no
+   `COMPOSE_FILE` is given: see [Your own additions](/guide/self-hosting/quick-start#step-by-step).
+
+   ```yaml
+   services:
+     api:
+       environment:
+         CCMS_S3_ACCESS_KEY_ID_FILE: /run/secrets/s3-access-key-id
+         CCMS_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3-secret-access-key
+       secrets: [s3-access-key-id, s3-secret-access-key]
+     worker:
+       environment:
+         CCMS_S3_ACCESS_KEY_ID_FILE: /run/secrets/s3-access-key-id
+         CCMS_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/s3-secret-access-key
+       secrets: [s3-access-key-id, s3-secret-access-key]
+   secrets:
+     s3-access-key-id:
+       file: /srv/secrets/s3-access-key-id
+     s3-secret-access-key:
+       file: /srv/secrets/s3-secret-access-key
+   ```
+
+   Or set `CCMS_S3_ACCESS_KEY_ID` and `CCMS_S3_SECRET_ACCESS_KEY` in `api.env` (both or neither).
+   With neither, the SDK's own chain applies: `AWS_*` variables, shared credential files, an
+   instance or task role. The endpoint URL never holds credentials.
+
+4. Start again: `docker compose up -d --wait`.
+
+Each upload is sent with its SHA-256 checksum, so the service refuses bytes that do not match.
+
+**Backups:** with `s3`, the blobs stay in their bucket and are not part of the server's backups.
+Turn on versioning (or object lock) for the bucket.
+
+## Health
+
+`GET /health` reports `"blobs": "unavailable"` when the store does not answer within 2 seconds,
+and `GET /health/ready` then answers 503 `blob-store-unavailable`, so a load balancer takes the
+instance out of rotation ([Database](/guide/self-hosting/database), "Health").
+
+## Images from the old layout
+
+Content written before the blob store kept images under `assets/<sha256>` in the repository. The
+API still reads those. To copy them into the store, run:
+
+```sh
+docker compose exec api node dist/blobs/import-git-assets.main.js
+```
+
+It copies every `assets/` file at the head of every branch and tag, changes nothing in Git, and
+can run again.

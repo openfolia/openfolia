@@ -1,0 +1,352 @@
+<!doctype html>
+<!--
+  The hero's intro card (#441, docs/demo-videos.md): about 7.4 s on the frame's own graphite and
+  grain, so it flows into the first shot without a cut. One module floats in, splits into three
+  manuals in two languages, and they fold back into the mark; the name and the two-beat line
+  land. The brand green is the only colour, for one moment: the leaf that catches last.
+
+  A template: `cards.mjs` fills the {{…}} slots (texts per language, the look, the theme's fonts,
+  the lockup from frontend/theme) and `render.mjs` renders it frame by frame.
+-->
+<html lang="{{lang}}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{product}} intro card</title>
+    <style>
+      {{fonts}}
+      :root {
+        --line: rgba(255, 255, 255, 0.08);
+        --page: rgba(255, 255, 255, 0.045);
+        --bar: rgba(255, 255, 255, 0.13);
+        --ink: {{ink}};
+        --muted: {{muted}};
+        --dim: {{dim}};
+        --mark: {{mark}};
+        --settle: cubic-bezier(0.22, 0.9, 0.3, 1);
+        --glide: cubic-bezier(0.65, 0, 0.25, 1);
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+      body {
+        position: relative;
+        color: var(--ink);
+        font-family: 'Geist', sans-serif;
+        background: {{background}};
+      }
+
+      /* A slow push-in: the camera moves, not the content. */
+      .stage {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 48%;
+        animation: push 7.4s cubic-bezier(0.3, 0, 0.4, 1) both;
+      }
+      .content {
+        position: absolute;
+        inset: 0;
+        animation: out 0.7s ease-in 6.55s both;
+      }
+
+      /* A page: the module itself, and each manual's copy of it. */
+      .page {
+        position: absolute;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--page);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+      .bars {
+        display: grid;
+        gap: 14px;
+      }
+      .bars i {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 12px;
+      }
+      .bars i::before {
+        content: '';
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1.5px solid var(--mark);
+        flex: none;
+        box-sizing: border-box;
+      }
+      .bars i::after {
+        content: '';
+        height: 8px;
+        width: var(--w);
+        border-radius: 4px;
+        background: var(--bar);
+      }
+
+      /* Act 1: one module. */
+      .module {
+        left: 720px;
+        top: 330px;
+        width: 480px;
+        height: 330px;
+        padding: 40px 44px;
+        animation:
+          focus 0.8s var(--settle) 0.2s both,
+          split 0.5s ease-in 1.55s forwards;
+      }
+      .module .kind {
+        font: 500 20px 'Geist Mono', monospace;
+        color: var(--dim);
+      }
+      .module h1 {
+        margin: 14px 0 30px;
+        font-size: 40px;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+      }
+
+      /* Act 2: three manuals, each in two languages. Each pair arrives from the module's place. */
+      .manual {
+        position: absolute;
+        top: 300px;
+        width: 330px;
+        height: 420px;
+        animation:
+          spread 0.85s var(--settle) var(--at) both,
+          gather 0.6s var(--glide) var(--back) forwards;
+      }
+      .manual .page {
+        width: 300px;
+        height: 380px;
+        padding: 28px 30px;
+      }
+      .manual .page.back {
+        left: 30px;
+        top: 30px;
+        background: #1c1e22;
+      }
+      .manual .page.front {
+        left: 0;
+        top: 0;
+        background: #24262b;
+      }
+      .manual .title {
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .manual .lang {
+        position: absolute;
+        right: 22px;
+        top: 26px;
+        font: 500 16px 'Geist Mono', monospace;
+        color: var(--dim);
+      }
+      .manual .page.back .lang {
+        top: auto;
+        bottom: 7px;
+      }
+      .manual .rule {
+        height: 1px;
+        margin: 20px 0 22px;
+        background: var(--line);
+      }
+      /* The module inside each manual: the same steps, a little brighter than the pages. */
+      .manual .inset {
+        margin-top: 22px;
+        padding: 16px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .manual .inset b {
+        display: block;
+        margin-bottom: 14px;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .manual .inset .bars {
+        gap: 11px;
+      }
+
+      /* Act 3: the mark builds where the pages went, catches the green leaf, the name wipes in. */
+      .logo {
+        position: absolute;
+        left: 660px;
+        top: 400px;
+        width: 600px;
+      }
+      .logo svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      .logo .spine {
+        transform-box: fill-box;
+        transform-origin: 50% 100%;
+        animation: build 0.55s var(--settle) 3.2s both;
+      }
+      .logo .leaf {
+        transform-box: fill-box;
+        transform-origin: 0% 100%;
+      }
+      .logo .leaf.back {
+        animation: fan 0.6s var(--settle) 3.38s both;
+      }
+      .logo .leaf.signal {
+        animation: catch 0.55s cubic-bezier(0.2, 1.4, 0.35, 1) 3.55s both;
+      }
+      .logo .word {
+        animation: wipe 0.8s var(--glide) 3.85s both;
+      }
+
+      .line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 585px;
+        margin: 0;
+        text-align: center;
+        font-size: 46px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+      }
+      .line span {
+        display: inline-block;
+        animation: focus 0.8s var(--settle) both;
+      }
+      .line .first {
+        color: var(--muted);
+        animation-delay: 4.45s;
+      }
+      .line .second {
+        color: var(--ink);
+        animation-delay: 5.05s;
+      }
+
+      @keyframes push {
+        from {
+          transform: scale(1);
+        }
+        to {
+          transform: scale(1.045);
+        }
+      }
+      @keyframes focus {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+          filter: blur(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes split {
+        to {
+          opacity: 0;
+          transform: scale(0.92);
+          filter: blur(6px);
+        }
+      }
+      @keyframes spread {
+        from {
+          opacity: 0;
+          transform: translate(var(--dx), 30px) scale(0.7);
+          filter: blur(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes gather {
+        to {
+          opacity: 0;
+          transform: translate(var(--gx), var(--gy)) scale(0.12);
+          filter: blur(6px);
+        }
+      }
+      @keyframes build {
+        from {
+          opacity: 0;
+          transform: translateY(30px) scale(0.94);
+          filter: blur(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+          filter: blur(0);
+        }
+      }
+      @keyframes fan {
+        from {
+          opacity: 0;
+          transform: rotate(-38deg);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes catch {
+        from {
+          opacity: 0;
+          transform: rotate(-30deg) scale(0.6);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes wipe {
+        from {
+          clip-path: inset(0 100% 0 0);
+          opacity: 0.4;
+        }
+        to {
+          clip-path: inset(0 0 0 0);
+          opacity: 1;
+        }
+      }
+      @keyframes out {
+        to {
+          opacity: 0;
+          filter: blur(4px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    {{grain}}
+    <div class="stage">
+      <div class="content">
+        <div class="page module">
+          <div class="kind">{{id}}</div>
+          <h1>{{module}}</h1>
+          <div class="bars">
+            <i style="--w: 300px"></i><i style="--w: 250px"></i
+            ><i style="--w: 330px"></i><i style="--w: 210px"></i>
+          </div>
+        </div>
+        {{manuals}}
+        <div class="logo">{{logo}}</div>
+        <p class="line">
+          <span class="first">{{first}}</span>
+          <span class="second">{{second}}</span>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

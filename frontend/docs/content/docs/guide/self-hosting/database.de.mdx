@@ -1,0 +1,123 @@
+---
+title: 'Datenbank'
+description: 'Postgres: die Verbindung, Migrationen beim Start, die Zustandsprüfungen, der Verbindungspool und seine Auslastung.'
+articleId: 'guide.self-hosting.database'
+---
+
+Postgres hält den Betriebszustand: Benutzer, Rollen, Sperren, Kommentare, Workflow, das Audit-Log,
+die Hintergrund-Jobs und Indizes, die sich aus den Inhalten neu aufbauen lassen. Die Inhalte selbst
+bleiben in Git ([Inhalts-Repository](/de/guide/self-hosting/content-repository)).
+`deploy/compose.yaml` betreibt Postgres 18 im Dienst `postgres`, auf dem Volume `postgres`.
+
+## Die Verbindung
+
+`compose.yaml` setzt `CCMS_DATABASE_URL` selbst aus `POSTGRES_PASSWORD` zusammen. Für ein eigenes
+Postgres ist das Format:
+
+```text
+postgres://benutzer:passwort@db.example.com:5432/datenbank?sslmode=verify-full
+```
+
+`compose.yaml` setzt `CCMS_DATABASE_URL` unter `environment:` der Dienste `api`, `worker`,
+`backup` und `restore`, und das hat Vorrang vor `api.env`. Geben Sie Ihre eigene URL deshalb aus
+einer Datei, in einer `compose.override.yaml` neben `compose.yaml`, die die erzeugte in allen vier
+leert (ein leerer Wert gilt als nicht gesetzt):
+
+```yaml
+services:
+  api:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  worker:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  backup:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  restore:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+secrets:
+  database-url:
+    file: /srv/secrets/database-url
+```
+
+Die Datei enthält nur die URL. Die Datei gehört dem Benutzer des Containers und ist für niemanden
+sonst lesbar (`chown 1000` und `chmod 400` für die Datei, `chmod 700` für `/srv/secrets`).
+`compose.yaml` verlangt weiterhin `POSTGRES_PASSWORD`: Setzen Sie es wie bisher auf einen zufälligen
+Wert (`openssl rand -hex 24`); die mitgelieferte Datenbank bleibt dann ungenutzt. Compose liest die
+Ergänzung nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben ist: siehe [Eigene
+Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt).
+
+- **TLS:** Ergänzen Sie `?sslmode=verify-full`. Das Zertifikat wird auch bei `require` geprüft;
+  für eine private CA setzen Sie deshalb `NODE_EXTRA_CA_CERTS` auf deren Datei.
+- **Ein Connection-Pooler:** Migrationen halten einen Advisory Lock von Postgres; das braucht eine
+  direkte Verbindung oder einen Pooler im Session-Modus, keinen im Transaktionsmodus.
+- **Erweiterungen:** Die Migrationen legen `pg_trgm` an (für Tippfehler in der Suche). Die
+  semantische Suche braucht zusätzlich `vector` ([Semantische
+  Suche](/de/guide/self-hosting/semantic-search)).
+
+## Migrationen
+
+Die API wendet ausstehende Migrationen beim Start an, bevor sie Anfragen beantwortet, und
+protokolliert `Migrations applied`. Server, die gemeinsam starten, wenden jede Migration einmal an.
+Ein Worker (`CCMS_ROLE=worker`) migriert nie: Er wartet bis zu 120 s auf die Migrationen der API
+und beendet sich dann mit einer Meldung. Migrationen gehen nur vorwärts: siehe
+[Upgrades](/de/guide/self-hosting/upgrades).
+
+- `CCMS_DATABASE_MIGRATE=false` hält die API vom Migrieren ab. Führen Sie die Migrationen dann
+  selbst als Schritt der Auslieferung aus:
+  `docker compose run --rm api node dist/database/migrate.main.js`.
+- Eine Anweisung einer Migration wartet höchstens `CCMS_DATABASE_LOCK_TIMEOUT_MS` (10 s) auf eine
+  Tabellensperre; danach wird der Versuch zurückgerollt und wiederholt, bis zu
+  `CCMS_DATABASE_MIGRATE_ATTEMPTS` (3) Mal, mit wachsenden Pausen. So lässt eine lange Transaktion
+  auf einer Tabelle nicht jede Abfrage darauf warten.
+
+Eine fehlende oder fehlerhafte URL, ein nicht erreichbarer Server, abgewiesene Zugangsdaten, eine
+fehlende Datenbank oder eine fehlschlagende Migration beenden den Start mit einer Meldung, die
+sagt, was es war, nie mit dem Passwort.
+
+## Zustand
+
+Zwei Routen brauchen kein Token. `GET /health` immer und `GET /health/ready`, wenn es mit 200
+antwortet, antworten mit `{ "status", "database", "pool", "blobs" }`:
+
+- `GET /health` ist die Lebendigkeit: immer 200, solange der Server läuft. Entscheiden Sie
+  Neustarts danach: Die Inhalts- und PDF-Routen funktionieren ohne Datenbank.
+- `GET /health/ready` ist die Bereitschaft: 200, wenn alles `ok` ist, sonst 503 mit `Retry-After`
+  und dem Code `database-unavailable` (die Datenbank antwortete nicht binnen 2 Sekunden),
+  `database-saturated` (der Pool ist erschöpft) oder `blob-store-unavailable`. Richten Sie den Load
+  Balancer auf diese Route: Er nimmt die Instanz aus der Rotation und wieder hinein, sobald sie sich
+  erholt. Die Zustandsprüfungen der Container-Images verwenden sie ebenfalls.
+
+## Der Verbindungspool
+
+Jeder Serverprozess hat einen Pool von höchstens `CCMS_DATABASE_POOL_MAX` Verbindungen
+(Standard 10), die Job-Warteschlange einen eigenen, `CCMS_JOBS_POOL_MAX` (Standard 4). Während
+Abfragen auf eine freie Verbindung warten, ist `pool` `saturated`, und `/health/ready` antwortet
+mit 503 `database-saturated`.
+
+Geschieht das unter normaler Last, erhöhen Sie `CCMS_DATABASE_POOL_MAX` und halten die Summe über
+alle Prozesse (API, Worker, Backup-Dienst) unter `max_connections` der Datenbank. Suchen laufen pro
+Server höchstens `CCMS_SEARCH_CONCURRENCY` (4) gleichzeitig, sodass sie nie den ganzen Pool belegen.
+
+## Zeitgrenzen für Schreibvorgänge
+
+Schreibende Transaktionen, die Zeilen halten, auf die andere warten (ein Speicherpunkt, das
+Verwerfen einer Überarbeitung, das Aufbrechen von Sperren), warten höchstens
+`CCMS_DATABASE_WRITE_LOCK_TIMEOUT_MS` (5 s) auf eine Sperre, und jede ihrer Anweisungen läuft
+höchstens `CCMS_DATABASE_WRITE_STATEMENT_TIMEOUT_MS` (30 s). Danach wird die Anfrage
+zurückgerollt und antwortet mit 503 `database-timeout` und `Retry-After`, nie mit 500.
+
+## Backups
+
+Die Datenbank wird zusammen mit den Inhalten, den Dateien und dem Instanzschlüssel gesichert:
+siehe [Backups auf dem Server](/de/guide/self-hosting/backups).

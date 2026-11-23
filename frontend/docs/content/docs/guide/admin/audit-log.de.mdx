@@ -1,0 +1,51 @@
+---
+title: 'Das Audit-Log'
+description: 'Sehen, wer was wann geändert hat, das Log filtern und als CSV oder JSON Lines exportieren.'
+articleId: 'guide.admin.audit-log'
+---
+
+Das Audit-Log zeichnet jede Zustandsänderung auf: eine freigegebene Überarbeitung, eine
+zugewiesene Rolle, einen gelöschten Webhook, einen Export. Jedes Ereignis sagt, wann, wer, was
+geschah, woran, und den Kommentar dazu. Ereignisse werden nie geändert.
+
+## Das Log lesen
+
+1. Öffnen Sie **Verwaltung**, dann **Audit-Log**. Die neuesten Ereignisse stehen oben.
+2. Wählen Sie den Pfeil am Anfang einer Zeile (**Details anzeigen**), um alles zu sehen, was das
+   Ereignis festhält.
+
+![Das Audit-Log mit den letzten Ereignissen und dem geöffneten Menü Exportieren](/images/guide/de/admin-audit.webp)
+
+Eine Aktion, die der Editor kennt, steht in Worten da, ihr Schlüssel darunter, etwa
+**Überarbeitung freigegeben** über `change-set.approve`. Das Objekt verlinkt, wo möglich, auf das
+Modul, das Handbuch oder die Prüfung der Überarbeitung.
+
+Eine Überarbeitung, die ihr Autor allein freigegeben hat, ist mit **Durch den Autor** markiert.
+Siehe [Die eigene Überarbeitung freigeben](/de/guide/review/self-approval).
+
+## Das Log filtern
+
+- **Akteur**: alle, alle Personen, alle Service-Accounts oder eine bestimmte Person bzw. ein
+  bestimmter Service-Account.
+- **Objekt**: die Art dessen, woran es geschah; **Objekt-ID** grenzt auf eines ein.
+- **Aktion**: eine Art von Ereignis.
+- **Von** und **Bis**: ein Zeitraum in Tagen, beide eingeschlossen.
+
+**Filter zurücksetzen** zeigt wieder alles. Die Filter stehen in der Adresse der Seite, ein
+gefiltertes Log lässt sich also als Lesezeichen speichern oder teilen.
+
+Aus einem Modul oder einer Prüfung öffnet **Im Audit-Log anzeigen** in deren Menü das Log auf sie
+gefiltert.
+
+## Das Log exportieren
+
+1. Setzen Sie die Filter für das, was Sie brauchen, etwa einen Zeitraum.
+2. Wählen Sie **Exportieren**, dann **CSV (Tabelle)** oder **JSON Lines**.
+3. Die Datei enthält jedes Ereignis, das die Filter auswählen, nicht nur die angezeigte Seite.
+
+Jeder Export wird selbst im Log festgehalten: **Audit-Log exportiert**.
+
+## Alte Ereignisse
+
+Wer den Server betreibt, kann eine Aufbewahrungsfrist festlegen. Ältere Ereignisse werden dann
+entfernt, und das Entfernen wird im Log festgehalten: **Alte Audit-Ereignisse entfernt**.

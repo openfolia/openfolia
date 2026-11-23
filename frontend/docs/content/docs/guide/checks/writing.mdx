@@ -1,0 +1,97 @@
+---
+title: 'Terminology and style'
+description: 'Forbidden terms and the house style, checked in every module’s text before review and release, and in CI.'
+articleId: 'guide.checks.writing'
+---
+
+These checks read what a module says: the words of its paragraphs, titles, list items, alternative
+texts, safety messages and other translatable text. Code, literal blocks and passthrough blocks are
+never read. They are warnings unless your project's configuration makes them blocking.
+
+## Terms
+
+The terms of your [terminology](/guide/writing/terminology) name the variants that must not be used, per
+language.
+
+- **Forbidden term**: the text uses a forbidden variant of an approved term, in the module's
+  language. It is matched as a whole word and in any case, without word endings: “loader” is found
+  in “Plug in the Loader”, not in “loaders”. The details say what to write instead, the term's
+  preferred variant, in the case that was found.
+- The same check reports a **deprecated term**: any variant of a term marked deprecated, with its
+  replacement's preferred variant when the term names one. It is always a warning.
+
+A proposed term is not in force yet and checks nothing. A forbidden term is blocking when the
+configuration says so:
+
+```yaml
+terminology:
+  forbiddenIsBlocking: true
+```
+
+## Style rules
+
+Your house style, as rules in `openfolia.yaml`, per language:
+
+```yaml
+styleRules:
+  en:
+    maxSentenceWords: 25
+    rules:
+      - id: in-order-to
+        words: in order to
+        message: Write “to”.
+        replacement: to
+      - id: utilise
+        pattern: '\butili[sz]e\b'
+        message: Write “use”.
+        replacement: use
+        severity: blocking
+```
+
+- **Style rule**: the text matches a rule. A rule is a phrase (`words`, matched as whole words in
+  any case) or a pattern (`pattern`), with the message the writer reads and, optionally, what to
+  write instead. A rule is a warning unless its `severity` is `blocking`.
+- The same check reports a sentence longer than `maxSentenceWords` words.
+
+A pattern is a small part of regular expressions: characters, `.`, classes such as `[a-z]` and
+`\w`, groups, `|`, `?`, `*`, `+`, counts up to 20, `^`, `$` and `\b`. It is matched in time that
+grows with the text only, so no pattern can hold up the checks. A pattern outside that part
+(back-references, lookaround) is refused when the configuration is saved, and says why. The
+[`openfolia.yaml` reference](/reference/project-config) lists every key.
+
+**Writing not checked** (warning): a module's text is longer than the checks read (1,000,000
+characters), has more findings than they list (1,000), or took the style rules too long. What comes
+after was not checked: split the module, or fix the first findings.
+
+## While you write
+
+The module editor runs the same checks as you type, in the module's language, on the terms and
+style rules of the revision you edit. They run when you pause, on the text you changed only.
+
+- A finding is **underlined**: dotted, thicker for a blocking one, with a warning icon beside its
+  paragraph. Point at it, or put the caret in it and press **Alt+Enter**, to open its card: what is
+  wrong, the note of the term, and what to write instead. **Replace** puts the fix in, as one step
+  that **Ctrl+Z** (**Cmd+Z** on a Mac) takes back. **Ignore here** hides that finding in that text
+  until you close the module; the checks before review and release still report it.
+- The **Suggestions** tab of the side panel lists every finding under **Writing checks**, with
+  **Replace**, **Show** (selects the text) and **Ignore here**.
+- Typing the first three letters of an approved term's preferred variant shows the rest in grey:
+  **Tab** puts it in, linked to the term; **Escape** dismisses it. Typing an allowed variant in full
+  offers to link it the same way. To insert a term by searching, choose **Term** in the **/** menu
+  or under **Insert** in the toolbar.
+- A term link is underlined thinly. Pointing at it, or resting the caret in it, shows its
+  definition.
+
+The suggestions of the [style review](/guide/writing/style-review) are marked in the text too
+(dashed), with **Apply** and **Dismiss** in their card.
+
+## In CI
+
+The same checks run on a content repository from the command line, for a pipeline:
+
+```sh
+pnpm nx run api:check-content -- --content path/to/content --ref main
+```
+
+It prints one line per check and exits 1 when any check is blocking, 0 with warnings only.
+`--manual <id>` checks one manual, `--format json` prints JSON.

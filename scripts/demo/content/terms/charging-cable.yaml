@@ -1,0 +1,13 @@
+schemaVersion: 1
+status: proposed
+domain: electric drive
+languages:
+  en:
+    preferred: charging cable
+    definition: The cable between the charging station and the vehicle's charging socket.
+  de:
+    preferred: Ladekabel
+    definition: Das Kabel zwischen Ladestation und der Ladebuchse des Fahrzeugs.
+  fr:
+    preferred: câble de recharge
+    definition: Le câble entre la borne de recharge et la prise de recharge du véhicule.

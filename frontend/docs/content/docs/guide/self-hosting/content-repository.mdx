@@ -1,0 +1,61 @@
+---
+title: 'Content repository'
+description: 'Where the content lives: a bare Git repository on the data volume, how to put yours there, and what the server writes into it.'
+articleId: 'guide.self-hosting.content-repository'
+---
+
+The content (modules, manuals, revisions, releases) lives in a **bare** Git repository. In the
+container setup it is `/data/content.git` on the data volume (`CCMS_CONTENT_DIR`). It is the copy
+that counts: the database holds operational state and an index that can be rebuilt from it.
+
+Until a repository is there, the API starts and answers its health check, but every content
+request fails. Its start-up log names the folder it reads.
+
+## Put your repository there
+
+**From a Git server:**
+
+```sh
+docker compose run --rm --no-deps api \
+  git clone --bare https://git.example.com/docs/content.git /data/content.git
+```
+
+**From a bare repository on the host:**
+
+```sh
+docker compose run --rm --no-deps -v /srv/content.git:/import:ro api \
+  git -c safe.directory=/import clone --bare /import /data/content.git
+```
+
+`safe.directory` is needed because Git refuses to read a repository another user owns.
+
+**The sample content**, to try it out:
+
+```sh
+docker compose run --rm --no-deps api node docker/sample-content.mjs
+```
+
+It refuses to run when something is already at `/data/content.git`, so it never replaces real
+content.
+
+Use a bare repository: the API never moves a branch that is checked out in a working tree.
+
+## What the server writes
+
+- **Revisions** (change sets) are branches, `change-sets/<id>`.
+- **Releases** are annotated tags, named by `CCMS_RELEASE_TAG` (default
+  `release/{product}/{revision}`).
+- **Maintenance lines** are branches, named by `CCMS_MAINTENANCE_BRANCH` (default
+  `maintenance/{product}/{revision}`).
+
+Every write moves a branch only if it still points where the server last read it, so two writers
+never overwrite each other.
+
+## Copies elsewhere
+
+The server pushes nowhere by itself. To publish the content to another Git server, push from this
+repository, for example on a schedule. Changes to the content come in through revisions and
+review in the editor.
+
+Back the repository up with the rest of the instance: [Backups](/guide/self-hosting/backups).
+What it holds and what it doesn't: [Almost everything is content](/guide/getting-started/content).

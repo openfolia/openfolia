@@ -1,0 +1,18 @@
+{
+  "title": "Verwaltung",
+  "pages": [
+    "navigation",
+    "users-and-roles",
+    "group-mappings",
+    "service-accounts",
+    "project-settings",
+    "variants",
+    "import",
+    "branding",
+    "webhooks",
+    "audit-log",
+    "backups",
+    "system",
+    "break-locks"
+  ]
+}

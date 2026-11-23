@@ -1,0 +1,22 @@
+= Fahrzeug abschleppen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Abschleppen
+
+[#intro]
+Die Abschleppöse liegt beim Wagenheber unter dem Boden des Laderaums.
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Schleppen Sie das Elektromodell nur mit allen vier Rädern auf einem Transporter ab. Rollt es beim Abschleppen auf den Rädern, erzeugt der Motor eine Spannung, die das Fahrzeug beschädigen kann.
+====
+
+[procedure#steps]
+.Abschleppöse anbringen
+. [[step-cover]]Drücken Sie die Abdeckung im Stoßfänger an ihrer Markierung, bis sie herausspringt.
+. [[step-screw]]Drehen Sie die Abschleppöse gegen den Uhrzeigersinn bis zum Anschlag ein.
+. [[step-neutral]]Schalten Sie das Fahrzeug ein und wählen Sie [.ui]##N##.

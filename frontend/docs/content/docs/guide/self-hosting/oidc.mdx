@@ -1,0 +1,104 @@
+---
+title: 'Sign-in with OpenID Connect'
+description: 'Let people sign in to the editor with your identity provider: the client, the settings, the first admin, groups and sessions.'
+articleId: 'guide.self-hosting.oidc'
+---
+
+People can sign in to the editor at any OpenID Connect provider that publishes a discovery
+document (`<issuer>/.well-known/openid-configuration`), hosted or your own. Nothing is specific to
+one provider. Sign-in with a provider is off until `CCMS_OIDC_ISSUER` is set.
+
+The examples use a provider you host yourself at `https://id.example.com`, beside the editor at
+`https://docs.example.com`, both behind the same [reverse proxy](/guide/self-hosting/reverse-proxy).
+
+## Register the client at the provider
+
+In the provider's admin console:
+
+1. Create a **client** (some providers call it an application) for the authorization code flow
+   with PKCE (S256). A confidential client has a secret; a public one needs none.
+2. Set its **redirect URL** to `https://docs.example.com/api/auth/oidc/callback`. To sign people
+   out at the provider too, set its **post-logout redirect URL** to
+   `https://docs.example.com/sign-in`.
+3. Give it the scopes `openid profile email`, with `email` and `email_verified` in the ID token or
+   the userinfo answer. For roles from groups, add a claim with the person's groups.
+4. Make sure people cannot set an email address that the provider then reports as verified.
+
+## Configure the API
+
+Set these in `deploy/api.env`:
+
+```sh
+CCMS_OIDC_ISSUER=https://id.example.com/realms/docs   # exactly as its discovery document names it
+CCMS_OIDC_CLIENT_ID=docs
+CCMS_OIDC_REDIRECT_URL=https://docs.example.com/api/auth/oidc/callback
+CCMS_OIDC_NAME=Company account                       # the sign-in button's label (optional)
+```
+
+- **The issuer** must be `https://` (plain `http://` only on a loopback host, for a local test
+  provider). The API container must reach it at the same address as people's browsers do, with a
+  certificate it trusts. For a certificate from your own CA, mount the CA file and set
+  `NODE_EXTRA_CA_CERTS` to its path in `api.env`.
+- **The redirect URL** is on the editor's origin, since the session cookie is the editor's.
+- **The scopes** are `CCMS_OIDC_SCOPES` (default `openid profile email`; must include `openid`).
+- **The client secret**, for a confidential client, comes from a file: a Compose secret named by
+  `CCMS_OIDC_CLIENT_SECRET_FILE` under the `api` and `worker` services' `environment`, in a
+  `compose.override.yaml`. Don't write it into `api.env`. Compose reads the override only when no
+  `-f` and no `COMPOSE_FILE` is given: see [Your own
+  additions](/guide/self-hosting/quick-start#step-by-step).
+
+The instance [secret key](/guide/self-hosting/secret-key) must be available: it seals the cookie
+that holds a sign-in while it is under way.
+
+## The first admin
+
+Set `CCMS_FIRST_ADMIN_EMAIL` to your address at the provider before the first start
+([quick start](/guide/self-hosting/quick-start)), then sign in with the provider's button. The API
+finds that user by the verified email address and links it, because they have never signed in
+before. To offer only the provider, set `CCMS_PASSWORD_SIGN_IN=off`.
+
+## Linking by email address
+
+`CCMS_OIDC_LINK_BY_EMAIL` decides whether a first sign-in joins an existing user whose address the
+provider reports as verified (`email_verified`):
+
+| Value               | A first sign-in joins                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pending` (default) | only a user who has never signed in with any provider: one an admin created, or the first admin.      |
+| `any`               | any user without an identity at this issuer yet. Only for a provider that guarantees verified emails. |
+| `off`               | nobody: every first sign-in makes a new user.                                                         |
+
+Linking trusts the provider's `email_verified`. If people could set someone else's address and
+have it reported as verified, they would take over that account.
+
+**Moving to another provider** (a new issuer): under `pending`, people who signed in before would
+get a second account at their first sign-in at the new one. Set `any` for the move, if the new
+provider guarantees verified addresses, and set it back once everyone has signed in.
+
+## Roles from groups
+
+The provider sends a person's groups in a claim, `groups` by default (`CCMS_OIDC_GROUPS_CLAIM`, a
+name or a dotted path such as `org.groups`). A group mapping gives every member of a group a role.
+Set mappings up in the editor ([Group mappings](/guide/admin/group-mappings)), through the API
+(`GET`, `POST` and `DELETE /group-mappings`, permission `admin.roles`), or in a seed file's
+`groupMappings` (`db-seed`).
+
+At each sign-in the provider's groups apply as they are, even when that takes away the last
+admin's role. Give the first admin their role directly to keep it.
+
+## Sessions
+
+A session ends after 8 hours without a request (`CCMS_SESSION_IDLE_MINUTES`, default 480) and at
+the latest 7 days after signing in (`CCMS_SESSION_MAX_HOURS`, default 168). A role change, a group
+mapping change or a deactivation applies from the person's next request.
+
+## What does not go with it
+
+- **Demo mode:** with `CCMS_AUTH_MODE=demo`, the API refuses to start when `CCMS_OIDC_ISSUER` is
+  set.
+- **The shared token:** leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset. The API refuses
+  the shared token with sign-in, as it would let anyone who reaches the editor read every draft
+  without signing in. Machine clients use
+  [service account tokens](/guide/integrations/authentication).
+
+Every setting is in the [settings reference](/reference/settings).

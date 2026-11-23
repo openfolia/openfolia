@@ -1,0 +1,109 @@
+---
+title: 'Webhooks empfangen'
+description: 'Die signierten Ereignisse empfangen, die ein Webhook-Abonnent erhält: der Inhalt, die Header, die Prüfung der Signatur, die Antwort und die Wiederholungen.'
+articleId: 'guide.integrations.webhooks'
+---
+
+Ein Webhook-Abonnent erfährt von Veröffentlichungen, Rücknahmen, als veraltet markierten Inhalten
+und Übersetzungsimporten, ohne abzufragen. Eine Person aus der Verwaltung legt den Abonnenten an und
+gibt Ihnen sein Signatur-Secret: siehe [Webhooks](/de/guide/admin/webhooks). Diese Seite richtet
+sich an den Empfänger.
+
+## Was ankommt
+
+Jedes Ereignis ist ein `POST` mit JSON an die `https://`-URL des Abonnenten:
+
+```json
+{
+  "type": "manual.released",
+  "idempotencyKey": "…",
+  "occurredAt": "2026-11-20T09:30:00.000Z",
+  "data": {}
+}
+```
+
+`data` enthält IDs und was sich geändert hat, nie Inhalte: Die Inhalte holen Sie über die
+[Delivery API](/de/guide/integrations/delivery-api). Die Ereignisse sind `manual.released`,
+`module.released`, `release.withdrawn`, `module.deprecated`, `manual.deprecated` und
+`translation.imported`; **Testereignis senden** sendet ein `ping`. Ein Abonnent erfährt nur von
+Inhalten, die sein Eigentümer lesen darf, innerhalb seiner Zielgruppengrenze.
+
+Die Header:
+
+| Header             | Was                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `Content-Type`     | `application/json`                                                                     |
+| `User-Agent`       | `openfolia-webhooks/1`                                                                 |
+| `X-Ccms-Event`     | der Typ des Ereignisses                                                                |
+| `X-Ccms-Delivery`  | die ID der Zustellung                                                                  |
+| `Idempotency-Key`  | der Schlüssel des Ereignisses: Dasselbe Ereignis hat immer denselben Schlüssel         |
+| `X-Ccms-Signature` | `t=<Unix-Sekunden>,v1=<hex>`, mit einem zweiten `v1`, während ein Secret erneuert wird |
+
+Eigene Header, die in der Verwaltung eingerichtet sind (etwa ein eigener `Authorization`-Header),
+kommen ebenfalls mit jeder Zustellung.
+
+## Die Signatur prüfen
+
+Prüfen Sie jede Zustellung, bevor Sie darauf reagieren:
+
+1. Lesen Sie den Inhalt roh als Bytes, bevor Sie ihn parsen.
+2. Teilen Sie `X-Ccms-Signature` an `,` und nehmen Sie `t` und jedes `v1`.
+3. Weisen Sie ein `t` zurück, das mehr als 5 Minuten von Ihrer Uhr abweicht: Es kann eine
+   Wiederholung durch Dritte sein.
+4. Berechnen Sie HMAC-SHA256 über `<t>.<roher Inhalt>` (der Zeitstempel dezimal, ein Punkt, der
+   Inhalt), mit dem ganzen Secret als UTF-8 als Schlüssel, `whsec_` eingeschlossen, als Hex in
+   Kleinbuchstaben.
+5. Vergleichen Sie das Ergebnis mit jedem `v1` in konstanter Zeit. Passt eines, nehmen Sie die
+   Zustellung an.
+6. Ignorieren Sie einen `Idempotency-Key`, den Sie schon verarbeitet haben.
+
+In Node.js:
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+export function verify(header, rawBody, secret, now = Date.now()) {
+  if (typeof header !== 'string') return false;
+  let t;
+  const candidates = [];
+  for (const part of header.split(',')) {
+    const [key, value = ''] = part.trim().split('=', 2);
+    if (key === 't' && /^\d{1,12}$/.test(value)) t = Number(value);
+    if (key === 'v1' && /^[0-9a-f]{64}$/.test(value)) candidates.push(value);
+  }
+  if (t === undefined || Math.abs(Math.floor(now / 1000) - t) > 300)
+    return false;
+  const expected = createHmac('sha256', secret)
+    .update(`${t}.`)
+    .update(rawBody)
+    .digest();
+  return candidates.some((v) =>
+    timingSafeEqual(Buffer.from(v, 'hex'), expected),
+  );
+}
+```
+
+Bewahren Sie das Secret nur beim Empfänger auf, nie in seiner URL oder im Code. Nach **Secret
+erneuern** signiert das alte Secret noch einen Tag neben dem neuen; wechseln Sie innerhalb dieser
+Zeit, wann es Ihnen passt.
+
+## Antworten und Wiederholungen
+
+- Antworten Sie mit einem beliebigen **2xx**, um eine Zustellung anzunehmen. Sie wird nie erneut
+  gesendet.
+- Alles andere gilt als fehlgeschlagen: ein anderer Status, eine Weiterleitung (keiner wird
+  gefolgt), keine Antwort innerhalb der Zeitgrenze (standardmäßig 10 s) oder eine abgebrochene
+  Verbindung. Die Zustellung wird 9-mal versucht, zuerst im Abstand von 30 s, der sich jedes Mal
+  verdoppelt, insgesamt etwa zwei Stunden. Danach ist sie fehlgeschlagen, und die Verwaltung kann
+  sie von Hand wiederholen.
+- Die Zustellung erfolgt mindestens einmal: Ein Ereignis kann zweimal mit demselben
+  `Idempotency-Key` ankommen. Merken Sie sich die verarbeiteten Schlüssel.
+- Schlagen 5 Zustellungen hintereinander endgültig fehl, wird der Abonnent abgeschaltet, bis ihn
+  die Verwaltung wieder einschaltet.
+
+Antworten Sie schnell und erledigen Sie die Arbeit danach. Für eine Kopie der Inhalte, die kein
+Ereignis verpassen darf, lassen Sie einen Webhook nur einen Leser des
+[Änderungs-Feeds](/de/guide/integrations/change-feed) wecken: Er enthält die Ereignisse zu
+Veröffentlichungen, Rückzügen und als veraltet markierten Inhalten mit denselben Schlüsseln und
+verliert nichts, solange Sie ausgefallen sind. `translation.imported` enthält er nicht: Dieses
+Ereignis kommt nur als Webhook.

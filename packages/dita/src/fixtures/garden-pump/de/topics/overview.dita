@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="overview" xml:lang="de" audience="operator">
+  <title>Über die <ph keyref="prodname"/></title>
+  <shortdesc>Die <ph keyref="prodname"/> fördert Wasser aus einer Regentonne in den Garten.</shortdesc>
+  <prolog>
+    <metadata>
+      <keywords>
+        <keyword>Pumpe</keyword>
+        <keyword>Garten, Wasser</keyword>
+      </keywords>
+    </metadata>
+  </prolog>
+  <conbody>
+    <p id="purpose">Nur für <b>klares Wasser</b> verwenden. Lesen Sie <xref href="install.dita#install/connect">Schlauch anschließen</xref>
+      vor dem ersten Gebrauch.</p>
+    <fig id="fig-pump">
+      <title>Die Pumpe</title>
+      <image href="../../images/pump.png" placement="break" width="8cm">
+        <alt>Seitenansicht der Pumpe</alt>
+      </image>
+    </fig>
+    <p product="pro">Das Pro-Modell hat einen <uicontrol>Timer</uicontrol>-Schalter.<indexterm>Timer</indexterm></p>
+    <section id="parts">
+      <title>Teile</title>
+      <ul id="part-list">
+        <li id="motor">Der Motor</li>
+        <li id="filter">Der Filter<fn>Monatlich reinigen.</fn></li>
+      </ul>
+    </section>
+  </conbody>
+</concept>

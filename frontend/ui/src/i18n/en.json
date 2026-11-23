@@ -1,0 +1,515 @@
+{
+  "account": {
+    "labelCollapsed": "Account: {name}"
+  },
+  "badges": {
+    "status": {
+      "draft": "Draft",
+      "inReview": "In review",
+      "approved": "Approved",
+      "released": "Released",
+      "deprecated": "Deprecated"
+    },
+    "translation": {
+      "upToDate": "Up to date",
+      "outdated": "Outdated",
+      "atAgency": "At agency",
+      "notTranslated": "Not translated",
+      "translated": "Translated"
+    }
+  },
+  "blocks": {
+    "reference": {
+      "module": "Whole module",
+      "block": "Block",
+      "link": "Link",
+      "open": "Open",
+      "shared": "Shared module"
+    },
+    "safety": {
+      "hazard": "Hazard",
+      "consequence": "Consequence",
+      "measure": "Measure",
+      "noArtwork": "No artwork",
+      "symbolWithoutArtwork": "{label}: no artwork to show"
+    },
+    "variant": {
+      "label": "Variant block",
+      "shownFor": "Shown for",
+      "everyVariant": "Applies to every variant",
+      "add": "Add variant"
+    },
+    "image": {
+      "alt": "Alt text: {alt}",
+      "noAlt": "No alt text: required",
+      "missing": "Image not found, or not visible to you",
+      "failed": "The image could not be loaded",
+      "empty": "No image chosen",
+      "retry": "Retry"
+    },
+    "callouts": {
+      "group": "Callouts",
+      "handle": "{part, select, anchor {Callout {number}, anchor} label {Callout {number}, label} other {Callout {number}}}{hidden, select, yes {, hidden in this variant} other {}}"
+    },
+    "attachment": {
+      "unnamed": "Untitled file",
+      "missing": "File not found, or not visible to you",
+      "empty": "No file chosen"
+    },
+    "passthrough": {
+      "show": "Show source",
+      "hide": "Hide source"
+    }
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "more": "More breadcrumbs"
+  },
+  "command": {
+    "instructions": "Use arrow keys to navigate, Enter to select, Escape to clear selection.",
+    "empty": "No results found.",
+    "results": "{count, plural, =0 {No results found for “{term}”} one {# result found for “{term}”} other {# results found for “{term}”}}",
+    "search": "Search commands",
+    "placeholder": "Type a command or search…"
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "ok": "OK"
+  },
+  "diff": {
+    "inserted": "Inserted",
+    "deleted": "Deleted",
+    "comments": "{count, plural, one {comment} other {comments}}"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "listFrame": {
+    "label": "List",
+    "loading": "Loading {label}",
+    "pagination": "Pagination",
+    "pageOf": "Page {page, number} of {last, number} ({total, number} in total)",
+    "rowsPerPage": "Rows per page",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "moduleTree": {
+    "label": "Manual structure",
+    "moved": "{title}: {number}, level {level} of the outline"
+  },
+  "select": {
+    "placeholder": "Select an option…",
+    "search": "Search…",
+    "noResults": "No results"
+  },
+  "sidebar": {
+    "label": "Sidebar",
+    "close": "Close sidebar",
+    "toggle": "Toggle sidebar"
+  },
+  "states": {
+    "loading": "Loading",
+    "empty": {
+      "title": "Nothing here yet"
+    },
+    "error": {
+      "unauthorized": "You do not have access",
+      "notFound": "Not found",
+      "invalid": "The request was not valid",
+      "unavailable": "The service is busy or down",
+      "network": "No connection",
+      "unknown": "Something went wrong",
+      "retry": "Try again"
+    },
+    "noAccess": {
+      "title": "You do not have access",
+      "message": "Ask an administrator for the permission this needs."
+    },
+    "save": {
+      "saved": "Saved",
+      "saving": "Saving…",
+      "draft": "Draft",
+      "notSaved": "Not saved"
+    }
+  },
+  "switch": {
+    "label": "Toggle switch"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "toast": {
+    "region": "Notifications",
+    "dismiss": "Dismiss",
+    "undo": "Undo",
+    "kind": {
+      "success": "Done",
+      "info": "Note",
+      "warning": "Warning",
+      "error": "Error"
+    }
+  },
+  "showcase": {
+    "title": "Component showcase",
+    "logo": "Logo",
+    "button": {
+      "heading": "Button",
+      "type": {
+        "default": "Default",
+        "secondary": "Secondary",
+        "outline": "Outline",
+        "ghost": "Ghost",
+        "destructive": "Destructive",
+        "link": "Link"
+      },
+      "size": {
+        "xs": "Extra small",
+        "sm": "Small",
+        "default": "Default",
+        "lg": "Large"
+      }
+    },
+    "states": {
+      "heading": "Empty, loading, error and no access",
+      "emptyCard": "EMPTY · folder without modules",
+      "emptyTitle": "No modules in this folder yet",
+      "emptyDescription": "Create the first one, or move modules here from another folder.",
+      "newModule": "New module",
+      "loadingCard": "LOADING · skeleton rows, no spinner for lists",
+      "errorCard": "ERROR · request failed",
+      "errorHeading": "Couldn't load the modules",
+      "errorMessage": "The content service didn't answer. Your drafts are safe.",
+      "noAccessCard": "NO ACCESS · outside the role's scope",
+      "noAccessHeading": "You can't open this module",
+      "noAccessMessage": "It belongs to a product line or audience your roles don't cover. Ask an admin to extend your access.",
+      "seeRoles": "See my roles",
+      "saveCard": "SAVE STATUS · editor header",
+      "justNow": "just now",
+      "finishBlock": "finish the block to save",
+      "offline": "offline. Changes are kept in this browser.",
+      "cycle": "Cycle",
+      "toastCard": "TOAST · after an action",
+      "reviewRequested": "{count, plural, one {Review requested from # reviewer} other {Review requested from # reviewers}}",
+      "exportReady": "{count, plural, one {Export ready · # language} other {Export ready · # languages}}",
+      "download": "Download",
+      "successUndo": "Success with undo",
+      "deleted": "Entry deleted",
+      "restored": "Restored.",
+      "renamed": "The draft was renamed.",
+      "cannotUndo": "This cannot be undone later.",
+      "couldNotSave": "Could not save. Check your connection.",
+      "listFrame": "The list frame",
+      "listFrameState": "List frame state",
+      "frame": {
+        "rows": "Rows",
+        "many": "{count, number} rows",
+        "loading": "Loading",
+        "empty": "Empty",
+        "error": "Error",
+        "noAccess": "No access"
+      },
+      "exampleList": "Example list",
+      "noEntries": "No entries yet",
+      "noEntriesHint": "Entries you add will show up here.",
+      "addEntry": "Add an entry",
+      "busy": "The service is busy. Try again in a moment.",
+      "row": "Row {n}",
+      "rowDetail": "Some detail for row {n}"
+    },
+    "components": {
+      "badges": "Badges",
+      "blocks": "Document blocks",
+      "signal": {
+        "danger": "Danger",
+        "warning": "Warning",
+        "caution": "Caution",
+        "notice": "Notice"
+      },
+      "hazard": "Sample hazard text for the notice.",
+      "consequence": "Sample consequence if the hazard is ignored.",
+      "measure": "Sample measure that avoids the hazard.",
+      "hazardOnly": "Only a hazard is given.",
+      "symbol": "General warning",
+      "variantContent": "Content that applies to the chosen variants only. Picker opened {count, plural, one {# time} other {# times}}.",
+      "noCondition": "No condition, read-only.",
+      "calloutPicture": "A grey area with three callouts",
+      "sharedModule": "Sample shared module",
+      "otherBlock": "Block of another module",
+      "longTitle": "A module whose title is long and has-a-very-long-unbroken-word-that-must-wrap-instead-of-widening-the-page-or-the-card",
+      "diff": "Diff marks",
+      "diffBefore": "Tighten the",
+      "diffOld": "old",
+      "diffNew": "new",
+      "diffMiddle": "fitting and check the",
+      "diffAnchor": "torque value",
+      "diffAfter": "before use.",
+      "tree": {
+        "heading": "Module tree",
+        "hint": "Drag the handle, or use the keyboard: arrows move between rows, Tab and Shift+Tab change the level, Alt+Up and Alt+Down move a row.",
+        "intro": "Introduction",
+        "safety": "Safety",
+        "general": "General notes",
+        "symbols": "Symbols",
+        "use": "Operation",
+        "start": "Starting up",
+        "stop": "Stopping",
+        "care": "Maintenance"
+      },
+      "admonition": {
+        "note": "Note",
+        "tip": "Tip",
+        "important": "Important",
+        "text": "A call-out that is not about safety."
+      },
+      "faq": {
+        "label": "FAQ entry",
+        "question": "Can I charge overnight?",
+        "answer": "Yes: the charger stops when the battery is full."
+      },
+      "procedure": {
+        "label": "Procedure",
+        "one": "Open the cover.",
+        "two": "Check the seal."
+      },
+      "code": {
+        "label": "Code"
+      },
+      "passthrough": {
+        "label": "Unconverted content"
+      },
+      "pageBreak": "Page break (PDF)",
+      "sortable": {
+        "heading": "Sortable list",
+        "hint": "Drag a row by its grip, or focus the grip and press Alt+Up or Alt+Down."
+      },
+      "tips": {
+        "heading": "Tips and tour",
+        "title": "A sample tip",
+        "body": "One or two sentences about the element it points at.",
+        "stepTitle": "A tour step",
+        "stepBody": "Each step points at one part of the screen."
+      }
+    },
+    "base": {
+      "disabled": "Disabled",
+      "invalid": "Invalid",
+      "none": "none",
+      "side": {
+        "top": "top",
+        "bottom": "bottom",
+        "left": "left",
+        "right": "right"
+      },
+      "size": {
+        "small": "small",
+        "medium": "medium",
+        "large": "large"
+      },
+      "kind": {
+        "concept": "Concept",
+        "procedure": "Procedure",
+        "reference": "Reference",
+        "faq": "FAQ"
+      },
+      "table": {
+        "heading": "Table",
+        "hint": "A wide table scrolls inside its own box. Default, compact and comfortable sizes, striped and bordered, a selected row and the empty table.",
+        "region": "Table: {name}",
+        "selectAll": "Select all",
+        "select": "Select {name}",
+        "name": "Name",
+        "type": "Type",
+        "status": "Status",
+        "changed": "Changed",
+        "total": "Total",
+        "empty": "Empty table",
+        "noRows": "No rows to show.",
+        "compact": "Compact, striped",
+        "comfortable": "Comfortable, bordered",
+        "item1": "Sample item one",
+        "item2": "Sample item two",
+        "item3": "Sample item three"
+      },
+      "input": {
+        "heading": "Input and textarea",
+        "default": "Default",
+        "placeholder": "Placeholder text",
+        "withValue": "With a value",
+        "typed": "A value that was typed",
+        "focus": "Focus (forced look)",
+        "focused": "Focused",
+        "notEditable": "Not editable",
+        "notAnAddress": "not an address",
+        "validAddress": "Enter a valid address.",
+        "readOnly": "Read only",
+        "readOnlyValue": "Read-only value",
+        "textarea": "Textarea",
+        "longer": "A longer text",
+        "textareaDisabled": "Textarea, disabled",
+        "textareaInvalid": "Textarea, invalid",
+        "tooShort": "Too short",
+        "group": "Input group",
+        "address": "Address",
+        "clear": "Clear"
+      },
+      "select": {
+        "heading": "Select",
+        "searchable": "Searchable, with a long list",
+        "pickCity": "Pick a city",
+        "hint": "Keyboard: Enter, Space or Down opens, arrows, Home and End move, letters jump, Enter chooses, Escape closes.",
+        "placeholder": "Placeholder",
+        "pickSize": "Pick a size",
+        "required": "Required",
+        "groups": "Groups, a disabled item",
+        "groupsLabel": "Groups",
+        "pickKind": "Pick a kind",
+        "kinds": "Kinds",
+        "other": "Other",
+        "faqDisabled": "FAQ (disabled)",
+        "multiple": "Multiple",
+        "pickSome": "Pick some",
+        "popper": "Popper position, long label",
+        "longLabel": "Long label",
+        "long": "A label that is long and has-an-unbroken-part-that-must-not-widen-the-page",
+        "short": "Short"
+      },
+      "choices": {
+        "heading": "Checkbox, radio group and switch",
+        "checkbox": "Checkbox",
+        "uncheckedOrChecked": "Unchecked or checked",
+        "checked": "Checked",
+        "disabledChecked": "Disabled, checked",
+        "radio": "Radio group",
+        "sampleChoice": "Sample choice",
+        "first": "First",
+        "second": "Second",
+        "invalidChoice": "Invalid choice",
+        "disabledGroup": "Disabled group",
+        "groupDisabled": "Group disabled",
+        "switch": "Switch",
+        "offOrOn": "Off or on",
+        "on": "On",
+        "disabledOn": "Disabled, on"
+      },
+      "dialogs": {
+        "heading": "Dialog, alert dialog and sheet",
+        "hint": "They trap the focus, close with Escape and give the focus back to the button that opened them. The alert dialog does not close on a click outside.",
+        "openDialog": "Open dialog",
+        "openAlert": "Open alert dialog",
+        "openSheet": "Open sheet ({side})",
+        "openPalette": "Open command palette",
+        "newItem": "New item",
+        "fillIn": "Fill in the details. All fields are required.",
+        "title": "Title",
+        "aTitle": "A title",
+        "kind": "Kind",
+        "fromCopy": "Start from a copy",
+        "create": "Create",
+        "deleteTitle": "Delete this item?",
+        "deleteText": "This cannot be undone. Anything that uses it keeps a gap.",
+        "sheetFrom": "Sheet from the {side}",
+        "sheetText": "A panel for what belongs beside the page.",
+        "sheetContent": "Sample content in the sheet.",
+        "note": "Note",
+        "aNote": "A note",
+        "done": "Done"
+      },
+      "command": {
+        "palette": "Command palette",
+        "searchFor": "Search for a command.",
+        "goTo": "Go to",
+        "content": "Content",
+        "manuals": "Manuals",
+        "review": "Review",
+        "notAvailable": "Not available",
+        "heading": "Command",
+        "hint": "Type to filter, arrows move, Enter chooses, Escape clears. Last chosen: {last}.",
+        "search": "Search",
+        "suggestions": "Suggestions",
+        "settings": "Settings",
+        "profile": "Profile",
+        "locked": "Locked option",
+        "escape": "Esc",
+        "contentHint": "Modules and folders"
+      },
+      "popover": {
+        "heading": "Popover",
+        "button": "Popover {side}",
+        "title": "Dimensions",
+        "text": "Set the size of the item.",
+        "width": "Width"
+      },
+      "tooltip": {
+        "heading": "Tooltip",
+        "hint": "Shows on hover and on keyboard focus. A control that is blocked for now stays focusable and says why.",
+        "on": "Tooltip on the {side}",
+        "blockedReason": "Blocked while checks fail.",
+        "blocked": "Blocked, with a reason"
+      },
+      "menu": {
+        "heading": "Dropdown menu",
+        "hint": "Enter, Space or Down opens, arrows, Home, End and letters move, Right opens a submenu, Escape closes and returns the focus.",
+        "open": "Open menu",
+        "disabled": "Disabled menu",
+        "state": "Last: {last}; notes {notes, select, true {on} other {off}}; sort by {sort, select, date {date} other {name}}",
+        "actions": "Actions",
+        "openItem": "Open",
+        "rename": "Rename",
+        "showNotes": "Show notes",
+        "sortName": "Sort by name",
+        "sortDate": "Sort by date",
+        "more": "More",
+        "delete": "Delete",
+        "export": "Export",
+        "share": "Share"
+      },
+      "segmented": {
+        "heading": "Segmented control",
+        "inline": "Inline",
+        "sideBySide": "Side by side",
+        "rendered": "Rendered"
+      },
+      "meter": {
+        "heading": "Meter bar",
+        "value": "{share} %"
+      },
+      "avatar": {
+        "heading": "Avatar",
+        "sample": "Alex Brandt"
+      },
+      "codeEditor": {
+        "heading": "Code editor",
+        "label": "manual.typ, Typst",
+        "hint": "Tab indents. Press Escape, then Tab, to leave the editor."
+      }
+    }
+  },
+  "dropdown": {
+    "openMenu": "Open menu"
+  },
+  "sortableList": {
+    "move": "Move {label}",
+    "moved": "{label}: position {position} of {total}"
+  },
+  "pageHelp": {
+    "label": "Help: {title} (opens in a new tab)",
+    "tooltip": "Help: {title}"
+  },
+  "tip": {
+    "learnMore": "Learn more",
+    "learnMoreLabel": "Learn more: {title} (opens in a new tab)",
+    "gotIt": "Got it",
+    "turnOff": "Turn off tips",
+    "step": "{index} of {total}",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done"
+  }
+}

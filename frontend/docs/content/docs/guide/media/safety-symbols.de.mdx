@@ -1,0 +1,34 @@
+---
+title: 'Grafiken der Sicherheitssymbole'
+description: 'Wie Sicherheitssymbole im Editor, in der Vorschau und im PDF erscheinen, und woher ihre Grafik kommt.'
+articleId: 'guide.media.safety-symbols'
+---
+
+Ein Sicherheitshinweis kann Symbole zeigen, etwa das allgemeine Warnzeichen. Der Editor zeigt die
+Grafik jedes Symbols neben dem Signalwort, im Menü, in dem Sie es wählen, und in der Vorschau. Das
+PDF druckt dieselbe Grafik.
+
+## Ein Symbol wählen
+
+1. Wählen Sie in einem Sicherheitshinweis die Schaltfläche oben rechts (**Stufe und Symbole des
+   Sicherheitshinweises**).
+2. Unter **Symbole** zeigt jedes Symbol seine Grafik neben seinem Namen. Wählen Sie eines oder
+   mehrere.
+
+![Ein Sicherheitshinweis mit dem allgemeinen Warnzeichen und sein Menü mit den Stufen und den Symbolen](/images/guide/de/media-safety-symbols.webp)
+
+Der Hinweis zeigt die Grafik sofort. Screenreader lesen den Namen des Symbols.
+
+## Ein Symbol ohne Grafik
+
+Ein Symbol kann eingerichtet sein, bevor seine Grafik da ist. Der Hinweis zeigt dann seinen Namen
+und **Keine Grafik**. Die Vorschau lässt es weg, und das PDF druckt an seiner Stelle einen grauen
+Platzhalter. Fügen Sie die Grafik hinzu oder wählen Sie ein anderes Symbol.
+
+## Woher Symbole kommen
+
+Welche Symbole es gibt, entscheidet die Verwaltung unter **Verwaltung**, **Projekteinstellungen**,
+**Sicherheitssymbole**: Jedes hat eine ID und einen Namen. Die Grafik ist eine Datei, benannt nach
+der ID, ein SVG oder PNG, im Ordner `symbols` des Inhalts-Repositorys, abgelegt von der Person, die
+das Repository betreut. Die Sicherheitsnorm der Seitengestaltung legt Form und Farben der Symbole
+fest.

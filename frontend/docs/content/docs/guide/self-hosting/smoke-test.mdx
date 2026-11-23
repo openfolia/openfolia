@@ -1,0 +1,76 @@
+---
+title: 'Smoke test'
+description: 'Check a deployment after it starts, and the two scripts that test the images and the one-command setup from scratch.'
+articleId: 'guide.self-hosting.smoke-test'
+---
+
+## Check your own deployment
+
+After a deploy or an upgrade, on the server:
+
+1. **Every service healthy:** `docker compose ps` shows each one as `healthy` (`up -d --wait`
+   waits for that).
+2. **The API runs:** `curl -s http://127.0.0.1:3000/health` answers 200 with `"status":"ok"`, or
+   `degraded` with the part that does not answer (the database, the blob store). It stays 200
+   while the process runs.
+3. **The API is ready for traffic:** `curl -s http://127.0.0.1:3000/health/ready` answers 200 when
+   the database and the blob store answer. Otherwise 503 with `database-unavailable`,
+   `blob-store-unavailable` or `database-saturated`.
+4. **The editor:** `https://docs.example.com/` opens the sign-in page.
+5. **The way through the proxy:** `https://docs.example.com/api/health` answers as in step 2.
+6. **The content:** after signing in, open a manual and render its PDF.
+7. **Admin**, **System** shows the background work, email and the backups without warnings
+   ([System](/guide/admin/system)).
+
+## The scripts
+
+Two scripts in `deploy/` start a stack from scratch, check it and remove it again (containers and
+volumes). Both make random secrets and read no settings file of a deployment on the same machine.
+CI runs both on every pull request that changes an image, and a release is deployed only after
+they passed.
+
+### `deploy/smoke-test.sh`
+
+Builds the images (or, with `SMOKE_BUILD=0`, uses them as they are) and starts the stack on the
+sample content. It checks:
+
+- `GET /health` and `GET /health/ready`;
+- two workers: each one's health from inside its container, and no API on them;
+- a release cut through the API, its files rendered by the two workers, none twice and within the
+  per-release cap, the API rendering none;
+- a page image from the API's own PDF pool;
+- the editor's index and an app route, `/api` through the editor, and a request from another
+  origin refused there;
+- a PDF rendered directly and through the editor;
+- the editor reaching the API after the API container is recreated;
+- the MCP server: refused without its token, its tools listed with it;
+- backups: a backup key, an S3 location, a verified backup, and a restore onto a fresh stack that
+  renders a PDF and still opens its sealed secrets;
+- the instance secret key on the data volume.
+
+| Setting                                                 | What it does                                               |
+| ------------------------------------------------------- | ---------------------------------------------------------- |
+| `SMOKE_PROJECT`                                         | The Compose project (default `openfolia-smoke`).           |
+| `SMOKE_API_PORT`, `SMOKE_EDITOR_PORT`, `SMOKE_MCP_PORT` | The ports on `127.0.0.1` (default 3103, 4303, 3203).       |
+| `SMOKE_BUILD=0`                                         | Use the images as they are instead of building them first. |
+| `SMOKE_KEEP=1`                                          | Leave the stack running at the end.                        |
+
+### `deploy/self-host-test.sh`
+
+Runs the one command of the [quick start](/guide/self-hosting/quick-start) as a person would, on a
+settings file of its own, with a first admin, the sample content and a test OpenID Connect provider
+beside the stack. It checks:
+
+- `GET /health` and the editor;
+- the sign-in options: the password form and the provider;
+- the first admin signing in through the provider, linked by their email address, with the role
+  `admin`;
+- that sign-in closing the one-time link in the log, a new link from `first-admin`, a password
+  chosen through it, a sign-in with it, and the link refused the second time;
+- a second run of `self-host.sh`: everything kept, no second admin, no new link.
+
+| Setting                                                              | What it does                                         |
+| -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `SELF_HOST_PROJECT`                                                  | The Compose project (default `openfolia-self-host`). |
+| `SELF_HOST_API_PORT`, `SELF_HOST_EDITOR_PORT`, `SELF_HOST_OIDC_PORT` | The ports on `127.0.0.1` (default 3104, 4304, 9404). |
+| `SELF_HOST_KEEP=1`                                                   | Leave the stack running at the end.                  |

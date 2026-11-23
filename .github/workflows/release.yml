@@ -1,0 +1,104 @@
+# The release step (#421; CONTRIBUTING.md, "Releases"): on a release tag vX.Y.Z, write the
+# release's notes from the merged pull requests (.github/release.yml groups them), create or update
+# its GitHub Release, and propose its CHANGELOG.md entry and data (changelog/<tag>.json, which the
+# docs site's /changelog is built from) as a pull request to main. The logic is
+# scripts/release.mjs, tested by its unit tests and runnable by hand:
+# `node scripts/release.mjs vX.Y.Z --dry-run --to HEAD`.
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+# One run per tag: tags pushed together each get theirs (a single group would drop the middle one).
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  notes:
+    name: release notes and changelog
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # main, with every tag: the changelog is updated on main, the notes cover the tag's commits.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # The filter above also matches a pre-release tag (v1.2.0-rc.1): that one gets no notes.
+      - id: tag
+        name: a release tag vX.Y.Z
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "release=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "$TAG is no release tag vX.Y.Z: no release notes."
+            echo "release=false" >>"$GITHUB_OUTPUT"
+          fi
+      - if: steps.tag.outputs.release == 'true'
+        run: pnpm install --frozen-lockfile --filter @openfolia/workflow
+      - name: the tag is a release of main
+        if: steps.tag.outputs.release == 'true'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git merge-base --is-ancestor "refs/tags/$TAG" HEAD || {
+            echo "The tag $TAG names a commit that is not on main: no release notes."
+            exit 1
+          }
+      - name: the GitHub Release, CHANGELOG.md and changelog/<tag>.json
+        if: steps.tag.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: node scripts/release.mjs "$TAG"
+      # The files the install guide for coding agents downloads (#423, #739: compose.yaml, the
+      # images' digests and SHA256SUMS) are attached by the images workflow (images.yml, job
+      # `release-files`) once every image of the tag is pushed: the digests exist only then.
+      # The changelog as a pull request to main. Opening it with the workflow's token needs the
+      # repository setting "Allow GitHub Actions to create and approve pull requests". Run again
+      # for the same tag (to fix its notes), it replaces the branch and updates the open PR.
+      - name: the changelog as a pull request to main
+        if: steps.tag.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$(git status --porcelain -- CHANGELOG.md changelog)" ]; then
+            echo "The changelog is unchanged."
+            exit 0
+          fi
+          branch="release/changelog-$TAG"
+          title="docs: the changelog of $TAG"
+          body="The release step's changelog entry for $TAG (scripts/release.mjs): CHANGELOG.md and changelog/$TAG.json, the same notes as its GitHub Release."
+          # git authenticates through gh, so the token is never part of a command line.
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git add CHANGELOG.md changelog
+          git commit -m "$title"
+          # Only this tag's own changelog branch is ever replaced.
+          git push --force origin "HEAD:refs/heads/$branch"
+          # This repository's own open pull request from the branch: never a fork's of the same name.
+          number=$(gh pr list --head "$branch" --state open --json number,isCrossRepository \
+            --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "$title" --body "$body"
+          else
+            gh pr create --base main --head "$branch" --title "$title" --body "$body"
+          fi

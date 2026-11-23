@@ -1,0 +1,64 @@
+/*
+ * The product's theme (`@openfolia/theme`, imported in the layouts so its font URLs resolve) mapped
+ * onto Fumadocs: `shadcn.css` points Fumadocs' colours at the theme's token names (the same names
+ * Zard UI uses), in light (`:root`) and dark (`.dark`). No colour is written here.
+ */
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
+@import 'fumadocs-openapi/css/preset.css';
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0 !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+
+/*
+ * A table fills its frame (Fumadocs' wrapper, which scrolls a table wider than the page inside
+ * itself). A cell wraps a word only when nothing else fits it (`break-word`, not `anywhere`, which
+ * would also let the browser squeeze a column to a letter); generated names break between their
+ * parts (`<wbr />`, `breakableCode`), and code in a cell wraps at its spaces.
+ */
+.prose table {
+  width: 100%;
+}
+
+.prose td,
+.prose :is(h1, h2, h3, h4) {
+  overflow-wrap: break-word;
+}
+
+.prose td code {
+  white-space: normal;
+}
+
+/*
+ * Code in a description (the last column: an address, an IRI, a sample) may break anywhere: a long
+ * span would otherwise set the column's least width and push the table out of its frame.
+ */
+.prose td:last-child code {
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,940 @@
+# Every error code the API answers with, and when (the docs site's error code reference,
+# frontend/docs). `tests/error-codes.spec.ts` fails for a code the source raises that is not
+# here, for one here that the source no longer raises, and for a status the source answers a code
+# with that its entry does not list. Each entry:
+#   status: the HTTP status (or a list of them); left out for a code reported elsewhere (a job's
+#     or an output's error, a warning in a report), which its text then says
+#   when: what happened, in one or two sentences, for the person reading the error
+
+admin-role-for-service-account:
+  status: 422
+  when: 'A service account cannot hold a role with admin.roles (…): access is administered by people.'
+already-approved:
+  status: 409
+  when: You have approved what you may of this change set already.
+already-carried-forward:
+  status: 409
+  when: The change set was carried forward already.
+already-deactivated:
+  status: 409
+  when: The service account "…" is deactivated already.
+already-resolved:
+  status: 409
+  when: The thread is resolved already.
+already-revoked:
+  status: 409
+  when: The token "…" is revoked already.
+already-superseded:
+  status: 409
+  when: The change set’s changes were moved onto its current base already.
+animated-image:
+  status: 422
+  when: A branding image is one still picture; an animated PNG or WebP is not taken.
+approval-lapsed:
+  status: 409
+  when:
+    'An approval the change set needs no longer holds: its approver lost the role or scope it
+    took. Return it to be reviewed again.'
+archive-failed:
+  when: A backup run could not pack the database dump and the files into its archive. Reported on the backup run.
+asset-deleted:
+  status: 409
+  when: The working copy names a file that was deleted as unused; upload it again.
+asset-in-use:
+  status: 409
+  when: The file is in use or was uploaded too recently; it is not deleted.
+backup-identity-missing:
+  status: 422
+  when:
+    The server keeps no identity of the current backup key, so it cannot decrypt to verify. Rotate
+    the key to make one whose identity is kept.
+backup-key-exists:
+  status: 409
+  when: There is a backup key already; rotate it to make a new one.
+backup-key-missing:
+  status: 409
+  when: 'There is no backup key yet: create one first.'
+backup-path-outside-volume:
+  status: 422
+  when:
+    A backup setting names a path outside the backup volume (a problem of 422
+    `invalid-backup-settings`).
+backup-service-not-running:
+  status: 409
+  when:
+    'The backup service is not running: start it (docker compose --profile backup up -d) and try
+    again.'
+backup-setting-fixed-by-environment:
+  status: 409
+  when: … fixes this setting in the backup service's environment; change it there.
+base-missing:
+  status: 409
+  when: The change set’s base branch … is gone.
+base-moved:
+  status: 409
+  when: The base branch kept moving while merging; try again.
+base-not-rewritten:
+  status: 409
+  when:
+    'The base branch still holds the commit the change set started from: update it from its base
+    instead.'
+base-rewritten:
+  status: 409
+  when:
+    The base branch no longer holds the commit the change set started from; what would be merged
+    is not what was reviewed.
+blob-store-unavailable:
+  status: 503
+  when: The blob store does not answer.
+block-not-found:
+  status: 422
+  when: The comment names a block that is not in the module in this change set.
+branch-exists:
+  status: 409
+  when: The branch "…" exists already.
+branch-missing:
+  status: 409
+  when: There is no branch "…" to carry the change forward to.
+branch-moved:
+  status: 409
+  when: The change set’s branch kept moving while updating it; try again.
+branding-image-busy:
+  status: 503
+  when: The same file is being deleted elsewhere; try again.
+branding-image-in-use:
+  status: 409
+  when: A field of the branding names this image; set the field to another image or null first.
+change-set-branch-missing:
+  status: 404
+  when: The change set's branch is no longer in the repository.
+chunk-set-too-large:
+  status: 422
+  when:
+    'The chunks of the commit, as you see them, are too large to cut together: many modules each
+    include a lot (a module referred to over several paths counts once per path), past four times
+    the content they are made from plus room for 32 modules at the limits of one (the text they
+    keep: plus room for 8). `GET /chunks`
+    lists none of them at that commit; `meta` names the budget and the modules that expanded the
+    most. Refer to fewer modules, over fewer paths. (Before release, a change set’s checks report
+    it as a blocking `chunk-set-too-large` check at those modules.)'
+chunk-sets-busy:
+  status: 503
+  when:
+    Too many change set checks are cutting the chunks of a whole commit (#710, one at a time, a few
+    waiting); try again later.
+comment-deleted:
+  status: 409
+  when: The comment is deleted.
+config-in-use:
+  status: 422
+  when:
+    'The configuration would make … … in the content invalid…: archive what is in use instead of
+    removing it, or change the content first.'
+content-type-required:
+  status: 415
+  when: 'A … request needs Content-Type: …, also without a body.'
+content-unavailable:
+  status: 503
+  when: The content changed while its references were read; try again.
+coti-job-mismatch:
+  status: 422
+  when: An XLIFF document in a COTI package belongs to another translation job (its `ccms:job`) than its package names, or a project description names two jobs.
+cross-origin-request:
+  status: 403
+  when: A signed-in request that changes something must come from the editor's own origin.
+cursor-expired:
+  status: 400
+  when:
+    The change feed cannot continue from this cursor (the server's secret key changed, it was
+    issued to someone else, or it was changed). Start again without `page[cursor]`.
+cursor-gone:
+  status: 410
+  when:
+    The change feed cursor stands on a commit that is gone from the repository or no longer reads.
+    Resync from the start or from a release tag.
+database-saturated:
+  status: 503
+  when: Every database connection is in use.
+database-unavailable:
+  status: 503
+  when: The database does not answer.
+demo-mode-off:
+  status: 400
+  when: … is only accepted in demo mode; send the request without it.
+derived-source-outside-scope:
+  status: 403
+  when: A derived manual's rule names a source manual you may not read (or one that does not exist, for an author who may not read manuals of every audience). Name a manual you can open as its source.
+design-in-use:
+  status: 409
+  when:
+    The configuration or a manual still names the page design to delete (`meta.usedIn`); it is not
+    deleted.
+dita-notices-unsupported:
+  status: 422
+  when:
+    'The manual is a derived manual gathering safety notices (`rule.notices`): a DITA package holds
+    whole modules, so the manual has none. Its PDF and its iiRDS package hold it.'
+dita-package-too-large:
+  status: 422
+  when:
+    The DITA package would read more modules, hold more elements or characters, or make more bytes
+    or files than one package may hold.
+duplicate-language:
+  status: 422
+  when: Two documents translate into "…".
+duplicate-subject:
+  status: 422
+  when: … is both committed and deleted.
+email-code-sign-in-off:
+  status: 409
+  when:
+    Signing in with a code by email is off on this server (`CCMS_EMAIL_CODE_SIGN_IN=off`, email
+    not set up, or demo mode).
+email-taken:
+  status: 409
+  when: Another user has this email address already.
+encrypt-failed:
+  when: A backup run could not encrypt its archive to the backup key. Reported on the backup run.
+expansion-too-large:
+  status: 422
+  when:
+    'Once its module references are included the manual holds more than 500,000 content nodes,
+    12,000,000 characters or 1,000,000 table cells (rows × columns; a module referred to over several paths counts once per path), or its
+    blocks and references nest more than 100 deep, so nothing of it is resolved, rendered or
+    previewed. Refer to fewer modules, over fewer paths, or nest them less deeply; `meta` names
+    the limits. (`GET /chunks` never answers it: a module too large to cut is left out and named
+    in `meta.leftOut`, and is an `expansion-too-large` check of the module; many together are
+    `chunk-set-too-large`.)'
+export-conflict:
+  status: 409
+  when: Another export sent some of these blocks meanwhile; try again.
+forbidden:
+  status: 403
+  when: The actor lacks the permission the action needs (or there is no actor).
+gone:
+  status: 410
+  when: What the request names existed once and is gone for good.
+group-mapping-exists:
+  status: 409
+  when: The group already holds the role "…".
+has-changes:
+  status: 409
+  when: The change set holding the lock has changes to its subject; the lock stays.
+head-moved:
+  status: 409
+  when:
+    The change set’s branch moved after it was submitted, so its approvals no longer hold; it is
+    back in draft, to be submitted again.
+header-name-duplicate:
+  status: 422
+  when:
+    A webhook's custom header is given twice; names are compared without case (a problem of 422
+    `invalid-headers`).
+header-name-invalid:
+  status: 422
+  when:
+    A webhook's custom header name is not a token of letters, digits and !#$%&'*+-.^_`|~ (a
+    problem of 422 `invalid-headers`).
+header-name-refused:
+  status: 422
+  when:
+    A webhook's custom header is one the server sets itself or one that would break the delivery
+    (a problem of 422 `invalid-headers`).
+header-value-invalid:
+  status: 422
+  when:
+    A webhook's custom header value holds a line break or another control character (a problem of
+    422 `invalid-headers`).
+header-value-required:
+  status: 422
+  when:
+    A secret header's value must be given again, for example when the webhook points at another
+    URL (a problem of 422 `invalid-headers`).
+headers-too-large:
+  status: 422
+  when:
+    A webhook's custom header names and values add up to more characters than allowed (a problem
+    of 422 `invalid-headers`).
+id-mismatch:
+  status: 409
+  when: '`data.id` must be the ID in the path.'
+id-taken:
+  status: 409
+  when: A module "…" exists already.
+iirds-not-configured:
+  status: 422
+  when:
+    'The configuration at release … holds no iiRDS mapping (`iirds` in openfolia.yaml): its manuals are
+    not exported as iiRDS packages.'
+iirds-package-too-large:
+  status: 422
+  when: The package would make … bytes in … files, more than one package may hold (… bytes, … files).
+image-not-square:
+  status: 422
+  when: A branding image that must be square (an icon) is not (a problem of 422 `invalid-branding`).
+image-too-large:
+  status: 422
+  when: A branding image is at most … pixels wide and high.
+import-busy:
+  status: 503
+  when: The server is checking other imports; try again shortly.
+import-expired:
+  status: 409
+  when: The import was uploaded more than an hour ago; upload it again.
+import-failed:
+  when:
+    'Reported on an import job, not as a response: applying the import failed repeatedly; what was
+    written so far is in its change set.'
+import-not-applicable:
+  status: 422
+  when:
+    The import’s report refuses something, or has nothing to write; fix the bundle and upload it
+    again.
+import-outdated:
+  status: 409
+  when:
+    What the import would do changed since it was checked (the target moved on); upload it again
+    to see the new report.
+import-too-large:
+  status: 422
+  when: The DITA project converts to more than an import may hold or take; split it into several imports.
+importer-gone:
+  when:
+    'Reported on an import job, not as a response: the person who started the import was
+    deactivated or removed before it ran.'
+insufficient-contrast:
+  status: 422
+  when:
+    A branding colour does not reach the contrast it needs in light or dark mode (a problem of 422
+    `invalid-branding`).
+internal-error:
+  status: 500
+  when: Something unexpected failed on the server. The server log holds the cause; the answer never does.
+invalid-archive:
+  status: 422
+  when: The file is no ZIP archive.
+invalid-backup-settings:
+  status: 422
+  when: Some settings cannot be used.
+invalid-base:
+  status: 422
+  when: Give baseRef or maintenanceLine, not both.
+invalid-body:
+  status: 400
+  when: The body nests deeper than … levels.
+invalid-branding:
+  status: 422
+  when: The branding was not changed.
+invalid-bucket:
+  status: 422
+  when:
+    The backup bucket name is not 3 to 63 lowercase letters, digits, "." and "-" (a problem of 422
+    `invalid-backup-settings`).
+invalid-code:
+  status: 401
+  when:
+    The email address or the code by email is not right, or the code was used or ran out; which
+    of them is not said.
+invalid-commit:
+  status: 422
+  when: "Git refused the release's commit: it names a tree or commit the repository does not have."
+invalid-content:
+  status: 422
+  when: The content sent, or the content a request would make, is not valid.
+invalid-coti:
+  status: 422
+  when:
+    'The uploaded COTI package cannot be read (`meta.reason`, `meta.path`): a project description
+    (`COTI.xml`) that is not well-formed, has a DTD or an entity, is not UTF-8, too large or too
+    deep, is no COTI document or lacks what every one has (`invalid-coti`); two in one folder; no
+    job named; a listed translation file that is missing, listed twice or no XLIFF.'
+invalid-credentials:
+  status: 401
+  when: The email address or the password is not right; which of them is not said.
+invalid-endpoint:
+  status: 422
+  when:
+    The backup storage endpoint is not a URL the backup service can use (a problem of 422
+    `invalid-backup-settings`).
+invalid-expiry:
+  status: 422
+  when: A token must expire in the future, and within 366 days.
+invalid-headers:
+  status: 422
+  when: The custom headers cannot be used.
+invalid-id:
+  status: 422
+  when: '`…` is no module ID: a lowercase slug of at most 100 characters, e.g. "battery-charging".'
+invalid-identity:
+  status: 422
+  when: The acting user's name or email cannot be written as a Git author.
+invalid-language:
+  status: 422
+  when: '"…" is no language configured in openfolia.yaml.'
+invalid-maintenance-branch:
+  status: 422
+  when: The product and revision make no branch name by CCMS_MAINTENANCE_BRANCH.
+invalid-message:
+  status: 422
+  when: The commit message cannot be written to Git (empty, too long, with a control character or a "---" line, or ending in lines Git reads as trailers).
+invalid-notes:
+  status: 422
+  when: The notes, in all languages together, may hold at most … characters.
+invalid-options:
+  status: 422
+  when: The options are not what the importer "…" takes.
+invalid-parameter:
+  status:
+    - 400
+    - 422
+  when: A path or query parameter is malformed or out of range; `source.parameter` names it.
+invalid-prefix:
+  status: 422
+  when:
+    The backup prefix holds characters other than letters, digits and !_.*'()/-, or "..". (a
+    problem of 422 `invalid-backup-settings`).
+invalid-product:
+  status: 422
+  when: The maintenance line maintains "…"; its releases are of that product.
+invalid-release-name:
+  status: 422
+  when: A product and a revision may hold only letters, digits, ".", "_" and "-".
+invalid-schedule:
+  status: 422
+  when:
+    The backup schedule is not one the backup service reads (a problem of 422
+    `invalid-backup-settings`).
+invalid-state:
+  status: 409
+  when: The change set is …; images are uploaded only into a draft.
+invalid-thread:
+  status: 422
+  when: "No thread to reply to in this change set: a reply goes to a thread's first comment."
+invalid-time-zone:
+  status: 422
+  when:
+    The backup time zone is not an IANA name such as Europe/Berlin, or UTC (a problem of 422
+    `invalid-backup-settings`).
+invalid-trailer:
+  status: 422
+  when: A trailer of the commit message (who acted, for which change set) cannot be written to Git.
+invalid-url:
+  status: 422
+  when:
+    'The webhook URL cannot be used: not https, or pointing at an address deliveries may not go
+    to; `meta.problem` says which.'
+invalid-working-copy:
+  status: 422
+  when: The working copies cannot be committed as they are.
+invalid-xliff:
+  status: 422
+  when: The XLIFF document does not have the structure an export writes (its units, sources or targets).
+job-not-open:
+  status: 409
+  when:
+    The translation job "…" is … and cannot be cancelled, imported or downloaded as a package
+    (a cancelled job's blocks may have been sent again since).
+language-mismatch:
+  status: 422
+  when: The document translates … into …; the job translates … into ….
+last-admin:
+  status: 409
+  when: This would leave no active user holding admin.roles. Give the role to someone else first.
+link-expired:
+  status: 410
+  when: The invite, password reset or sign-in code link ran out (an invite after `CCMS_INVITE_DAYS` days, a reset after an hour, a code's link after `CCMS_EMAIL_CODE_MINUTES` minutes); ask for a new one.
+link-invalid:
+  status: 404
+  when:
+    The invite, password reset or sign-in code link does not work (malformed, used already,
+    replaced by a newer link or code, withdrawn, or its person deactivated).
+lock-contended:
+  status: 409
+  when: The subject is being locked and released by others; try again.
+lock-required:
+  status: 409
+  when: Take the lock on … for this change set first.
+locked:
+  status: 409
+  when: Someone else holds the lock.
+maintenance-line-exists:
+  status: 409
+  when: A maintenance line was started from this release already.
+manual-empty:
+  when:
+    "A warning in an iiRDS package's report: the manual holds no module its audience reads in this
+    variant."
+merge-conflict:
+  status: 409
+  when:
+    The change set conflicts with its base in … file(s); it stays approved but unmerged. Return it
+    for its author to resolve.
+method-not-allowed:
+  status: 405
+  when: 'An export is only made for GET: it is recorded each time.'
+missing-asset:
+  when:
+    "A warning in an iiRDS package's report: a file a module refers to is not stored, so it is
+    left out."
+mixed-jobs:
+  status: 422
+  when: The documents come from different translation jobs; import one job at a time.
+no-changes:
+  status: 409
+  when: '"…" holds this change already.'
+no-email-address:
+  status: 422
+  when: You have no email address, so the test email has nowhere to go (or the user has none to sign in with a password). Add one first.
+no-password:
+  status: 409
+  when: You have no password here; you sign in with your identity provider.
+no-product-facet:
+  status: 422
+  when: openfolia.yaml configures no facet whose values name products (release.productFacet).
+no-sign-off-needed:
+  status: 409
+  when: The change set changes no module of a restricted type.
+no-xliff:
+  status: 422
+  when: The ZIP holds no XLIFF file (.xlf or .xliff).
+not-a-thread:
+  status: 422
+  when: The comment is a reply; resolve or reopen its thread ("…").
+not-acceptable:
+  status: 406
+  when: This route answers with …; the Accept header rules it out.
+not-approved:
+  status: 409
+  when: The change set’s review head lacks approvals it needs.
+not-changed:
+  status: 422
+  when: This change set does not change ….
+not-configured:
+  status: 404
+  when:
+    The feature is not set up on this server (for example the style review without a model
+    endpoint); answered as if the route were not there.
+not-deactivated:
+  status: 409
+  when: The service account "…" is active.
+not-deletable:
+  status: 422
+  when: … cannot be deleted.
+not-found:
+  status: 404
+  when:
+    'The item does not exist at this ref, or lies outside what the reader may read: both get the
+    same answer.'
+not-on-maintenance-line:
+  status: 409
+  when: The change set was not merged into a maintenance line.
+not-renamable:
+  status: 422
+  when: … is not UTF-8 text, so it cannot be moved.
+not-resolved:
+  status: 409
+  when: The thread is not resolved, so there is nothing to reopen.
+not-restorable:
+  status: 422
+  when: … at the change set's base is not UTF-8 text.
+not-retryable:
+  status: 409
+  when:
+    A webhook delivery cannot be retried; `meta.reason` says why (its status, a test event, an
+    inactive webhook, a changed owner or audience, no longer subscribed).
+not-xliff:
+  status: 422
+  when: The file is XML but not an XLIFF document.
+nothing-to-delete:
+  status: 422
+  when: There is no … on the branch to delete.
+nothing-to-import:
+  status: 422
+  when: No unit of the import can be imported now (each is refused, or skipped).
+nothing-to-revert:
+  status: 422
+  when: Name at least one subject to take out.
+nothing-to-translate:
+  status: 422
+  when: Every block of what you asked for is up to date or at a provider already in these languages.
+offline-package-too-large:
+  status: 422
+  when:
+    'A release’s offline package would be larger than CCMS_RELEASE_ARCHIVE_MAX_BYTES or hold more
+    than 50,000 files: the output fails (its error), the release’s PDFs are kept.'
+outbox-blocked:
+  status: 503
+  when:
+    The change feed is held after the server's database was restored from another server, until
+    its operator finishes the restore; try again later with the same cursor (`Retry-After`).
+output-busy:
+  status: 409
+  when: 'The output’s last attempt is still ending: try again in a moment.'
+output-not-failed:
+  status: 409
+  when: 'The output is …: only a failed one is queued again.'
+output-not-ready:
+  status: 409
+  when: The PDF is …, not ready yet; try again in a moment.
+password-sign-in-off:
+  status: 409
+  when: Signing in with a password is off on this server (`CCMS_PASSWORD_SIGN_IN=off`, or demo mode).
+password-too-common:
+  status: 422
+  when:
+    The new password is too easy to guess (a common password, a run along the keyboard, a
+    repeated pattern or the person's own address); choose a longer phrase.
+password-too-long:
+  status: 422
+  when: The new password has more than 256 characters.
+password-too-short:
+  status: 422
+  when: The new password has fewer than 12 characters.
+path-conflict:
+  status: 422
+  when: 'A file and a folder of one name: a template file is saved, or committed, where a folder of its name is (or a folder of its path is a file).'
+pdf-not-included:
+  when: "A warning in an iiRDS package's report: the manual's PDF is not part of the package."
+public-url-not-set:
+  status: 409
+  when: 'CCMS_PUBLIC_URL is not set: there is no address for a QR code to hold.'
+rate-limited:
+  status: 429
+  when: The client asked too often within the window; `Retry-After` says when to try again.
+refresh-conflict:
+  status: 409
+  when:
+    Updating from … conflicts in … file(s); nothing was written. Make them what they should be in
+    the editor, then update again keeping them.
+refresh-unresolved:
+  status: 409
+  when:
+    … kept file(s) were not saved since updating from … reported them conflicting (or … changed
+    them again); nothing was written. Save each as it should be in the editor, or keep it as it is
+    (`keepMine`), then update again.
+release-archive-empty:
+  status: 409
+  when: None of the release's outputs is ready, so there is nothing to put in the archive.
+release-archive-too-large:
+  status: 422
+  when:
+    'The release’s files make … bytes, more than the … one archive may hold: download them one by
+    one.'
+release-exists:
+  status: 409
+  when: The release "…" exists already.
+release-pending:
+  status: 409
+  when: The release "…" was dropped meanwhile; try again.
+release-withdrawn:
+  status:
+    - 409
+    - 410
+  when: Release … was withdrawn; open the latest address.
+render-error:
+  when:
+    'Reported on a release output, not as a response: rendering failed unexpectedly; the server
+    log says why.'
+render-failed:
+  status: 500
+  when: PDF rendering failed.
+render-memory-exceeded:
+  status: 422
+  when: This document needs too much memory to render as PDF (more than `CCMS_PDF_MEMORY_MB` per PDF worker).
+render-timeout:
+  status: 422
+  when: This document takes too long to render as PDF.
+renderer-busy:
+  status: 503
+  when: Too many checks are rendering PDFs; try again later.
+rendition-busy:
+  status: 503
+  when: Too many renditions are being made; try again shortly.
+rendition-timeout:
+  status: 503
+  when: The rendition took too long; try again later or use the original.
+request-header-required:
+  status: 403
+  when: A … request to this route needs the … header.
+retry-limit:
+  status: 409
+  when: 'The output was queued again … times already: change the content and cut a new release.'
+role-exists:
+  status: 409
+  when: There is a role "…" already.
+role-held-by-service-account:
+  status: 409
+  when: 'Service accounts hold the role "…": take it from them before giving it admin.roles.'
+role-in-use:
+  status: 409
+  when: The role "…" is held by … user(s) or service account(s); take it from them first.
+search-busy:
+  status: 503
+  when: Too many searches at once on this server; try again.
+secret-key-missing:
+  status: 409
+  when:
+    The instance has no secret key to seal the S3 secret key with (CCMS_SECRET_KEY_GENERATE=false
+    and none set).
+secret-required:
+  status: 422
+  when: Pointing the S3 location at another endpoint, bucket or access key needs its secret key again.
+service-account-deactivated:
+  status:
+    - 403
+    - 409
+  when: The service account of this token is deactivated and cannot act.
+service-account-exists:
+  status: 409
+  when: There is a service account "…" already.
+session-expired:
+  status: 401
+  when: The session has ended; sign in again.
+shutting-down:
+  status: 503
+  when: The server is shutting down.
+sign-in-busy:
+  status: 503
+  when: Too many passwords are being checked at once; try again after `Retry-After` seconds.
+sign-in-not-allowed:
+  status: 403
+  when: The session policy does not let this person sign in this way.
+source-moved:
+  status: 409
+  when: The source module "…" is gone from the base; validate the import again.
+stale-working-copy:
+  status: 409
+  when: 'Changed on the branch since the content was based on it: …. Read it again.'
+style-review-busy:
+  status: 503
+  when: Too many style reviews are running; try again shortly.
+style-review-timeout:
+  status: 503
+  when: The style review took too long; try again later.
+style-review-unavailable:
+  status: 503
+  when: The style review could not be done; try again later.
+subject-mismatch:
+  status: 422
+  when: The content sent does not name the subject in the path (its ID, a module's language).
+table-too-large:
+  status: 422
+  when:
+    'A table has more than 1,000 columns, or covers more than 50,000 cells (its rows times its
+    columns, a cell spanning several counted once for each), or the tables of a module or a page design’s regions more than
+    1,000,000 cells together, so it is not laid out: split it into
+    smaller tables. Answered when such content is saved (`source.pointer` the table, or its `blocks` or `regions` for the total), and when a
+    module file holding one is read (`meta.path`); `meta.columns`, `meta.cells` and `meta.totalCells` are the caps. A
+    manual leaves such a module out, as a module that cannot be read (`invalid-module`); an import
+    refuses it item by item.'
+template-error:
+  status: 422
+  when: The page design’s own template does not compile, or its folder is too large to (`meta.design`, `meta.template`, `meta.problems` with each file, line, column and message).
+template-too-large:
+  status: 422
+  when: 'Saving the template file would take its folder past 200 files or 16 MiB together (`meta.maxFiles`, `meta.maxBytes`; `meta.files`, `meta.bytes`: what it would hold). Delete files or make them smaller first.'
+term-in-use:
+  status: 422
+  when: 'Modules still link the … to delete…: remove the term links first.'
+token-expired:
+  status: 401
+  when: The API token has expired.
+token-revoked:
+  status: 401
+  when: The API token was revoked.
+too-large:
+  status: 422
+  when: The image is larger than … bytes; use the original.
+too-many-change-sets:
+  status: 503
+  when: Too many change sets are open to tell whether a file is used.
+too-many-changes:
+  status: 422
+  when: One commit changes at most … files.
+too-many-comments:
+  status: 409
+  when: A change set holds at most … comments.
+too-many-commits:
+  status: 409
+  when: 'The change set holds more than … commits: who wrote them (for four eyes) cannot be read whole.'
+too-many-failed-attempts:
+  status: 429
+  when: Too many failed authentications (or sign-in code requests) from this address or for this account; try again later.
+too-many-files:
+  status: 422
+  when: A module names at most … different images and attachments.
+too-many-headers:
+  status: 422
+  when: A webhook has more custom headers than allowed (a problem of 422 `invalid-headers`).
+too-many-imports:
+  status: 503
+  when:
+    The server keeps as many translation imports as it holds; try again once some are applied or
+    expired.
+too-many-locks:
+  status: 409
+  when: One holder holds at most … locks; release some first.
+too-many-outputs:
+  status: 422
+  when: 'The release would have … outputs, more than the … a release may have
+    (CCMS_RELEASE_MAX_OUTPUTS): none are planned.'
+too-many-subjects:
+  status: 422
+  when: One update keeps at most … subjects.
+too-many-tokens:
+  status: 409
+  when: A service account holds at most … tokens that are neither revoked nor expired; revoke one first.
+too-many-units:
+  status: 422
+  when: This export would send … units; at most … go in one. Export fewer modules or languages at once.
+too-many-uploads:
+  status: 409
+  when: A change set holds at most … uploaded files.
+too-many-webhooks:
+  status: 409
+  when: There may be at most … webhooks; delete one first.
+too-many-working-copies:
+  status: 409
+  when: A change set holds at most … working copies; commit or discard some first.
+translation-at-provider:
+  status: 409
+  when: Blocks of the module are at a translation provider; import or cancel the job first.
+translation-missing:
+  status: 422
+  when: The module has no translation into "…" you may read here.
+translation-record-protected:
+  status: 422
+  when:
+    'Only a translation manager of … changes the translation record of …; keep `translations` as
+    committed.'
+unauthorized:
+  status: 401
+  when: The request has no valid API token or session.
+uncommitted-working-copies:
+  status: 409
+  when: Commit or discard the working copies of these modules first.
+unknown-asset:
+  status: 422
+  when:
+    The content names a file that is not stored or that you may not use; upload it into this
+    change set.
+unknown-image:
+  status: 422
+  when: The branding names an image that was not uploaded (a problem of 422 `invalid-branding`).
+unknown-importer:
+  status: 422
+  when: There is no importer "…"; GET /importers lists them.
+unknown-job:
+  status: 404
+  when: The translation document names no translation job you may see (its `ccms:job`).
+unknown-maintenance-line:
+  status: 422
+  when: There is no maintenance line "…".
+unknown-role:
+  status: 422
+  when: No role ….
+unknown-user:
+  status: 403
+  when: … names no user.
+unknown-variant:
+  status: 422
+  when: The condition names what the configuration does not hold.
+unmapped-audience:
+  when:
+    "A warning in an iiRDS package's report: an audience has no iiRDS qualification class
+    (`iirds.audiences` in openfolia.yaml)."
+unmapped-facet:
+  when:
+    "A warning in an iiRDS package's report: a facet value has no iiRDS class (`iirds` in
+    openfolia.yaml)."
+unmapped-lifecycle-phase:
+  when:
+    "A warning in an iiRDS package's report: a lifecycle phase has no iiRDS class (`iirds` in
+    openfolia.yaml)."
+unmapped-module-type:
+  when:
+    "A warning in an iiRDS package's report: a module type has no iiRDS topic type (`iirds` in
+    openfolia.yaml)."
+unmapped-variant-attribute:
+  when:
+    "A warning in an iiRDS package's report: a variant attribute has no iiRDS class (`iirds` in
+    openfolia.yaml)."
+unprocessable-image:
+  status: 422
+  when: The image cannot be decoded within the limits; use the original.
+unreadable-translation:
+  status: 422
+  when: The … translation of "…" cannot be read, so nothing is merged into it; fix or remove it first.
+unrelated-histories:
+  status: 409
+  when: The two branches share no history, so they cannot be merged.
+unsupported-attachment-type:
+  status: 422
+  when: A file of type … ….
+unsupported-font-type:
+  status: 422
+  when:
+    Only TrueType, OpenType, WOFF and WOFF2 fonts can be uploaded, recognised by their bytes and
+    checked by their structure; a font collection, a malformed font and other files are refused.
+unsupported-image-type:
+  status: 422
+  when:
+    Only PNG and JPEG images can be uploaded, recognised by their bytes; SVG and other types are
+    refused.
+unsupported-media-type:
+  status: 415
+  when: Send the file as …, in one file part named "…".
+unsupported-parameter:
+  status: 400
+  when: This route does not support the query parameter "…".
+upload-failed:
+  when: A backup run could not upload its archive to the backup location. Reported on the backup run.
+upload-interrupted:
+  status: 503
+  when: The image was removed while it was recorded; upload it again.
+upload-missing:
+  status: 409
+  when: The uploaded file is gone from the blob store; upload it again.
+user-deactivated:
+  status:
+    - 403
+    - 409
+  when: The user … names is deactivated and cannot act, or cannot be given a sign-in link.
+user-exists:
+  status: 409
+  when: There is a user "…" already.
+user-header-not-accepted:
+  status: 400
+  when: … is not accepted with a service account's token; send the request without it.
+verify-failed:
+  when: A backup run could not read its uploaded archive back and decrypt it. Reported on the backup run.
+version-conflict:
+  status: 409
+  when: The working copy was replaced meanwhile; read it again.
+working-copy-changed:
+  status: 409
+  when: Working copies changed while committing; try again.
+wrong-password:
+  status: 403
+  when: The current password given to change one's password is not right.
+xliff-dtd-forbidden:
+  status: 422
+  when: 'The XLIFF file declares a DTD: refused, so no entity can expand.'
+xliff-not-well-formed:
+  status: 422
+  when: The XLIFF file is not well-formed XML.
+xliff-too-deep:
+  status: 422
+  when: The XLIFF file nests its elements deeper than the import reads.
+xliff-too-large:
+  status: 422
+  when: The document is longer than … characters.
+xliff-too-many-attributes:
+  status: 422
+  when: An element of the XLIFF file has more attributes than the import reads.
+xliff-too-many-nodes:
+  status: 422
+  when: The XLIFF file has more elements and text than the import reads.
+xliff-unsupported-encoding:
+  status: 422
+  when: … is not UTF-8 text.

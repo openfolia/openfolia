@@ -1,0 +1,227 @@
+# A deployment: Postgres, the API, its workers, the editor and the backups, with one command
+# (deploy/README.md).
+#
+#   cd deploy
+#   docker compose up -d                                  # images from a registry (OPENFOLIA_IMAGES)
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build   # or built from this checkout
+#
+# Settings come from the environment or from deploy/.env (Compose reads it for the ${...} below;
+# .env.example, "Container deployment", lists them). Any other API setting from .env.example goes
+# into deploy/api.env, which the API reads when it exists (a setting named under `environment:`
+# below wins over api.env, so set those in deploy/.env). Only the editor (and the API) are
+# published, on 127.0.0.1 by default: put a reverse proxy with TLS in front.
+# This is not the local development file (../compose.yaml), which runs Postgres and S3 for
+# `pnpm nx run api:serve-local`.
+name: openfolia
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  restart: unless-stopped
+
+# The backup service and the restore command (below): one image, the API's settings for the
+# database and the instance secret key, and backup.env for the CCMS_BACKUP_* settings, which fix a
+# setting of Admin, Backups (shown read-only there).
+x-backup: &backup
+  <<: *hardening
+  image: ${OPENFOLIA_IMAGES:-openfolia}/backup:${OPENFOLIA_VERSION:-local}
+  depends_on:
+    postgres:
+      condition: service_healthy
+  env_file:
+    - path: ${OPENFOLIA_API_ENV_FILE:-./api.env}
+      required: false
+    - path: ${OPENFOLIA_BACKUP_ENV_FILE:-./backup.env}
+      required: false
+  environment:
+    CCMS_DATABASE_URL: postgres://openfolia:${POSTGRES_PASSWORD}@postgres:5432/openfolia
+  # A run's unencrypted parts are staged in their own volume (backup-staging, /staging), never in
+  # the backups volume that is copied off the host; the service empties it whenever it starts.
+  tmpfs:
+    - /tmp:mode=1777
+
+services:
+  postgres:
+    image: postgres:18.7-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openfolia
+      POSTGRES_DB: openfolia
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (letters and digits, e.g. openssl rand -hex 24) in deploy/.env}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openfolia -d openfolia']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # Never published: only the API reaches it, on the stack's own network.
+
+  api:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/api:${OPENFOLIA_VERSION:-local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: ${OPENFOLIA_API_ENV_FILE:-./api.env}
+        required: false
+    environment: &api-environment
+      CCMS_DATABASE_URL: postgres://openfolia:${POSTGRES_PASSWORD}@postgres:5432/openfolia
+      CCMS_AUTH_MODE: ${CCMS_AUTH_MODE:-token}
+      CCMS_API_TOKEN: ${CCMS_API_TOKEN:-}
+      CCMS_EDITOR_ORIGINS: ${CCMS_EDITOR_ORIGINS:-}
+      CCMS_SOURCE_URL: ${CCMS_SOURCE_URL:-}
+      CCMS_PUBLIC_URL: ${CCMS_PUBLIC_URL:-}
+      # The first admin (#373; deploy/README.md, "Quick start"): made on the first start of an
+      # instance without users, their one-time link to choose a password in the API's log.
+      # Ignored once the instance has a user.
+      CCMS_FIRST_ADMIN_EMAIL: ${CCMS_FIRST_ADMIN_EMAIL:-}
+      CCMS_FIRST_ADMIN_NAME: ${CCMS_FIRST_ADMIN_NAME:-}
+      # The link in the log (default true; valid one hour). false: print it with first-admin.
+      CCMS_FIRST_ADMIN_LINK_LOG: ${CCMS_FIRST_ADMIN_LINK_LOG:-}
+      # The editor's nginx in front, one hop, passing the reader's address on (#574): the limits per
+      # client see readers, not the editor. 2 with your own proxy in front of the editor
+      # (deploy/README.md, "Reverse proxy with TLS"). Safe only while the API's own port is out of
+      # readers' reach (OPENFOLIA_API_BIND, default 127.0.0.1).
+      CCMS_TRUST_PROXY: ${CCMS_TRUST_PROXY:-1}
+      # Email (#609; deploy/README.md, "Email"): unset, none. The workers send it.
+      CCMS_MAIL_URL: ${CCMS_MAIL_URL:-}
+      CCMS_MAIL_USER: ${CCMS_MAIL_USER:-}
+      CCMS_MAIL_PASSWORD: ${CCMS_MAIL_PASSWORD:-}
+      CCMS_MAIL_PASSWORD_FILE: ${CCMS_MAIL_PASSWORD_FILE:-}
+      CCMS_MAIL_FROM: ${CCMS_MAIL_FROM:-}
+      CCMS_MAIL_REQUIRE_TLS: ${CCMS_MAIL_REQUIRE_TLS:-}
+      CCMS_MAIL_CA_FILE: ${CCMS_MAIL_CA_FILE:-}
+      CCMS_MAIL_LANGUAGE: ${CCMS_MAIL_LANGUAGE:-}
+      # Serves the API and enqueues jobs; the worker service below runs them (#527). `all` runs
+      # everything here instead (then: --scale worker=0).
+      CCMS_ROLE: ${OPENFOLIA_API_ROLE:-api}
+    # The content repository (/data/content.git), the blobs (/data/blobs) and the instance
+    # secret key (/data/ccms-secret.key, made on the first start): back this volume up.
+    volumes:
+      - data:/data
+    tmpfs:
+      - /tmp:mode=1777
+    ports:
+      # Its own address (#574): CCMS_TRUST_PROXY believes whoever connects here about the client.
+      - ${OPENFOLIA_API_BIND:-127.0.0.1}:${OPENFOLIA_API_PORT:-3000}:3000
+
+  # The background work (#527): release planning and files, imports, webhook deliveries, the
+  # sweeps. The same image as the API, CCMS_ROLE=worker: it serves no HTTP but its health check,
+  # on the container's loopback interface, and never migrates (it starts once the API has).
+  # More of them: `docker compose up -d --scale worker=3`. Memory: CCMS_PDF_WORKERS × about
+  # 450 MB each (deploy/README.md, "Workers").
+  worker:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/api:${OPENFOLIA_VERSION:-local}
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - path: ${OPENFOLIA_API_ENV_FILE:-./api.env}
+        required: false
+      # Settings for the workers only (CCMS_PDF_WORKERS, CCMS_RENDER_CONCURRENCY, ...), over api.env.
+      - path: ${OPENFOLIA_WORKER_ENV_FILE:-./worker.env}
+        required: false
+    environment:
+      <<: *api-environment
+      CCMS_ROLE: worker
+      HOST: 127.0.0.1
+    # Its renders yield the CPU to the API: a nice value (CCMS_WORKER_NICE, default 10, which its
+    # PDF processes inherit), and a CPU limit per worker when OPENFOLIA_WORKER_CPUS is set (default
+    # 0, none: Docker refuses a limit above the host's CPUs; deploy/README.md, "The API first").
+    cpus: ${OPENFOLIA_WORKER_CPUS:-0}
+    # The same content repository, blobs and instance secret key as the API.
+    volumes:
+      - data:/data
+    tmpfs:
+      - /tmp:mode=1777
+    # No ports: nothing outside the container reaches it.
+
+  editor:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/editor:${OPENFOLIA_VERSION:-local}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      CCMS_EDITOR_API_URL: http://api:3000
+      # Only for a demo instance on a private network: anyone who reaches the editor then acts
+      # with this token (deploy/README.md, "Signing in").
+      CCMS_EDITOR_API_TOKEN: ${CCMS_EDITOR_API_TOKEN:-}
+      # The editor's own host names (host[:port], comma-separated); any other Host gets 421.
+      # Required with CCMS_EDITOR_API_TOKEN. Default: unset, any Host.
+      CCMS_EDITOR_HOSTS: ${CCMS_EDITOR_HOSTS:-}
+    tmpfs:
+      - /tmp:mode=1777
+    ports:
+      - ${OPENFOLIA_BIND:-127.0.0.1}:${OPENFOLIA_EDITOR_PORT:-8080}:8080
+
+  # Backups (#529, deploy/README.md, "Backups"): scheduled, encrypted and verified, set up in
+  # the editor (Admin, Backups). It reads /data and the database, writes /backups (and S3 when
+  # set), and never needs a restart for a changed setting. `docker compose run --rm backup now`
+  # backs up at once; `docker compose run --rm backup list` lists the backups.
+  backup:
+    <<: *backup
+    restart: unless-stopped
+    # Time for a run in progress to finish its step and clean up on `docker compose stop`.
+    stop_grace_period: 2m
+    # After the API, which applies the migrations the service reads.
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - data:/data:ro
+      - backups:/backups
+      - backup-staging:/staging
+
+  # Restores a backup onto a stopped stack (deploy/README.md, "Restoring a backup"):
+  #   docker compose stop api worker backup && docker compose run --rm -T restore <name> --key-file - < key.txt
+  # Refused into an instance that holds anything, unless --force. The arguments follow the
+  # command `restore`, which the entrypoint names.
+  restore:
+    <<: *backup
+    profiles: [restore]
+    restart: 'no'
+    entrypoint:
+      [
+        '/usr/bin/tini',
+        '--',
+        '/usr/local/bin/openfolia-entrypoint',
+        'node',
+        'dist/main.js',
+        'restore',
+      ]
+    volumes:
+      - data:/data
+      - backups:/backups
+      - backup-staging:/staging
+
+  # The MCP server for agents, over HTTP: `docker compose --profile mcp up -d`.
+  mcp:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/mcp:${OPENFOLIA_VERSION:-local}
+    profiles: [mcp]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      CCMS_MCP_API_URL: http://api:3000
+      CCMS_MCP_API_TOKEN: ${CCMS_MCP_API_TOKEN:-}
+      CCMS_MCP_HTTP_TOKEN: ${CCMS_MCP_HTTP_TOKEN:-}
+      CCMS_MCP_HTTP_ALLOWED_ORIGINS: ${CCMS_MCP_HTTP_ALLOWED_ORIGINS:-}
+    tmpfs:
+      - /tmp:mode=1777
+    ports:
+      - ${OPENFOLIA_BIND:-127.0.0.1}:${OPENFOLIA_MCP_PORT:-3200}:3200
+
+volumes:
+  postgres:
+  data:
+  # The backups (#529). Keep a copy off this host too: an S3 location, or a copy of this volume.
+  backups:
+  # A backup run's unencrypted parts while it runs; emptied at every start of the backup service.
+  # Never copy it off the host.
+  backup-staging:

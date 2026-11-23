@@ -1,0 +1,247 @@
+{
+  "name": "@openfolia/docs",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "dependencies": {
+    "@openfolia/theme": "workspace:*",
+    "fumadocs-core": "16.17.10",
+    "fumadocs-mdx": "15.4.10",
+    "fumadocs-openapi": "12.5.8",
+    "fumadocs-ui": "16.17.10",
+    "next": "16.4.5",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "typescript": "^6.0.3",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@openfolia/content-model": "workspace:*",
+    "@openfolia/mcp": "workspace:*",
+    "@mdx-js/mdx": "3.1.1",
+    "@playwright/test": "1.65.0",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/mdx": "2.0.14",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "postcss": "^8.5.33",
+    "remark-gfm": "4.0.1",
+    "tailwindcss": "^4.3.5"
+  },
+  "nx": {
+    "name": "docs",
+    "projectType": "application",
+    "tags": [
+      "scope:frontend",
+      "type:docs"
+    ],
+    "implicitDependencies": [
+      "api"
+    ],
+    "targets": {
+      "generate": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "^build"
+        ],
+        "cache": true,
+        "inputs": [
+          "{projectRoot}/scripts/**/*",
+          "{projectRoot}/agents/**/*",
+          "{workspaceRoot}/deploy/compose.yaml",
+          "{workspaceRoot}/scripts/release-digests.mjs",
+          "{workspaceRoot}/scripts/images-plan.mjs",
+          "{workspaceRoot}/.env.example",
+          "{workspaceRoot}/changelog/**/*",
+          "{workspaceRoot}/backend/api/openapi/**/*",
+          "{workspaceRoot}/backend/api/error-codes.yaml",
+          "{workspaceRoot}/backend/api/scripts/openapi-document.mjs",
+          "{workspaceRoot}/backend/api/scripts/in-process-api.mjs",
+          "{workspaceRoot}/backend/api/src/access/core/permissions.ts",
+          "{workspaceRoot}/backend/api/src/access/repos/example-seed.ts",
+          "{workspaceRoot}/frontend/editor/src/app/**/*.ts",
+          "!{workspaceRoot}/frontend/editor/src/app/**/*.spec.ts",
+          "{workspaceRoot}/frontend/editor/src/i18n/*.json",
+          "{workspaceRoot}/frontend/editor/tools/i18n.test.mjs",
+          "{workspaceRoot}/packages/content-model/import-format.schema.json",
+          {
+            "dependentTasksOutputFiles": "**/*",
+            "transitive": true
+          },
+          "{workspaceRoot}/pnpm-lock.yaml",
+          {
+            "env": "DOCS_API_BASE_URL"
+          },
+          {
+            "env": "DOCS_SITE_URL"
+          },
+          {
+            "env": "DOCS_REPOSITORY_URL"
+          },
+          {
+            "env": "DOCS_RELEASE"
+          },
+          {
+            "env": "DOCS_RELEASE_URL"
+          },
+          {
+            "env": "DOCS_IMAGES"
+          },
+          {
+            "env": "DOCS_RELEASE_DIGESTS"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNATURES"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNER_IDENTITY"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNER_ISSUER"
+          }
+        ],
+        "outputs": [
+          "{projectRoot}/generated"
+        ],
+        "options": {
+          "cwd": "frontend/docs",
+          "command": "node scripts/generate.mjs"
+        }
+      },
+      "build": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "generate"
+        ],
+        "cache": true,
+        "inputs": [
+          "production",
+          "{workspaceRoot}/frontend/theme/**/*",
+          {
+            "dependentTasksOutputFiles": "**/*"
+          },
+          "{workspaceRoot}/pnpm-lock.yaml",
+          {
+            "env": "DOCS_API_BASE_URL"
+          },
+          {
+            "env": "DOCS_SITE_URL"
+          },
+          {
+            "env": "DOCS_REPOSITORY_URL"
+          },
+          {
+            "env": "DOCS_RELEASE"
+          },
+          {
+            "env": "DOCS_RELEASE_URL"
+          },
+          {
+            "env": "DOCS_IMAGES"
+          },
+          {
+            "env": "DOCS_RELEASE_DIGESTS"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNATURES"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNER_IDENTITY"
+          },
+          {
+            "env": "DOCS_RELEASE_SIGNER_ISSUER"
+          }
+        ],
+        "outputs": [
+          "{projectRoot}/out"
+        ],
+        "options": {
+          "cwd": "frontend/docs",
+          "commands": [
+            "next build",
+            "node scripts/markdown-pages.mjs",
+            "node scripts/check-stable-paths.mjs"
+          ],
+          "parallel": false
+        }
+      },
+      "typecheck": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "default",
+          "{workspaceRoot}/pnpm-lock.yaml"
+        ],
+        "options": {
+          "cwd": "frontend/docs",
+          "commands": [
+            "next typegen",
+            "tsc --noEmit -p tsconfig.app.json",
+            "tsc --noEmit -p tsconfig.spec.json"
+          ],
+          "parallel": false
+        }
+      },
+      "serve": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "generate"
+        ],
+        "continuous": true,
+        "options": {
+          "cwd": "frontend/docs",
+          "command": "next dev --hostname 127.0.0.1"
+        }
+      },
+      "test": {
+        "inputs": [
+          "default",
+          "^production",
+          "{workspaceRoot}/.env.example",
+          "{workspaceRoot}/backend/api/openapi/**/*",
+          "{workspaceRoot}/backend/api/src/access/core/permissions.ts",
+          "{workspaceRoot}/backend/api/src/access/repos/example-seed.ts",
+          "{workspaceRoot}/frontend/editor/src/app/shortcuts/shortcuts.ts",
+          "{workspaceRoot}/frontend/editor/src/i18n/*.json",
+          "{workspaceRoot}/frontend/editor/src/app/shortcuts/key-caps.ts",
+          "{workspaceRoot}/frontend/editor/src/app/**/*.ts",
+          "{workspaceRoot}/changelog/**/*",
+          "{workspaceRoot}/deploy/compose.yaml"
+        ]
+      },
+      "browsers": {
+        "executor": "nx:run-commands",
+        "cache": false,
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node node_modules/@playwright/test/cli.js install --only-shell chromium"
+        }
+      },
+      "e2e": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "browsers",
+          "build"
+        ],
+        "cache": true,
+        "inputs": [
+          "{projectRoot}/e2e/**/*",
+          {
+            "dependentTasksOutputFiles": "**/*"
+          },
+          "{workspaceRoot}/pnpm-lock.yaml",
+          {
+            "env": "E2E_WORKERS"
+          }
+        ],
+        "outputs": [],
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node node_modules/@playwright/test/cli.js test --config e2e/playwright.config.ts"
+        }
+      }
+    }
+  }
+}

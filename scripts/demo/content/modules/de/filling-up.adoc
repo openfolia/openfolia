@@ -1,0 +1,35 @@
+= Tanken und Laden
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Tanken, Laden, Energie
+
+[#intro]
+Die Tankklappe oder Ladeklappe befindet sich am linken hinteren Kotflügel. Drücken Sie auf ihre hintere Kante, um sie zu öffnen.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[procedure#refuel]
+.Fahrzeug tanken
+. [[refuel-off]]Schalten Sie den Motor aus.
+. [[refuel-flap]]Öffnen Sie die Tankklappe und drehen Sie den Tankdeckel gegen den Uhrzeigersinn ab.
+. [[refuel-fill]]Tanken Sie bleifreies Benzin mit mindestens 95 ROZ (E10 ist zulässig), bis die Zapfpistole abschaltet.
+. [[refuel-close]]Drehen Sie den Tankdeckel zu, bis er einrastet, und schließen Sie die Klappe.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[procedure#charge]
+.Fahrzeug laden
+. [[charge-flap]]Öffnen Sie die Ladeklappe.
++
+[#img-port]
+image::demo-image:charging-port["Ladebuchse hinter der geöffneten Klappe, mit dem Leuchtring darum",width=45%]
+. [[charge-plug]]Stecken Sie das Ladekabel ein, bis es verriegelt. Der Leuchtring um die Buchse blinkt grün, solange die Batterie lädt.
+. [[charge-end]]Um das Laden zu beenden, entriegeln Sie das Fahrzeug und ziehen Sie den Stecker ab.
+
+[#charge-times]
+An einer Wallbox mit 11 kW lädt die Batterie in etwa 4 Stunden von 10 % auf 80 %, an einer Schnellladesäule mit 100 kW in etwa 30 Minuten.
+====

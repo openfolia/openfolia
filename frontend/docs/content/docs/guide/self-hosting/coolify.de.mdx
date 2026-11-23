@@ -1,0 +1,64 @@
+---
+title: 'Beispiel: Coolify'
+description: 'Die Compose-Datei als eine Ressource in Coolify betreiben, mit dessen Proxy für TLS und einem Deploy-Webhook für Veröffentlichungen.'
+articleId: 'guide.self-hosting.coolify'
+---
+
+Coolify, eine Open-Source-Plattform zum Selbstbetrieb, betreibt `deploy/compose.yaml` als eine
+Docker-Compose-Ressource. Sein Proxy beendet TLS; Sie brauchen also keinen eigenen Proxy.
+
+## Einrichten
+
+1. Legen Sie eine Ressource vom Typ **Docker Compose** an, aus dem Repository (oder einem Fork
+   davon), mit `deploy/compose.yaml` als Compose-Datei.
+2. Setzen Sie unter **Environment variables**:
+   - `POSTGRES_PASSWORD`, ein zufälliges (`openssl rand -hex 24`);
+   - `OPENFOLIA_IMAGES=ghcr.io/<owner>/openfolia`;
+   - `OPENFOLIA_VERSION`: `latest` (die neueste Version, die der Deploy-Webhook einer
+     Veröffentlichung dann übernimmt) oder ein festes `vX.Y.Z`, das Sie für jedes Upgrade von Hand
+     ändern;
+   - `CCMS_EDITOR_HOSTS=docs.example.com`, damit der Editor nur seinen eigenen Hostnamen bedient;
+   - `CCMS_TRUST_PROXY=2`: Der Proxy von Coolify ist ein Hop vor dem des Editors, und beim
+     Standard `1` zählte jede lesende Person als dieser Proxy, mit einem gemeinsamen Budget für
+     fehlgeschlagene Anmeldungen und Anfragen an dauerhafte Adressen. Setzen Sie `2` nur, solange
+     die Ports des Editors und der API allein über den Proxy von Coolify erreichbar sind: Ein
+     Container, der einen davon direkt erreicht (in einem Netz, das der Stack mit anderen
+     Ressourcen teilt, etwa dem vordefinierten gemeinsamen Netz von Coolify), könnte dann jede
+     Client-Adresse angeben. Sind Sie sich dessen nicht sicher, bleiben Sie bei `1`. Siehe
+     [Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy);
+   - `CCMS_PUBLIC_URL=https://docs.example.com/` und jede andere Einstellung, die
+     `deploy/compose.yaml` aus seiner Einstellungsdatei nimmt.
+
+   Coolify listet die `${...}`-Variablen der Compose-Datei für Sie auf. Es lädt jedes Image dieser
+   Version, das Backup-Image eingeschlossen.
+
+3. Geben Sie dem Dienst `editor` seine Domain, `https://docs.example.com:8080`: Der Proxy von
+   Coolify beendet TLS, leitet an Port 8080 weiter und erhält den `Host`-Header. Die
+   veröffentlichten Ports werden nicht gebraucht, schaden auf `127.0.0.1` aber nicht.
+4. Legen Sie vor dem ersten Start das Inhalts-Repository auf das Volume `data`: über das Terminal
+   von Coolify für den Dienst `api` mit den Befehlen aus
+   [Inhalts-Repository](/de/guide/self-hosting/content-repository) oder direkt auf dem Server.
+5. Starten Sie die Bereitstellung. Legen Sie dann den ersten Admin an wie im
+   [Schnellstart](/de/guide/self-hosting/quick-start) (`CCMS_FIRST_ADMIN_EMAIL` vor dem ersten
+   Start oder der Befehl `first-admin` im Terminal).
+
+## Daten und Backups
+
+Coolify behält die benannten Volumes (`postgres`, `data`, `backups`) über Bereitstellungen hinweg.
+Sichern Sie sie mit dem eigenen Dienst `backup` des Stacks
+([Backups](/de/guide/self-hosting/backups)): Er verschlüsselt und prüft jedes Backup. Ein geplantes
+Datenbank-Backup in Coolify plus eine Kopie des Volumes `data` geht auch, aber das Volume `data`
+enthält den Instanzschlüssel: Wer diese Kopie und den Datenbank-Dump hat, kann jedes Geheimnis
+öffnen, das der Server speichert. Verschlüsseln Sie deshalb beide, bevor sie den Host verlassen,
+und bewahren Sie sie getrennt auf. Das eigene Datenbank-Backup von Coolify sendet den Dump, wie er
+ist: Lassen Sie sein Ziel auf dem Host, oder nutzen Sie lieber den Dienst `backup` des Stacks.
+
+## Veröffentlichungen
+
+Der Image-Workflow des Projekts (`.github/workflows/images.yml`) ruft einen Deploy-Webhook auf,
+nachdem er die Images eines Versions-Tags auf einem Commit von `main` übertragen hat und Smoke-Test
+und Self-Host-Test bestanden sind ([Smoke-Test](/de/guide/self-hosting/smoke-test)). Setzen Sie in
+einem Fork die Repository-Secrets `DEPLOY_WEBHOOK_URL` und `DEPLOY_WEBHOOK_TOKEN` auf den
+Deploy-Webhook der Ressource und ein API-Token von Coolify. Mit `OPENFOLIA_VERSION=latest` wird
+dann jede Version von selbst bereitgestellt. Lesen Sie trotzdem vorher die Upgrade-Hinweise im
+[Changelog](/de/changelog): [Upgrades](/de/guide/self-hosting/upgrades).

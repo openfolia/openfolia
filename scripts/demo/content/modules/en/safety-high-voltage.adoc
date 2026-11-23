@@ -1,0 +1,19 @@
+= High-voltage system
+:schema-version: 1
+:module-type: safety
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: high voltage, electric
+
+[safety#hv-shock,severity=danger,symbols=w012]
+.Electric shock from the high-voltage system
+====
+[#hv-shock-text]
+The [.term.high-voltage-system]##high-voltage system## works at up to 400 V. Touching its parts can cause fatal injuries.
+
+[#hv-shock-measures]
+* [[hv-shock-m1]]Never open, remove or repair parts with orange cables or orange covers.
+* [[hv-shock-m2]]After an accident, switch the vehicle off and keep away from damaged high-voltage parts.
+* [[hv-shock-m3]]Leave all work on the high-voltage system to a qualified workshop.
+====

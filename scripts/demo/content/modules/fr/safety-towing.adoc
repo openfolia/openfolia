@@ -1,0 +1,28 @@
+= Levage et pièces chaudes
+:schema-version: 1
+:module-type: safety
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: cric, freins chauds
+
+[safety#jack,severity=danger,symbols=w001]
+.Chute du véhicule du cric
+====
+[#jack-text]
+Un véhicule posé sur un cric peut glisser et écraser toute personne se trouvant dessous.
+
+[#jack-measures]
+* [[jack-m1]]Ne vous allongez jamais sous un véhicule qui repose uniquement sur le cric et n'y passez jamais la main.
+* [[jack-m2]]Utilisez uniquement les [.term.jacking-point]##points de levage## repérés sur le bas de caisse.
+====
+
+[safety#hot-brakes,severity=caution,symbols=w017]
+.Freins et échappement chauds
+====
+[#hot-brakes-text]
+Après un trajet, les disques de frein et, sur le modèle essence, l'échappement peuvent être assez chauds pour brûler la peau.
+
+[#hot-brakes-measures]
+* [[hot-brakes-m1]]Laissez refroidir les roues avant de toucher les freins.
+====

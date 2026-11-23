@@ -1,0 +1,24 @@
+languages:
+  source: en
+  targets: [de]
+moduleTypes:
+  - { id: concept, label: Concept }
+  - { id: procedure, label: Procedure }
+audiences:
+  - { id: public, label: Public }
+  - { id: internal, label: Internal }
+facets:
+  - id: region
+    label: Region
+    values:
+      - { id: north, label: North }
+      - { id: south, label: South }
+variantAttributes:
+  - id: model
+    label: Model
+    kind: enum
+    values:
+      - { id: small, label: Small }
+      - { id: large, label: Large }
+safetySymbols:
+  - { id: w001, label: General warning }

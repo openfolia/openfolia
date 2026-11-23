@@ -1,0 +1,23 @@
+= Fusibles
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: fusible
+
+[#img-box]
+image::demo-image:fuse-box["Boîte à fusibles avec les emplacements de fusibles numérotés",width=60%]
+<.> [callout#f-puller,x=0.12,y=0.2,label-x=0.05,label-y=0.06] Pince à fusibles
+<.> [callout#f-spare,x=0.88,y=0.78,label-x=0.95,label-y=0.94] Fusibles de rechange
+
+[#table,cols="1,2,1",options=header]
+.Fusibles
+|===
+|[[fu-h-no]]N° |[[fu-h-what]]Protège |[[fu-h-amp]]Calibre
+|[[fu-1]]1 |[[fu-1-what]]Essuie-glaces et pompe de lave-glace |[[fu-1-amp]]20 A
+|[[fu-2]]2 |[[fu-2-what]]Écran central |[[fu-2-amp]]10 A
+|[[fu-3]]3 |[[fu-3-what]]Prise 12 V et ports USB |[[fu-3-amp]]15 A
+|[[fu-4]]4 |[[fu-4-what]]Sièges chauffants |[[fu-4-amp]]25 A
+|[[fu-5]]5 |[[fu-5-what]]Éclairage intérieur |[[fu-5-amp]]5 A
+|===

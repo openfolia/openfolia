@@ -1,0 +1,31 @@
+# How a release's notes group the merged pull requests (#421; CONTRIBUTING.md, "Releases").
+#
+# scripts/release.mjs reads this file to write the notes of a GitHub Release and CHANGELOG.md, and
+# GitHub's own "Generate release notes" button reads it too. A pull request goes into the first
+# group whose label it carries. Without any of these labels, the type of its conventional-commit
+# title decides (feat: New, perf: Improved, fix and revert: Fixed, docs: Docs; test, chore, ci,
+# build, refactor and style: internal, left out), and a title without a type goes into Improved.
+# A title whose scopes are all the repository's own tooling (workflow, hooks, ci, scripts, factory,
+# board, agents) is internal too.
+# A pull request labelled as excluded below is always left out, whatever its other labels.
+changelog:
+  exclude:
+    labels:
+      - internal
+      - chore
+  categories:
+    - title: Security
+      labels:
+        - security
+    - title: New
+      labels:
+        - feature
+    - title: Improved
+      labels:
+        - enhancement
+    - title: Fixed
+      labels:
+        - bug
+    - title: Docs
+      labels:
+        - documentation

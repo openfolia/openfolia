@@ -1,0 +1,687 @@
+/*
+ * Styles for the HTML that @openfolia/render-html generates, shared by the editor's preview and the
+ * portal. Built on the theme's CSS variables (`@openfolia/theme/theme.css`, which the page imports
+ * first): no colour is written here, so the theme's `.dark` gives the dark look and the fixed
+ * `--safety-*` colours stay the same in both. Every rule is scoped under `.of-content`, the
+ * root of every rendered fragment, so nothing here reaches the host page. The class names are
+ * documented in the package README and stable.
+ */
+
+.of-content {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.of-content :where(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.25;
+  margin: 1.5em 0 0.5em;
+  font-weight: 600;
+}
+
+.of-content :where(h1) {
+  font-size: 2em;
+}
+.of-content :where(h2) {
+  font-size: 1.5em;
+}
+.of-content :where(h3) {
+  font-size: 1.25em;
+}
+.of-content :where(h4, h5, h6) {
+  font-size: 1em;
+}
+
+.of-content :where(p) {
+  margin: 0 0 0.75em;
+}
+
+/* Manual */
+
+.of-content .of-manual__header {
+  margin-bottom: 2em;
+}
+.of-content .of-manual__title {
+  margin-top: 0;
+}
+.of-content .of-manual__subtitle {
+  color: var(--muted-foreground);
+}
+
+.of-content .of-toc {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1em 1.25em;
+  margin-bottom: 2em;
+}
+.of-content .of-toc__title {
+  margin-top: 0;
+}
+.of-content .of-toc__list {
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+}
+.of-content .of-toc__list .of-toc__list {
+  padding-inline-start: 1.25em;
+}
+.of-content .of-toc__item {
+  margin: 0.25em 0;
+}
+.of-content .of-toc__group {
+  font-weight: 600;
+}
+.of-content .of-toc__link {
+  color: inherit;
+}
+
+.of-content .of-module,
+.of-content .of-group,
+.of-content .of-section {
+  margin: 0;
+}
+
+/* Text */
+
+.of-content .of-link,
+.of-content .of-xref {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.of-content .of-link--refused,
+.of-content .of-xref--unresolved {
+  color: inherit;
+  text-decoration: none;
+}
+.of-content .of-attribute--missing {
+  color: var(--destructive);
+  background: var(--destructive-muted);
+  font-family: var(--font-mono);
+}
+/* The preview's own marks: an attribute the preview has no value for, and a page break. */
+.of-content .of-attribute--unset {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px dashed var(--border);
+  border-radius: calc(var(--radius) / 2);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.875em;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.of-content .of-page-break {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin: 1.5em 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.of-content .of-page-break::before,
+.of-content .of-page-break::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--border);
+}
+.of-content .of-page-break__label {
+  flex: none;
+}
+.of-content .of-ui {
+  font-weight: 600;
+}
+/*
+ * Mixed-direction text (#458): a run that stands for one thing (a user-interface label, a
+ * cross-reference, a term link, an attribute without a value) is isolated, so its characters
+ * keep their order and the text around it keeps its own. Code (a code span, a literal block, a
+ * keyboard shortcut) in right-to-left text also gets `dir="ltr"`, which isolates it too.
+ */
+.of-content :is(.of-ui, .of-xref, .of-term__link, .of-attribute) {
+  unicode-bidi: isolate;
+}
+.of-content .of-code,
+.of-content .of-kbd__key {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.of-content .of-code {
+  background: var(--muted);
+  border-radius: calc(var(--radius) / 2);
+  padding: 0.1em 0.3em;
+}
+.of-content .of-kbd {
+  white-space: nowrap;
+}
+.of-content .of-kbd__key {
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: calc(var(--radius) / 2);
+  background: var(--muted);
+  padding: 0 0.35em;
+}
+.of-content .of-kbd__separator {
+  padding: 0 0.15em;
+}
+
+/* Lists and procedures */
+
+.of-content .of-list,
+.of-content .of-procedure__steps {
+  margin: 0 0 0.75em;
+  padding-inline-start: 1.5em;
+}
+.of-content .of-item__text {
+  margin-bottom: 0.25em;
+}
+.of-content .of-procedure {
+  margin: 0 0 1em;
+}
+.of-content .of-procedure__title {
+  font-weight: 600;
+}
+.of-content .of-procedure__steps {
+  list-style: none;
+  counter-reset: of-step;
+  padding-inline-start: 0;
+}
+.of-content .of-procedure__step {
+  counter-increment: of-step;
+  position: relative;
+  padding-inline-start: 2.25em;
+  margin-bottom: 0.5em;
+}
+.of-content .of-procedure__step > .of-figure,
+.of-content .of-procedure__step > .of-image {
+  /* Under the step's text, indented with it; printed on the same page where it fits. */
+  margin: 0.5em 0 0.75em;
+}
+.of-content .of-procedure__step:has(> .of-figure, > .of-image) {
+  break-inside: avoid;
+}
+.of-content .of-procedure__step::before {
+  content: counter(of-step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.1em;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.6em;
+  text-align: center;
+}
+
+/* Tables: the wrapper scrolls sideways, so a wide table never widens the page. */
+
+.of-content .of-table {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+}
+.of-content .of-table__table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.of-content .of-table__cell {
+  border: 1px solid var(--border);
+  padding: 0.4em 0.6em;
+  text-align: start;
+  vertical-align: top;
+}
+.of-content th.of-table__cell {
+  background: var(--muted);
+  font-weight: 600;
+}
+.of-content .of-table__cell--center {
+  text-align: center;
+}
+/* A column's `left` and `right` are the start and end of the text's direction (#458). */
+.of-content .of-table__cell--right {
+  text-align: end;
+}
+.of-content .of-table__cell > :last-child {
+  margin-bottom: 0;
+}
+
+/* Figures */
+
+.of-content .of-figure,
+.of-content .of-image {
+  margin: 0 0 1em;
+}
+.of-content .of-figure__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Image callouts (#546): the markers and leader lines over the picture, in an SVG whose
+   coordinates are percentages of it (image coordinates: never mirrored); the legend under or
+   beside the picture, following the text's direction. */
+.of-content .of-callouts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75em;
+}
+.of-content .of-callouts--beside {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.of-content .of-callouts__picture {
+  position: relative;
+  max-width: 100%;
+}
+.of-content .of-callouts--beside > .of-callouts__picture:not([style]) {
+  max-width: 60%;
+}
+.of-content .of-callouts__picture > .of-figure__image {
+  width: 100%;
+}
+.of-content .of-callouts__overlay {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.of-content .of-callouts__leader {
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+.of-content .of-callouts__anchor,
+.of-content .of-callouts__marker circle {
+  fill: var(--primary);
+}
+.of-content .of-callouts__marker text {
+  fill: var(--primary-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+.of-content .of-callouts__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.of-content .of-callouts--beside > .of-callouts__legend {
+  flex: 1 1 12em;
+}
+/* A long legend wraps, a long word broken (hyphenated by the page's language), never wider (#548). */
+.of-content .of-callouts__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.of-content .of-callouts__entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0 0 0.35em;
+}
+.of-content .of-callout-number,
+.of-content .of-callout-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 0.1em;
+}
+.of-content .of-callout-number--unresolved,
+.of-content .of-callout-ref--unresolved {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.of-content .of-caption {
+  color: var(--muted-foreground);
+  font-size: 0.9em;
+  margin-top: 0.4em;
+  text-align: start;
+}
+.of-content caption.of-caption {
+  caption-side: top;
+  margin: 0 0 0.4em;
+}
+.of-content .of-caption__label {
+  font-weight: 600;
+}
+
+/* Attachments: a download link with the file's facts. */
+
+.of-content .of-attachment {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 0 1em;
+  padding: 0.6em 0.9em;
+  overflow-wrap: anywhere;
+}
+.of-content .of-attachment__line {
+  margin: 0;
+}
+.of-content .of-attachment__label {
+  font-weight: 600;
+}
+.of-content .of-attachment__link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.of-content .of-attachment__facts {
+  color: var(--muted-foreground);
+  font-size: 0.9em;
+}
+.of-content .of-attachment__description {
+  margin: 0.3em 0 0;
+}
+
+/* Safety notices (ANSI Z535 / ISO 3864): the signal word on its fixed safety colour. */
+
+.of-content .of-safety {
+  --of-safety-colour: var(--safety-warning);
+  --of-safety-on-colour: var(--safety-warning-foreground);
+  border: 2px solid var(--of-safety-colour);
+  border-radius: var(--radius);
+  margin: 0 0 1em;
+  overflow: hidden;
+}
+.of-content .of-safety--danger {
+  --of-safety-colour: var(--safety-danger);
+  --of-safety-on-colour: var(--safety-danger-foreground);
+}
+.of-content .of-safety--warning {
+  --of-safety-colour: var(--safety-warning);
+  --of-safety-on-colour: var(--safety-warning-foreground);
+}
+.of-content .of-safety--caution {
+  --of-safety-colour: var(--safety-caution);
+  --of-safety-on-colour: var(--safety-caution-foreground);
+}
+.of-content .of-safety--notice {
+  --of-safety-colour: var(--safety-notice);
+  --of-safety-on-colour: var(--safety-notice-foreground);
+}
+.of-content .of-safety__signal {
+  margin: 0;
+  padding: 0.3em 0.75em;
+  background: var(--of-safety-colour);
+  color: var(--of-safety-on-colour);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+/* The safety alert symbol precedes DANGER, WARNING and CAUTION, never NOTICE. */
+.of-content .of-safety--danger .of-safety__signal::before,
+.of-content .of-safety--warning .of-safety__signal::before,
+.of-content .of-safety--caution .of-safety__signal::before {
+  content: '\26A0\FE0E';
+  /* Decorative: the signal word follows, so screen readers skip the symbol. */
+  content: '\26A0\FE0E' / '';
+  margin-inline-end: 0.4em;
+}
+.of-content .of-safety__body {
+  display: flex;
+  gap: 0.75em;
+  padding: 0.75em;
+}
+.of-content .of-safety__symbols {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  flex: none;
+}
+.of-content .of-safety__symbol {
+  width: 3em;
+  height: 3em;
+  object-fit: contain;
+}
+.of-content .of-safety__content {
+  min-width: 0;
+  flex: 1;
+}
+.of-content .of-safety__hazard {
+  font-weight: 600;
+}
+.of-content .of-safety__content > :last-child {
+  margin-bottom: 0;
+}
+
+/* Admonitions: notes, tips and important points (never safety). */
+
+.of-content .of-admonition {
+  --of-admonition-colour: var(--info);
+  --of-admonition-background: var(--info-muted);
+  background: var(--of-admonition-background);
+  border-radius: var(--radius);
+  padding: 0.6em 0.9em;
+  margin: 0 0 1em;
+}
+.of-content .of-admonition--tip {
+  --of-admonition-colour: var(--success);
+  --of-admonition-background: var(--success-muted);
+}
+.of-content .of-admonition--important {
+  --of-admonition-colour: var(--warning);
+  --of-admonition-background: var(--warning-muted);
+}
+.of-content .of-admonition__label {
+  color: var(--of-admonition-colour);
+  font-weight: 700;
+  margin-bottom: 0.25em;
+}
+.of-content .of-admonition > :last-child {
+  margin-bottom: 0;
+}
+
+/* FAQ entries: a disclosure, the question as its heading-like line. */
+
+.of-content .of-faq {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 0 1em;
+}
+.of-content .of-faq__question {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.6em 0.9em;
+  border-radius: var(--radius);
+}
+.of-content .of-faq__question:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.of-content .of-faq__answer {
+  padding: 0 0.9em 0.6em;
+}
+.of-content .of-faq__answer > :last-child {
+  margin-bottom: 0;
+}
+/* Opening and closing slide where the browser can animate a disclosure. */
+@media (prefers-reduced-motion: no-preference) {
+  .of-content .of-faq {
+    interpolate-size: allow-keywords;
+  }
+  .of-content .of-faq::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 0.2s ease,
+      content-visibility 0.2s allow-discrete;
+  }
+  .of-content .of-faq[open]::details-content {
+    block-size: auto;
+  }
+}
+
+/*
+ * Term links (#245): the term underlined with dots; its definition a tooltip under it, shown on
+ * hover and on keyboard focus (a host may hide it on Escape with `of-term--dismissed`). Hidden
+ * it takes no room, so it never widens the page; screen readers read it as the link's
+ * description either way.
+ */
+
+.of-content .of-term {
+  position: relative;
+}
+.of-content .of-term__link {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+.of-content .of-term__link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.of-content .of-term__definition {
+  display: none;
+  position: absolute;
+  inset-inline-start: 0;
+  top: 100%;
+  z-index: 10;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.5em 0.75em;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.45;
+  text-align: start;
+  white-space: normal;
+}
+.of-content .of-term:hover > .of-term__definition,
+.of-content .of-term:focus-within > .of-term__definition {
+  display: block;
+}
+.of-content .of-term.of-term--dismissed > .of-term__definition {
+  display: none;
+}
+.of-content .of-term--unresolved {
+  color: inherit;
+}
+
+/* The glossary (#245): the terms a manual links, each with its definition. */
+
+.of-content .of-glossary__list {
+  margin: 0;
+}
+.of-content .of-glossary__entry {
+  margin: 0 0 0.75em;
+  scroll-margin-top: 1em;
+}
+.of-content .of-glossary__term {
+  font-weight: 600;
+}
+.of-content .of-glossary__term dfn {
+  font-style: normal;
+}
+.of-content .of-glossary__definition {
+  margin: 0.15em 0 0;
+}
+.of-content .of-glossary__entry:target .of-glossary__term {
+  color: var(--primary);
+}
+
+/* Preformatted text and unconverted content */
+
+.of-content .of-literal,
+.of-content .of-unconverted__source {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--muted);
+  border-radius: calc(var(--radius) / 2);
+  padding: 0.75em 1em;
+  margin: 0 0 1em;
+  overflow-x: auto;
+  white-space: pre;
+}
+.of-content .of-unconverted {
+  border: 1px dashed var(--destructive);
+  border-radius: calc(var(--radius) / 2);
+  padding: 0.6em 0.9em;
+  margin: 0 0 1em;
+}
+.of-content .of-unconverted__label {
+  color: var(--destructive);
+  font-weight: 600;
+}
+.of-content .of-unconverted__format {
+  font-weight: 400;
+}
+.of-content .of-unconverted__source {
+  margin-bottom: 0;
+}
+
+/* Callout highlighting (#549): while a callout's marker, legend entry or reference is hovered or
+   focused, a host's script (`highlightCallouts`) gives all its parts `of-callout--highlighted`.
+   Never colour alone: the marker grows a ring, the leader line thickens, the entry and the
+   reference get an outline (no change of weight: the text around must not move). Motion only
+   when the reader has not asked for less. */
+.of-content .of-callouts__marker {
+  pointer-events: auto;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.of-content .of-callouts__marker.of-callout--highlighted {
+  transform: scale(1.2);
+}
+.of-content .of-callouts__marker.of-callout--highlighted circle {
+  stroke: var(--ring);
+  stroke-width: 3;
+}
+.of-content .of-callouts__leader.of-callout--highlighted {
+  stroke: var(--ring);
+  stroke-width: 3;
+}
+.of-content .of-callouts__anchor.of-callout--highlighted {
+  fill: var(--ring);
+}
+.of-content .of-callouts__entry.of-callout--highlighted {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: calc(var(--radius) / 2);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.of-content a.of-callout-ref {
+  text-decoration: none;
+}
+.of-content a.of-callout-ref:focus-visible,
+.of-content .of-callout-ref.of-callout--highlighted {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .of-content .of-callouts__marker,
+  .of-content .of-callouts__leader,
+  .of-content .of-callouts__entry,
+  .of-content .of-callout-ref {
+    transition:
+      transform 150ms ease-out,
+      stroke-width 150ms ease-out,
+      outline-color 150ms ease-out,
+      background-color 150ms ease-out;
+  }
+}

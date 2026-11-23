@@ -1,0 +1,12 @@
+= Before you set off
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+This guide shows the first things you need with your {model-name}: starting, setting the clock, filling up and what to do with a flat tyre.
+
+[#full]
+The owner's manual describes everything else, and has all the safety notices.

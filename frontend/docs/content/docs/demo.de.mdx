@@ -1,0 +1,119 @@
+---
+title: Die Demo ausprobieren
+description: OpenFolia aus einem frischen Klon mit einem Befehl starten und als drei Demo-Personen durch Schreiben, Prüfung und Veröffentlichungen gehen.
+---
+
+Die Demo startet den Editor und die API auf Ihrem Rechner, mit der Dokumentation eines erfundenen
+Autos und drei Demo-Personen. Sie braucht weder Docker noch einen Datenbankserver und lässt Ihre
+eigene Einrichtung unberührt. Für den echten Betrieb siehe [Erste Schritte](/de/getting-started)
+und [Selbst betreiben](/de/self-hosting).
+
+## Voraussetzungen
+
+- Node 24 und pnpm 11 (`corepack enable` nimmt die Version, die das Repository nennt).
+- Git 2.40 oder neuer.
+- Die Ports 3290 und 4390 sind frei.
+
+## Starten
+
+In einem Klon des Repositorys:
+
+```sh
+pnpm install
+pnpm demo:start --lang de
+```
+
+Der erste Start baut die API und den Editor, das dauert einige Minuten. Danach legt er die Inhalte
+und die Datenbank an, erstellt zwei Veröffentlichungen und erzeugt ihre PDFs, das dauert etwa eine
+Minute. Am Ende steht eine Adresse:
+
+```
+Open:     http://127.0.0.1:4390/__start?lang=de&user=demo-author&theme=light
+```
+
+Öffnen Sie sie im Browser. Sie meldet Sie als Autorin an und zeigt **Inhalte**.
+
+| Befehl                      | Was er tut                                                                       |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| `pnpm demo:start --lang de` | Der Editor auf Deutsch. Was die Demo selbst schreibt, ist ebenfalls auf Deutsch. |
+| `pnpm demo:reset`           | Alles neu angelegt, wie nach einem Start. Ihre Änderungen sind weg.              |
+| `pnpm demo:stop`            | Hält sie an und entfernt ihre Inhalte und ihre Datenbank.                        |
+| `pnpm demo:status`          | Sagt, ob sie läuft, und nennt ihre Adresse.                                      |
+
+## Was darin ist
+
+- **Die Inhalte:** 32 Module einer Betriebsanleitung und eines Serviceheftes, auf Englisch und
+  Deutsch, teils auf Französisch. Drei Handbücher, erstellt für Varianten nach Karosserie
+  (Schrägheck, Kombi), Antrieb (Benzin, elektrisch) und Markt (Links- und Rechtslenker).
+- **Zwei Veröffentlichungen**, 1.0 und 1.1, mit ihren PDFs. 1.1 hat einen Reifendruck geändert.
+- **Eine Überarbeitung in Prüfung**, „Rad wechseln überarbeiten“, mit Kommentaren des Prüfers.
+- **Drei Personen:** eine Autorin, ein Prüfer (der auch schreiben darf) und eine Administratorin.
+  Das Kontomenü zeigt ihre Namen.
+
+Die Titel der Module in der Inhaltsliste und die Beschriftungen der Projekteinstellungen bleiben
+auf Englisch, der Ausgangssprache der Demo.
+
+## Der Rundgang
+
+### 1. Als Autorin: ein Modul ändern
+
+1. Wählen Sie unter **Inhalte** das Modul **Setting the clock**. Es ist **Veröffentlicht** und
+   schreibgeschützt: Sie lesen die veröffentlichten Inhalte.
+2. Öffnen Sie das Überarbeitungsmenü oben rechts, das **Veröffentlichte Inhalte** zeigt, und wählen
+   Sie **Neue Überarbeitung**. Geben Sie einen **Titel** ein, etwa „Uhr nach dem Abstellen
+   erklären“, und wählen Sie **Anlegen**.
+3. Das Modul ist jetzt **Von Ihnen gesperrt**. Klicken Sie ans Ende des ersten Absatzes und tippen
+   Sie einen Satz. Die Kopfzeile zeigt **Gespeichert**.
+4. Wählen Sie **Prüfung** in der Seitenleiste, dann **Entwürfe** und Ihre Überarbeitung. Wählen
+   Sie **Zur Prüfung einreichen**.
+
+### 2. Als Prüfer: prüfen und freigeben
+
+1. Öffnen Sie das Kontomenü (Ihr Name unten in der Seitenleiste) und wählen Sie unter
+   **Benutzer wechseln** den Prüfer.
+2. Wählen Sie **Prüfung**. Wählen Sie unter **Wartend** die Überarbeitung **Rad wechseln
+   überarbeiten**.
+3. Lesen Sie die Änderungen **Im Text**, **Nebeneinander** oder **Gerendert**, und die Kommentare
+   zu den Schritten. Antworten Sie auf einen, oder schreiben Sie mit **Kommentieren** einen
+   eigenen.
+4. Wählen Sie **Freigeben**. Ihre Überarbeitung aus Schritt 1 wartet dort ebenfalls: Geben Sie
+   auch sie frei.
+
+### 3. Als Administratorin: zusammenführen und die Veröffentlichungen ansehen
+
+1. Wechseln Sie zur Administratorin.
+2. Wählen Sie **Prüfung**, dann **Freigegeben** und eine Überarbeitung, und wählen Sie
+   **Zusammenführen**. Ihre Änderung ist jetzt in den veröffentlichten Inhalten.
+3. Wählen Sie **Veröffentlichungen**, dann **1.1** und **Dateien und Änderungen**.
+   **Änderungen** zeigt, was sich seit 1.0 geändert hat. Wählen Sie unter **Dateien**
+   **Herunterladen** beim PDF des **Owner's manual** oder des **Service booklet** für einen Kombi
+   (**Estate**): Seine Reifendrucktabelle zeigt den neuen Druck hinten.
+4. Wählen Sie **Übersetzungen**: Die Spalte Französisch zeigt, was fehlt oder veraltet ist.
+5. Wählen Sie **Handbücher**: das Handbuch **Owner's manual**, seine Module in Reihenfolge und seine Ausgaben
+   je Sprache.
+
+Eine eigene Veröffentlichung erstellen Sie mit **Neue Veröffentlichung** unter
+**Veröffentlichungen**; siehe [Eine Veröffentlichung erstellen](/de/guide/releases/overview).
+
+## Was sie zeigt, und was nicht
+
+**Sie zeigt** das Produkt, wie es ist: die echte API und den echten Editor, Inhalte in einem echten
+Git-Repository, Überarbeitungen, Prüfung und Zusammenführen, Veröffentlichungen mit ihren PDFs,
+Übersetzungen und Varianten.
+
+**Sie zeigt nicht:**
+
+- **Die Anmeldung.** Die Demo-Personen werden gewählt, nicht angemeldet: kein Passwort, kein Code
+  per E-Mail, keine Anmeldung mit dem Konto Ihrer Organisation. Wer die Demo erreicht, kann als
+  jede Person handeln, auch als Administratorin. Die Demo hört nur auf 127.0.0.1, leiten Sie ihre Ports
+  also nicht weiter und stellen Sie keinen Proxy davor. Siehe
+  [Anmeldemodi](/de/guide/self-hosting/authentication).
+- **Eigene Inhalte.** Kein Import und keine Übernahme aus einem anderen System; die Inhalte sind
+  die der Demo.
+- **Dass etwas bleibt.** Die Datenbank läuft im Arbeitsspeicher. Ein Anhalten oder Zurücksetzen
+  entfernt alles, was Sie geändert haben.
+- **Den Betrieb auf einem Server.** Keine Container, keine Backups, kein Reverse Proxy. Siehe
+  [Selbst betreiben](/de/self-hosting).
+
+Was die Demo-Inhalte enthalten und wie ihre Videos entstehen, steht in `docs/demo-videos.md` im
+Repository.

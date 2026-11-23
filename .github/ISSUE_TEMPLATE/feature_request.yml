@@ -1,0 +1,25 @@
+name: Feature request
+description: Something the project should do that it doesn't yet.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the need, not a particular organisation's setup: attributes, audience levels and module types are configuration in this project. Please keep names of organisations, clients and people out of it.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What you want to be able to do, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How it could work, from the outside (a route, a screen, a setting).
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What you do today instead, or other ways it could be solved.

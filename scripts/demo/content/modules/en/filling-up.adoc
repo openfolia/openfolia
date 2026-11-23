@@ -1,0 +1,35 @@
+= Refuelling and charging
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: refuelling, charging, energy
+
+[#intro]
+The filler flap or charging flap is on the left rear wing. Press its rear edge to open it.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[procedure#refuel]
+.Refuel the vehicle
+. [[refuel-off]]Switch the engine off.
+. [[refuel-flap]]Open the filler flap and turn the filler cap anticlockwise.
+. [[refuel-fill]]Fill up with unleaded petrol of at least 95 RON (E10 is allowed) until the nozzle shuts off.
+. [[refuel-close]]Turn the filler cap until it clicks and close the flap.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[procedure#charge]
+.Charge the vehicle
+. [[charge-flap]]Open the charging flap.
++
+[#img-port]
+image::demo-image:charging-port["Charging socket behind the open flap, with the light ring around it",width=45%]
+. [[charge-plug]]Plug in the charging cable until it locks. The light ring around the socket flashes green while the battery charges.
+. [[charge-end]]To stop charging, unlock the vehicle and pull the plug out.
+
+[#charge-times]
+At a wall box with 11 kW the battery charges from 10 % to 80 % in about 4 hours; at a fast charger with 100 kW in about 30 minutes.
+====

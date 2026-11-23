@@ -1,0 +1,99 @@
+{
+  "name": "@openfolia/editor-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "The editor's real-browser end-to-end suite: Playwright on the built editor and the real API (README.md).",
+  "type": "module",
+  "nx": {
+    "name": "editor-e2e",
+    "tags": [
+      "scope:frontend",
+      "type:e2e"
+    ],
+    "implicitDependencies": [
+      "editor",
+      "api"
+    ],
+    "targets": {
+      "browsers": {
+        "executor": "nx:run-commands",
+        "cache": false,
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node node_modules/@playwright/test/cli.js install --only-shell chromium"
+        }
+      },
+      "e2e": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "browsers",
+          "editor:build",
+          "api:build"
+        ],
+        "cache": true,
+        "inputs": [
+          "default",
+          "^production",
+          {
+            "env": "CCMS_E2E_SELECT"
+          },
+          {
+            "env": "CCMS_E2E_BASE"
+          },
+          {
+            "env": "CCMS_E2E_HEAD"
+          },
+          {
+            "env": "E2E_WORKERS"
+          }
+        ],
+        "outputs": [],
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node run.ts"
+        }
+      },
+      "guide-screenshots": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "browsers",
+          "editor:build",
+          "api:build"
+        ],
+        "cache": false,
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node node_modules/@playwright/test/cli.js test --config screenshots/playwright.config.ts"
+        }
+      },
+      "typecheck": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "default",
+          "^production"
+        ],
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "tsc -p tsconfig.json --noEmit"
+        }
+      },
+      "test": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "default"
+        ],
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node --test tools/*.test.ts"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "fflate": "0.8.2"
+  }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map id="quick-guide" xml:lang="en">
+  <title>Garden pump quick guide</title>
+  <ditavalref href="../../filters/basic.ditaval"/>
+  <ditavalref href="../../filters/pro.ditaval"/>
+  <mapref href="keys.ditamap" processing-role="resource-only"/>
+  <topichead navtitle="Getting started">
+    <topicref href="../topics/overview.dita"/>
+    <topicref href="../topics/install.dita"/>
+  </topichead>
+</map>

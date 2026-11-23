@@ -1,0 +1,77 @@
+---
+title: 'Authentication modes'
+description: 'How people and programs sign in: the sign-in methods, token mode and demo mode, and how the editor guards a token it adds.'
+articleId: 'guide.self-hosting.authentication'
+---
+
+People sign in to the editor; programs send a service account's token. Which sign-in methods the
+editor offers is set on the API:
+
+| Method                     | Set up with                                      | Page                                                                   |
+| -------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| Email address and password | on by default (`CCMS_PASSWORD_SIGN_IN`)          | [Password sign-in](/guide/self-hosting/password-sign-in)               |
+| A one-time code by email   | on with email set up (`CCMS_EMAIL_CODE_SIGN_IN`) | [Sign-in with a code by email](/guide/self-hosting/email-code-sign-in) |
+| OpenID Connect             | `CCMS_OIDC_ISSUER` and its settings              | [OpenID Connect](/guide/self-hosting/oidc)                             |
+
+Programs (portals, pipelines, scripts) send `Authorization: Bearer <token>`, the token of a
+[service account](/guide/admin/service-accounts) whose roles hold only what they need.
+
+## Token mode
+
+`CCMS_AUTH_MODE=token` is the default, and the right mode wherever real people work. Only service
+accounts' tokens and signed-in sessions authenticate.
+
+**Leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset.** `CCMS_API_TOKEN` is a shared token
+for local use and demo mode. Set in token mode, it acts as a read-only service that reads
+everything, drafts included, and the API warns at start-up. With OpenID Connect the API refuses to
+start with it. Added by the editor (`CCMS_EDITOR_API_TOKEN`), it would let anyone who reaches the
+editor read every draft without signing in.
+
+With password sign-in off, no OpenID Connect and no codes by email, the editor loads and its sign-in
+page says that sign-in is not set up.
+
+Failed authentications count per client address (`CCMS_AUTH_FAILURES_MAX`, default 20 a minute);
+past that, a client gets 429 `too-many-failed-attempts` until the window ends. Behind a proxy, the
+address is the one `CCMS_TRUST_PROXY` lets the API believe:
+[Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
+
+## Demo mode
+
+For evaluating on a private network only. **Anyone who reaches the editor can act as any user, the
+admin included.** Never use it where real people sign in; it cannot be on together with OpenID
+Connect or password sign-in.
+
+1. Make a random token: `openssl rand -hex 32`.
+2. In `deploy/.env`, set `CCMS_AUTH_MODE=demo`, `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` to that
+   token, and `CCMS_EDITOR_HOSTS` to the host names people open the editor under, for example
+   `docs.internal.example,127.0.0.1`.
+3. Start the stack, then seed the example users:
+
+   ```sh
+   docker compose exec api node dist/database/seed.main.js --example
+   ```
+
+The editor's sign-in page then lists the seeded users. Keep a demo instance on a private network,
+or behind a proxy that authenticates people first.
+
+## How the editor guards a token it adds
+
+The editor never adds a token unless `CCMS_EDITOR_API_TOKEN` is set, and refuses to start with one
+unless `CCMS_EDITOR_HOSTS` is set too. With a token, its proxy guards it against other websites:
+
+- **Host allowlist.** Only the hosts in `CCMS_EDITOR_HOSTS` are served. Any other `Host` gets 421
+  and is never proxied. This stops DNS rebinding, where a page on another host name that resolves
+  to this server carries its own name as both `Host` and `Origin`.
+- **Origin.** An `/api` request whose `Origin` is not the editor's own is refused (403
+  `cross-origin-request`).
+- **Same origin shown.** An `/api` request must carry the editor's `Origin` or
+  `Sec-Fetch-Site: same-origin`, which browsers send on the editor's own requests. A cross-site
+  image or link, or a script without either header, is refused before the token is added.
+  Browsers send `Sec-Fetch-Site` only to a secure origin, so open a demo editor over HTTPS or on
+  `localhost` or `127.0.0.1`.
+
+A program that reaches the editor directly can still send those headers itself. That is why a
+demo instance belongs on a private network.
+
+Without a token, the editor passes the browser's own `Authorization` header on, and the Origin
+check still applies to every `/api` request.

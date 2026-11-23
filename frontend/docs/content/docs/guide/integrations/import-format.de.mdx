@@ -1,0 +1,176 @@
+---
+title: 'Importformat'
+description: 'Inhalte aus einem anderen System übernehmen: ein Importpaket schreiben, es mit einem Probelauf prüfen und dann in eine Überarbeitung übernehmen.'
+articleId: 'guide.integrations.import-format'
+---
+
+Inhalte aus einem anderen System kommen als **Importpaket**: ein ZIP, das ein von Ihnen
+geschriebener Konverter aus dem Export des anderen Systems erstellt. Der Server prüft das Paket
+gegen den Zielzweig und schreibt es in eine neue Überarbeitung, die wie jede andere geprüft wird.
+Ein Konverter für ein bestimmtes System gehört nicht zum Produkt.
+
+## Das Paket
+
+Ein ZIP mit:
+
+| Pfad              | Was                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `import.json`     | die Inhalte: `modules`, `manuals`, woher sie stammen (`source`), was sich nicht abbilden ließ (`report`) |
+| `assets/<sha256>` | jedes Bild und jeder Anhang, benannt nach dem SHA-256 seiner Bytes (64 Hex-Ziffern in Kleinbuchstaben)   |
+
+Ein Block verweist auf eine Datei als `sha256:<hash>`. Jede andere Datei im Archiv wird mit einer
+Warnung übergangen. Die [Referenz des Importformats](/de/reference/import-format) ist das JSON
+Schema von `import.json`, Feld für Feld; `packages/content-model/docs/import-format.md` im
+Repository erklärt jedes Feld und wie Sie einen Konverter schreiben.
+
+Eine kleine `import.json` mit einem Modul, in den Begriffen der Beispielinhalte:
+
+```json
+{
+  "formatVersion": 1,
+  "source": { "system": "Example Wiki", "exportedAt": "2026-11-02" },
+  "modules": [
+    {
+      "schemaVersion": 1,
+      "id": "charging-the-battery",
+      "meta": {
+        "title": "Charging the battery",
+        "type": "procedure",
+        "lang": "en",
+        "audience": "public",
+        "source": { "system": "Example Wiki", "id": "PAGE-17" }
+      },
+      "blocks": [
+        {
+          "type": "paragraph",
+          "id": "intro",
+          "content": [
+            { "type": "text", "text": "Charge the battery before first use." }
+          ]
+        }
+      ]
+    }
+  ],
+  "report": [
+    { "sourceId": "PAGE-17", "message": "An embedded video was left out." }
+  ]
+}
+```
+
+- Eine Übersetzung ist dieselbe `id` mit einer anderen `meta.lang` und denselben Block-IDs.
+- Setzen Sie `meta.source` bei jedem Modul, damit sich jedes bis zu seinem Ursprung zurückverfolgen
+  lässt.
+- Schreiben Sie alles, was der Konverter nicht abbilden konnte, in `report`: Es erscheint im
+  Bericht des Imports, damit eine Person es nacharbeiten kann.
+
+## Prüfen, dann übernehmen
+
+Importieren braucht eine Rolle mit **admin.roles** sowie **content.edit** und **content.read**.
+Jedes Element wird gegen Ihren Leseumfang geprüft, so wie beim Speichern.
+
+Ein Import wird deshalb von einer Person ausgeführt, nie von einer Integration: Ein Service-Account
+kann keine Rolle mit **admin.roles** haben, sein Token wird also abgewiesen (403 `forbidden`). Im
+Editor erledigen Sie unter **Verwaltung**, dann **Import**, alle Schritte unten ohne Terminal: siehe
+[Inhalte importieren](/de/guide/admin/import). Für ein Skript tragen die Anfragen unten die Sitzung
+einer angemeldeten Person: das Cookie `__Host-openfolia-session`, in der Cookie-Datei `cookies.txt` von
+curl.
+Diese Datei handelt in Ihrem Namen, bis die Sitzung endet: Machen Sie sie nur für Sie lesbar,
+schreiben Sie das Cookie oder das Passwort nie in eine Befehlszeile, und melden Sie sich ab, wenn
+Sie fertig sind.
+
+## Für den Import anmelden
+
+Ist die Anmeldung mit Passwort eingeschaltet, melden Sie sich in der Shell an. `umask 077` macht
+die Cookie-Datei nur für Sie lesbar; `read -rs` liest das Passwort, ohne es anzuzeigen, und der
+Inhalt der Anfrage geht über stdin (`printf` ist in die Shell eingebaut), sodass keines von beiden
+im Verlauf der Shell oder in der Prozessliste erscheint:
+
+```sh
+umask 077
+read -r EMAIL
+read -rs PASSWORD
+printf '{"data":{"type":"PasswordSignIn","attributes":{"email":"%s","password":"%s"}}}' \
+  "$EMAIL" "$PASSWORD" |
+  curl -s -c cookies.txt -H 'Content-Type: application/vnd.api+json' --data-binary @- \
+    https://docs.example.com/api/auth/password/sign-in
+unset PASSWORD
+```
+
+Ein Passwort mit `"` oder `\` muss für JSON maskiert werden (`\"`, `\\`). Eine falsche Adresse oder
+ein falsches Passwort ergibt 401 `invalid-credentials`. Melden sich die Personen nur über einen
+Anbieter an, liegt die Sitzung im Browser, und diese Anfragen können sie nicht tragen: Ein Import
+über die API braucht dann eine Anmeldung dieser Person mit Passwort oder, wo eingeschaltet, mit
+einem Code per E-Mail: `POST /auth/email-code/request` (Typ `EmailCodeRequest`) verschickt den
+Code, und `POST /auth/email-code/sign-in` (Typ `EmailCodeSignIn`, Adresse und Code, so gesendet wie
+oben das Passwort) setzt das Cookie. Siehe
+[Anmeldung mit E-Mail und Passwort](/de/guide/self-hosting/password-sign-in) und
+[Anmeldung mit einem Code per E-Mail](/de/guide/self-hosting/email-code-sign-in).
+
+Wenn Sie fertig sind, melden Sie sich ab, was die Sitzung auf dem Server beendet, und löschen Sie
+dann die Datei:
+
+```sh
+curl -s -b cookies.txt -X POST -H 'Content-Type: application/vnd.api+json' \
+  https://docs.example.com/api/auth/sign-out
+rm cookies.txt
+```
+
+## Importieren
+
+1. **Probelauf.** Laden Sie das Paket mit `dryRun=true` hoch. Nichts wird gespeichert:
+
+   ```sh
+   curl -s -b cookies.txt -H "X-Ccms-Request: 1" \
+     -F file=@bundle.zip -F dryRun=true \
+     https://docs.example.com/api/imports
+   ```
+
+   `meta.report` sagt für jedes Element, ob es angelegt, aktualisiert, übersprungen oder
+   abgewiesen würde, und warum, mit den Problemen des Pakets und den Zählungen. `valid` und
+   `applicable` sagen, ob es sich übernehmen lässt; `applicableWithoutRefused`, ob es sich ohne
+   die abgewiesenen Elemente übernehmen lässt (Schritt 3).
+
+2. **Zum Übernehmen hochladen.** Senden Sie dasselbe, mit `-b cookies.txt`, ohne `dryRun`. Die
+   Antwort ist 201 mit dem Import, eine Stunde lang aufbewahrt (`attributes.expiresAt`). Mit
+   `updateExisting=true` werden vorhandene Module und Handbücher aktualisiert; ohne werden sie
+   übersprungen. `baseRef` nennt einen anderen Zweig, gegen den geprüft wird (Standard: der
+   Standardzweig des Servers).
+3. **Übernehmen.** Die Antwort ist 202; der Import wird im Hintergrund in eine neue Überarbeitung
+   geschrieben, `Import of <Dateiname>`:
+
+   ```sh
+   curl -s -b cookies.txt -X POST -H 'Content-Type: application/vnd.api+json' \
+     https://docs.example.com/api/imports/<importId>/apply
+   ```
+
+   Ein Import mit einem abgewiesenen Element wird abgewiesen (422 `import-not-applicable`). Um den
+   Rest ohne die abgewiesenen Elemente zu importieren, senden Sie `{"meta":{"skipRefused":true}}`
+   als Inhalt (`-d '{"meta":{"skipRefused":true}}'`). Das geht bei jedem Importer, aber nur, wenn
+   der Bericht `applicableWithoutRefused` meldet: Der Server hat das Paket ohne die abgewiesenen
+   Elemente geprüft, und er entscheidet über jedes andere Element genau wie der Bericht. Es ist
+   falsch, wenn etwas anderes ein abgewiesenes Element braucht (ein Handbuch, das ein abgewiesenes
+   Modul nennt, ein Modul, das eine abgewiesene Datei zeigt). Ausgelassen werden genau die
+   abgewiesenen Elemente. Die Beschreibung der Überarbeitung und jede Commit-Nachricht nennen sie
+   mit Grund, und der Bericht des Imports behält sie.
+
+4. **Verfolgen.** `GET /imports/<importId>` (mit `-b cookies.txt`) zeigt Zustand, Fortschritt und,
+   wenn fertig, die Überarbeitung. Prüfen und übernehmen Sie diese wie jede andere. Melden Sie sich
+   dann ab wie oben.
+
+Ein Formular braucht `X-Ccms-Request` (ein beliebiger Wert), den ein Formular einer fremden Website
+nicht senden kann. Derselbe Import noch einmal schreibt für Unverändertes nichts.
+
+## Was abgewiesen wird
+
+- Ein Archiv, das kein sicheres ZIP ist: ein Pfad, der seinen Ordner verlässt, Verknüpfungen,
+  derselbe Pfad zweimal, Verschlüsselung, ZIP64 oder zu viele, zu tiefe oder zu große Dateien
+  (422 `invalid-archive`, mit `meta.reason`).
+- Ein Element außerhalb Ihres Leseumfangs, eines mit einem Validierungsfehler oder eine Datei, die
+  die Upload-Regeln abweisen.
+- Ein Verweis auf eine Datei, die das Paket nicht enthält, außer Sie dürfen sie auf dem Server
+  schon lesen (`missing-asset`).
+
+Die Größengrenzen sind Einstellungen: `CCMS_IMPORT_MAX_BYTES`, `CCMS_IMPORT_MAX_FILES`,
+`CCMS_IMPORT_MAX_UNPACKED_BYTES`, `CCMS_IMPORT_MAX_PATH_DEPTH` und die übrigen in der
+[Referenz der Einstellungen](/de/reference/settings). Für ein DITA-Projekt siehe
+[DITA-Import](/de/guide/integrations/dita-import).

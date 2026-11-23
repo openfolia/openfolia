@@ -1,0 +1,17 @@
+= Installer un siège enfant
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: siège enfant
+
+[#intro]
+Installez les sièges enfant sur les places arrière latérales. Lisez d'abord les consignes de sécurité relatives aux sièges enfant et la notice du siège enfant.
+
+[procedure#steps]
+.Fixer un siège enfant aux points d'ancrage
+. [[step-find]]Repérez les deux points d'ancrage entre l'assise et le dossier d'une place arrière latérale.
+. [[step-click]]Poussez les bras de verrouillage du siège enfant sur les points d'ancrage jusqu'à ce que les deux s'enclenchent.
+. [[step-tether]]Accrochez la sangle supérieure à l'anneau situé derrière le dossier et tendez-la.
+. [[step-check]]Tirez fermement sur le siège enfant : il ne doit pas se détacher.

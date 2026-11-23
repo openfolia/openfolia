@@ -1,0 +1,30 @@
+= Changer une roue
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: crevaison, roue, cric
+
+[#intro]
+La roue de secours, le cric et la clé de roue se trouvent sous le plancher du coffre.
+
+[#ref-secure]
+module::secure-vehicle[]
+
+[#ref-warn]
+module::warning-triangle[]
+
+[procedure#steps]
+.Changer la roue
+. [[step-loosen]]Desserrez les [.term.wheel-bolt]##boulons de roue## d'un tour tant que la roue est encore au sol.
+. [[step-jack]]Placez le cric sous le [.term.jacking-point]##point de levage## le plus proche de la roue et levez le véhicule jusqu'à ce que la roue ne touche plus le sol.
++
+[#img-jack]
+image::demo-image:wheel-change["Cric sous le point de levage du bas de caisse, roue soulevée du sol",width=60%]
+. [[step-remove]]Retirez les boulons de roue et déposez la roue.
+. [[step-fit]]Montez la roue de secours et vissez les boulons à la main.
+. [[step-lower]]Descendez le véhicule et serrez les boulons en croix.
+
+[#after]
+Vérifiez la pression de la roue de secours dès que possible et faites réparer ou remplacer le pneu endommagé.

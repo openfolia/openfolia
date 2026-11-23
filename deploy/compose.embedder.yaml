@@ -1,0 +1,62 @@
+# The local embedding worker, for semantic search with no text leaving the installation (#532;
+# deploy/README.md, "Semantic search"). Together with compose.vector.yaml (pgvector):
+#
+#   docker compose -f compose.yaml -f compose.vector.yaml -f compose.embedder.yaml up -d --build --wait
+#
+# The worker runs a sentence-embedding model on the CPU, loaded once from deploy/embedder-model/
+# (OPENFOLIA_EMBEDDER_MODEL_DIR): model.onnx and tokenizer.json, each checked against the SHA-256
+# pinned in deploy/.env. It is on an internal network of its own, which has no route out of the
+# host, and publishes no port: only the API and the workers reach it. The settings come from
+# deploy/.env (.env.example, "Embedding worker"); the API's CCMS_EMBEDDER_URL, _MODEL and
+# _DIMENSIONS are set here and win over api.env.
+services:
+  embedder:
+    image: ${OPENFOLIA_IMAGES:-openfolia}/embedder:${OPENFOLIA_VERSION:-local}
+    build:
+      context: ..
+      target: embedder
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    restart: unless-stopped
+    environment:
+      CCMS_EMBEDDER_MODEL: ${CCMS_EMBEDDER_MODEL:?set CCMS_EMBEDDER_MODEL (the model's name) in deploy/.env}
+      CCMS_EMBEDDER_DIMENSIONS: ${CCMS_EMBEDDER_DIMENSIONS:?set CCMS_EMBEDDER_DIMENSIONS (the length of its vectors) in deploy/.env}
+      CCMS_EMBEDDER_MODEL_SHA256: ${CCMS_EMBEDDER_MODEL_SHA256:?set CCMS_EMBEDDER_MODEL_SHA256 (sha256sum model.onnx) in deploy/.env}
+      CCMS_EMBEDDER_TOKENIZER_SHA256: ${CCMS_EMBEDDER_TOKENIZER_SHA256:?set CCMS_EMBEDDER_TOKENIZER_SHA256 (sha256sum tokenizer.json) in deploy/.env}
+      CCMS_EMBEDDER_POOLING: ${CCMS_EMBEDDER_POOLING:-}
+      CCMS_EMBEDDER_PREFIX: ${CCMS_EMBEDDER_PREFIX:-}
+      CCMS_EMBEDDER_MAX_TOKENS: ${CCMS_EMBEDDER_MAX_TOKENS:-}
+      CCMS_EMBEDDER_THREADS: ${CCMS_EMBEDDER_THREADS:-}
+      CCMS_EMBEDDER_QUEUE: ${CCMS_EMBEDDER_QUEUE:-}
+    volumes:
+      - ${OPENFOLIA_EMBEDDER_MODEL_DIR:-./embedder-model}:/models:ro
+    tmpfs:
+      - /tmp:mode=1777
+    # The model once (its file's size, about as much again while it loads) and one request's
+    # working memory: 2 GB holds a model of a few hundred MB. CPUs: 0 is no limit.
+    mem_limit: ${OPENFOLIA_EMBEDDER_MEMORY:-2g}
+    memswap_limit: ${OPENFOLIA_EMBEDDER_MEMORY:-2g}
+    pids_limit: 100
+    cpus: ${OPENFOLIA_EMBEDDER_CPUS:-0}
+    networks: [embedder]
+    # No ports: nothing outside the stack reaches it.
+
+  api:
+    environment:
+      CCMS_EMBEDDER_URL: http://embedder:8090/v1/embeddings
+      CCMS_EMBEDDER_MODEL: ${CCMS_EMBEDDER_MODEL:?set CCMS_EMBEDDER_MODEL in deploy/.env}
+      CCMS_EMBEDDER_DIMENSIONS: ${CCMS_EMBEDDER_DIMENSIONS:?set CCMS_EMBEDDER_DIMENSIONS in deploy/.env}
+    networks: [default, embedder]
+
+  worker:
+    environment:
+      CCMS_EMBEDDER_URL: http://embedder:8090/v1/embeddings
+      CCMS_EMBEDDER_MODEL: ${CCMS_EMBEDDER_MODEL:?set CCMS_EMBEDDER_MODEL in deploy/.env}
+      CCMS_EMBEDDER_DIMENSIONS: ${CCMS_EMBEDDER_DIMENSIONS:?set CCMS_EMBEDDER_DIMENSIONS in deploy/.env}
+    networks: [default, embedder]
+
+networks:
+  # Internal: Docker gives it no gateway, so the worker cannot reach anything outside the stack.
+  embedder:
+    internal: true

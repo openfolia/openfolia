@@ -1,0 +1,18 @@
+= Andere Verkehrsteilnehmer warnen
+:schema-version: 1
+:module-type: snippet
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[variant#eu,when="market in (eu)"]
+====
+[#text]
+Ziehen Sie eine Warnweste an und stellen Sie das [.term.warning-triangle]##Warndreieck## mindestens 50 m hinter dem Fahrzeug auf, auf der Autobahn 100 m.
+====
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Ziehen Sie eine Warnweste an. Stellen Sie auf der Autobahn kein [.term.warning-triangle]##Warndreieck## auf: Verlassen Sie das Fahrzeug und warten Sie hinter der Leitplanke. Auf anderen Straßen stellen Sie es mindestens 45 m hinter dem Fahrzeug auf.
+====

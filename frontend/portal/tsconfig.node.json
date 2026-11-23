@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declarationMap": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "lib": ["es2024", "dom"],
+    "types": ["node", "vitest/globals", "astro/client"]
+  },
+  "include": [
+    "build/**/*.ts",
+    "scripts/**/*.ts",
+    "testing/**/*.ts",
+    "tests/**/*.ts",
+    "e2e/**/*.ts",
+    "src/lib/**/*.ts",
+    "vitest.config.mts"
+  ]
+}

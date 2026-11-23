@@ -1,0 +1,56 @@
+---
+title: 'Freigaben und Abzeichnungen'
+description: 'Was eine Überarbeitung braucht, bevor sie zusammengeführt wird, und was geschieht, wenn jemandem die Rolle entzogen wird.'
+articleId: 'guide.review.approvals'
+---
+
+Die Karte **Freigaben** rechts auf der Seite **Prüfung** listet der Reihe nach, was eine
+Überarbeitung braucht und wer es erteilt hat. Ein Ring markiert, worauf sie gerade wartet, ein
+Haken, was erteilt ist.
+
+![Freigaben: die Prüfung erteilt, eine Abzeichnung für Procedure wartet, dann das Zusammenführen](/images/guide/de/review-approvals.webp)
+
+## Was eine Überarbeitung braucht
+
+- **Prüfung**: immer. Eine Prüferin oder ein Prüfer erteilt sie mit **Freigeben**.
+- **Abzeichnung: Procedure** (oder ein anderer Typ): für jeden eingeschränkten Modultyp unter den
+  Modulen, die sie ändert. Wer diesen Typ abzeichnen darf, erteilt sie mit **Abzeichnen**.
+- **Zusammenführen**: sobald alles darüber erteilt ist. Eine Veröffentlicherin oder ein
+  Veröffentlicher führt sie zusammen.
+
+Eine Änderung der Projekteinstellungen braucht jede Abzeichnung, die es gibt. Eingeschränkt ist ein
+Modultyp, wenn eine Administratorin oder ein Administrator ihn unter **Verwaltung** ›
+**Projekteinstellungen** › **Modultypen** als **Eingeschränkt** markiert. Wird ein Typ erst nach dem
+Einreichen eingeschränkt, braucht er seine Abzeichnung trotzdem.
+
+## Eine Zeile lesen
+
+- **Wartet auf eine Prüferin oder einen Prüfer**, **Wartet auf eine Abzeichnung für diesen Typ**:
+  worauf sie gerade wartet.
+- **Nötig, sobald sie eingereicht ist**: Die Überarbeitung ist noch ein Entwurf.
+- **Freigegeben von Sample Reviewer**, mit Zeitpunkt.
+- **In main, sobald freigegeben**, dann **Bereit zum Zusammenführen in main**.
+
+## Wer was erteilen darf
+
+- Dieselbe Person darf die Prüfung und eine Abzeichnung erteilen.
+- Niemand gibt eine Überarbeitung frei, zeichnet sie ab oder gibt sie zurück, die er ganz oder
+  teilweise geschrieben hat. Wer eine Korrektur übertragen oder verschoben hat, ist nicht ihr
+  einziger Autor: Wer sie geschrieben hat, zählt mit. Die Ausnahme steht unter
+  [Die eigene Überarbeitung freigeben](/de/guide/review/self-approval).
+- Eine Abzeichnung braucht eine Rolle, die jedes geänderte Modul dieses Typs abdeckt.
+
+## Wenn jemandem die Rolle entzogen wird
+
+Eine Freigabe zählt nur, solange die Person die Rolle noch hat, mit der sie sie erteilt hat. Nimmt
+eine Administratorin oder ein Administrator ihr die Rolle oder schränkt sie ein, steht dort
+**Freigegeben von Sample Reviewer, zählt nicht mehr: die Rolle wurde entzogen**, und der Schritt
+wartet wieder.
+
+Jemand anderes mit der Rolle kann ihn dann erteilen. Bis dahin wird **Zusammenführen** abgelehnt:
+**Eine nötige Freigabe zählt nicht mehr: der Person wurde die Rolle entzogen. Zur erneuten Prüfung
+zurückgeben.** Eine Prüferin oder ein Prüfer gibt sie mit **Änderungen anfordern** zurück, und der
+Autor reicht sie erneut ein.
+
+Die [Rollen](/de/guide/reference/roles) listen, welche Rolle prüfen, abzeichnen und zusammenführen
+darf.

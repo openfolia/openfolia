@@ -1,0 +1,56 @@
+---
+title: 'Layout and page design warnings'
+description: 'Text cut off or shortened in the PDF, safety messages split across pages, and page design texts that are missing.'
+articleId: 'guide.checks.layout-warnings'
+---
+
+A manual's checks make its PDF and look at what did not fit the page design: a text cut off, a
+running head shortened, a callout legend too long. They also check the page design's own texts for
+each manual that uses it, in each variant and language.
+
+## Text that does not fit
+
+All warnings: the PDF is made, but not as intended.
+
+- **Page design text cut off**: a text of the page design does not fit its place on the title or
+  back page. Shorten the text in the design, or its translation.
+- **Running head shortened**: a running header or footer does not fit on one line, even at its
+  smallest size, so it ends with an ellipsis. Shorten the chapter title, or the design's header or
+  footer text.
+- **Callout legend cut off**: a callout's legend beside its image is taller than the image. Shorten
+  the legend or its translation, put the legend below the image, or ask an administrator to lower
+  the smallest size.
+- **Safety message split across pages**: a safety message is taller than a whole page of the page
+  design, so it breaks across pages. Shorten it, split it into several, or use a design with a
+  larger page or smaller type.
+
+## The page design's texts
+
+Checked at every manual that uses the design, in each variant and language.
+
+- **Page design text not translated** (warning): a text has no version in the manual's language, so
+  the source language's is shown. Translate it in the design.
+- **Page design text left out** (warning): a text has a version neither in the manual's language
+  nor in the source language, so the PDF leaves it out. Add it in the source language.
+- **Page design translation differs** (warning): a region's translation has other blocks than its
+  source. Give the translation the same blocks.
+- **Page design value missing** (warning): a placeholder or title page field has no value for this
+  manual and variant. The placeholder stays as it is, the field is left out. Give the manual the
+  value, or take it out of the design.
+- **Page design text attribute missing** (blocking): a text of the design uses a text attribute
+  this variant has no value for. Give the manual a value.
+- **Page design condition unknown** (blocking): a condition in the design tests a variant attribute
+  this variant does not set, so what it holds is left out.
+- **Page design font missing** (warning): a font file is not stored or is no font, so the PDF uses
+  the standard font. Upload the font again in the design.
+
+See [Page designs](/guide/releases/page-designs) for changing a design.
+
+## When the layout could not be checked
+
+**Layout not checked** (warning): in a project that makes plain PDFs, the PDF of a manual with a
+page design could not be made, because it took too long or the template has an error. So what does
+not fit was not checked. Open the PDF to see why. With PDF/UA-1, the same is **PDF not checked**.
+
+A PDF refused under PDF/UA-1 is still laid out first: its layout warnings show beside the
+**PDF not accessible** issues. See [PDF accessibility](/guide/checks/pdf-accessibility).

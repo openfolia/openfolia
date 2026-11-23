@@ -1,0 +1,115 @@
+---
+title: 'Database'
+description: 'Postgres: the connection, migrations on start, the health checks, the connection pool and its saturation.'
+articleId: 'guide.self-hosting.database'
+---
+
+Postgres holds the operational state: users, roles, locks, comments, workflow, the audit log, the
+background jobs, and indexes that can be rebuilt from the content. The content itself stays in
+Git ([Content repository](/guide/self-hosting/content-repository)). `deploy/compose.yaml` runs
+Postgres 18 in the `postgres` service, on the `postgres` volume.
+
+## The connection
+
+`compose.yaml` builds `CCMS_DATABASE_URL` from `POSTGRES_PASSWORD` itself. For a Postgres of your
+own, the format is:
+
+```text
+postgres://user:password@db.example.com:5432/database?sslmode=verify-full
+```
+
+`compose.yaml` sets `CCMS_DATABASE_URL` under `environment:` of the `api`, `worker`, `backup` and
+`restore` services, which wins over `api.env`. So give your own URL from a file, in a
+`compose.override.yaml` next to `compose.yaml` that blanks the built one (a blank value counts as
+unset) in each of the four:
+
+```yaml
+services:
+  api:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  worker:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  backup:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+  restore:
+    environment:
+      CCMS_DATABASE_URL: ''
+      CCMS_DATABASE_URL_FILE: /run/secrets/database-url
+    secrets: [database-url]
+secrets:
+  database-url:
+    file: /srv/secrets/database-url
+```
+
+The file holds the URL alone. Make the file the container user's and no one else's (`chown 1000` and
+`chmod 400` on the file, `chmod 700` on `/srv/secrets`). `compose.yaml` still requires
+`POSTGRES_PASSWORD`: set it to a random value as before (`openssl rand -hex 24`); the bundled
+database then stays unused. Compose reads the override only when no `-f` and no `COMPOSE_FILE` is
+given: see [Your own additions](/guide/self-hosting/quick-start#step-by-step).
+
+- **TLS:** add `?sslmode=verify-full`. The certificate is verified for `require` too, so for a
+  private CA set `NODE_EXTRA_CA_CERTS` to its file.
+- **A connection pooler:** migrations hold a Postgres advisory lock, which needs a direct
+  connection or a session-mode pooler, not a transaction-mode one.
+- **Extensions:** the migrations create `pg_trgm` (for typos in search). Semantic search needs
+  `vector` as well ([Semantic search](/guide/self-hosting/semantic-search)).
+
+## Migrations
+
+The API applies pending migrations when it starts, before it answers requests, and logs
+`Migrations applied`. Servers starting together apply each migration once. A worker
+(`CCMS_ROLE=worker`) never migrates: it waits up to 120 s for the API's migrations, then stops
+saying so. Migrations only go forward: see [Upgrades](/guide/self-hosting/upgrades).
+
+- `CCMS_DATABASE_MIGRATE=false` stops the API migrating. Then run them yourself as a deploy step:
+  `docker compose run --rm api node dist/database/migrate.main.js`.
+- A migration statement waits at most `CCMS_DATABASE_LOCK_TIMEOUT_MS` (10 s) for a table lock;
+  past it the attempt rolls back and is tried again, up to `CCMS_DATABASE_MIGRATE_ATTEMPTS` (3)
+  times, with growing pauses. So a long transaction on a table never makes every query on it wait.
+
+A missing or malformed URL, an unreachable server, refused credentials, a missing database or a
+failing migration stop the start with a message saying which, never the password.
+
+## Health
+
+Two routes need no token. `GET /health` always, and `GET /health/ready` when it answers 200,
+answer `{ "status", "database", "pool", "blobs" }`:
+
+- `GET /health` is liveness: always 200 while the server runs. Use it for restart decisions: the
+  content and PDF routes work without the database.
+- `GET /health/ready` is readiness: 200 when everything is `ok`, else 503 with `Retry-After` and
+  the code `database-unavailable` (the database did not answer within 2 seconds),
+  `database-saturated` (the pool is exhausted) or `blob-store-unavailable`. Point the load
+  balancer at this one: it takes the instance out of rotation and puts it back once it recovers.
+  The container images' own health checks use it too.
+
+## The connection pool
+
+Each server process has a pool of at most `CCMS_DATABASE_POOL_MAX` connections (default 10), and
+the job queue a pool of its own, `CCMS_JOBS_POOL_MAX` (default 4). While queries wait for a free
+connection, `pool` is `saturated` and `/health/ready` answers 503 `database-saturated`.
+
+When that happens under normal load, raise `CCMS_DATABASE_POOL_MAX`, and keep the sum over every
+process (API, workers, backup service) below the database's `max_connections`. Searches run at
+most `CCMS_SEARCH_CONCURRENCY` (4) at once per server, so they never hold the whole pool.
+
+## Timeouts for writes
+
+Write transactions that hold rows others wait for (a save point, abandoning a change set,
+breaking locks) wait at most `CCMS_DATABASE_WRITE_LOCK_TIMEOUT_MS` (5 s) for a lock, and each of
+their statements runs at most `CCMS_DATABASE_WRITE_STATEMENT_TIMEOUT_MS` (30 s). Past either the
+request rolls back and answers 503 `database-timeout` with `Retry-After`, never a 500.
+
+## Backups
+
+The database is backed up with the content, the files and the instance secret key: see
+[Backups on the server](/guide/self-hosting/backups).

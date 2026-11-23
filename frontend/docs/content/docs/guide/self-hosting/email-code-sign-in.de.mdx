@@ -1,0 +1,88 @@
+---
+title: 'Anmeldung mit einem Code per E-Mail'
+description: 'Einmalige Codes per E-Mail, neben Passwörtern oder als einziger Weg zur Anmeldung: die Einstellungen, die Grenzen und wann ein Code endet.'
+articleId: 'guide.self-hosting.email-code-sign-in'
+---
+
+Mit einem Code per E-Mail melden sich Personen ohne Passwort an: Die Anmeldeseite bietet **Code per
+E-Mail senden** an, die Person gibt ihre Adresse ein und erhält einen sechsstelligen Code und einen
+Link, der sie anmeldet. Dafür muss [E-Mail](/de/guide/self-hosting/email) eingerichtet sein; im
+Demo-Modus funktioniert es nie.
+
+## Neben Passwörtern
+
+`CCMS_EMAIL_CODE_SIGN_IN` ist standardmäßig eingeschaltet, wo E-Mail (`CCMS_MAIL_URL` und der
+[geheime Schlüssel](/de/guide/self-hosting/secret-key), den es braucht) eingerichtet und die
+[Passwort-Anmeldung](/de/guide/self-hosting/password-sign-in) eingeschaltet ist. Mit `off` schalten
+Sie es aus.
+
+Jede Person mit einem aktiven Konto und einer E-Mail-Adresse kann es nutzen, mit Passwort oder ohne.
+Wer lieber Codes verwendet, muss nie ein Passwort setzen.
+
+## Nur Codes
+
+Für die Anmeldung nur mit Codes, ohne Passwörter und ohne Identitätsanbieter, richten Sie
+[E-Mail](/de/guide/self-hosting/email) in `deploy/.env` ein (`compose.yaml` gibt die
+`CCMS_MAIL_*`-Einstellungen von dort weiter):
+
+```sh
+CCMS_MAIL_URL=smtp://mail.example.com:587
+CCMS_MAIL_FROM=docs@example.com
+CCMS_PUBLIC_URL=https://docs.example.com/
+```
+
+und die beiden Anmelde-Einstellungen in `deploy/api.env` (`compose.yaml` gibt sie nicht weiter; in
+`deploy/.env` bewirkten sie nichts):
+
+```sh
+CCMS_PASSWORD_SIGN_IN=off
+CCMS_EMAIL_CODE_SIGN_IN=on
+```
+
+Mit `CCMS_PASSWORD_SIGN_IN=off` bietet nur ein ausdrückliches `on` Codes an, und `on` ohne
+`CCMS_MAIL_URL` wird beim Start abgelehnt. Die Anmeldeseite zeigt dann nur **Code per E-Mail
+senden**. Der erste Admin (`CCMS_FIRST_ADMIN_EMAIL` oder `first-admin`) meldet sich mit einem Code
+an seiner Adresse an: Das Protokoll beim Start sagt das, statt einen Link auszugeben.
+
+Dieselbe Einstellung bietet Codes auch neben [OpenID Connect](/de/guide/self-hosting/oidc) bei
+ausgeschalteten Passwörtern an. Bedenken Sie, dass ein Code ein Weg hinein ist, der nicht über den
+Anbieter führt.
+
+## Der Code
+
+- **Sechs Ziffern und ein Link**, jeweils einmal gültig, für `CCMS_EMAIL_CODE_MINUTES` Minuten (1
+  bis 60, Standard 10). Der Link steht nur in der E-Mail, wenn `CCMS_PUBLIC_URL` gesetzt ist.
+- **Ein neuer Code** widerruft den früheren.
+- **Dieselbe Antwort** für jede Adresse, bekannt oder nicht, sodass die Seite nie verrät, ob jemand
+  ein Konto hat.
+
+## Grenzen
+
+Anfragen nach einem Code und falsche Codes zählen jeweils je Konto, unter
+`CCMS_PASSWORD_FAILURES_MAX` (getrennt von Passwörtern und voneinander), und je Client-Adresse,
+unter `CCMS_AUTH_FAILURES_MAX`. Über einer der Grenzen lautet die Antwort 429
+`too-many-failed-attempts`. Sobald die falschen Codes die Versuche des Kontos aufgebraucht haben,
+wird der Code widerrufen. Jeder Code erlaubt außerdem höchstens fünf Versuche.
+
+## Wann ein offener Code endet
+
+Ein Code und sein Link funktionieren nicht mehr, wenn:
+
+- die Person ein Passwort über einen Link setzt oder ihr Passwort ändert;
+- das Konto deaktiviert wird;
+- sich die Adresse der Person ändert, durch einen Admin, durch den Identitätsanbieter bei der
+  Anmeldung oder durch den Seed: Ein Code gilt nur, solange die Adresse, an die er ging, noch die
+  der Person ist;
+- er benutzt wurde, abgelaufen ist oder ein neuerer Code ihn ersetzt.
+
+Ein Code, der angefordert wird, während das Passwort gesetzt oder geändert wird, endet ebenfalls
+damit.
+
+## Ausschalten
+
+`CCMS_EMAIL_CODE_SIGN_IN=off` lehnt neue Codes ab und beendet die Sitzungen, die mit einem Code
+begonnen haben. Sitzungen haben dieselben Grenzen wie jede andere Anmeldung: 8 Stunden ohne Anfrage
+(`CCMS_SESSION_IDLE_MINUTES`) und höchstens 7 Tage (`CCMS_SESSION_MAX_HOURS`).
+
+Wie bei Passwörtern lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer, wo sich Personen
+anmelden.

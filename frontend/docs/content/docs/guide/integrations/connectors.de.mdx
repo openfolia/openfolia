@@ -1,0 +1,130 @@
+---
+title: 'Import-Konnektoren'
+description: 'Seiten eines Wiki-Markups einmal übernehmen oder Einträge eines Issue-Trackers immer wieder einholen, stets in eine Überarbeitung zur Prüfung.'
+articleId: 'guide.integrations.connectors'
+---
+
+Konnektoren holen Inhalte aus anderen Werkzeugen über das
+[Importformat](/de/guide/integrations/import-format), den einzigen Weg hinein: Sie erzeugen ein
+Import-Bundle, und der Import prüft es und schreibt es in eine Überarbeitung, die wie jede andere
+geprüft wird. Ein Konnektor veröffentlicht nichts. Konnektoren sind eigene, optionale Werkzeuge in
+`connectors/` des Quellcodes; die Plattform hängt nicht von ihnen ab, und sie rufen nichts auf,
+was Sie nicht eingerichtet haben (keine Telemetrie).
+
+| Konnektor                    | Wofür                                                                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Wiki-Markup-Konverter        | ein Wiki einmal übernehmen: Seiten eines allgemeinen Wiki-Markups werden ein Import-Bundle                                 |
+| Tracker-Konnektor (Beispiel) | Versionshinweise oder Funktionsbeschreibungen aus Einträgen eines Issue-Trackers, nach Zeitplan oder auf Aufruf der Quelle |
+
+Welches Feld der Quelle zu welchem Modultyp, welcher Zielgruppe, welcher Facette oder Variante wird,
+steht in einer Zuordnungsdatei, nie im Code. Jeder Wert darin muss einer sein, den Ihre
+`openfolia.yaml` einrichtet: Das Bundle wird dagegen geprüft, bevor etwas geschrieben wird.
+
+## Ein Wiki übernehmen
+
+1. Exportieren Sie die Seiten als Dateien: je Seite eine Datei `<name>.wiki`, ihre Anhänge in einem
+   Ordner `<name>/` daneben. Eine Seite darf mit Front Matter beginnen, das ihre `id`, ihren
+   `title`, ihre `labels` und ihre `order` nennt.
+2. Schreiben Sie die Zuordnung: die Sprache, den Modultyp, die Zielgruppe, was ein Seitenlabel
+   setzt, wie Info-, Tipp-, Hinweis- und Warnkästen abgebildet werden (als Hinweise oder
+   Sicherheitshinweise), und auf Wunsch ein Handbuch mit allen Seiten.
+3. Konvertieren Sie, geprüft gegen Ihre Konfiguration:
+
+   ```sh
+   node connectors/wiki-markup/dist/main.js export/ --mapping mapping.yaml \
+     --out bundle.zip --config openfolia.yaml
+   ```
+
+4. Lesen Sie, was es ausgibt: jedes Konstrukt, das es nicht umsetzen konnte, je Seite und Block,
+   beginnend mit einem festen Code wie `[unknown-macro]` oder `[page-link-outside]`. Dieselbe Liste
+   steht im `report` des Bundles und im Bericht des Imports. Nichts geht stillschweigend verloren:
+   Ein unbekanntes Makro bleibt wörtlich als Passthrough-Block erhalten, und Text, dessen
+   Formatierung kein Gegenstück hat (Farbe, Unterstreichung, eine Erwähnung), bleibt als
+   einfacher Text.
+5. Importieren Sie `bundle.zip` wie unter [Importformat](/de/guide/integrations/import-format):
+   zuerst ein Probelauf, dann hochladen und übernehmen, und die Überarbeitung prüfen.
+
+Derselbe Export ergibt bei erneuter Konvertierung dieselben Modul- und Block-IDs, sodass ein
+zweiter Import mit `updateExisting=true` ändert, was sich geändert hat, und den Rest überspringt.
+
+## Tracker-Einträge nach Zeitplan einholen
+
+Der Tracker-Konnektor ist ein Beispiel: Er liest Einträge (ID, Art, Status, Titel, eine
+Beschreibung im Wiki-Markup, Labels und Felder) aus einer Datei. Ein Konnektor für einen echten
+Tracker ersetzt diese Quelle durch eine, die die API des Trackers liest, unter der Adresse und mit
+dem Zugang, die Sie ihm geben.
+
+Jeder Lauf macht aus den Einträgen, die die Zuordnung einschließt (nach Art, Status und Label), je
+ein Modul und auf Wunsch ein Handbuch, das sie auflistet, jeder Eintrag in den Varianten, auf die
+ein Feld des Eintrags verweist. Er prüft das Bundle zuerst mit einem Probelauf: Hat sich nichts
+geändert, hört er dort auf und schreibt nichts. Sonst importiert er es in eine neue Überarbeitung
+und reicht diese zur Prüfung ein.
+
+Ein Import ist der einer Person, daher handelt der Konnektor mit Ihrer Sitzung, wie die Anfragen
+unter [Importformat](/de/guide/integrations/import-format#sign-in-for-the-import): Melden Sie sich
+mit curl in eine Cookie-Datei an, die nur Sie lesen können, und starten Sie ihn:
+
+```sh
+export CCMS_CONNECTOR_API_URL=https://docs.example.com/api
+export CCMS_CONNECTOR_SESSION_FILE=$HOME/.openfolia/cookies.txt
+node connectors/tracker/dist/main.js --mapping mapping.yaml --items items.json --every 60
+```
+
+- `--every 60` lässt ihn stündlich laufen, bis er beendet wird; ohne läuft er einmal, für cron.
+- Der Konnektor ruft nur `CCMS_CONNECTOR_API_URL` auf: https, oder http zu diesem Rechner. Er
+  lehnt eine Cookie-Datei ab, die andere lesen können, liest sie bei jedem Lauf neu (erneutes
+  Anmelden erneuert sie) und gibt sie nie aus.
+- Die Überarbeitung ist Ihre, daher können Sie sie nicht freigeben: Eine andere prüfende Person
+  gibt sie frei, und sie wird wie jede andere zusammengeführt.
+- Solange eine offene Überarbeitung ein Modul hält, das ein Lauf ändern würde (die des vorigen
+  Laufs, noch in Prüfung), schreibt der Lauf nichts und nennt die Überarbeitung, die es hält; der
+  erste Lauf, nachdem sie zusammengeführt oder verworfen ist, holt die Änderungen nach.
+
+## Einen Lauf aus der Quelle starten
+
+Statt auf den Zeitplan zu warten, kann die Quelle einen Lauf starten: Ändert sich ein Eintrag,
+ruft sie den Konnektor auf, der sofort antwortet und den Lauf einreiht. Starten Sie den Konnektor
+mit `--listen` und einem Geheimnis, das nur er und die Quelle kennen:
+
+```sh
+export CCMS_CONNECTOR_WEBHOOK_SECRET=$(openssl rand -hex 32)   # der Quelle denselben Wert geben
+node connectors/tracker/dist/main.js --mapping mapping.yaml --items items.json --listen 8080 --every 1440
+```
+
+Er lauscht auf `127.0.0.1:8080` (`--listen 0.0.0.0:8080` für alle Adressen); stellen Sie ihn hinter
+Ihren Reverse-Proxy mit https, wenn die Quelle von anderswo aufruft. Mit `--every` läuft der
+Zeitplan weiter, als Rückfall für einen Aufruf, der nie kam. Die Quelle sendet `POST /trigger`,
+signiert:
+
+- **Die Signatur** ist der Header `X-Openfolia-Signature: t=<Unix-Sekunden>,v1=<hex>`:
+  HMAC-SHA256 mit dem Geheimnis über den Zeitstempel, einen Punkt und den unveränderten Body, als
+  Hex in Kleinbuchstaben (das Rezept der Webhooks der Plattform selbst). Der Body kann bis 64 KiB
+  alles sein, etwa das Ereignis der Quelle: Er wird geprüft, nie gelesen. Der Lauf holt die
+  Einträge aus der Quelle wie jeder Lauf.
+
+  ```sh
+  body='{"event":"item.changed"}'; t=$(date +%s)
+  sig=$(printf '%s.%s' "$t" "$body" | openssl dgst -sha256 -hmac "$CCMS_CONNECTOR_WEBHOOK_SECRET" -hex | sed 's/^.* //')
+  curl -X POST https://connector.example.com/trigger -H "X-Openfolia-Signature: t=$t,v1=$sig" --data "$body"
+  ```
+
+- **Abgelehnt:** eine fehlende oder falsche Signatur oder eine, deren Zeit mehr als fünf Minuten
+  hinter der Uhr des Konnektors liegt, mehr als eine Minute vor ihr oder vor seinem Start (401);
+  dieselbe signierte Anfrage noch einmal (409); ein Body über 64 KiB (413). Nach 60 solchen
+  Ablehnungen pro Minute von einer Adresse antwortet er stattdessen mit 429 (mit `Retry-After`);
+  eine richtig signierte Anfrage wird so nie zurückgehalten. Halten Sie die Uhr der Quelle richtig
+  (eine nachgehende wird nach jedem Start des Konnektors so lange abgelehnt), und signieren Sie
+  jeden Versuch neu. Eine 409 heißt, dass dieselbe Anfrage schon ankam und ihr Lauf eingereiht ist:
+  Behandeln Sie sie als zugestellt.
+- **Eingereiht, nie zwei zugleich.** Die Antwort ist 202, `{"run":"queued"}`, bevor der Lauf
+  beginnt. Läufe folgen einander, höchstens einer pro Minute; Aufrufe, während ein Lauf wartet,
+  gehen in ihm auf (`already-queued`), und einer während eines Laufs verlangt einen weiteren danach.
+  Läufe nach Zeitplan und auf Aufruf teilen diese Warteschlange.
+- **Dieselben Ergebnisse:** Ein ausgelöster Lauf ist ein Lauf wie jeder andere. Er hört bei
+  `nothing-new` oder `held` auf oder importiert in eine neue Überarbeitung, die zur Prüfung
+  eingereicht wird, und gibt diese Zeile aus.
+- Beenden (Strg-C, SIGTERM) schließt den Empfang, verwirft den noch wartenden Lauf und lässt den
+  laufenden zu Ende gehen.
+
+Die READMEs der Konnektoren nennen das Markup, das sie lesen, jeden Berichtscode und jeden
+Schlüssel der Zuordnung.

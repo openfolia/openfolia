@@ -1,0 +1,9 @@
+= Switch the vehicle off
+:schema-version: 1
+:module-type: snippet
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Switch the vehicle off: press the [.ui]##START/STOP## button and wait until the instrument panel goes dark.

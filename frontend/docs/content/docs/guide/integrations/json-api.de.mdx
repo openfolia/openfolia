@@ -1,0 +1,93 @@
+---
+title: 'JSON:API-Konventionen'
+description: 'Der Medientyp, die Form der Ressourcen, das Blättern, Refs, Caching und das Fehlerformat, die alle Routen teilen.'
+articleId: 'guide.integrations.json-api'
+---
+
+Jede JSON-Antwort der API folgt [JSON:API](https://jsonapi.org/format/). Was diese Seite sagt, gilt
+für jede Route; die [API-Referenz](/de/api) enthält die eigenen Parameter und Schemas jeder Route.
+
+## Der Medientyp
+
+JSON geht in beide Richtungen als `application/vnd.api+json`, genau so.
+
+- **Lesen:** Senden Sie einen `Accept`-Header, der ihn zulässt, sonst lautet die Antwort 406.
+- **Schreiben:** Jede Anfrage, die etwas ändern kann (jede Methode außer `GET`, `HEAD` und
+  `OPTIONS`), muss `Content-Type: application/vnd.api+json` senden, **auch ohne Body** (ein
+  `DELETE`, ein Statuswechsel). Ohne ihn lautet die Antwort 415 `content-type-required`, mit einem
+  anderen Typ 415 `unsupported-media-type`. Die Routen, die einen Upload annehmen
+  (`multipart/form-data`: Bilder für das Branding, Dateien einer Überarbeitung, Importe,
+  Übersetzungsimporte), brauchen zusätzlich den Header `X-Ccms-Request` mit einem beliebigen Wert;
+  ohne ihn lautet die Antwort 403 `request-header-required`.
+
+So kann ein Formular einer anderen Website nichts ändern. Die API sendet keine CORS-Header, eine
+Seite auf einem anderen Origin kann sie also nicht aus einem Browser aufrufen.
+
+## Ressourcen
+
+Eine Ressource ist `{ type, id, attributes, relationships, meta }`:
+
+- `attributes` enthalten gespeicherte Daten, in camelCase.
+- `meta` enthält, was der Server daraus ableitet: Validierungsprobleme, Zusammenfassungen, wo ein
+  Modul verwendet wird.
+- JSON:API reserviert `id` und `type`, daher heißen ID und Typ eines Moduls `moduleId` und
+  `moduleType`.
+
+## Listen werden geblättert
+
+Jede Liste wird geblättert, auch eine kurze:
+
+- `page[number]` (ab 1) und `page[size]` (Standard 50, höchstens 200);
+- `meta.page` mit `currentPage`, `lastPage`, `perPage` und `total`;
+- `links` mit `self`, `first`, `last`, `prev` und `next`: Folgen Sie `next`, bis es fehlt.
+
+Filter heißen `filter[<name>]`. Ein Query-Parameter, den eine Route nicht unterstützt, ist 400
+`unsupported-parameter`, sodass ein falsch geschriebener Filter nie stillschweigend alles liefert.
+
+Der [Änderungs-Feed](/de/guide/integrations/change-feed) blättert anders, mit einem Cursor
+(`page[cursor]` und `page[size]`), denn er liest, was nach einem Zeitpunkt geschah, statt einer
+festen Liste.
+
+## Refs und Caching
+
+Jede Inhaltsroute liest eine Version der Inhalte, gewählt mit `?ref=`: ein Branch, der Tag einer
+Veröffentlichung oder eine Commit-ID. Ohne ihn gilt der Standard des Servers (`CCMS_DEFAULT_REF`,
+normalerweise `main`). Ein Token mit nur `content.read` darf `main` und die Tags der
+Veröffentlichungen lesen; andere Refs brauchen `content.read.draft`.
+
+- **`X-Ccms-Commit`** nennt den Commit, aus dem eine Antwort gelesen wurde. Um eine Liste mit
+  mehreren Seiten einheitlich zu lesen, lesen Sie jede Seite beim Tag einer Veröffentlichung, der
+  sich nie bewegt. Ein Token mit nur `content.read` darf einen Commit nur lesen, solange `main` oder
+  ein Tag auf ihn zeigt: Seiten, die an den Commit der ersten Seite bei `main` gebunden sind,
+  antworten 404 `not-found`, sobald `main` weiterrückt, und das Lesen beginnt erneut bei `main`.
+- **Per Commit-ID** ändert sich eine Antwort nie und ist als `immutable` markiert.
+- **Per Branch oder Tag** ist sie `no-cache` mit einem `ETag`: Senden Sie ihn als `If-None-Match`
+  zurück, und eine unveränderte Antwort ist ein günstiges 304.
+- **Der Tag einer zurückgezogenen Veröffentlichung** bleibt lesbar; jede Antwort, die bei ihm
+  gelesen wird, trägt `X-Ccms-Withdrawn: true`.
+
+## Fehler
+
+Fehler haben auf jeder Route dieselbe Form, auch bei binären Antworten und HTML-Seiten:
+
+```json
+{
+  "errors": [
+    {
+      "status": "400",
+      "title": "Bad Request",
+      "detail": "…",
+      "code": "unsupported-parameter",
+      "source": { "parameter": "filter[langs]" }
+    }
+  ]
+}
+```
+
+- **Entscheiden Sie nach `code`**, der stabil ist. `detail` ist Text für Menschen und kann sich
+  ändern.
+- `source.parameter` nennt einen falschen Parameter, `source.pointer` einen falschen Teil des Bodys.
+- `meta.retryAfter` ist, wo ein Fehler es hat, die Wartezeit in Sekunden. Bei 429 oder 503 mit einem
+  Header `Retry-After` warten Sie so lange, bevor Sie erneut fragen.
+
+Alle Codes stehen in der [Referenz der Fehlercodes](/de/reference/errors).

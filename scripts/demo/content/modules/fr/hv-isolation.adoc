@@ -1,0 +1,17 @@
+= Mettre en sécurité le système haute tension
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: technician
+:facet-product: fenna
+:keywords: haute tension, consignation
+
+[#intro]
+Consignez le système haute tension avant toute intervention sur des composants haute tension, ainsi qu'avant tout travail à proximité de ceux-ci avec des outils thermiques ou de coupe.
+
+[procedure#steps]
+.Consigner le système haute tension
+. [[step-off]]Éteignez le véhicule et gardez la clé à au moins 5 m.
+. [[step-12v]]Débranchez la borne négative de la batterie 12 V.
+. [[step-plug]]Retirez la fiche de service orange sous la banquette arrière et rangez-la sous clé.
+. [[step-wait]]Attendez 5 minutes, puis vérifiez avec un testeur bipolaire l'absence de tension dans le système.

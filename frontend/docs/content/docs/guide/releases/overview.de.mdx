@@ -1,0 +1,68 @@
+---
+title: 'Eine Veröffentlichung erstellen'
+description: 'Die Liste der Veröffentlichungen, eine neue Veröffentlichung für eine Produktversion und ihre Seite.'
+articleId: 'guide.releases.overview'
+---
+
+Eine Veröffentlichung ist ein fester Stand der veröffentlichten Inhalte für eine Produktversion.
+Sie markiert einen Commit der veröffentlichten Inhalte und erzeugt aus jedem Handbuch PDF-Dateien.
+Eine Veröffentlichung lässt sich später zurückziehen, aber nie ändern.
+
+## Die Liste der Veröffentlichungen
+
+Wählen Sie **Veröffentlichungen** in der Seitenleiste. Die Liste zeigt alle Veröffentlichungen, die
+neueste zuerst, auch zurückgezogene: ihr **Produkt**, ihre **Produktversion**, wie weit ihre
+**Dateien** sind, ihren **Status** und wer sie wann veröffentlicht hat. Mit den Filtern **Produkt**
+und **Status** oben grenzen Sie die Liste ein.
+
+Wählen Sie eine Zeile, um die Veröffentlichung neben der Liste zu sehen: wer sie veröffentlicht
+hat, ihre ersten Dateien zum Herunterladen, **Dateien und Änderungen** für ihre Seite und
+**Veröffentlichung zurückziehen**.
+
+![Die Liste der Veröffentlichungen mit einer gewählten Veröffentlichung und ihrem Bereich daneben](/images/guide/de/release-list.webp)
+
+## Eine Veröffentlichung erstellen
+
+Sie brauchen eine Rolle, die veröffentlichen darf. Dann:
+
+1. Wählen Sie **Neue Veröffentlichung**. Der Dialog **Veröffentlichung erstellen** hat vier
+   Schritte.
+2. **Produkt und Version:** Wählen Sie das **Produkt** und geben Sie die **Produktversion** ein,
+   etwa `2.1`. Der Dialog nennt den Commit, den die Veröffentlichung markiert.
+3. Wählen Sie **Weiter**. **Prüfungen** listet die Prüfungen jedes Handbuchs zu diesem Commit.
+   Beheben Sie zuerst jedes blockierende Problem: **Beheben** öffnet die Stelle. Warnungen halten
+   die Veröffentlichung nicht auf, aber Sie bestätigen sie mit **Trotz 55 Warnungen
+   veröffentlichen** (mit Ihrer Anzahl).
+4. Wählen Sie **Weiter**. **Ausgaben** listet die Sprachen und Handbücher, die die
+   Veröffentlichung erzeugt, und wie die Übersetzungen jeder Sprache stehen.
+5. Wählen Sie **Weiter**. Unter **Hinweise** schreiben Sie eine **Zusammenfassung** für die Leser
+   und, wenn Sie möchten, Zusammenfassungen pro Sprache. Schalten Sie **Wesentliche Änderung** ein,
+   damit die Leser der geänderten Handbücher benachrichtigt werden. Siehe
+   [Hinweise und Änderungen](/de/guide/releases/release-notes).
+6. Wählen Sie **Veröffentlichung erstellen**.
+
+![Der Dialog Veröffentlichung erstellen im ersten Schritt, mit Produkt und Produktversion](/images/guide/de/release-new.webp)
+
+Das Band über jedem Schritt sagt, wie die Prüfungen stehen, etwa **55 Warnungen, nichts
+blockiert**. Solange ein blockierendes Problem offen ist, bleibt **Veröffentlichung erstellen**
+gesperrt und sagt, warum.
+
+![Der Schritt Prüfungen: die Warnungen jedes Handbuchs mit Beheben, darunter die Bestätigung](/images/guide/de/release-new-checks.webp)
+
+Jede Produktversion lässt sich einmal veröffentlichen. Eine Version, die schon eine
+Veröffentlichung hat, lehnt der Dialog ab.
+
+## Die Seite der Veröffentlichung
+
+Danach öffnet sich die Seite der Veröffentlichung: ihr Name, **Veröffentlicht**, wer sie erstellt
+hat, ihr Commit und ihre Markierung. Sie hat drei Teile:
+
+- **Hinweise:** die Zusammenfassung, pro Sprache. Siehe
+  [Hinweise und Änderungen](/de/guide/releases/release-notes).
+- **Änderungen:** was sich seit der vorigen Veröffentlichung des Produkts geändert hat.
+- **Dateien:** jedes PDF, während es erzeugt wird. Siehe
+  [Die Dateien einer Veröffentlichung](/de/guide/releases/outputs).
+
+![Die Seite einer Veröffentlichung: Hinweise, Änderungen und Dateien](/images/guide/de/release-page.webp)
+
+**Alle Veröffentlichungen** führt zurück zur Liste.

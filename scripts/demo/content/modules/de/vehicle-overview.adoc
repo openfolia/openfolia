@@ -1,0 +1,30 @@
+= Ihr Fahrzeug im Überblick
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Übersicht
+
+[#intro]
+Der {model-name} ist ein fünfsitziges Kompaktfahrzeug mit Reifen der Größe {tyre-size}.
+
+[#img-overview]
+image::demo-image:vehicle-overview["Seitenansicht des Fahrzeugs mit seinen wichtigsten Teilen",width=90%]
+<.> [callout#v-bonnet,x=0.2,y=0.42,label-x=0.12,label-y=0.08] Motorhaubenentriegelung
+<.> [callout#v-mirror,x=0.34,y=0.46,label-x=0.34,label-y=0.08] Außenspiegel
+<.> [callout#v-flap,x=0.855,y=0.57,label-x=0.9,label-y=0.08] Tankklappe oder Ladeklappe
+<.> [callout#v-jack,x=0.36,y=0.79,label-x=0.4,label-y=0.95] Wagenheberaufnahme
+<.> [callout#v-wheel,x=0.22,y=0.8,label-x=0.1,label-y=0.95] Vorderrad
+
+[variant#estate,when="body in (estate)"]
+====
+[#estate-text]
+Der Kombi hat ein längeres Dach mit Dachreling und hinter der Rücksitzbank einen Laderaum von 580 l.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Das Elektromodell hat eine Batterie mit 58 kWh im Fahrzeugboden und seine Ladebuchse hinter der Klappe am linken hinteren Kotflügel.
+====

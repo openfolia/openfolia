@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backlog file for pnpm backlog:create (scripts/create-backlog.mjs)",
+  "description": "Milestones and issues by key. Each key is written as the item's marker (<!-- backlog:key <key> -->), so a re-run matches what exists and makes only what is missing; it never rewrites an existing item.",
+  "type": "object",
+  "required": ["issues"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "milestones": {
+      "description": "In sprint order: an issue may wait only for issues in its own or an earlier milestone.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "title"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/$defs/key",
+            "examples": ["sprint-0", "sprint-1"]
+          },
+          "title": {
+            "type": "string",
+            "description": "An unmarked milestone whose title starts the same (\"Sprint 1 ·\") is adopted.",
+            "examples": ["Sprint 0 · Discovery"]
+          },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "labels": {
+      "description": "Colours and descriptions for labels the issues use; a used label not listed here is made grey.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "color": { "type": "string", "pattern": "^[0-9a-fA-F]{6}$" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "title"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/$defs/key",
+            "examples": ["gate.1", "invoice.build"]
+          },
+          "title": { "type": "string" },
+          "body": {
+            "type": "string",
+            "description": "Markdown, without the Model and Waits-for lines and the marker: the script writes those (Model from fields.Model, Waits for from waitsFor as issue numbers)."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "A milestone's key."
+          },
+          "labels": { "type": "array", "items": { "type": "string" } },
+          "parent": {
+            "type": "string",
+            "description": "The key of the issue (an epic) this one is a sub-issue of."
+          },
+          "waitsFor": {
+            "description": "Keys of the issues this one waits for: the Waits-for line and GitHub's blocked-by links. They are made first.",
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "fields": {
+            "description": "Board values, set only where the issue's item has none yet. Status is Backlog unless given.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "Status": {
+                "enum": ["Backlog", "Ready", "In progress", "In review", "Done"]
+              },
+              "Priority": { "enum": ["P0", "P1", "P2"] },
+              "Size": { "enum": ["XS", "S", "M", "L", "XL"] },
+              "Model": { "enum": ["Opus", "Sonnet"] },
+              "Review rounds": { "type": "number" },
+              "Stopped": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }
+  }
+}

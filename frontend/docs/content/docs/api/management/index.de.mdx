@@ -1,0 +1,16 @@
+---
+title: 'Management API'
+description: 'Jede Route des Servers, die nicht zur Delivery API gehört.'
+---
+
+Die Management API umfasst alles Weitere, was der Server tut: Überarbeitungen und ihre Prüfung,
+Sperren und Arbeitskopien, Veröffentlichungen und ihre Ausgaben, Übersetzungen, Importe, Kommentare,
+Prüfungen, Benutzer, Rollen und Dienstkonten, Branding, Webhooks, Sicherungen, das Audit-Log.
+
+Jede Operation steht einmal: die lesenden Routen über freigegebene Inhalte sind in der
+[Delivery API](/de/api/delivery), und das vollständige Dokument des Servers (`GET /openapi.json`
+auf einem laufenden Server) enthält beide. Die Seiten der einzelnen Operationen sind auf Englisch.
+
+Das Dokument der Management API zum Herunterladen:
+
+<OpenAPIDownload api="management" lang="de" />

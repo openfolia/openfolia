@@ -1,0 +1,21 @@
+= Dimensions and weights
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: dimensions, weight
+
+[#table,cols="2,1,1",options=header]
+.Dimensions and weights
+|===
+|[[dm-h-what]]Value |[[dm-h-hb]]Hatchback |[[dm-h-es]]Estate
+|[[dm-length]]Length |[[dm-length-hb]]4,180 mm |[[dm-length-es]]4,520 mm
+|[[dm-width]]Width without mirrors |[[dm-width-hb]]1,790 mm |[[dm-width-es]]1,790 mm
+|[[dm-height]]Height |[[dm-height-hb]]1,460 mm |[[dm-height-es]]1,490 mm
+|[[dm-load]]Load space |[[dm-load-hb]]380 l |[[dm-load-es]]580 l
+|[[dm-roof]]Roof load |[[dm-roof-hb]]50 kg |[[dm-roof-es]]75 kg
+|===
+
+[#weights]
+The permitted gross weight and the axle loads of your vehicle are on the plate in the door frame on the passenger side.

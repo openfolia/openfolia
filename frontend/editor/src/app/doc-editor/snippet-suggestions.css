@@ -1,0 +1,40 @@
+/*
+ * A snippet suggestion (`plugins/snippet-suggestions.ts`): the rest of the snippet's text after
+ * the caret, in the line (never over it), in the muted text colour, with the key that accepts it.
+ * It fades in, at once under reduced motion; it is never selected or edited. A file of its own:
+ * the block editor's styles are at their size budget.
+ */
+.doc-editor-snippet-ghost {
+  color: var(--muted-foreground);
+  font-style: italic;
+  pointer-events: none;
+  user-select: none;
+  animation: doc-editor-snippet-in 150ms ease-out;
+}
+
+.doc-editor-snippet-key {
+  margin-inline-start: 0.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  font-style: normal;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+
+@keyframes doc-editor-snippet-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-editor-snippet-ghost {
+    animation: none;
+  }
+}

@@ -1,0 +1,35 @@
+= Faire le plein et recharger
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: plein, recharge, énergie
+
+[#intro]
+La trappe à carburant ou la trappe de recharge se trouve sur l'aile arrière gauche. Appuyez sur son bord arrière pour l'ouvrir.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[procedure#refuel]
+.Faire le plein
+. [[refuel-off]]Coupez le moteur.
+. [[refuel-flap]]Ouvrez la trappe à carburant et tournez le bouchon du réservoir dans le sens inverse des aiguilles d'une montre.
+. [[refuel-fill]]Faites le plein d'essence sans plomb d'indice d'octane RON 95 minimum (E10 autorisé) jusqu'à ce que le pistolet se coupe.
+. [[refuel-close]]Tournez le bouchon du réservoir jusqu'au déclic et refermez la trappe.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[procedure#charge]
+.Recharger le véhicule
+. [[charge-flap]]Ouvrez la trappe de recharge.
++
+[#img-port]
+image::demo-image:charging-port["Prise de recharge derrière la trappe ouverte, entourée de son anneau lumineux",width=45%]
+. [[charge-plug]]Branchez le câble de recharge jusqu'à ce qu'il se verrouille. L'anneau lumineux autour de la prise clignote en vert pendant la charge de la batterie.
+. [[charge-end]]Pour arrêter la recharge, déverrouillez le véhicule et retirez la fiche.
+
+[#charge-times]
+Sur une borne murale de 11 kW, la batterie se recharge de 10 % à 80 % en 4 heures environ ; sur une borne rapide de 100 kW, en 30 minutes environ.
+====

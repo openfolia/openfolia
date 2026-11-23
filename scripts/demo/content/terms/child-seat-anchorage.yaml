@@ -1,0 +1,13 @@
+schemaVersion: 1
+status: approved
+domain: safety
+languages:
+  en:
+    preferred: child seat anchorage
+    definition: The two metal brackets between seat cushion and backrest that a child seat locks onto, with a ring for its top tether.
+  de:
+    preferred: Kindersitzverankerung
+    definition: Die beiden Metallbügel zwischen Sitzfläche und Rückenlehne, an denen ein Kindersitz einrastet, mit einer Öse für seinen oberen Haltegurt.
+  fr:
+    preferred: points d'ancrage
+    definition: Les deux arceaux métalliques entre l'assise et le dossier sur lesquels se verrouille un siège enfant, avec un anneau pour sa sangle supérieure.

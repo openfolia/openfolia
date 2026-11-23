@@ -1,0 +1,68 @@
+---
+title: 'Benutzer und Rollen'
+description: 'Personen hinzufügen, ihnen Rollen geben, eine Rolle auf einen Teil der Inhalte beschränken und jemanden deaktivieren, der gegangen ist.'
+articleId: 'guide.admin.users-and-roles'
+---
+
+Jede Person hat einen Benutzer und eine oder mehrere Rollen. Eine Rolle ist eine Menge von
+Berechtigungen, ihr Geltungsbereich sagt, wo sie gelten. Änderungen gelten sofort und werden im
+Audit-Log festgehalten.
+
+## Eine Person hinzufügen
+
+1. Öffnen Sie **Verwaltung**, dann **Benutzer**.
+2. Wählen Sie **Neuer Benutzer**.
+3. Füllen Sie **Name** und **E-Mail-Adresse** aus. Die **Benutzer-ID** entsteht aus der Adresse.
+   Sie lässt sich später nicht ändern.
+4. Wählen Sie unter **Rollen** die Rollen der Person.
+5. Wählen Sie **Benutzer hinzufügen**.
+
+![Der Dialog Neuer Benutzer mit Name, E-Mail-Adresse, Benutzer-ID und Rollen](/images/guide/de/admin-user-new.webp)
+
+Die Liste zeigt E-Mail-Adresse und ID jeder Person unter ihrem Namen. Sie durchsucht Name, E-Mail
+und ID (drücken Sie <kbd>/</kbd>), **Alle**, **Aktiv** und **Deaktiviert** filtern sie.
+**Bearbeiten** und **Deaktivieren** stehen am Ende jeder Zeile; in einem schmalen Fenster scrollen Sie
+die Liste dafür seitwärts.
+
+## Wie sich eine Person anmeldet
+
+Wie sich Personen anmelden, wird auf dem Server eingerichtet: über einen Identitätsanbieter, mit
+einem Passwort, mit einem Code per E-Mail oder mehreres davon. Ist die Anmeldung mit Passwort
+eingeschaltet, zeigt die Seite Benutzer mehr:
+
+- Eine Spalte **Anmeldung** sagt, wie sich jede Person anmeldet: **Passwort**, **Anbieter**,
+  **Passwort und Anbieter**, **Eingeladen, noch nicht angemeldet**, **Einladung abgelaufen** oder
+  **Noch nicht**.
+- Eine neue Person bekommt sofort eine Einladung: einen Einmal-Link, einmal zum Kopieren
+  angezeigt. Ist E-Mail eingerichtet, wird er ihr auch gesendet.
+- **Einladen** erstellt eine neue Einladung, **Einladung zurückziehen** beendet eine offene, und
+  **Zurücksetzen-Link** erstellt einen Link zum Zurücksetzen des Passworts für jemanden mit
+  Passwort. Jeder Link funktioniert einmal, für begrenzte Zeit, und ersetzt jeden früheren.
+
+Eine Person ohne E-Mail-Adresse bekommt keinen Link. Codes per E-Mail brauchen hier nichts: Die
+Person fordert einen auf der Anmeldeseite an.
+
+## Eine Rolle anlegen oder ändern
+
+1. Öffnen Sie **Rollen**. Wählen Sie links eine Rolle oder **Neue Rolle**.
+2. Füllen Sie **Name der Rolle** und **Beschreibung** aus und kreuzen Sie ihre
+   **Berechtigungen** an.
+3. Beschränken Sie unter **Geltungsbereich**, wo sie gelten: die **Modultypen**, die
+   **Zielgruppen**, die **Sprachen** und jede Facette. Eine Zeile auf **Alle** gilt für alles.
+4. Wählen Sie **Änderungen speichern**, bei einer neuen Rolle **Rolle anlegen**.
+
+![Die Seite Rollen mit der Rolle Author, ihren Berechtigungen, ihrem Geltungsbereich und wer sie hat](/images/guide/de/admin-roles.webp)
+
+**admin.roles**, **admin.branding** und **webhook.manage** gelten immer überall. Unter **Wer sie
+hat** fügen Sie Personen und Service-Accounts hinzu oder entfernen sie. Eine Rolle mit
+**admin.roles** kann kein Service-Account haben. **Rolle löschen** geht, sobald niemand sie hat.
+
+[Rollen und Berechtigungen](/de/guide/reference/roles) listet jede Berechtigung.
+
+## Eine Person deaktivieren
+
+1. Wählen Sie in **Benutzer** in der Zeile der Person **Deaktivieren** und bestätigen Sie.
+2. Die Person kann nicht mehr handeln. Ihre Freigaben zählen nicht mehr, und alle ihre Sperren
+   werden aufgehoben. Ihre Rollen bleiben.
+
+**Reaktivieren** holt sie zurück.

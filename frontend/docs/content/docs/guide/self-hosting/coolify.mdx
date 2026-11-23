@@ -1,0 +1,59 @@
+---
+title: 'Coolify, a worked example'
+description: 'Run the Compose file as one resource on Coolify, with its proxy for TLS and a deploy webhook for releases.'
+articleId: 'guide.self-hosting.coolify'
+---
+
+Coolify, an open-source platform for self-hosting, runs `deploy/compose.yaml` as one Docker
+Compose resource. Its proxy terminates TLS, so you need no proxy of your own.
+
+## Set it up
+
+1. Create a resource of the type **Docker Compose**, from the repository (or a fork of it), with
+   `deploy/compose.yaml` as the Compose file.
+2. Under **Environment variables**, set:
+   - `POSTGRES_PASSWORD`, a random one (`openssl rand -hex 24`);
+   - `OPENFOLIA_IMAGES=ghcr.io/<owner>/openfolia`;
+   - `OPENFOLIA_VERSION`: `latest` (the newest release, which a release's deploy webhook then picks
+     up) or a pinned `vX.Y.Z`, changed by hand for each upgrade;
+   - `CCMS_EDITOR_HOSTS=docs.example.com`, so the editor serves only its own host name;
+   - `CCMS_TRUST_PROXY=2`: Coolify's proxy is a hop in front of the editor's, and at the default
+     `1` every reader would count as that proxy, sharing one budget of failed sign-ins and of
+     stable-address requests. Set `2` only while the editor's and the API's ports are reachable
+     through Coolify's proxy alone: a container that reaches either directly (on a network the
+     stack shares with other resources, such as Coolify's predefined shared network) could then
+     name any client address. If you cannot be sure of that, keep `1`. See
+     [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy);
+   - `CCMS_PUBLIC_URL=https://docs.example.com/`, and any other setting `deploy/compose.yaml`
+     takes from its settings file.
+
+   Coolify lists the Compose file's `${...}` variables for you. It pulls every image of that
+   version, the backup image included.
+
+3. Give the `editor` service its domain, `https://docs.example.com:8080`: Coolify's proxy
+   terminates TLS and forwards to port 8080, and keeps the `Host` header. The published ports are
+   not needed, but do no harm on `127.0.0.1`.
+4. Before the first start, put the content repository on the `data` volume: use Coolify's terminal
+   for the `api` service with the commands of
+   [Content repository](/guide/self-hosting/content-repository), or run them on the server.
+5. Deploy. Then make the first admin as in the [quick start](/guide/self-hosting/quick-start)
+   (`CCMS_FIRST_ADMIN_EMAIL` before the first start, or the `first-admin` command in the terminal).
+
+## Data and backups
+
+Coolify keeps the named volumes (`postgres`, `data`, `backups`) across deployments. Back them up
+with the stack's own `backup` service ([Backups](/guide/self-hosting/backups)): it encrypts each
+backup and verifies it. A scheduled database backup in Coolify plus a copy of the `data` volume
+works too, but the `data` volume holds the instance secret key: whoever has that copy and the
+database dump can open every secret the server stores. So encrypt both before they leave the host,
+and keep them apart. Coolify's own database backup sends the dump as it is: keep its destination
+on the host, or prefer the stack's `backup` service.
+
+## Releases
+
+The project's image workflow (`.github/workflows/images.yml`) calls a deploy webhook after it
+pushes the images of a release tag on a commit of `main`, once the smoke test and the self-host
+test have passed ([Smoke test](/guide/self-hosting/smoke-test)). In a fork, set the repository
+secrets `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN` to the resource's deploy webhook and a
+Coolify API token. With `OPENFOLIA_VERSION=latest`, each release is then deployed on its own. Read the [changelog](/changelog)'s
+upgrade notes first all the same: [Upgrades](/guide/self-hosting/upgrades).

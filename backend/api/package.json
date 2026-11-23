@@ -1,0 +1,201 @@
+{
+  "name": "@openfolia/api",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/main.js",
+  "nx": {
+    "name": "api",
+    "targets": {
+      "setup-local": {
+        "dependsOn": [
+          "^build",
+          "build"
+        ]
+      },
+      "serve-local": {
+        "dependsOn": [
+          "build"
+        ],
+        "continuous": true
+      },
+      "db-migrate": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "db-seed": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "service-token": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "first-admin": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "rotate-secret-key": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "blobs-import": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "index-rebuild": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "openapi-delivery": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build"
+        ],
+        "cache": false,
+        "options": {
+          "cwd": "backend/api",
+          "command": "node scripts/openapi-delivery.mjs"
+        }
+      },
+      "check-content": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build"
+        ],
+        "cache": false,
+        "options": {
+          "cwd": "backend/api",
+          "command": "node scripts/check-content.mjs"
+        }
+      },
+      "check-openapi-delivery": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "inputs": [
+          {
+            "dependentTasksOutputFiles": "**/*",
+            "transitive": true
+          },
+          "{projectRoot}/scripts/openapi-delivery.mjs",
+          "{projectRoot}/scripts/in-process-api.mjs",
+          "{projectRoot}/openapi/delivery.yaml",
+          "{workspaceRoot}/pnpm-lock.yaml"
+        ],
+        "options": {
+          "cwd": "backend/api",
+          "command": "node scripts/openapi-delivery.mjs --check"
+        }
+      },
+      "lint": {
+        "dependsOn": [
+          "check-openapi-delivery"
+        ]
+      },
+      "perf": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "^build"
+        ],
+        "cache": false,
+        "options": {
+          "cwd": "backend/api",
+          "command": "pnpm exec vitest run --config vitest.perf.config.mts"
+        }
+      },
+      "perf-scale": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          "build",
+          "^build",
+          "mcp:build"
+        ],
+        "cache": false,
+        "options": {
+          "cwd": "backend/api",
+          "command": "node tests/perf-scale/run.mjs"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1160.0",
+    "@openfolia/content-model": "workspace:*",
+    "@openfolia/content-repo": "workspace:*",
+    "@openfolia/dita": "workspace:*",
+    "@openfolia/render-html": "workspace:*",
+    "@openfolia/render-typst": "workspace:*",
+    "@openfolia/theme": "workspace:*",
+    "@openfolia/xliff": "workspace:*",
+    "@openfolia/xml": "workspace:*",
+    "@nestjs/common": "12.3.2",
+    "@nestjs/config": "12.0.1",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-express": "12.3.2",
+    "@nestjs/swagger": "12.1.0",
+    "age-encryption": "0.3.1",
+    "busboy": "1.6.0",
+    "croner": "10.0.1",
+    "drizzle-orm": "0.45.4",
+    "fflate": "0.8.2",
+    "nodemailer": "10.6.0",
+    "openid-client": "6.8.9",
+    "pg": "8.23.1",
+    "pg-boss": "12.38.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "sharp": "0.34.5",
+    "tslib": "^2.3.0",
+    "zod": "4.6.7"
+  },
+  "scripts": {
+    "start": "node dist/main.js",
+    "setup-local": "node scripts/setup-local.ts",
+    "serve-local": "node --env-file=../../.env.local dist/main.js",
+    "db-migrate": "node --env-file-if-exists=../../.env.local dist/database/migrate.main.js",
+    "db-seed": "node --env-file-if-exists=../../.env.local dist/database/seed.main.js",
+    "service-token": "node --env-file-if-exists=../../.env.local dist/database/service-token.main.js",
+    "first-admin": "node --env-file-if-exists=../../.env.local dist/database/first-admin.main.js",
+    "rotate-secret-key": "node --env-file-if-exists=../../.env.local dist/secrets/rotate-secret-key.main.js",
+    "db-generate": "drizzle-kit generate",
+    "blobs-import": "node --env-file-if-exists=../../.env.local dist/blobs/import-git-assets.main.js",
+    "index-rebuild": "node --env-file-if-exists=../../.env.local dist/modules/index-rebuild.main.js"
+  },
+  "devDependencies": {
+    "@openfolia/connector-tracker": "workspace:*",
+    "@openfolia/mcp": "workspace:*",
+    "@electric-sql/pglite": "0.5.14",
+    "@electric-sql/pglite-pgvector": "0.0.15",
+    "@electric-sql/pglite-socket": "0.2.17",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@nestjs/testing": "12.3.2",
+    "@swc/core": "1.16.21",
+    "@types/busboy": "1.5.5",
+    "@types/express": "5.0.6",
+    "@types/jsdom": "^28.0.3",
+    "@types/oidc-provider": "9.13.1",
+    "@types/pg": "8.23.1",
+    "@types/supertest": "7.2.1",
+    "drizzle-kit": "0.31.11",
+    "jsdom": "^31.0.1",
+    "jsqr": "1.4.0",
+    "jszip": "^3.10.1",
+    "oidc-provider": "9.13.3",
+    "smtp-server": "3.21.6",
+    "supertest": "7.3.1",
+    "typescript": "^6.0.3",
+    "unplugin-swc": "2.0.0",
+    "yaml": "2.9.1"
+  }
+}

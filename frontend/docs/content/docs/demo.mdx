@@ -1,0 +1,109 @@
+---
+title: Try the demo
+description: Start OpenFolia from a fresh clone with one command, and walk through writing, review and releases as three demo people.
+---
+
+The demo runs the editor and the API on your machine, with the documentation of an invented car
+and three demo people. It needs no Docker and no database server, and it leaves your own set-up
+alone. To run OpenFolia for real, see [Getting started](/getting-started) and
+[Self-hosting](/self-hosting).
+
+## What you need
+
+- Node 24 and pnpm 11 (`corepack enable` picks the version the repository names).
+- Git 2.40 or newer.
+- Ports 3290 and 4390 free.
+
+## Start it
+
+In a clone of the repository:
+
+```sh
+pnpm install
+pnpm demo:start
+```
+
+The first start builds the API and the editor, which takes a few minutes. Then it makes the
+content and the database, cuts two releases and renders their PDFs, which takes about a minute.
+It ends with an address:
+
+```
+Open:     http://127.0.0.1:4390/__start?lang=en&user=demo-author&theme=light
+```
+
+Open it in your browser. It signs you in as the author and shows **Content**.
+
+| Command                     | What it does                                                    |
+| --------------------------- | --------------------------------------------------------------- |
+| `pnpm demo:start --lang de` | The editor in German. What the demo writes is in German too.    |
+| `pnpm demo:reset`           | Everything made again, as after a start. Your changes are gone. |
+| `pnpm demo:stop`            | Stops it and removes its content and its database.              |
+| `pnpm demo:status`          | Says whether it runs, and its address.                          |
+
+## What is in it
+
+- **The content:** 32 modules of an owner's manual and a service booklet, in English and German,
+  and partly in French. Three manuals, built for variants of body (hatchback, estate), drive
+  (petrol, electric) and market (left- and right-hand drive).
+- **Two releases**, 1.0 and 1.1, with their PDFs. 1.1 changed one tyre pressure.
+- **A revision in review**, "Revise changing a wheel", with comments from the reviewer.
+- **Three people:** an author, a reviewer (who may also write) and an admin. The account menu
+  shows their names.
+
+## The walkthrough
+
+### 1. As the author: change a module
+
+1. In **Content**, choose **Setting the clock**. It is **Released** and read-only: you read the
+   published content.
+2. Open the revision menu at the top right, which shows **Published content**, and choose **New
+   revision**. Enter a **Title**, for example "Explain the clock after parking", and choose
+   **Start**.
+3. The module is now **Locked by you**. Click at the end of its first paragraph and type a
+   sentence. The header shows **Saved**.
+4. Choose **Review** in the sidebar, then **Drafts**, then your revision. Choose **Submit for
+   review**.
+
+### 2. As the reviewer: review and approve
+
+1. Open the account menu (your name at the bottom of the sidebar) and, under **Switch user**,
+   choose the reviewer.
+2. Choose **Review**. Under **Waiting**, choose **Revise changing a wheel**.
+3. Read the changes **Inline**, **Side by side** or **Rendered**, and the comments on the steps.
+   Reply to one, or add your own with **Comment**.
+4. Choose **Approve**. Your own revision from step 1 is waiting there too: approve it as well.
+
+### 3. As the admin: merge and look at the releases
+
+1. Switch to the admin.
+2. Choose **Review**, then **Approved**, then a revision, and choose **Merge**. Its change is now
+   in the published content.
+3. Choose **Releases**, then **1.1**, then **Files and changes**. **Changes** lists what changed
+   since 1.0. Under **Files**, choose **Download** for an estate's PDF of the **Owner's manual**
+   or the **Service booklet**: its tyre pressure table shows the new rear pressure.
+4. Choose **Translations**: the French column shows what is missing or out of date.
+5. Choose **Manuals**: the owner's manual, its modules in order, and its outputs per language.
+
+Cut a release of your own with **New release** on **Releases**; see
+[Cut a release](/guide/releases/overview).
+
+## What it shows, and what it doesn't
+
+**It shows** the product as it is: the real API and editor, content in a real Git repository,
+revisions, review and merge, releases with their PDFs, translations and variants.
+
+**It doesn't show:**
+
+- **Signing in.** The demo people are chosen, not signed in: no password, no code by email, no
+  sign-in with your organisation's account. Whoever reaches the demo may act as anyone, the admin
+  too: it listens on 127.0.0.1 only, so don't forward its ports or put a proxy in front of it. See
+  [Authentication modes](/guide/self-hosting/authentication).
+- **Bringing your own content.** No import or migration from another system; the content is the
+  demo's own.
+- **Keeping anything.** The database runs in memory. A stop or a reset removes everything you
+  changed.
+- **Running it on a server.** No containers, backups or reverse proxy. See
+  [Self-hosting](/self-hosting).
+
+What the demo content holds, and how its videos are made, is in `docs/demo-videos.md` in the
+repository.

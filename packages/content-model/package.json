@@ -1,0 +1,47 @@
+{
+  "name": "@openfolia/content-model",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "@openfolia/source": "./src/core.ts",
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./import-format.schema.json": "./import-format.schema.json"
+  },
+  "nx": {
+    "name": "content-model",
+    "tags": [
+      "scope:shared",
+      "type:model"
+    ],
+    "targets": {
+      "import-schema": {
+        "dependsOn": [
+          "build"
+        ],
+        "command": "node packages/content-model/scripts/write-import-schema.mjs",
+        "cache": false
+      }
+    }
+  },
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  }
+}

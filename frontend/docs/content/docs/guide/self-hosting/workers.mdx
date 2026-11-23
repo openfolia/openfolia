@@ -1,0 +1,108 @@
+---
+title: 'Workers'
+description: 'The API and the background work in processes of their own: the roles, scaling, and keeping the API responsive.'
+articleId: 'guide.self-hosting.workers'
+---
+
+The API and the background work run from the same image, in processes of their own. The setting
+`CCMS_ROLE` says what a process does.
+
+| Role     | What it does                                                                                                                                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api`    | Serves the API and only enqueues jobs. Runs no background loop. Keeps a small PDF pool (2 by default) for what readers ask for: a manual's PDF, page images, checks. Its `/health/ready` never depends on a worker.                    |
+| `worker` | Consumes every job: release planning and files, imports, webhook deliveries, notifications. Runs the sweeps and recounts. Serves only `GET /health` and `GET /health/ready`, with the job queue's counts. Never migrates the database. |
+| `all`    | Both in one process. The default outside `deploy/compose.yaml`.                                                                                                                                                                        |
+
+`deploy/compose.yaml` starts the `api` service with `CCMS_ROLE=api` and the background work in the
+`worker` service. A worker waits for the API's migrations before it starts.
+
+## Run more workers
+
+```sh
+docker compose up -d --scale worker=3
+```
+
+Each job is taken by one worker only, and the cap on one release's files (40 queued at once)
+holds across all of them. Workers on other hosts need the same Postgres and the same blob store:
+use S3 then, since `/data/blobs` on a volume belongs to one host
+([Blob store](/guide/self-hosting/blob-store)).
+
+**Admin**, **System** shows the jobs waiting, and warns when jobs wait and no worker has taken one
+for 5 minutes.
+
+What several workers share, through the database:
+
+- **Each job once.** Two workers never take the same job.
+- **A release's caps.** At most 40 of its files are queued at once, and at most 8 are moved
+  ahead because someone asked for them, however many workers and API processes there are.
+- **One planning per product at a time, in the order cut.** A new release shares the files of
+  the release before it that did not change. The workers plan a product's releases one after the
+  other, strictly in the order they were cut: when several releases of one product wait, the
+  oldest is planned first, whichever worker takes the turn, so each finds the one before it
+  planned and every unchanged file is made once. A new release waits only for its own product's
+  earlier releases still to be planned. Releases of different products are planned side by side.
+
+What each process keeps for itself: its PDF pool and queue, how many release files it renders at
+once, and its rate limits. Two workers render twice as many files at once as one.
+
+## Previews and PDFs readers ask for
+
+The API renders what a reader is waiting for in its own small pool: a manual's PDF, page images
+(the editor's preview), the checks. It never sends them through the job queue:
+
+- A reader never waits behind release files. A worker's PDF processes are busy with release
+  files, and a render cannot be interrupted, so a preview sent to the queue would wait for one
+  to finish.
+- Previews keep working when no worker is running.
+- A release file that is not rendered yet is not rendered by the API. It moves to the front of
+  the queue, and the API answers `409 output-not-ready` until a worker has made it.
+
+The API's pool has up to 2 PDF processes by default. For more, set `CCMS_PDF_WORKERS` in
+`deploy/api.env` and the workers' own number in `deploy/worker.env`.
+
+## Settings for the workers only
+
+Both services read `deploy/api.env`. Settings for the workers alone go into `deploy/worker.env`,
+which is read over it, for example their PDF pool:
+
+```sh
+# deploy/worker.env
+CCMS_PDF_WORKERS=3
+CCMS_RENDER_CONCURRENCY=3
+```
+
+A `CCMS_PDF_WORKERS` in `api.env` sizes the API's own pool too, so keep it in `worker.env`. The
+API ignores `CCMS_RENDER_CONCURRENCY`; a worker renders release files on all its PDF workers by
+default.
+
+## Keep the API responsive
+
+On a host they share, a worker yields the CPU to the API:
+
+- **Nice value.** A worker, and the PDF processes it starts, run at nice 10 (`CCMS_WORKER_NICE`,
+  0 to 19). It is only ever raised.
+- **A CPU limit.** For a hard bound, set `OPENFOLIA_WORKER_CPUS` in `deploy/.env`, for example `2`
+  on an 8-CPU host. The default `0` sets no limit; Docker refuses a limit above the host's CPUs.
+  Set `CCMS_PDF_WORKERS` in `worker.env` to the same number: the pool's default is the host's CPUs
+  less one, not the limit.
+
+How much memory and CPU this takes: [Sizing](/guide/self-hosting/sizing).
+
+## One process instead
+
+To run everything in the API container, set `OPENFOLIA_API_ROLE=all` in `deploy/.env` and start
+with no workers:
+
+```sh
+docker compose up -d --wait --scale worker=0
+```
+
+## The worker's health server
+
+In `deploy/compose.yaml` a worker binds its health server to `127.0.0.1`, since only the
+container's own health check needs it. Run outside that file, set `HOST=127.0.0.1` for a worker
+too, unless an orchestrator probes it from outside: its `/health` shows the job queue's counts to
+whoever reaches it.
+
+The workers deliver webhooks with the instance secret key, so rotating it stops them as well as
+the API: see [Instance secret key](/guide/self-hosting/secret-key).

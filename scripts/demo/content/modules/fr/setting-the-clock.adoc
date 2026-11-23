@@ -1,0 +1,22 @@
+= Régler l'heure
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: horloge, heure, écran
+
+[#intro]
+Le véhicule règle l'heure automatiquement à partir du signal de navigation. Vous pouvez aussi la régler à la main.
+
+[procedure#steps]
+.Régler l'heure
+. [[step-menu]]Sur l'écran central, ouvrez [.ui]##Réglages## › [.ui]##Date et heure##.
+. [[step-auto]]Désactivez [.ui]##Heure automatique##.
+. [[step-set]]Réglez les heures et les minutes avec les flèches, puis appuyez sur [.ui]##Enregistrer##.
+
+[NOTE#note-auto]
+====
+[#note-auto-text]
+Avec l'heure automatique activée, l'horloge passe aussi d'elle-même à l'heure d'été et revient à l'heure d'hiver.
+====

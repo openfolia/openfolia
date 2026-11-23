@@ -1,0 +1,26 @@
+= Remplacer un fusible
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: fusible
+
+[#intro]
+Si une fonction ne marche plus, vérifiez d'abord son fusible. Les fusibles et ce qu'ils protègent sont indiqués dans xref:fuses.adoc[].
+
+[#ref-off]
+module::switch-off[]
+
+[procedure#steps]
+.Remplacer un fusible
+. [[step-open]]Ouvrez le couvercle de la boîte à fusibles, à l'extrémité droite de la planche de bord.
+. [[step-pull]]Retirez le fusible avec la pince en plastique clipsée à l'intérieur du couvercle.
+. [[step-check]]Un fusible dont le filament est coupé a grillé. Remplacez-le par un fusible de même calibre.
+. [[step-close]]Refermez le couvercle.
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Sur les véhicules avec conduite à droite, la boîte à fusibles se trouve à l'extrémité gauche de la planche de bord.
+====

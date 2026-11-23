@@ -1,0 +1,16 @@
+---
+title: 'Delivery API'
+description: 'Read released content: for portals, apps, integrations and RAG pipelines.'
+---
+
+The Delivery API is what someone building their own viewer, portal or integration needs: the
+read routes over released content, and nothing about drafts. A consumer's token belongs to a
+service account whose role holds only `content.read`.
+
+Each operation has a page in the sidebar, with its parameters, responses, schemas, code samples
+and a playground. The document itself is `backend/api/openapi/delivery.yaml` in the repository
+(OpenAPI 3.0), for generating a client, and here to download:
+
+<OpenAPIDownload api="delivery" />
+
+For a retrieval pipeline, see [Integrating with a RAG pipeline](/guides/rag).

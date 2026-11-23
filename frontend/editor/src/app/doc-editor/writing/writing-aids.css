@@ -1,0 +1,89 @@
+/*
+ * The writing aids (#247, `writing/`). A finding of the writing checks: a dotted underline (a
+ * thicker one, in the destructive colour, when it is blocking) and an icon at the end of its
+ * field's first line, in the gutter, so a line with a finding is told by its shape too, never by
+ * colour alone. A page suggestion (the style review's): a dashed underline. Neither takes room:
+ * text decorations and an icon placed outside the text, so nothing moves as they come and go.
+ * They are not animated: a check redraws its field's text, which must not flicker. A file of its
+ * own: the block editor's styles are at their size budget.
+ */
+.doc-editor-content .doc-editor-finding {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--warning);
+  text-underline-offset: 0.25em;
+  text-decoration-skip-ink: none;
+}
+
+.doc-editor-content .doc-editor-finding[data-severity='blocking'] {
+  text-decoration-color: var(--destructive);
+  text-decoration-thickness: 3px;
+}
+
+.doc-editor-content .doc-editor-has-finding {
+  position: relative;
+}
+
+.doc-editor-content .doc-editor-finding-icon {
+  position: absolute;
+  inset-inline-end: -1.75rem;
+  top: 0.3em;
+  width: 1rem;
+  height: 1rem;
+  background: var(--warning);
+  /* lucide's triangle-alert */
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* A safety notice clips what leaves its frame, and its body has 1rem of padding: the icon of any
+   field in it (the hazard, a paragraph, a list item) stays inside that. */
+.doc-editor-content
+  .doc-block-content[data-content='safety']
+  .doc-editor-finding-icon {
+  inset-inline-end: -0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.doc-editor-content .doc-editor-suggestion-mark {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--info);
+  text-underline-offset: 0.25em;
+  text-decoration-skip-ink: none;
+}
+
+/* A term offered while typing: the rest of it after the caret, as a snippet's is shown. */
+.doc-editor-term-ghost {
+  color: var(--muted-foreground);
+  font-style: italic;
+  pointer-events: none;
+  user-select: none;
+  animation: doc-editor-writing-in 150ms ease-out;
+}
+
+.doc-editor-term-ghost-hint {
+  margin-inline-start: 0.35em;
+  font-size: 0.8125em;
+  font-style: normal;
+}
+
+@keyframes doc-editor-writing-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-editor-term-ghost {
+    animation: none;
+  }
+}

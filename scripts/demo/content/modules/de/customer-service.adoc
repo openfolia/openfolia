@@ -1,0 +1,12 @@
+= Service und Hilfe
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Lassen Sie Ihr Fahrzeug nach dem Wartungsplan von einem autorisierten Orvik-Servicepartner warten. Ihr Servicepartner beantwortet auch Fragen zu Ihrem Fahrzeug.
+
+[#breakdown]
+Bei einer Panne rufen Sie die Pannenhilfe an. Die Nummer steht auf dem Aufkleber an der Windschutzscheibe.

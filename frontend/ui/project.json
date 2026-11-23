@@ -1,0 +1,71 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "ui",
+  "projectType": "library",
+  "sourceRoot": "frontend/ui/src",
+  "prefix": "of",
+  "tags": ["scope:frontend", "type:ui"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:ng-packagr",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "project": "frontend/ui/ng-package.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "frontend/ui/tsconfig.lib.prod.json"
+        },
+        "development": {
+          "tsConfig": "frontend/ui/tsconfig.lib.json"
+        }
+      },
+      "defaultConfiguration": "production",
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "frontend/ui/tsconfig.spec.json",
+        "runner": "vitest",
+        "providersFile": "frontend/ui/testing/test-providers.ts"
+      },
+      "dependsOn": ["^build", "test-i18n"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "frontend/ui",
+        "commands": [
+          "ngc -p tsconfig.lib.json --noEmit",
+          "tsc -p tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    },
+    "test-i18n": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/frontend/ui/src/i18n/*.json",
+        "{workspaceRoot}/frontend/ui/tools/*.mjs",
+        "{workspaceRoot}/frontend/editor/src/**/*"
+      ],
+      "options": {
+        "cwd": "frontend/ui",
+        "command": "node --test tools/i18n.test.mjs"
+      }
+    },
+    "test-lint-rules": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "options": {
+        "cwd": "frontend/ui",
+        "command": "node --test eslint-rules/*.test.mjs"
+      }
+    },
+    "lint": {
+      "dependsOn": ["test-lint-rules"]
+    }
+  }
+}

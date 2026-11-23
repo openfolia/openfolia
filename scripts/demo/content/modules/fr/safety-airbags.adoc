@@ -1,0 +1,29 @@
+= Airbags
+:schema-version: 1
+:module-type: safety
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: airbag, siège passager
+
+[safety#rear-facing,severity=danger,symbols=w001]
+.Airbag passager et sièges enfant dos à la route
+====
+[#rear-facing-text]
+Un airbag qui se déploie devant un siège enfant dos à la route peut tuer l'enfant.
+
+[#rear-facing-measures]
+* [[rear-facing-m1]]N'installez jamais de siège enfant dos à la route sur le siège passager avant tant que l'airbag passager est activé.
+* [[rear-facing-m2]]Désactivez l'airbag avec le contacteur à clé dans la boîte à gants. Le témoin [.ui]##PASSENGER AIRBAG OFF## doit s'allumer.
+====
+
+[safety#position,severity=warning,symbols=w001]
+.Position trop proche d'un airbag
+====
+[#position-text]
+Un airbag qui se déploie peut blesser les personnes assises trop près ou appuyées contre la portière.
+
+[#position-measures]
+* [[position-m1]]Gardez au moins 25 cm entre votre poitrine et le volant.
+* [[position-m2]]Ne placez jamais d'objets, de housses ou d'autocollants sur les couvercles des airbags.
+====

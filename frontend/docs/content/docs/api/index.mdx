@@ -1,0 +1,42 @@
+---
+title: 'API reference'
+description: 'The two APIs of OpenFolia: the Delivery API for integrators, and the Management API.'
+---
+
+OpenFolia has one server with two API references, both generated from the server's controllers
+and schemas, so they always match the release they belong to.
+
+<Cards>
+  <Card
+    title="Delivery API"
+    href="/api/delivery"
+    description="Read released content: modules, manuals, releases, PDFs, HTML, images, chunks, the change feed. For portals, apps and RAG pipelines."
+  />
+  <Card
+    title="Management API"
+    href="/api/management"
+    description="Everything else the editor uses: change sets, review, releases, translations, users and roles, webhooks, backups."
+  />
+</Cards>
+
+## Download the documents
+
+Both documents, OpenAPI 3.0, with this API's address as their server:
+
+<OpenAPIDownload api="delivery" />
+
+<OpenAPIDownload api="management" />
+
+## Conventions
+
+- **JSON:API:** responses are `application/vnd.api+json` documents. Resources are
+  `{ type, id, attributes, relationships, meta }`; `attributes` hold stored data and `meta` what
+  the server derives from it.
+- **Lists are paged:** `page[number]` and `page[size]`, with `meta.page` and `links`. Query
+  parameters a route does not document are refused with 400 `unsupported-parameter`.
+- **Errors** are `{ errors: [{ status, title, detail, code, source?, meta? }] }` on every route,
+  with a stable `code`: see [error codes](/reference/errors).
+- **Authentication:** `Authorization: Bearer <token>`, a service account's token. Each route
+  needs a [permission](/reference/permissions).
+- **Refs:** content routes read at `?ref=` (a branch, tag or commit), by default the server's
+  default ref; every answer names the commit it read in `X-Ccms-Commit`.

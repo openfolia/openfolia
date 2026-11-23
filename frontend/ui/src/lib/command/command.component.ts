@@ -1,0 +1,418 @@
+import { injectTranslate } from '../i18n/text.pipe';
+import { TranslocoPipe } from '@jsverse/transloco';
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  contentChild,
+  contentChildren,
+  effect,
+  forwardRef,
+  input,
+  output,
+  signal,
+  ViewEncapsulation,
+} from '@angular/core';
+import {
+  type ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR,
+} from '@angular/forms';
+
+import type { IconName } from '@ng-icons/core';
+import type { ClassValue } from 'clsx';
+
+import { ZardCommandInputComponent } from '../command/command-input.component';
+import { ZardCommandOptionComponent } from '../command/command-option.component';
+import { commandVariants } from '../command/command.variants';
+import { mergeClasses } from '../ui/merge-classes';
+
+import { ZardCommand } from './command.tokens';
+
+export interface ZardCommandOption {
+  value: unknown;
+  label: string;
+  disabled?: boolean;
+  command?: string;
+  shortcut?: string;
+  icon?: IconName;
+  action?: () => void;
+  key?: string;
+}
+
+export interface ZardCommandGroup {
+  label: string;
+  options: ZardCommandOption[];
+}
+
+export interface ZardCommandConfig {
+  placeholder?: string;
+  emptyText?: string;
+  groups: ZardCommandGroup[];
+  dividers?: boolean;
+  onSelect?: (option: ZardCommandOption) => void;
+}
+
+@Component({
+  selector: 'z-command',
+  imports: [TranslocoPipe, FormsModule],
+  template: `
+    <div [class]="classes()">
+      <div [id]="uid + '-instructions'" class="sr-only">
+        {{ 'ui.command.instructions' | transloco }}
+      </div>
+      <div
+        [id]="uid + '-status'"
+        class="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {{ statusMessage() }}
+      </div>
+      <ng-content />
+      @if (isEmpty()) {
+        <p
+          data-slot="command-empty"
+          class="text-muted-foreground m-0 px-3 py-6 text-center text-sm"
+        >
+          {{ 'ui.command.empty' | transloco }}
+        </p>
+      }
+    </div>
+  `,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => ZardCommandComponent),
+      multi: true,
+    },
+    {
+      provide: ZardCommand,
+      useExisting: forwardRef(() => ZardCommandComponent),
+    },
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
+  host: {
+    'data-slot': 'command',
+    role: 'combobox',
+    'aria-haspopup': 'listbox',
+    '[attr.aria-expanded]': 'true',
+    '(keydown)': 'onHostKeyDown($event)',
+  },
+  exportAs: 'zCommand',
+})
+export class ZardCommandComponent implements ControlValueAccessor, ZardCommand {
+  private static nextId = 0;
+  readonly uid = `z-command-${ZardCommandComponent.nextId++}`;
+
+  private readonly commandInput = contentChild(ZardCommandInputComponent);
+  private readonly optionComponentsAsChildren = contentChildren(
+    ZardCommandOptionComponent,
+    { descendants: true },
+  );
+  private readonly registeredOptionComponents = signal<
+    ZardCommandOptionComponent[]
+  >([]);
+
+  readonly class = input<ClassValue>('');
+  /**
+   * Whether the command filters its options by the typed text (the default). Off when the
+   * options come from a search of their own (a server's): every option shows, there is no
+   * "No results found." and no result count is announced; the caller shows its own states.
+   */
+  readonly zShouldFilter = input(true, { transform: booleanAttribute });
+
+  readonly zCommandChange = output<ZardCommandOption>();
+  readonly zCommandSelected = output<ZardCommandOption>();
+
+  // Internal signals for search functionality
+  readonly searchTerm = signal('');
+  readonly selectedIndex = signal(0);
+
+  /**
+   * Clamps selectedIndex to valid bounds of filteredOptions and skips disabled
+   * options. Returns -1 when there are no enabled options to highlight.
+   */
+  private readonly resolvedIndex = computed(() => {
+    const options = this.filteredOptions();
+    const len = options.length;
+    if (len === 0) {
+      return -1;
+    }
+
+    const raw = this.selectedIndex();
+    const target = raw < 0 || raw >= len ? 0 : raw;
+
+    if (!options[target]?.zDisabled()) {
+      return target;
+    }
+
+    for (let i = 1; i < len; i++) {
+      const candidate = (target + i) % len;
+      if (!options[candidate]?.zDisabled()) {
+        return candidate;
+      }
+    }
+    return -1;
+  });
+
+  /**
+   * Finds the next enabled option index in the given direction, wrapping
+   * around. Returns -1 if there is no enabled option.
+   */
+  private findEnabledIndex(
+    from: number,
+    direction: 1 | -1,
+    options: readonly ZardCommandOptionComponent[],
+  ): number {
+    const len = options.length;
+    if (len === 0) {
+      return -1;
+    }
+    let idx = from;
+    for (let i = 0; i < len; i++) {
+      idx = (idx + direction + len) % len;
+      if (!options[idx]?.zDisabled()) {
+        return idx;
+      }
+    }
+    return -1;
+  }
+
+  readonly activeOptionId = computed(() => {
+    const idx = this.resolvedIndex();
+    return idx >= 0 ? (this.filteredOptions()[idx]?.id ?? null) : null;
+  });
+
+  protected readonly optionComponents = computed(() =>
+    this.optionComponentsAsChildren().length
+      ? this.optionComponentsAsChildren()
+      : this.registeredOptionComponents(),
+  );
+
+  registerOption(option: ZardCommandOptionComponent) {
+    this.registeredOptionComponents.update((current) => [...current, option]);
+  }
+
+  unregisterOption(option: ZardCommandOptionComponent) {
+    this.registeredOptionComponents.update((current) =>
+      current.filter((o) => o !== option),
+    );
+  }
+
+  // Signal to trigger updates when optionComponents change
+  private readonly optionsUpdateTrigger = signal(0);
+
+  protected readonly classes = computed(() =>
+    mergeClasses(commandVariants(), this.class()),
+  );
+
+  // Computed signal for filtered options - this will automatically update when searchTerm or options change
+  readonly filteredOptions = computed(() => {
+    const searchTerm = this.searchTerm();
+    // Include the trigger signal to make this computed reactive to option changes
+    this.optionsUpdateTrigger();
+
+    if (!this.optionComponents()) {
+      return [];
+    }
+    // An option whose inputs are not set yet joins once they are.
+    const options = this.optionComponents().filter((option) => option.ready());
+
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    if (!lowerSearchTerm || !this.zShouldFilter()) {
+      return options;
+    }
+
+    return options.filter((option) => {
+      const label = option.zLabel().toLowerCase();
+      const command = option.zCommand()?.toLowerCase() ?? '';
+      return (
+        label.includes(lowerSearchTerm) || command.includes(lowerSearchTerm)
+      );
+    });
+  });
+
+  /**
+   * True when there is a search term and no results match. Useful to render
+   * an empty state next to the command list (e.g. <z-empty />).
+   */
+  readonly isEmpty = computed(() => {
+    const searchTerm = this.searchTerm().trim();
+    if (!searchTerm || !this.zShouldFilter()) {
+      return false;
+    }
+    return this.filteredOptions().length === 0;
+  });
+
+  private readonly t = injectTranslate();
+
+  // Status message for screen readers
+  protected readonly statusMessage = computed(() => {
+    const searchTerm = this.searchTerm().trim();
+    const filteredCount = this.filteredOptions().length;
+
+    if (!searchTerm || !this.zShouldFilter()) {
+      return '';
+    }
+
+    return this.t('ui.command.results', {
+      count: filteredCount,
+      term: searchTerm,
+    });
+  });
+
+  private onChange = (_value: unknown) => {
+    // ControlValueAccessor implementation
+  };
+
+  private onTouched = () => {
+    // ControlValueAccessor implementation
+  };
+
+  constructor() {
+    this.triggerOptionsUpdate();
+
+    effect(() => {
+      const idx = this.resolvedIndex();
+      this.filteredOptions().forEach((opt, i) => opt.setSelected(i === idx));
+    });
+  }
+
+  /**
+   * Trigger an update to the filteredOptions computed signal
+   */
+  private triggerOptionsUpdate(): void {
+    this.optionsUpdateTrigger.update((value) => value + 1);
+  }
+
+  onSearch(searchTerm: string) {
+    this.searchTerm.set(searchTerm);
+    this.selectedIndex.set(0);
+  }
+
+  /**
+   * Sets the active item by index. Called by command-option on mouseenter
+   * and by command-list on mouseleave (with 0 to reset to first).
+   */
+  setActiveByIndex(index: number) {
+    this.selectedIndex.set(index);
+  }
+
+  selectOption(option: ZardCommandOptionComponent) {
+    const commandOption: ZardCommandOption = {
+      value: option.zValue(),
+      label: option.zLabel(),
+      disabled: option.zDisabled(),
+      command: option.zCommand(),
+      shortcut: option.zShortcut(),
+      icon: option.zIcon(),
+    };
+
+    this.onChange(commandOption.value);
+    this.zCommandChange.emit(commandOption);
+    this.zCommandSelected.emit(commandOption);
+  }
+
+  /**
+   * The command's keys, from the command itself, its input or an option. A key on another
+   * control inside it (a Retry button in an empty or error state) is that control's own: Enter
+   * there presses the button, never the highlighted option.
+   */
+  protected onHostKeyDown(event: KeyboardEvent): void {
+    if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+      return;
+    }
+    const target = event.target as Element | null;
+    // A focused option handles its own Enter (it selects itself): not the highlighted one too.
+    if (event.key === 'Enter' && target?.closest('[role=option]')) return;
+    const own =
+      target === event.currentTarget ||
+      target?.getAttribute('role') === 'combobox' ||
+      !!target?.closest('[role=option]');
+    if (!own) return;
+    event.preventDefault();
+    this.onKeyDown(event);
+  }
+
+  onKeyDown(event: Event) {
+    const filteredOptions = this.filteredOptions();
+    if (filteredOptions.length === 0) {
+      return;
+    }
+
+    const { key } = event as KeyboardEvent;
+    const currentIndex = this.resolvedIndex();
+
+    switch (key) {
+      case 'ArrowDown': {
+        const nextIndex = this.findEnabledIndex(
+          currentIndex,
+          1,
+          filteredOptions,
+        );
+        if (nextIndex >= 0) {
+          this.selectedIndex.set(nextIndex);
+          filteredOptions[nextIndex]?.scrollIntoView();
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        const prevIndex = this.findEnabledIndex(
+          currentIndex,
+          -1,
+          filteredOptions,
+        );
+        if (prevIndex >= 0) {
+          this.selectedIndex.set(prevIndex);
+          filteredOptions[prevIndex]?.scrollIntoView();
+        }
+        break;
+      }
+      case 'Enter':
+        if (currentIndex >= 0 && currentIndex < filteredOptions.length) {
+          const selectedOption = filteredOptions[currentIndex];
+          if (selectedOption && !selectedOption.zDisabled()) {
+            this.selectOption(selectedOption);
+          }
+        }
+        break;
+      case 'Escape':
+        this.selectedIndex.set(0);
+        break;
+    }
+  }
+
+  // ControlValueAccessor implementation
+  writeValue(_value: unknown): void {
+    // Implementation if needed for form control integration
+  }
+
+  registerOnChange(fn: (value: unknown) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(_isDisabled: boolean): void {
+    // Implementation if needed for form control disabled state
+  }
+
+  /**
+   * Refresh the options list - useful when options are added/removed dynamically
+   */
+  refreshOptions(): void {
+    this.triggerOptionsUpdate();
+  }
+
+  /**
+   * Focus the command input
+   */
+  focus(): void {
+    this.commandInput()?.focus();
+  }
+}

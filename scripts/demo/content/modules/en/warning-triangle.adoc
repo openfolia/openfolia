@@ -1,0 +1,18 @@
+= Warn other road users
+:schema-version: 1
+:module-type: snippet
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[variant#eu,when="market in (eu)"]
+====
+[#text]
+Put on a high-visibility vest and set up the [.term.warning-triangle]##warning triangle## at least 50 m behind the vehicle, or 100 m on a motorway.
+====
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Put on a high-visibility vest. On a motorway, set up no [.term.warning-triangle]##warning triangle##: leave the vehicle and wait behind the safety barrier. Elsewhere, set it up at least 45 m behind the vehicle.
+====

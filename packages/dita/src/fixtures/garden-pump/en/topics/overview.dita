@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="overview" xml:lang="en" audience="operator">
+  <title>About the <ph keyref="prodname"/></title>
+  <shortdesc>The <ph keyref="prodname"/> moves water from a rain barrel to the garden.</shortdesc>
+  <prolog>
+    <metadata>
+      <keywords>
+        <keyword>pump</keyword>
+        <keyword>garden, water</keyword>
+      </keywords>
+    </metadata>
+  </prolog>
+  <conbody>
+    <p id="purpose">Use it only for <b>clear water</b>. See <xref href="install.dita#install/connect">connecting the hose</xref>
+      before the first use.</p>
+    <fig id="fig-pump">
+      <title>The pump</title>
+      <image href="../../images/pump.png" placement="break" width="8cm">
+        <alt>Side view of the pump</alt>
+      </image>
+    </fig>
+    <p product="pro">The pro model has a <uicontrol>Timer</uicontrol> switch.<indexterm>timer</indexterm></p>
+    <section id="parts">
+      <title>Parts</title>
+      <ul id="part-list">
+        <li id="motor">The motor</li>
+        <li id="filter">The filter<fn>Clean it every month.</fn></li>
+      </ul>
+    </section>
+  </conbody>
+</concept>

@@ -1,0 +1,1 @@
+ALTER TABLE "outbox_consumers" ADD COLUMN "blocked" boolean DEFAULT false NOT NULL;

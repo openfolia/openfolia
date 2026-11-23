@@ -1,0 +1,79 @@
+---
+title: 'Smoke-Test'
+description: 'Eine Installation nach dem Start prüfen, und die zwei Skripte, die die Images und die Einrichtung mit einem Befehl von Grund auf testen.'
+articleId: 'guide.self-hosting.smoke-test'
+---
+
+## Die eigene Installation prüfen
+
+Nach einer Bereitstellung oder einem Upgrade, auf dem Server:
+
+1. **Jeder Dienst bereit:** `docker compose ps` zeigt jeden als `healthy` (`up -d --wait` wartet
+   darauf).
+2. **Die API läuft:** `curl -s http://127.0.0.1:3000/health` antwortet 200 mit `"status":"ok"`
+   oder `degraded` mit dem Teil, der nicht antwortet (die Datenbank, der Blob-Speicher). Die Antwort
+   bleibt 200, solange der Prozess läuft.
+3. **Die API ist bereit für Anfragen:** `curl -s http://127.0.0.1:3000/health/ready` antwortet 200,
+   wenn Datenbank und Blob-Speicher antworten, sonst 503 mit `database-unavailable`,
+   `blob-store-unavailable` oder `database-saturated`.
+4. **Der Editor:** `https://docs.example.com/` öffnet die Anmeldeseite.
+5. **Der Weg über den Proxy:** `https://docs.example.com/api/health` antwortet wie in Schritt 2.
+6. **Die Inhalte:** Öffnen Sie nach der Anmeldung ein Handbuch und erzeugen Sie sein PDF.
+7. **Verwaltung**, **System** zeigt Hintergrundarbeit, E-Mail und Backups ohne Warnungen
+   ([System](/de/guide/admin/system)).
+
+## Die Skripte
+
+Zwei Skripte in `deploy/` starten einen Stack von Grund auf, prüfen ihn und entfernen ihn wieder
+(Container und Volumes). Beide erzeugen zufällige Geheimnisse und lesen keine Einstellungsdatei
+einer Installation auf demselben Rechner. Die CI führt beide bei jedem Pull Request aus, der ein
+Image ändert, und eine Version wird erst bereitgestellt, wenn sie bestanden sind.
+
+### `deploy/smoke-test.sh`
+
+Baut die Images (oder nimmt sie mit `SMOKE_BUILD=0`, wie sie sind) und startet den Stack mit den
+Beispielinhalten. Es prüft:
+
+- `GET /health` und `GET /health/ready`;
+- zwei Worker: den Zustand jedes einzelnen aus seinem Container heraus und dass sie keine API
+  bedienen;
+- eine über die API erstellte Veröffentlichung, deren Dateien die zwei Worker erzeugen, keine
+  doppelt und innerhalb der Obergrenze je Veröffentlichung, die API keine;
+- ein Seitenbild aus dem eigenen PDF-Pool der API;
+- die Startseite des Editors und eine Route der Anwendung, `/api` über den Editor und die Ablehnung
+  einer Anfrage von einer anderen Herkunft dort;
+- ein PDF, direkt und über den Editor erzeugt;
+- dass der Editor die API erreicht, nachdem ihr Container neu erstellt wurde;
+- den MCP-Server: abgelehnt ohne sein Token, seine Werkzeuge aufgelistet mit ihm;
+- Backups: einen Backup-Schlüssel, einen S3-Speicherort, ein geprüftes Backup und eine
+  Wiederherstellung in einen neuen Stack, der ein PDF erzeugt und seine versiegelten Geheimnisse
+  noch öffnet;
+- den geheimen Instanzschlüssel auf dem Daten-Volume.
+
+| Einstellung                                             | Was sie bewirkt                                             |
+| ------------------------------------------------------- | ----------------------------------------------------------- |
+| `SMOKE_PROJECT`                                         | Das Compose-Projekt (Standard `openfolia-smoke`).           |
+| `SMOKE_API_PORT`, `SMOKE_EDITOR_PORT`, `SMOKE_MCP_PORT` | Die Ports auf `127.0.0.1` (Standard 3103, 4303, 3203).      |
+| `SMOKE_BUILD=0`                                         | Die Images nehmen, wie sie sind, statt sie vorher zu bauen. |
+| `SMOKE_KEEP=1`                                          | Den Stack am Ende laufen lassen.                            |
+
+### `deploy/self-host-test.sh`
+
+Führt den einen Befehl aus dem [Schnellstart](/de/guide/self-hosting/quick-start) so aus, wie es
+eine Person täte, mit einer eigenen Einstellungsdatei, einem ersten Admin, den Beispielinhalten und
+einem OpenID-Connect-Testanbieter neben dem Stack. Es prüft:
+
+- `GET /health` und den Editor;
+- die Anmeldeoptionen: das Passwortformular und den Anbieter;
+- die Anmeldung des ersten Admins über den Anbieter, über seine E-Mail-Adresse verknüpft, mit der
+  Rolle `admin`;
+- dass diese Anmeldung den Einmal-Link im Log schließt, einen neuen Link von `first-admin`, ein
+  darüber gewähltes Passwort, eine Anmeldung damit und dass der Link beim zweiten Mal abgelehnt
+  wird;
+- einen zweiten Lauf von `self-host.sh`: alles behalten, kein zweiter Admin, kein neuer Link.
+
+| Einstellung                                                          | Was sie bewirkt                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------ |
+| `SELF_HOST_PROJECT`                                                  | Das Compose-Projekt (Standard `openfolia-self-host`).  |
+| `SELF_HOST_API_PORT`, `SELF_HOST_EDITOR_PORT`, `SELF_HOST_OIDC_PORT` | Die Ports auf `127.0.0.1` (Standard 3104, 4304, 9404). |
+| `SELF_HOST_KEEP=1`                                                   | Den Stack am Ende laufen lassen.                       |

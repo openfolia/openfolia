@@ -1,0 +1,43 @@
+---
+title: 'After a restore'
+description: 'The one step to run after restoring a backup onto another database server.'
+articleId: 'guide.self-hosting.after-a-restore'
+---
+
+A backup restored onto another Postgres server (a new stack from a backup, or a move to another
+host) starts a new transaction count there. The events waiting for notifications, webhooks and the
+change feed carry the old server's count, so a new event would sort before ones already handled
+and be skipped.
+
+So the server holds them instead: **Admin, System** shows "Delivery is held after a restore" in its
+Background work card, the server logs it at error level, and the change feed answers 503
+`outbox-blocked`. Nothing is lost meanwhile.
+
+## Finish the restore
+
+Run this once, as the database owner, best right after the restore and before the first start,
+else with the API and the worker stopped (`docker compose stop api worker`). Run it as a script
+(`psql -f`, or on stdin), since `VACUUM` cannot run inside a transaction. It needs nothing from
+you; readers of the change feed resync afterwards. For a backup from a version before this step
+existed, start once first so the migrations run, then stop the API and the worker and run it:
+
+```sql
+-- outbox: after a restore
+BEGIN;
+UPDATE outbox_consumers SET last_tx_id = '1',
+  last_outbox_id = LEAST((SELECT min(o.id) - 1 FROM outbox o
+                          WHERE (o.tx_id, o.id) > (outbox_consumers.last_tx_id, outbox_consumers.last_outbox_id)),
+                         outbox_consumers.last_outbox_id)
+  WHERE last_tx_id <> '0';
+UPDATE outbox SET tx_id = '1';
+UPDATE outbox_consumers SET blocked = false;
+COMMIT;
+VACUUM outbox;
+```
+
+Then start the stack again. Notifications and webhooks catch up in order, a few at worst twice
+(receivers dedupe them by their `Idempotency-Key`). Readers of the change feed get 410 `cursor-gone` for a cursor from before the
+restore, and resync.
+
+If the audit log has a sink, its position needs the same once: see the operator guide,
+`backend/api/README.md`, "Audit log", "After a restore".

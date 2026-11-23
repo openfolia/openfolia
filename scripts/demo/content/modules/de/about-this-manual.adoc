@@ -1,0 +1,15 @@
+= Zu dieser Betriebsanleitung
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Diese Anleitung beschreibt den {model-name} mit seiner gesamten Ausstattung. Einzelne Ausstattungen sind in Ihrem Fahrzeug möglicherweise nicht eingebaut.
+
+[#keep]
+Bewahren Sie diese Anleitung im Fahrzeug auf und geben Sie sie beim Verkauf mit dem Fahrzeug weiter.
+
+[#notices]
+Sicherheitshinweise sind mit einem Signalwort gekennzeichnet: GEFAHR für eine Gefahr, die zum Tod oder zu schweren Verletzungen führt, WARNUNG für eine, die dazu führen kann, und VORSICHT für leichte Verletzungen.

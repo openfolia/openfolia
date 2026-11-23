@@ -1,0 +1,164 @@
+/*
+ * The theme: every colour, the radius and the fonts of every frontend, as CSS variables with
+ * Zard UI's token names. The values are the product's default brand, OpenFolia, in the palette
+ * of its website: warm paper surfaces, Iron Grey text, a Lavender Blush sidebar and the UI green
+ * accent (`--primary`, `--ring`, `--sidebar-primary`). Rebrand by changing this file alone.
+ * `.dark` holds the dark values. Plain CSS only: no framework syntax (the Tailwind mapping
+ * lives in `frontend/ui`). Colours are written only here (a test holds this).
+ */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * Right-to-left scripts (#458): Noto Sans Arabic and Noto Sans Hebrew, after Geist in the sans
+ * stack, which has neither. Each is fetched only for a page with text in its script
+ * (`unicode-range`). Print takes the same families as TTF (`fonts/ttf/`).
+ */
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  src: url('./fonts/NotoSansArabic-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF,
+    U+200C-200F, U+2010-2011, U+204F, U+25CC;
+}
+
+@font-face {
+  font-family: 'Noto Sans Hebrew';
+  src: url('./fonts/NotoSansHebrew-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+200C-200F, U+20AA, U+25CC;
+}
+
+/* `.light` scopes the light values under a dark page (screen 0 shows both side by side). */
+:root,
+.light {
+  --font-sans:
+    'Geist', 'Noto Sans Arabic', 'Noto Sans Hebrew', ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --radius: 0.625rem;
+
+  /* Paper (#fffdfb) for the working area, cards and menus; Iron Grey (#394648) text, 9.7:1. */
+  --background: oklch(0.995 0.0034 67.78);
+  --foreground: oklch(0.3835 0.0171 207.84);
+  --card: oklch(0.995 0.0034 67.78);
+  --card-foreground: oklch(0.3835 0.0171 207.84);
+  --popover: oklch(0.995 0.0034 67.78);
+  --popover-foreground: oklch(0.3835 0.0171 207.84);
+  /* UI green (#4a7740): 5.2:1 on paper, for buttons, links and the focus ring. */
+  --primary: oklch(0.5222 0.0965 139.98);
+  --primary-foreground: oklch(1 0 0);
+  /* Warm grey (#f3efeb, half way from paper to the line colour): tab bars, table heads, code. */
+  --secondary: oklch(0.9541 0.0069 67.74);
+  --secondary-foreground: oklch(0.3835 0.0171 207.84);
+  --muted: oklch(0.9541 0.0069 67.74);
+  /* #5a6467: 6.0:1 on paper. */
+  --muted-foreground: oklch(0.4957 0.0133 217.66);
+  /* The highlight (#eef4eb): hover and selection. */
+  --accent: oklch(0.9601 0.0135 134.9);
+  --accent-foreground: oklch(0.3835 0.0171 207.84);
+  /* The line (#e6e2dc). */
+  --border: oklch(0.9142 0.0092 78.28);
+  --input: oklch(0.9142 0.0092 78.28);
+  --ring: oklch(0.5222 0.0965 139.98);
+
+  /* Lavender Blush (#f8e9e9) with its line (#e6cfcb); the selected item sits on paper. */
+  --sidebar: oklch(0.9459 0.0163 17.45);
+  --sidebar-foreground: oklch(0.3835 0.0171 207.84);
+  --sidebar-primary: oklch(0.5222 0.0965 139.98);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.995 0.0034 67.78);
+  --sidebar-accent-foreground: oklch(0.3835 0.0171 207.84);
+  --sidebar-border: oklch(0.8724 0.0264 29.43);
+  --sidebar-ring: oklch(0.5222 0.0965 139.98);
+
+  /* Status: the colour is the text or icon colour, the -muted one the background behind it. */
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-muted: oklch(0.985 0.008 17);
+  --success: oklch(0.45 0.13 150);
+  --success-muted: oklch(0.962 0.044 156);
+  --warning: oklch(0.47 0.11 65);
+  --warning-muted: oklch(0.973 0.05 90);
+  --info: oklch(0.46 0.15 255);
+  --info-muted: oklch(0.962 0.03 250);
+
+  /*
+   * Safety colours: FIXED. They follow ISO 3864 / ANSI Z535 (danger red, warning orange,
+   * caution yellow, notice blue) and carry safety meaning, so a rebrand does not change them
+   * and `.dark` does not redefine them. The -foreground is the text colour on each.
+   */
+  --safety-danger: oklch(0.5 0.2 27);
+  --safety-danger-foreground: oklch(1 0 0);
+  --safety-warning: oklch(0.72 0.17 55);
+  --safety-warning-foreground: oklch(0.145 0 0);
+  --safety-caution: oklch(0.88 0.17 95);
+  --safety-caution-foreground: oklch(0.145 0 0);
+  --safety-notice: oklch(0.45 0.16 255);
+  --safety-notice-foreground: oklch(1 0 0);
+  /* The tile a safety symbol's artwork sits on: white, as printed signs are, in both themes. */
+  --safety-symbol-background: oklch(1 0 0);
+}
+
+/*
+ * Dark: the page #1e2628, cards and menus on #252f31, the sidebar on the deepest surface
+ * (#151b1c) with the ink sheet's line (#283133); text #eef0ec, muted text #a9b4b2, lines
+ * #384548 (fields #46555a), hover and selection #2e3a3c. The accent is the dark green (#8fc07f)
+ * under its own dark text (#12200f, 8.1:1): the UI green fails on dark (2.9:1 on the page).
+ */
+.dark {
+  --background: oklch(0.2617 0.012 214.56);
+  --foreground: oklch(0.9525 0.0057 128.53);
+  --card: oklch(0.2966 0.0142 211.13);
+  --card-foreground: oklch(0.9525 0.0057 128.53);
+  --popover: oklch(0.2966 0.0142 211.13);
+  --popover-foreground: oklch(0.9525 0.0057 128.53);
+  --primary: oklch(0.7567 0.1039 138.18);
+  --primary-foreground: oklch(0.2251 0.0373 140.09);
+  --secondary: oklch(0.3384 0.0163 208.76);
+  --secondary-foreground: oklch(0.9525 0.0057 128.53);
+  --muted: oklch(0.3384 0.0163 208.76);
+  --muted-foreground: oklch(0.7607 0.0126 183.97);
+  --accent: oklch(0.3384 0.0163 208.76);
+  --accent-foreground: oklch(0.9525 0.0057 128.53);
+  --border: oklch(0.3801 0.0176 213.26);
+  --input: oklch(0.4386 0.0205 219.98);
+  --ring: oklch(0.7567 0.1039 138.18);
+
+  --sidebar: oklch(0.2164 0.0092 208.75);
+  --sidebar-foreground: oklch(0.9525 0.0057 128.53);
+  --sidebar-primary: oklch(0.7567 0.1039 138.18);
+  --sidebar-primary-foreground: oklch(0.2251 0.0373 140.09);
+  --sidebar-accent: oklch(0.2966 0.0142 211.13);
+  --sidebar-accent-foreground: oklch(0.9525 0.0057 128.53);
+  --sidebar-border: oklch(0.3055 0.0129 212.64);
+  --sidebar-ring: oklch(0.7567 0.1039 138.18);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-muted: oklch(0.28 0.08 25);
+  --success: oklch(0.8 0.17 155);
+  --success-muted: oklch(0.28 0.06 155);
+  --warning: oklch(0.85 0.15 85);
+  --warning-muted: oklch(0.3 0.06 80);
+  --info: oklch(0.8 0.12 250);
+  --info-muted: oklch(0.28 0.07 255);
+}

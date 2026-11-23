@@ -1,0 +1,67 @@
+---
+import Base from '../layouts/Base.astro';
+import SearchField from '../components/SearchField.astro';
+import { textsFor } from '../lib/i18n.ts';
+import { catalogue, formatDate, href, manualPath, siteBrand } from '../lib/site.ts';
+
+const { s, cards } = catalogue();
+const t = textsFor(s.lang);
+const brand = siteBrand();
+const title = brand.name ?? t.siteTitle;
+/** Manuals a product shows on the start page; the rest are a link to the list away. */
+const SHOWN = 6;
+/** Variants a manual links before "+n more" (the manual's own page has them all). */
+const FOLD = 4;
+---
+
+<Base title={title} current="start">
+  <div class="start">
+    <section class="start__lead">
+      <h1 class="start__title">{title}</h1>
+      <p class="start__intro">{t.startIntro}</p>
+      <SearchField id="start-q" size="large" />
+    </section>
+    {cards.length === 0 && <p class="empty empty--page">{t.noManuals}</p>}
+    {
+      s.releases.map((release) => (
+        <section class="product" id={`product-${release.product}`} data-product-section={release.product} aria-labelledby={`h-${release.product}`}>
+          <header class="product__head">
+            <h2 class="product__name" id={`h-${release.product}`}>{release.productLabel}</h2>
+            <p class="product__release">
+              {t.latestRelease} {release.revision}
+              <span class="sep" aria-hidden="true">·</span>
+              <time datetime={release.publishedAt}>{formatDate(release.publishedAt, s.lang)}</time>
+            </p>
+          </header>
+          <ul class="entries">
+            {release.manuals.slice(0, SHOWN).map((manual) => (
+              <li class="entry">
+                <a class="entry__title" href={href(manualPath(release, manual, manual.variants[0]!))}>{manual.title}</a>
+                {manual.variants.length > 1 && (
+                  <ul class="entry__variants" aria-label={t.variants}>
+                    {manual.variants.slice(0, FOLD).map((v) => (
+                      <li><a href={href(manualPath(release, manual, v))}>{v.label}</a></li>
+                    ))}
+                    {manual.variants.length > FOLD && (
+                      <li class="entry__more">
+                        <a href={href(manualPath(release, manual, manual.variants[FOLD]!))}>{t.moreVariants.replace('{n}', String(manual.variants.length - FOLD))}</a>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+          {release.manuals.length > SHOWN && (
+            <p class="product__more">
+              <a class="arrow-link" href={href(`manuals/?product=${release.product}`)}>
+                {t.allOfProduct.replace('{n}', String(release.manuals.length)).replace('{product}', () => release.productLabel)}
+                <span aria-hidden="true">→</span>
+              </a>
+            </p>
+          )}
+        </section>
+      ))
+    }
+  </div>
+</Base>

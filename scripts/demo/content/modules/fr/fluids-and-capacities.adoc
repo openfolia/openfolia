@@ -1,0 +1,28 @@
+= Liquides et contenances
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: liquides, contenances
+
+[#table,cols="2,2",options=header]
+.Liquides et contenances
+|===
+|[[fc-h-what]]Liquide |[[fc-h-value]]Spécification et contenance
+|[[fc-washer]]Liquide lave-glace |[[fc-washer-v]]4,0 l, avec antigel en hiver
+|[[fc-brake]]Liquide de frein |[[fc-brake-v]]DOT 4, 0,7 l
+|[[fc-coolant]]Liquide de refroidissement |[[fc-coolant-v]]Liquide de refroidissement sans silicates, prêt à l'emploi
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Réservoir de carburant : 45 l d'essence sans plomb, RON 95 minimum. Huile moteur : 4,2 l, viscosité 0W-30.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Batterie : 58 kWh utiles. Le groupe motopropulseur ne nécessite aucune vidange.
+====

@@ -1,0 +1,19 @@
+schemaVersion: 1
+status: approved
+domain: operation
+languages:
+  en:
+    preferred: parking brake
+    forbidden:
+      - term: handbrake
+        note: The brake is electric and set with a switch.
+    definition: The brake that holds the parked vehicle, set with the switch beside the gear selector.
+  de:
+    preferred: Feststellbremse
+    forbidden:
+      - term: Handbremse
+        note: Die Bremse ist elektrisch und wird mit einem Schalter betätigt.
+    definition: Die Bremse, die das abgestellte Fahrzeug hält, betätigt mit dem Schalter neben dem Wählhebel.
+  fr:
+    preferred: frein de stationnement
+    definition: Le frein qui immobilise le véhicule à l'arrêt, commandé par l'interrupteur à côté du sélecteur.

@@ -1,0 +1,87 @@
+---
+title: 'Retrieval chunks'
+description: 'Read the content as ready-made chunks for a retrieval index: what a chunk holds, the filters, reading every page at one commit, and modules left out as too large.'
+articleId: 'guide.integrations.chunks'
+---
+
+`GET /chunks` gives a retrieval pipeline the content as ready-made chunks, with the metadata to
+filter on and a hash, so you embed a chunk again only when it changed. It is part of the
+[Delivery API](/api/delivery) and needs `content.read`. To keep an index in step over time, read
+the [change feed](/guide/integrations/change-feed).
+
+## What a chunk is
+
+- **One chunk per module and language**, the module as Markdown: the title as a `#` heading,
+  sections as deeper headings, lists, numbered steps, tables, safety messages and notes as quotes
+  headed by their signal word, images as `*Figure:*` lines with their alternative text.
+- **One more chunk per FAQ entry**, after its module's: the question as heading, then its answer.
+- **Module references** are put in, but only modules the reader may see and no more restricted
+  than the including module, so a chunk's `audience` holds for all of its text.
+- **Variant blocks** are quotes headed by `**when**` and their condition. With
+  `filter[variant]=model=large` they are resolved for that variant instead.
+
+A chunk's `id` is `<lang>/<moduleId>` (an FAQ entry's `<lang>/<moduleId>/<blockId>`). Its
+`attributes` hold `moduleId`, `lang`, `title`, `moduleType`, `audience`, `facets`, `keywords`,
+`manuals` (the manuals that include it), `conditions`, `text`, `sourceHash` and `contentHash` (the
+SHA-256 of `text`). `meta` holds `commit`, `sources` and `release` (the newest release that holds
+the module). Changing only a file's formatting changes neither `text` nor `contentHash`.
+
+## Read every chunk
+
+1. Ask for the first page at `main`:
+
+   ```sh
+   curl -gs -i -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/chunks?ref=main&page[size]=200"
+   ```
+
+2. Keep the commit the answer names in `X-Ccms-Commit`, and read every further page at
+   `?ref=<that commit>`, so all pages come from one commit. A consumer's token may read that
+   commit only while `main` (or a tag) still points at it: if `main` moves on during the read, a
+   later page answers 404 `not-found`; start again at step 1. To read one release whatever comes
+   after it, read every page at its release tag instead.
+3. Store each chunk by `id`. Embed it only when its `contentHash` is new.
+4. Filter retrieval on `audience`, `facets`, `manuals`, `lang` and `meta.release`.
+
+Next time, `filter[changedSince]=<the commit you kept>` lists only the chunks that may differ since.
+It does not list deletions or what left the reader's scope: follow the change feed for those, or
+read everything again now and then (and after each release, for `meta.release`).
+
+**Filters**, all optional: `filter[module]`, `filter[lang]`, `filter[manual]`, `filter[variant]`,
+`filter[changedSince]`, and the module filters of [search](/guide/integrations/search)
+(`filter[type]`, `filter[audience]`, `filter[facet]`, `filter[keyword]`). A chunk outside the
+reader's scope is never listed, counted or put in. Drafts (any ref other than `main` and tags)
+need `content.read.draft`, which a consumer's token does not hold.
+
+## Modules left out as too large
+
+Module references that multiply can make a module too large to cut. A module's chunks, its FAQ
+entries' included, are held to the limits a manual has: 500,000 content nodes, 12,000,000
+characters, 1,000,000 table cells (rows × columns), 100 levels deep. Past one, only that module is
+left out:
+
+- it has no chunk, and the others are served as usual;
+- `meta.leftOut` names it, with `moduleId`, `lang` and `reason` (`size` or `depth`), only to
+  readers who may see it;
+- the change feed carries the release without its chunks;
+- before the release, the module's checks show a blocking `expansion-too-large`, so the writer
+  can fix it (see [Fix what the checks find](/guide/checks/fixing-issues)).
+
+## A commit's chunks too large together
+
+Each module may be under the limits while many of them together are not (a hundred small modules
+that each refer to one that multiplies). So the chunks of a commit, as one reader sees them,
+share one budget: four times the content they are made from, plus room for 32 modules at the
+limits of one. Past it, every request for that commit's chunks, each page and each filter, is
+422 `chunk-set-too-large`:
+
+- `meta` names the budget, and `meta.largest` the up to five modules (among those the reader may
+  see) whose chunks expanded the most, with `moduleId`, `lang`, `chars` and `nodes`;
+- it is that commit's and that reader's only: other commits, and readers who may not see the
+  modules that multiply, are served as usual;
+- the change feed skips such a release;
+- before the release, a revision's checks show a blocking `chunk-set-too-large` at those modules
+  (see [References, images and terms](/guide/checks/references)). The fix is in the content: refer
+  to fewer modules, over fewer paths.
+
+For the whole loop of a retrieval index, see [Integrating with a RAG pipeline](/guides/rag).

@@ -1,0 +1,42 @@
+{
+  "$comment": "Licences a shipped dependency may have, as SPDX identifiers, because they may be combined with AGPL-3.0-only (#370). `pnpm licences` fails on any other, on an unknown one and on a free-text licence. Not here on purpose: GPL-2.0-only and LGPL-2.0-only (incompatible with GPL-3.0), SSPL, BUSL, Commons Clause and non-commercial or no-derivatives licences. `allowedExceptions` are the SPDX exceptions a `WITH` may add (they only grant more); any other, such as Commons-Clause, is refused. A dependency whose licence was reviewed and found acceptable all the same goes into `exceptions`: the package, its licence exactly as `pnpm licenses list` reports it, and why. Platform builds are matched by their name without the platform words (`@img/sharp-libvips`).",
+  "allowed": [
+    "0BSD",
+    "AGPL-3.0",
+    "AGPL-3.0-only",
+    "AGPL-3.0-or-later",
+    "Apache-2.0",
+    "BlueOak-1.0.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC-BY-4.0",
+    "CC0-1.0",
+    "GPL-2.0-or-later",
+    "GPL-3.0",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "ISC",
+    "LGPL-2.1",
+    "LGPL-2.1-only",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0",
+    "LGPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "OFL-1.1",
+    "PSF-2.0",
+    "Python-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib"
+  ],
+  "allowedExceptions": [
+    "Classpath-exception-2.0",
+    "GCC-exception-3.1",
+    "LLVM-exception"
+  ],
+  "exceptions": []
+}

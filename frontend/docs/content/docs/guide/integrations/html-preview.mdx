@@ -1,0 +1,55 @@
+---
+title: 'HTML preview routes'
+description: 'Show a module or a manual as a web page from the API: the routes, their parameters, the theme, and the headers that keep the page safe.'
+articleId: 'guide.integrations.html-preview'
+---
+
+Two routes answer a complete HTML page, for showing content in a portal, an app or a frame:
+
+| Route                                              | What                                                         |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /modules/<lang>/<id>/preview`                 | one module, on its own                                       |
+| `GET /manuals/<id>/variants/<variant>/<lang>/html` | a manual in one variant and language, resolved as its PDF is |
+
+Both are part of the [Delivery API](/api/delivery), need `content.read` and read only what the
+reader may see. A module or manual the reader may not see answers 404, exactly like a missing
+one.
+
+## Get a page
+
+```sh
+curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: text/html" \
+  "https://docs.example.com/api/manuals/<id>/variants/model=large/en/html?ref=<tag>"
+```
+
+| Parameter | What                                                                                                                        |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `ref`     | A branch, tag or commit (default: the server's default branch). Read at a release's tag for released content.               |
+| `theme`   | `auto` (default: follows the viewer's light or dark setting, no script), `light` or `dark`, for a host with its own switch. |
+| `variant` | Module route only: a variant slug such as `model=large`. Without it, no condition on a variant attribute holds.             |
+| `view`    | Manual route only: `reader` (default), the HTML readers get, or `editor`, which also marks each page break of the PDF.      |
+
+Any other parameter is 400 `unsupported-parameter`; an `Accept` that excludes `text/html` is 406.
+Only a success is HTML: every error is a JSON:API error document.
+
+The page's stylesheets, fonts and images are linked relative to the page's own URL, at the same
+`ref`, so they resolve wherever the API is mounted. They need the same token: serve the page
+through a server of yours that adds it, never with a token in the URL.
+
+## Caching
+
+At a commit ID, the answer is `private, max-age=31536000, immutable`. At a branch or tag, it is
+`private, no-cache` with an ETag, and `If-None-Match` gets a cheap 304. `X-Ccms-Commit` names the
+commit read.
+
+## What keeps it safe
+
+- `Content-Security-Policy` allows no script of any kind and nothing from another origin.
+- It may be framed only by the API's own origin and those in `CCMS_EDITOR_ORIGINS`
+  (`frame-ancestors`): to frame it elsewhere, the operator adds that origin there.
+- `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+
+Text is escaped by the renderer, so no content becomes markup. To list what the variant conditions
+leave out of a page, use `GET /modules/<lang>/<id>/hidden-content` and
+`GET /manuals/<id>/variants/<variant>/<lang>/hidden-content`. For a manual at its released
+address, see [Release outputs for portals](/guide/integrations/release-outputs).

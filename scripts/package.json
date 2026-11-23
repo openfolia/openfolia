@@ -1,0 +1,50 @@
+{
+  "name": "@openfolia/workflow",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "Repository tooling for planning and parallel agents: backlog, board, agent slots, review and merge helpers, and the Claude Code guard hooks' tests.",
+  "type": "module",
+  "devDependencies": {
+    "@openfolia/content-model": "workspace:*",
+    "@openfolia/render-typst": "workspace:*",
+    "yaml": "2.9.1"
+  },
+  "nx": {
+    "name": "workflow",
+    "targets": {
+      "licences": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "{workspaceRoot}/pnpm-lock.yaml",
+          "{workspaceRoot}/**/package.json",
+          "{workspaceRoot}/THIRD-PARTY-NOTICES.md",
+          "{projectRoot}/licences.mjs",
+          "{projectRoot}/licences-plan.mjs",
+          "{projectRoot}/licence-policy.json"
+        ],
+        "outputs": [],
+        "options": {
+          "cwd": "{workspaceRoot}",
+          "command": "node scripts/licences.mjs check"
+        }
+      },
+      "lint": {
+        "dependsOn": [
+          "licences"
+        ]
+      },
+      "test": {
+        "inputs": [
+          "default",
+          "^production",
+          "{workspaceRoot}/.github/release.yml",
+          "{workspaceRoot}/deploy/docker/docs/**/*",
+          "{workspaceRoot}/LICENSE",
+          "{workspaceRoot}/THIRD-PARTY-NOTICES.md"
+        ]
+      }
+    }
+  }
+}

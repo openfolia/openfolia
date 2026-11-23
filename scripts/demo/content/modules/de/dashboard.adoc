@@ -1,0 +1,26 @@
+= Instrumententafel
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Instrumente, Kontrollleuchten
+
+[#intro]
+Die Instrumententafel zeigt die Geschwindigkeit, die Warn- und Kontrollleuchten und Meldungen des Fahrzeugs.
+
+[#img-cluster]
+image::demo-image:instrument-panel["Instrumententafel mit Tachometer, Anzeige und Kontrollleuchten",width=80%]
+<.> [callout#i-speed,x=0.25,y=0.5,label-x=0.25,label-y=0.06] Tachometer
+<.> [callout#i-display,x=0.5,y=0.5,label-x=0.5,label-y=0.06] Anzeige mit Uhr und Meldungen
+<.> [callout#i-energy,x=0.75,y=0.5,label-x=0.75,label-y=0.06] Tankanzeige oder Ladezustand
+<.> [callout#i-lights,x=0.5,y=0.86,label-x=0.9,label-y=0.94] Warn- und Kontrollleuchten
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+Bei Fahrzeugen für Großbritannien zeigt der Tachometer Meilen pro Stunde, auf der inneren Skala Kilometer pro Stunde.
+====
+
+[#ref-lights]
+module::warning-lights[]

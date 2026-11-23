@@ -1,0 +1,29 @@
+= Airbags
+:schema-version: 1
+:module-type: safety
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: airbag, passenger seat
+
+[safety#rear-facing,severity=danger,symbols=w001]
+.Front passenger airbag and rear-facing child seats
+====
+[#rear-facing-text]
+An airbag that inflates in front of a rear-facing child seat can kill the child.
+
+[#rear-facing-measures]
+* [[rear-facing-m1]]Never fit a rear-facing child seat on the front passenger seat while the front passenger airbag is switched on.
+* [[rear-facing-m2]]Switch the airbag off with the key switch in the glovebox. The indicator [.ui]##PASSENGER AIRBAG OFF## must light up.
+====
+
+[safety#position,severity=warning,symbols=w001]
+.Sitting too close to an airbag
+====
+[#position-text]
+An inflating airbag can injure people who sit too close to it or lean against the door.
+
+[#position-measures]
+* [[position-m1]]Keep at least 25 cm between your chest and the steering wheel.
+* [[position-m2]]Never put objects, covers or stickers on the airbag covers.
+====

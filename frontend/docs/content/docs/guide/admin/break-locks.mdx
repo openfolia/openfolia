@@ -1,0 +1,26 @@
+---
+title: 'Free the locks someone holds'
+description: 'Take over one module, release every lock of a person who left, or break all locks of a revision.'
+articleId: 'guide.admin.break-locks'
+---
+
+Whoever edits a module holds its lock, so nobody else changes it at the same time. A lock stays
+while its holder's revision is open. When the holder is away or has left, an admin can free it.
+
+## One module
+
+Open the module and choose **Take over editing**. You say why, the other person is told,
+and their editor turns read-only. See [Locks and taking over](/guide/writing/locks-and-taking-over).
+
+## Every lock of a person who left
+
+Deactivate the person in **Admin › Users** (see [Users and roles](/guide/admin/users-and-roles)).
+Every lock they hold is released, and the message says how many. A service account's locks are
+released the same way, when it is deactivated.
+
+## Every lock of a revision or a holder, at once
+
+The editor has no button for this. A tool or script with an admin's access can do it through the
+API (`POST /locks/break`, with a comment): it breaks every lock of one revision or of one holder,
+and each broken lock is recorded in the [audit log](/guide/admin/audit-log) as **Lock broken**.
+Holders are told. See the [API reference](/api).

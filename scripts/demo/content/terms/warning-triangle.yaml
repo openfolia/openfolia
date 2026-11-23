@@ -1,0 +1,13 @@
+schemaVersion: 1
+status: approved
+domain: breakdown
+languages:
+  en:
+    preferred: warning triangle
+    definition: The red reflective triangle set up behind a vehicle that has stopped on the road.
+  de:
+    preferred: Warndreieck
+    definition: Das rote, reflektierende Dreieck, das hinter einem auf der Fahrbahn liegen gebliebenen Fahrzeug aufgestellt wird.
+  fr:
+    preferred: triangle de présignalisation
+    definition: Le triangle rouge réfléchissant placé derrière un véhicule arrêté sur la chaussée.

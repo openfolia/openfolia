@@ -1,0 +1,32 @@
+= Tyre pressures
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: tyres, tyre pressure
+
+[#intro]
+Pressures for cold tyres of size {tyre-size}, in bar. They also apply to the spare wheel.
+
+[variant#hatchback,when="body in (hatchback)"]
+====
+[#table-hatchback,cols="2,1,1",options=header]
+.Tyre pressures, hatchback
+|===
+|[[hb-h-load]]Load |[[hb-h-front]]Front |[[hb-h-rear]]Rear
+|[[hb-part]]Up to 3 people |[[hb-part-front]]2.3 bar |[[hb-part-rear]]2.2 bar
+|[[hb-full]]Fully loaded |[[hb-full-front]]2.5 bar |[[hb-full-rear]]2.8 bar
+|===
+====
+
+[variant#estate,when="body in (estate)"]
+====
+[#table-estate,cols="2,1,1",options=header]
+.Tyre pressures, estate
+|===
+|[[es-h-load]]Load |[[es-h-front]]Front |[[es-h-rear]]Rear
+|[[es-part]]Up to 3 people |[[es-part-front]]2.4 bar |[[es-part-rear]]2.4 bar
+|[[es-full]]Fully loaded |[[es-full-front]]2.6 bar |[[es-full-rear]]2.9 bar
+|===
+====

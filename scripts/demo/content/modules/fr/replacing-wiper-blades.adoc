@@ -1,0 +1,20 @@
+= Remplacer les balais d'essuie-glace
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: essuie-glaces
+
+[#intro]
+Remplacez les balais d'essuie-glace une fois par an, ou dès qu'ils laissent des traces.
+
+[procedure#steps]
+.Remplacer un balai d'essuie-glace
+. [[step-service]]Dans les dix secondes qui suivent l'arrêt du véhicule, poussez la manette d'essuie-glace vers le bas : les essuie-glaces se placent en position de service.
+. [[step-lift]]Écartez le bras d'essuie-glace du pare-brise.
+. [[step-release]]Appuyez sur le bouton de déverrouillage et retirez le balai du bras.
++
+[#img-wiper]
+image::demo-image:wiper-blade["Bras d'essuie-glace relevé, bouton de déverrouillage enfoncé, balai en train de glisser hors du bras",width=45%]
+. [[step-fit]]Enfoncez le balai neuf sur le bras jusqu'au déclic, puis rabattez le bras.

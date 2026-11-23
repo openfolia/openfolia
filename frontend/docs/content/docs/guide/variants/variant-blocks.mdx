@@ -1,0 +1,42 @@
+---
+title: 'Text for some variants'
+description: 'A variant block holds text that only some variants get: insert one and set its condition.'
+articleId: 'guide.variants.variant-blocks'
+---
+
+A product often comes in variants, such as a small and a large model. Most of a module is the same
+for all of them. Put what differs into a variant block: only the variants you choose get it.
+
+The variant attributes (such as **Model**) and their values (such as **Small** and **Large**) are
+set in the project's settings. Ask your admin when one is missing.
+
+## Insert a variant block
+
+1. Put the caret where the text should go.
+2. Choose **Insert**, then **Variant block**. Or type `/variant` and press <kbd>Enter</kbd>.
+3. The frame says **No variants chosen yet**. Choose the variants that get it (see below).
+4. Write the text inside the block's frame.
+
+The frame says whom it is for: **Shown for** **Model: Large**.
+
+## Choose the variants
+
+1. Choose **Choose variants** in the block's frame, or **Change variants** once it has some.
+2. In **Show this block for**, tick the values of each attribute. **is** keeps the ticked values,
+   **is not** all the others. Type in **Find a variant attribute or value** to find one fast.
+3. With more than one attribute, choose under **Rule** whether **All groups must match** or **Any
+   group may match**.
+4. Check what the block will be in: **Appears in** lists the manuals' builds that get it.
+5. Choose **Apply**.
+
+![The dialog Show this block for, with Model is Large ticked](/images/guide/en/variant-picker.webp)
+
+**Condition as text** shows the same rule written out, such as `model in (large)`. You can type it
+there too.
+
+To show the block for every variant again, choose **Remove condition**.
+
+## Check what a variant gets
+
+Open the [preview](/guide/writing/preview) and choose a variant. The note above the preview names
+the blocks hidden for it.

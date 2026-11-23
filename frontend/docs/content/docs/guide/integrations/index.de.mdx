@@ -1,0 +1,92 @@
+---
+title: 'Integrationen'
+description: 'Webhooks, der Änderungs-Feed, der MCP-Server und Exporte.'
+articleId: 'guide.integrations'
+---
+
+Dieser Abschnitt richtet sich an Entwicklerinnen und Entwickler, die andere Systeme an die
+freigegebenen Inhalte anbinden: ein Portal, eine App, einen Suchindex oder einen KI-Assistenten.
+Für das Schreiben und Prüfen brauchen Sie ihn nicht. Beginnen Sie mit
+[Die Delivery-API](/de/guide/integrations/delivery-api).
+
+Die [API-Referenz](/de/api) hat eine Seite je Route, aus dem Server erzeugt, und beide
+OpenAPI-Dokumente zum Herunterladen. Zwei Anleitungen beschreiben eine ganze Anbindung:
+[Anbindung an eine RAG-Pipeline](/de/guides/rag) und [der MCP-Server](/de/guides/mcp) für
+KI-Assistenten. Eine Veröffentlichung als [iiRDS-Paket](/de/guide/releases/iirds) oder als
+[DITA-Projekt](/de/guide/releases/dita) steht unter Veröffentlichungen.
+
+Im Editor richtet eine Administratorin oder ein Administrator ein, was Integrationen nutzen:
+Service-Accounts mit ihren Tokens und Webhooks. Siehe [Verwaltung](/de/guide/admin).
+
+<Cards>
+  <Card
+    title="Die Delivery-API"
+    href="/de/guide/integrations/delivery-api"
+    description="Was die Lese-Routen liefern, und eine erste Anfrage."
+  />
+  <Card
+    title="Mit dem Token eines Service-Accounts authentifizieren"
+    href="/de/guide/integrations/authentication"
+    description="Tokens von Service-Accounts und abgelehnte Tokens."
+  />
+  <Card
+    title="JSON:API-Konventionen"
+    href="/de/guide/integrations/json-api"
+    description="Medientyp, Seiten, Refs und Fehler."
+  />
+  <Card
+    title="Änderungs-Feed"
+    href="/de/guide/integrations/change-feed"
+    description="Was sich geändert hat, Seite für Seite mit einem Cursor."
+  />
+  <Card
+    title="Webhooks empfangen"
+    href="/de/guide/integrations/webhooks"
+    description="Signierte Ereignisse, Signaturen prüfen, Wiederholungen."
+  />
+  <Card
+    title="Such-API"
+    href="/de/guide/integrations/search"
+    description="Die Anfrage, Filter, Reihenfolge und Grenzen."
+  />
+  <Card
+    title="Retrieval-Chunks"
+    href="/de/guide/integrations/chunks"
+    description="Fertige Stücke für einen Retrieval-Index."
+  />
+  <Card
+    title="Veröffentlichte Dateien für Portale"
+    href="/de/guide/integrations/release-outputs"
+    description="PDFs und ZIPs einer Veröffentlichung, und dauerhafte Adressen."
+  />
+  <Card
+    title="HTML-Vorschau-Routen"
+    href="/de/guide/integrations/html-preview"
+    description="Ein Modul oder Handbuch als Webseite."
+  />
+  <Card
+    title="Das statische Portal"
+    href="/de/guide/integrations/static-portal"
+    description="Eine statische Website je Zielgruppe, und ihr Hosting."
+  />
+  <Card
+    title="Importformat"
+    href="/de/guide/integrations/import-format"
+    description="Import-Bundles, Probeläufe und das Übernehmen."
+  />
+  <Card
+    title="DITA-Import"
+    href="/de/guide/integrations/dita-import"
+    description="Ein DITA-1.3-Projekt als Inhalte übernehmen."
+  />
+  <Card
+    title="Import-Konnektoren"
+    href="/de/guide/integrations/connectors"
+    description="Ein Wiki einmal übernehmen, Tracker-Einträge nach Zeitplan."
+  />
+  <Card
+    title="Terminologie exportieren"
+    href="/de/guide/integrations/terminology-export"
+    description="Terminologie als TBX oder CSV."
+  />
+</Cards>

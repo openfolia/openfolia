@@ -1,0 +1,21 @@
+schemaVersion: 1
+status: approved
+domain: electric drive
+languages:
+  en:
+    preferred: high-voltage system
+    allowed:
+      - term: HV system
+    definition: The battery, the motor and every part between them that carries more than 60 V. Its cables are orange.
+  de:
+    preferred: Hochvoltsystem
+    allowed:
+      - term: HV-System
+    forbidden:
+      - term: Hochspannungssystem
+    definition: Die Batterie, der Motor und alle Bauteile dazwischen, die mehr als 60 V führen. Seine Leitungen sind orange.
+  fr:
+    preferred: système haute tension
+    allowed:
+      - term: système HT
+    definition: La batterie, le moteur et toutes les pièces entre eux qui portent plus de 60 V. Ses câbles sont orange.

@@ -1,0 +1,86 @@
+---
+title: 'Verweise, Bilder und Begriffe'
+description: 'Defekte Verweise, fehlende Bilder und Dateien, unbekannte Begriffe, ein zu großes Handbuch und zusammen zu große Abschnitte beheben.'
+articleId: 'guide.checks.references'
+---
+
+Diese Prüfungen sehen sich an, worauf ein Modul zeigt: andere Module, Blöcke, Bilder, angehängte
+Dateien, Begriffe und Positionsnummern. Die meisten sind blockierend: Eine Veröffentlichung hätte
+sonst einen kaputten Link oder eine Lücke.
+
+![Prüfungen einer Überarbeitung: ein unbekannter Begriff und ein defekter Verweis, blockierend, und fehlende Übersetzungen](/images/guide/de/checks-blocking.webp)
+
+Wählen Sie **Zum Block** neben einem Problem, um genau beim Block zu landen, beheben Sie es dort und
+wählen Sie **Erneut prüfen**.
+
+## Module und Querverweise
+
+- **Fehlendes Modul** (blockierend): Das Handbuch oder ein Modulverweis nennt ein Modul, das es
+  nicht gibt. Wählen Sie ein anderes Modul oder entfernen Sie den Verweis.
+- **Modul verweist auf sich selbst** (blockierend): Modulverweise bilden eine Schleife. Entfernen
+  Sie einen davon.
+- **Defekter Modulverweis** (blockierend): Ein Verweis auf einen Block eines Moduls nennt einen
+  Block, den es in diesem Modul nicht (mehr) gibt, etwa **Bindet den Block „acid-warning“ aus
+  „battery-safety“ ein, den es nicht gibt.** Wählen Sie einen anderen Block oder entfernen Sie
+  den Verweis.
+- **Defekter Verweis** (blockierend): Ein Querverweis zeigt auf ein Modul oder einen Block, den es
+  nicht gibt, etwa **Verlinkt auf „clean-the-sensors“, das es nicht gibt.** Verlinken Sie ein
+  anderes.
+- **Verweis außerhalb des Handbuchs** (Warnung): Das verlinkte Modul ist nicht in diesem Handbuch,
+  Leser des Handbuchs können dem Link also nicht folgen. Nehmen Sie das Modul ins Handbuch auf oder
+  verlinken Sie ein anderes.
+- **Veraltetes Modul** (Warnung): Das Handbuch enthält ein veraltetes Modul. Die Details nennen das
+  Modul, das stattdessen gilt, sofern es eines gibt.
+- **Unbekannter Ersatz** (Warnung): Eine Veraltung nennt einen Ersatz, den es nicht gibt.
+
+## Ein Handbuch, zu groß zum Erstellen
+
+**Handbuch zu groß** (blockierend): Mit seinen Modulverweisen enthält das Handbuch mehr als
+500.000 Inhaltselemente oder 12.000.000 Zeichen, oder seine Inhalte sind mehr als 100 Ebenen tief
+verschachtelt. Das geschieht, wenn Module über viele Wege auf dasselbe Modul verweisen, das dann
+jedes Mal erneut zählt, oder über viele Ebenen aufeinander verweisen.
+
+Ein solches Handbuch wird gar nicht erstellt: Sein PDF, seine Seiten und seine Vorschauen werden
+abgelehnt, und sein PDF wird nicht geprüft. Verweisen Sie auf weniger Module, über weniger Wege
+oder weniger tief verschachtelt. Die Details nennen die überschrittene Grenze.
+
+## Abschnitte zusammen zu groß
+
+Die Abschnitte für Suche und Assistenten (Retrieval-Chunks) sind die Teile der Inhalte, die Suche
+und Assistenten lesen. Die Prüfungen einer Überarbeitung sehen sich auch die Abschnitte aller
+Inhalte an, so wie Sie diese sehen:
+
+- **Abschnitte zusammen zu groß** (blockierend): Viele Module schließen jeweils viel ein, sodass
+  ihre Abschnitte zusammen größer werden, als die Inhalte dürfen. Nach der Veröffentlichung hätten
+  die Inhalte gar keine Abschnitte. Die Prüfung erscheint bei den Modulen, die am stärksten
+  gewachsen sind. Verweisen Sie auf weniger Module, über weniger Wege.
+- **Abschnitte nicht geprüft** (Warnung): Die Prüfung der Abschnitte war zu aufwendig, daher
+  wurden sie ab diesem Modul nicht geprüft. Die Abhilfe ist dieselbe.
+
+## Bilder und angehängte Dateien
+
+- **Fehlendes Bild** (blockierend): Das Bild ist nicht gespeichert. Laden Sie es erneut hoch oder
+  wählen Sie ein anderes.
+- **Fehlende angehängte Datei** (blockierend): dasselbe für einen Anhang.
+- **Dateiname passt nicht zur Datei** (blockierend): Der Dateiname des Anhangs hat eine Endung, die
+  nicht zur Datei passt, oder eine, die Code ausführen kann. Geben Sie ihm die Endung der Datei.
+
+## Begriffe
+
+- **Unbekannter Begriff** (blockierend): Ein Begriffslink nennt einen Begriff, den es nicht gibt.
+  Verlinken Sie einen anderen Begriff, oder lassen Sie ihn unter **Terminologie** anlegen.
+- **Veralteter Begriff** (Warnung): Der Begriff ist veraltet. Die Details nennen den Begriff, der
+  stattdessen gilt, sofern es einen gibt.
+
+## Positionsnummern
+
+- **Unbekannte Positionsnummer** (blockierend): Ein Verweis auf eine Positionsnummer nennt ein Bild
+  oder eine Positionsnummer, die es nicht gibt.
+- **Ausgeblendete Positionsnummer** (Warnung): Die Positionsnummer fehlt in einer Variante, hat dort
+  also keine Nummer.
+
+## Seitengestaltung
+
+**Unbekannte Seitengestaltung** (blockierend): Das Handbuch oder das Projekt nennt eine
+Seitengestaltung, die es nicht gibt. Das PDF verwendet die eingebaute Gestaltung, bis Sie eine
+bestehende wählen.

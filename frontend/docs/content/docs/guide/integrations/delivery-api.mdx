@@ -1,0 +1,82 @@
+---
+title: 'The Delivery API'
+description: 'Read released content for a portal, an app or an integration: what the routes give and a first request.'
+articleId: 'guide.integrations.delivery-api'
+---
+
+The Delivery API is the part of the API for someone building their own viewer, portal or
+integration: read routes over the content, nothing about authoring, review or administration. Every
+route is `GET`, and needs a token whose role holds `content.read`, with three exceptions:
+`GET /health` needs nothing; the stable addresses under `/d/` need no token where `openfolia.yaml`
+makes them public (see [Who opens the addresses](/guide/releases/address-access)); and
+`GET /preview/{name}` and `GET /preview/fonts/{name}` (the stylesheets and fonts of the HTML pages)
+need a token but no permission. The
+[Delivery API reference](/api/delivery) has each route with its parameters, schemas and a
+playground, and the OpenAPI document to download.
+
+## What it gives
+
+| Routes                                                                               | What                                                                                                 |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `/config`, `/refs`                                                                   | The project configuration (languages, module types, audiences, variant attributes) and the refs.     |
+| `/modules`, `/modules/{lang}/{id}`                                                   | Single modules, their history and comparisons.                                                       |
+| `/manuals`, `/manuals/{id}`, `/manuals/{id}/variants/{variant}/{lang}`               | Manuals and the resolved manual: one variant and language, the modules in reading order.             |
+| `…/html`, `…/pdf`, `/modules/{lang}/{id}/preview`                                    | The server's own rendering, as an HTML page or a PDF.                                                |
+| `/assets/{hash}`, `/symbols/{id}`                                                    | Images and attachments by their hash, safety symbols.                                                |
+| `/releases`, `/releases/{id}`, `/releases/{id}/changes`, `/changelog`                | Releases, what each changed, the changelog.                                                          |
+| `/releases/{id}/outputs`, `…/outputs/archive`, `…/iirds-packages`, `…/dita-packages` | A release's files, and its [iiRDS](/guide/releases/iirds) and [DITA](/guide/releases/dita) packages. |
+| `/search`, `/chunks`, `/changes`                                                     | Search, retrieval chunks, the change feed.                                                           |
+| `/terms`, `/terms/export`                                                            | The terminology.                                                                                     |
+| `/d/…`, `/stable-addresses`                                                          | Manuals' stable addresses and their QR codes.                                                        |
+
+Read `GET /config` instead of assuming languages, module types or variants: they are configuration.
+
+## A first request
+
+With a [service account token](/guide/integrations/authentication) and the API reached through the
+editor's host (`https://docs.example.com/api`):
+
+1. List the releases, newest first:
+
+   ```sh
+   curl -gs 'https://docs.example.com/api/releases?page[size]=5' \
+     -H "Authorization: Bearer $DOCS_TOKEN" \
+     -H 'Accept: application/vnd.api+json'
+   ```
+
+   Each release has its tag in `attributes.tag`.
+
+2. Read a manual exactly as it was released, by passing that tag as `ref`:
+
+   ```sh
+   curl -s 'https://docs.example.com/api/manuals/operating?ref=<tag>' \
+     -H "Authorization: Bearer $DOCS_TOKEN" \
+     -H 'Accept: application/vnd.api+json'
+   ```
+
+   The manual lists the variants it publishes, each as a slug. Use the slug exactly as given.
+
+3. Resolve it for one variant and language:
+   `GET /manuals/operating/variants/{variant}/en?ref=<tag>`.
+
+Keep the token in an environment variable or your platform's secret store, as above, never in the
+URL.
+
+## Reading at a ref
+
+- A **release tag** never moves: read it to get exactly what was released.
+- `main` is the newest released content; it can move.
+- A **commit ID** never changes, so an answer read by it never does either. But a token with only
+  `content.read` may read a commit only while `main` or a tag points at it; after that it answers
+  404 `not-found`. The `X-Ccms-Commit` header of any answer names the commit it was read from.
+
+Paging, caching and the error format are the same on every route:
+[JSON:API conventions](/guide/integrations/json-api).
+
+## Keeping up to date
+
+- [The change feed](/guide/integrations/change-feed) tells what was released, withdrawn or
+  deprecated since you last asked.
+- [Webhooks](/guide/integrations/webhooks) wake your integration up when that happens.
+- [Chunks](/guide/integrations/chunks) and [search](/guide/integrations/search) serve retrieval and
+  search; [release outputs](/guide/integrations/release-outputs) the files.

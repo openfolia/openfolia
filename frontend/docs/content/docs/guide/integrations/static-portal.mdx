@@ -1,0 +1,157 @@
+---
+title: 'The static portal'
+description: 'Build a static site of the released manuals for one audience, in every language, and host it with the headers it needs.'
+articleId: 'guide.integrations.static-portal'
+---
+
+The portal is a static site of the released manuals for one audience: a site per language, with
+the manuals per product and variant, filters, search in the browser, light and dark, in your
+organisation's branding. It is built
+from the API with a service account's token and then needs no API at all: any static file server
+serves it.
+
+## Prepare a token
+
+1. Choose the audience the portal is for, an audience level of `openfolia.yaml` (in the sample content,
+   `public`). One build serves one audience.
+2. Make a service account whose roles hold only `content.read`, each with an audience limit of at
+   most that level (see [Service accounts and tokens](/guide/admin/service-accounts)), and copy its
+   token.
+
+The build refuses a token that is no service account's, holds anything but `content.read`, or may
+read above the audience. It checks every manual and module again as it reads them, so nothing
+above the audience reaches the files.
+
+## Build it
+
+From a checkout of the repository:
+
+```sh
+CCMS_PORTAL_API_URL=https://docs.example.com/api \
+CCMS_PORTAL_TOKEN="$PORTAL_TOKEN" \
+CCMS_PORTAL_AUDIENCE=public \
+pnpm nx run portal:site
+```
+
+| Setting                 | What                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `CCMS_PORTAL_API_URL`   | The API's address, `https://` (plain `http` only to this machine). Required.         |
+| `CCMS_PORTAL_TOKEN`     | The service account's token. Sent only in the `Authorization` header. Required.      |
+| `CCMS_PORTAL_AUDIENCE`  | The audience level. Required.                                                        |
+| `CCMS_PORTAL_LANGUAGES` | The languages, comma-separated (default: every configured language).                 |
+| `CCMS_PORTAL_RELEASES`  | Release IDs, comma-separated (default: each product's newest release not withdrawn). |
+| `CCMS_PORTAL_OUT_DIR`   | Where the sites are written (default: `frontend/portal/dist`).                       |
+| `CCMS_PORTAL_BASE_PATH` | The path the sites are served under, starting and ending with `/` (default: `/`).    |
+| `CCMS_PORTAL_BRANDING`  | `on` (default) or `off`: the organisation's branding, or OpenFolia's default look.   |
+
+The output holds a folder per language (`en/`, `de/`) and an `index.html` that sends readers to
+the first. It replaces the output folder only once every language is built. Before that, the build
+searches every file for the token and fails on a match, and it fails when an image's or
+attachment's bytes do not match their hash. Run it again after each release.
+
+## What readers see
+
+- **The start page** leads with a search field and lists each product's manuals; **All
+  manuals** lists every manual with filters for the product, each variant attribute and the
+  title.
+- **A manual** is set for reading: its contents beside it mark the section in view, a switch per
+  variant attribute (body style, market, …) opens the same manual in another variant, and a link
+  downloads the release's PDF of that variant and language when the release has one.
+- **Search** finds sections as well as manuals, filtered by product and variant.
+- **The branding** set in [Branding](/guide/admin/branding) (name, logos for light and dark,
+  favicon, colours) is on every page. Its colours apply only when their contrast checks pass;
+  safety colours never change. Build again after changing it.
+
+## Host it
+
+Serve the output folder with any static web server, on a host name of its own or under the base
+path. The portal has no sign-in: **a portal that is not public needs one in front**, your proxy's or
+your host's.
+
+Each page carries its Content Security Policy as a meta tag, but a meta tag cannot carry
+everything. So the host must send these headers on every response:
+
+- `Content-Security-Policy`, exactly:
+
+  ```text
+  default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  ```
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security: max-age=31536000`, over HTTPS
+
+On attachments written as `.bin` (`<lang>/assets/*.bin`), also send
+`Content-Type: application/octet-stream` and `Content-Disposition: attachment`: not every server
+knows the extension. A missing path answers with its language's `<lang>/404.html`.
+
+nginx (an `add_header` in a `location` replaces the server's, so the `.bin` location repeats them;
+`always` gives error pages the headers too):
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name manuals.example.com;
+    ssl_certificate     /etc/letsencrypt/live/manuals.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/manuals.example.com/privkey.pem;
+    root /srv/portal;
+
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location ~ /assets/[^/]+\.bin$ {
+        types { }
+        default_type application/octet-stream;
+        add_header Content-Disposition "attachment" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+    }
+    error_page 404 /en/404.html;
+    location /en/ { error_page 404 /en/404.html; try_files $uri $uri/ =404; }
+    location /de/ { error_page 404 /de/404.html; try_files $uri $uri/ =404; }
+}
+```
+
+Caddy (the headers as a snippet, for the files and the error pages alike):
+
+```text
+(portal-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
+	}
+}
+
+manuals.example.com {
+	root * /srv/portal
+	import portal-headers
+	@bin path_regexp /assets/[^/]+\.bin$
+	header @bin {
+		Content-Type "application/octet-stream"
+		Content-Disposition "attachment"
+	}
+	file_server
+	handle_errors {
+		import portal-headers
+		@en404 expression `{err.status_code} == 404 && {path}.startsWith("/en/")`
+		@de404 expression `{err.status_code} == 404 && {path}.startsWith("/de/")`
+		rewrite @en404 /en/404.html
+		rewrite @de404 /de/404.html
+		file_server
+	}
+}
+```
+
+List your own languages in place of `en` and `de`. On a host that takes a headers file or settings
+instead of a server configuration, set the same headers there: the four for every path, and the two
+for `.bin` files.

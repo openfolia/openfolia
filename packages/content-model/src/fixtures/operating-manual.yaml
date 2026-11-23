@@ -1,0 +1,26 @@
+schemaVersion: 1
+title: Operating manual
+audience: customer
+variants:
+  - market: eu
+    model: l-200
+    software: "2.2"
+  - market: eu
+    model: l-400
+    software: "2.3"
+  - market: us
+    model: l-400
+    software: 2.10.1
+attributes:
+  product-name:
+    - value: L-200
+      when: model in (l-200)
+    - value: L-400
+  rated-load: 400 kg
+entries:
+  - title: Operation
+    entries:
+      - module: battery-charging
+      - module: service-internals
+  - module: battery-disposal
+    when: market in (eu)

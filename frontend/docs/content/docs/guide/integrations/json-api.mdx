@@ -1,0 +1,90 @@
+---
+title: 'JSON:API conventions'
+description: 'The media type, the shape of resources, paging, refs, caching and the error format every route shares.'
+articleId: 'guide.integrations.json-api'
+---
+
+Every JSON answer of the API follows [JSON:API](https://jsonapi.org/format/). What this page says
+holds for every route; the [API reference](/api) has each route's own parameters and schemas.
+
+## The media type
+
+JSON goes both ways as `application/vnd.api+json`, exactly.
+
+- **Reading:** send an `Accept` header that allows it, or the answer is 406.
+- **Writing:** every request that may change something (any method but `GET`, `HEAD` and `OPTIONS`)
+  must send `Content-Type: application/vnd.api+json`, **also without a body** (a `DELETE`, a
+  transition). Without it the answer is 415 `content-type-required`, with another type 415
+  `unsupported-media-type`. The routes that take an upload (`multipart/form-data`: branding images,
+  files of a revision, imports, translation imports) also need the header `X-Ccms-Request` with any
+  value; without it the answer is 403 `request-header-required`.
+
+This is what keeps a cross-site form from changing anything. The API sends no CORS headers, so a
+page on another origin cannot call it from a browser.
+
+## Resources
+
+A resource is `{ type, id, attributes, relationships, meta }`:
+
+- `attributes` hold stored data, in camelCase.
+- `meta` holds what the server derives from it: validation issues, summaries, where a module is
+  used.
+- JSON:API reserves `id` and `type`, so a module's own ID and type are `moduleId` and `moduleType`.
+
+## Lists are paged
+
+Every list is paged, even a short one:
+
+- `page[number]` (from 1) and `page[size]` (default 50, at most 200);
+- `meta.page` with `currentPage`, `lastPage`, `perPage` and `total`;
+- `links` with `self`, `first`, `last`, `prev` and `next`: follow `next` until there is none.
+
+Filters are `filter[<name>]`. A query parameter a route does not support is 400
+`unsupported-parameter`, so a misspelt filter never silently returns everything.
+
+The [change feed](/guide/integrations/change-feed) pages differently, by cursor
+(`page[cursor]` and `page[size]`), since it reads what happened after a point rather than a fixed
+list.
+
+## Refs and caching
+
+Every content route reads one version of the content, chosen with `?ref=`: a branch, a release tag
+or a commit ID. Without it, the server's default applies (`CCMS_DEFAULT_REF`, normally `main`). A
+token with only `content.read` may read `main` and release tags; other refs need
+`content.read.draft`.
+
+- **`X-Ccms-Commit`** names the commit an answer was read from. To read a list of several pages
+  consistently, read every page at a release tag, which never moves. A token with only
+  `content.read` may read a commit only while `main` or a tag points at it: pages pinned to the
+  commit the first page at `main` named answer 404 `not-found` once `main` moves on, and the read
+  starts again at `main`.
+- **By commit ID**, an answer never changes and is marked `immutable`.
+- **By branch or tag**, it is `no-cache` with an `ETag`: send it back as `If-None-Match`, and an
+  unchanged answer is a cheap 304.
+- **A withdrawn release's tag** stays readable; every answer read at it carries
+  `X-Ccms-Withdrawn: true`.
+
+## Errors
+
+Errors have the same shape on every route, binary ones and HTML pages included:
+
+```json
+{
+  "errors": [
+    {
+      "status": "400",
+      "title": "Bad Request",
+      "detail": "…",
+      "code": "unsupported-parameter",
+      "source": { "parameter": "filter[langs]" }
+    }
+  ]
+}
+```
+
+- **Branch on `code`**, which is stable. `detail` is text for people and may change.
+- `source.parameter` names a bad parameter; `source.pointer` a bad part of the body.
+- `meta.retryAfter`, where an error has it, is the seconds to wait. On a 429 or 503 with a
+  `Retry-After` header, wait that long before asking again.
+
+Every code is in the [error codes reference](/reference/errors).

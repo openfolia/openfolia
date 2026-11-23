@@ -1,0 +1,25 @@
+---
+title: 'Der MCP-Server'
+description: 'KI-Assistenten und Agenten über den MCP-Server die freigegebenen Inhalte geben.'
+---
+
+Der MCP-Server (`backend/mcp`) lässt KI-Assistenten und Agenten die freigegebene Dokumentation
+durchsuchen und lesen. Er ist ein Client der API: jeder Werkzeugaufruf liest über die API mit dem
+Token des Dienstkontos des Servers, sodass ein Agent genau sieht, was dieses Konto lesen darf, und
+nichts schreibt.
+
+## Betrieb
+
+Er spricht MCP über stdio (ein Desktop-Assistent startet ihn) oder über Streamable HTTP
+(`--http`). Er braucht die Basis-URL der API (`CCMS_MCP_API_URL`) und das Token eines
+Dienstkontos, dessen Rollen nur `content.read` halten (`CCMS_MCP_API_TOKEN`); über HTTP außerdem
+das Bearer-Token, das seine Aufrufer senden (`CCMS_MCP_HTTP_TOKEN`). Die
+[Referenz der Einstellungen](/de/reference/settings) beschreibt jede, und die Container-Einrichtung
+startet ihn als optionalen Dienst `mcp` ([Selbst betreiben](/de/self-hosting)).
+
+Ein Token, dessen Rollen mehr als `content.read` halten, lässt jeden Aufruf scheitern: der Server
+liest immer nur freigegebene Inhalte.
+
+## Die Werkzeuge
+
+Die [Referenz der MCP-Werkzeuge](/de/reference/mcp-tools) führt jedes Werkzeug und seine Argumente auf.

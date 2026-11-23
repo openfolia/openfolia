@@ -1,0 +1,30 @@
+# A test OpenID Connect provider beside the stack, for the self-host test only
+# (deploy/self-host-test.sh): never part of a deployment. It signs in whoever names a login it
+# knows, without a password.
+#
+# It runs in the API container's network (network_mode), so its issuer is the same address for
+# the API and for the browser: http://127.0.0.1:<SMOKE_OIDC_PORT>, a loopback address the API
+# accepts over plain http, published on 127.0.0.1 through the api service.
+services:
+  oidc:
+    build:
+      context: ..
+      target: mock-oidc
+    image: ${OPENFOLIA_IMAGES:-openfolia}/mock-oidc:${OPENFOLIA_VERSION:-local}
+    network_mode: service:api
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      MOCK_OIDC_HOST: 0.0.0.0
+      MOCK_OIDC_PORT: ${SMOKE_OIDC_PORT:-9404}
+      MOCK_OIDC_CLIENT_ID: openfolia-smoke
+      MOCK_OIDC_REDIRECT_URIS: http://127.0.0.1:${OPENFOLIA_EDITOR_PORT:-8080}/api/auth/oidc/callback
+      MOCK_OIDC_POST_LOGOUT_URIS: http://127.0.0.1:${OPENFOLIA_EDITOR_PORT:-8080}/sign-in
+      MOCK_OIDC_ACCOUNTS: '{"admin":{"name":"First Admin","email":"${SMOKE_ADMIN_EMAIL:-admin@example.com}"}}'
+
+  api:
+    ports:
+      - 127.0.0.1:${SMOKE_OIDC_PORT:-9404}:${SMOKE_OIDC_PORT:-9404}

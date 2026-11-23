@@ -1,0 +1,125 @@
+---
+title: 'Reverse Proxy mit TLS'
+description: 'Einen Proxy mit TLS vor den Editor stellen, der richtigen Client-Adresse glauben und die stabilen Adressen an Lesende und Caches ausliefern.'
+articleId: 'guide.self-hosting.reverse-proxy'
+---
+
+Die Container lauschen nur auf `127.0.0.1`. Stellen Sie einen Reverse Proxy vor den Editor: Er
+beendet TLS und leitet alles an den Port des Editors (8080) weiter. Der Editor liefert die Anwendung
+aus und gibt `/api` und die stabilen Adressen `/d/` im eigenen Netz des Stacks an die API weiter.
+
+## Was der Proxy tun muss
+
+1. **Auf demselben Rechner laufen**, und `OPENFOLIA_BIND` bleibt auf `127.0.0.1`. Werden die Ports
+   breiter veröffentlicht (`0.0.0.0`), umgehen sie die Firewall-Regeln des Servers und liefern
+   unverschlüsseltes HTTP.
+2. **Den `Host`-Header erhalten.** Der Editor vergleicht den `Origin` jeder Anfrage mit ihrem `Host`
+   und lehnt eine Anfrage von einer anderen Herkunft ab. Caddy und Traefik erhalten ihn
+   standardmäßig; nginx braucht `proxy_set_header Host $host;`.
+3. **Die Adresse des Clients anhängen**, an `X-Forwarded-For`, als reine Adresse ohne Port. Caddy
+   tut das; nginx braucht `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.
+4. **Große Anfragen zulassen.** Uploads werden an die API durchgereicht, die ihre eigenen Grenzen
+   durchsetzt (`CCMS_MAX_UPLOAD_BYTES` und die anderen). 1 GB deckt jeden Standard ab.
+5. **Lange Antworten zulassen.** Ein PDF kann bis zu `CCMS_PDF_TIMEOUT_MS` dauern (Standard 60 s).
+
+Dann in `deploy/.env`:
+
+```sh
+CCMS_PUBLIC_URL=https://docs.example.com/
+CCMS_EDITOR_HOSTS=docs.example.com
+CCMS_TRUST_PROXY=2
+```
+
+`CCMS_PUBLIC_URL` ist die Basis jeder stabilen Adresse, jedes QR-Codes und jedes Links in einer
+E-Mail. Mit `CCMS_EDITOR_HOSTS` beantwortet der Editor jeden anderen `Host` mit 421.
+
+### Caddy
+
+Zertifikate kommen automatisch von Let's Encrypt:
+
+```text
+docs.example.com {
+	reverse_proxy 127.0.0.1:8080 {
+		transport http {
+			read_timeout 5m
+		}
+	}
+	request_body {
+		max_size 1GB
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
+```
+
+### nginx
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name docs.example.com;
+    ssl_certificate     /etc/letsencrypt/live/docs.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/docs.example.com/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 1g;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+## Die Adresse des Clients: `CCMS_TRUST_PROXY`
+
+Die API ordnet ihre Ratenbegrenzungen und die Zahl fehlgeschlagener Anmeldungen der Adresse des
+Clients zu. Sie glaubt keinem Proxy diese Adresse, außer `CCMS_TRUST_PROXY` sagt es.
+`deploy/compose.yaml` setzt es auf `1`: das nginx des Editors, ein Hop.
+
+- **`1`** (der Standard in Compose) passt, wenn Lesende den Port des Editors direkt erreichen.
+- **`2`** mit Ihrem eigenen Proxy vor dem Editor, wie oben. Der Port des Editors darf dann nur über
+  Ihren Proxy erreichbar sein, sonst könnte ein Client eine beliebige Adresse angeben. Bleibt es
+  hinter Ihrem Proxy bei `1`, zählt jeder Lesende als Ihr Proxy: ein Budget für alle.
+- Eine Zahl von Hops muss für **jeden** Weg zur API stimmen. Geben Sie der API mit `2` keinen
+  eigenen Host: Dieser Weg hat einen Hop weniger, und ein Client darauf könnte eine beliebige
+  Adresse angeben. API-Clients verwenden stattdessen `https://docs.example.com/api/...`; ohne
+  `CCMS_EDITOR_API_TOKEN` gibt der Editor ihren `Authorization`-Header weiter.
+- Lassen Sie den eigenen Port der API auf `127.0.0.1` (`OPENFOLIA_API_BIND`, der Standard, was
+  auch immer `OPENFOLIA_BIND` sagt). Veröffentlichen Sie ihn breiter, setzen Sie
+  `CCMS_TRUST_PROXY=none` und erhöhen Sie `CCMS_DELIVERY_PER_MINUTE` oder schalten Sie es ab, denn
+  dann teilen sich alle Lesenden über den Editor ein Budget.
+
+Statt einer Zahl von Hops nimmt `CCMS_TRUST_PROXY` auch die Adressen oder Subnetze der Proxys; das
+Format steht in der [Referenz der Einstellungen](/de/reference/settings).
+
+## Stabile Adressen für Lesende
+
+Der Editor liefert `/d/`, die stabile Adresse jedes Handbuchs mit PDF und QR-Codes
+([Stabile Adressen](/de/guide/releases/stable-addresses)), ohne jede Anmeldedaten von der API aus:
+Lesende erhalten nur, was `delivery.access` in `openfolia.yaml` ohne Anmeldung erlaubt. Clients mit
+Token verwenden `/api/d/`.
+
+| Einstellung                    | Was sie bewirkt                                                                                                                                                                                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_DELIVERY_MAX_ACCESS`     | Das Höchste, was `delivery.access` eines Projekts öffnen darf: `public` (Standard, keine Grenze), `signed-in` oder `off`. Ein Projekt, das mehr verlangt, wird auf der Grenze ausgeliefert, und die Prüfungen seiner Handbücher melden `delivery-access-capped`. |
+| `CCMS_DELIVERY_PER_MINUTE`     | Seiten, PDFs und QR-Codes, die ein Client pro Minute abrufen darf (Standard 60, `0` ohne Grenze); danach 429 mit `Retry-After`. Erhöhen Sie es, wo viele Lesende eine Adresse teilen.                                                                            |
+| `CCMS_DELIVERY_IGNORED_QUERY`  | Parameter, die `/d/` ignoriert, damit geteilte Links mit Tracking-Parametern sich öffnen (Standard `utm_*`). Jeder andere wird abgelehnt (400).                                                                                                                  |
+| `CCMS_DELIVERY_SHARED_MAX_AGE` | Wie lange ein gemeinsamer Cache das Bild einer öffentlichen Seite behalten darf, in Sekunden (Standard 300).                                                                                                                                                     |
+| `CCMS_BUILD_ID`                | Derselbe Wert auf jedem Server eines Builds, ein neuer mit jedem Build, damit die ETags ihrer Seiten übereinstimmen.                                                                                                                                             |
+
+Setzen Sie `CCMS_DELIVERY_MAX_ACCESS=signed-in`, wo kein Projekt ohne Anmeldung lesbar sein darf;
+so kann eine einzelne geprüfte Änderung an `openfolia.yaml` keines öffentlich machen.
+
+**Caches davor** (ein Proxy, ein CDN): Seiten, PDFs, QR-Codes und Symbole unter `/d/` sind
+`no-cache` mit einem ETag; jeder Cache fragt also neu und erhält eine günstige 304, und eine neue
+Veröffentlichung oder ein Rückzug erreicht Lesende sofort. Bilder werden länger zwischengespeichert:
+Der Browser eines Lesenden behält eines einen Tag, ein gemeinsamer Cache ein öffentliches für
+`CCMS_DELIVERY_SHARED_MAX_AGE`. Die Bilder einer zurückgezogenen Veröffentlichung können also so
+lange in einem gemeinsamen Cache bleiben. Antworten an angemeldete Lesende sind `private`.
+
+Die Einstellungen der Tabelle gehören in `deploy/api.env`. Betreiben Sie eine veränderte Version,
+setzen Sie auch `CCMS_SOURCE_URL`: siehe [Lizenz und Quellcode](/de/guide/self-hosting/licence).

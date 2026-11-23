@@ -1,0 +1,12 @@
+= À propos de ce carnet d'entretien
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: technician
+:facet-product: fenna
+
+[#intro]
+Ce carnet s'adresse aux ateliers qualifiés. Il décrit l'entretien périodique de la {model-name} et les travaux qu'il nécessite.
+
+[#qualified]
+N'intervenez sur le système haute tension du modèle électrique qu'avec la qualification exigée pour cela dans votre pays.

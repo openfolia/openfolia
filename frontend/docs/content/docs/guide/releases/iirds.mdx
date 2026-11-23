@@ -1,0 +1,82 @@
+---
+title: 'iiRDS packages'
+description: 'Get a release output as an iiRDS package, mapped to the standard’s vocabulary in openfolia.yaml.'
+articleId: 'guide.releases.iirds'
+---
+
+A release output (a manual in one variant and language) can be downloaded as an **iiRDS package**,
+the standard exchange format for technical documentation (iiRDS 1.3). The package is made on
+request from the release as it was released, so the same output gives the same package for every
+reader. There is no editor screen for it yet: it comes through the
+[Delivery API](/guide/integrations/delivery-api), with a token that holds `content.read`.
+
+## Map the project to iiRDS
+
+The export needs a mapping in `openfolia.yaml`, under `iirds`. Without one, the package is refused with
+422 `iirds-not-configured`. It is content: change it in a change set, and it applies to releases cut
+after that.
+
+```yaml
+iirds:
+  baseIri: https://docs.example.com/iirds/ # every IRI is made under it, ending in "/"
+  documentTypes: [OperatingInstructions] # each manual's, at least one
+  manualDocumentTypes: { service: [MaintenanceInstructions] } # a manual's own, instead
+  moduleTypes:
+    task: GenericTask
+    safety: { topicType: GenericConcept, subjects: [SafetyInstruction] }
+  audiences: { operator: Role, technician: SkillLevel }
+  facets: { region: ProductVariant }
+  variantAttributes: { model: ProductVariant }
+  lifecyclePhases: { facet: phase, values: { use: Operation } }
+```
+
+Values are the standard's names; a name it does not have is refused. Every map is optional:
+whatever the mapping leaves out is left out of the package's metadata with a warning, never
+refused. `GET /config` lists what is unmapped in `meta.iirdsIssues`. Every key is in the
+[`openfolia.yaml` reference](/reference/project-config).
+
+## Download a package
+
+1. Find the release: `GET /releases` lists them, newest first, with their IDs.
+2. List its packages: `GET /releases/{releaseId}/iirds-packages`, one per output you may read,
+   filtered with `filter[manual]` and `filter[lang]`. Each has the output's `manual`, `variant`,
+   `lang` and `fileName`. Listing makes nothing.
+3. Optionally, `GET /releases/{releaseId}/iirds-packages/{packageId}` makes the package and
+   describes it: `meta.size`, `meta.topics`, `meta.media` and `meta.warnings`.
+4. Download it: `GET /releases/{releaseId}/iirds-packages/{packageId}/file`, an
+   `application/iirds+zip` file named `<manual>_<variant>_<lang>_<revision>.iirds`. The header
+   `X-Ccms-Iirds-Warnings` gives the number of warnings.
+
+```sh
+curl -sf -o operating.iirds \
+  -H "Authorization: Bearer $DOCS_TOKEN" \
+  "https://docs.example.com/api/releases/$RELEASE/iirds-packages/$PACKAGE/file"
+```
+
+## What the package holds
+
+- `META-INF/metadata.rdf`: the metadata. The manual as a document, each module as a topic, the
+  table of contents, and the audiences, facets, variant values and lifecycle phases as the mapping
+  names them.
+- `content/<module>.html`: each module of the manual as an HTML page of its own.
+- `media/` and `symbols/`: the images and attachments the topics show, and the safety symbols'
+  artwork.
+- `pdf/<file>`: the output's PDF, once it is rendered. Until then the package comes without it,
+  with the warning `pdf-not-included`.
+
+A manual with no module its audience reads in that variant gives a package of its document alone,
+with the warning `manual-empty`.
+
+## When it is refused
+
+| Status | `code`                    | Why                                                                                                                                                        |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 404    | `not-found`               | No such release, or an output that is not its own or you may not read.                                                                                     |
+| 422    | `iirds-not-configured`    | `openfolia.yaml` at the release's tag has no `iirds` mapping.                                                                                              |
+| 422    | `iirds-package-too-large` | The package is past the archive's size limit.                                                                                                              |
+| 422    | `expansion-too-large`     | Once its module references are included, the manual is past the limits of one (see [Retrieval chunks](/guide/integrations/chunks)): nothing of it is made. |
+| 429    | `rate-limited`            | Too many packages being made or sent; wait for `Retry-After`.                                                                                              |
+| 503    | `blob-store-unavailable`  | The blob store does not answer; wait for `Retry-After`.                                                                                                    |
+
+How many packages are sent at once is bounded per server and per reader:
+see [sizing](/guide/self-hosting/sizing).

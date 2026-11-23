@@ -1,0 +1,29 @@
+= Jump-starting
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: battery, jump start
+
+[#intro]
+If the 12 V battery is flat, the vehicle does not start. You can start it with jump leads from another vehicle.
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+The 12 V battery is in the engine compartment, on the left. Connect the jump leads directly to it.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+The electric model has a 12 V battery too: it switches the high-voltage system on. Connect the jump leads only to the two jump-start points under the bonnet, never to the high-voltage system.
+====
+
+[procedure#steps]
+.Jump-start the vehicle
+. [[step-red]]Connect the red lead to the positive terminal or jump-start point of your vehicle, then to the positive terminal of the other battery.
+. [[step-black]]Connect the black lead to the negative terminal of the other battery, then to the negative jump-start point or to bare metal of your vehicle, away from the battery.
+. [[step-start]]Start the other vehicle, then yours.
+. [[step-remove]]Remove the leads in the reverse order.

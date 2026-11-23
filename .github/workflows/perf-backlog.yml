@@ -1,0 +1,104 @@
+# The readers' p95 while a large release backlog is planned and rendered (#527): `api:perf-scale`'s
+# backlog rows (scripts/perf/README.md, "Server benchmarks") on a freshly seeded profile, on a
+# GitHub-hosted Linux runner: a quiet machine of its own, which a shared laptop is not. Run by hand
+# only (Actions, "perf-backlog", "Run workflow", or `gh workflow run perf-backlog.yml`), never on
+# a push or a pull request: a run takes hours (the `large` seed alone is most of it).
+#
+# Four rows: one process doing it all (`CCMS_ROLE=all`) and the API beside `backlog-workers` worker
+# processes (`CCMS_ROLE=api` + `worker`), each with nothing rendering and with the seed's releases'
+# backlog planning and rendering. The report (Markdown and JSON) is the job's summary and an
+# artifact. Nothing is pushed, published or deployed; the runner and its database are thrown away.
+name: perf-backlog
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: The scale profile to seed and measure (`small` to try the workflow itself).
+        type: choice
+        options: [large, small]
+        default: large
+      only:
+        description: The rows to run (`api:perf-scale --only`, `|`-separated parts of row names).
+        type: string
+        default: backlog
+      backlog-workers:
+        description: Worker processes beside the API in the split rows (1 to 8).
+        type: string
+        default: '1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-backlog
+  cancel-in-progress: false
+
+env:
+  NX_DAEMON: 'false'
+  NX_NO_CLOUD: 'true'
+
+jobs:
+  perf:
+    name: readers beside a release backlog
+    runs-on: ubuntu-24.04
+    timeout-minutes: 345
+    services:
+      # The compose Postgres (compose.yaml), on the address the perf tooling uses
+      # (scripts/perf/paths.mjs, LOCAL_POSTGRES): local credentials, on this runner only.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ccms
+          POSTGRES_PASSWORD: ccms
+          POSTGRES_DB: ccms
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ccms -d ccms"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: the machine
+        run: |
+          nproc
+          free -m
+          uname -a
+      - name: seed the profile
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: pnpm perf:seed --profile "$PROFILE"
+      - name: measure the backlog rows
+        env:
+          PROFILE: ${{ inputs.profile }}
+          ONLY: ${{ inputs.only }}
+          WORKERS: ${{ inputs.backlog-workers }}
+        run: pnpm nx run api:perf-scale --output-style=static -- --profile "$PROFILE" --only "$ONLY" --backlog-workers "$WORKERS"
+      - name: the report as the job's summary
+        if: always()
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          shopt -s nullglob
+          for report in .local/perf/"$PROFILE"/reports/api-*.md; do
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: perf-backlog-${{ inputs.profile }}
+          path: |
+            .local/perf/${{ inputs.profile }}/reports/
+            .local/perf/${{ inputs.profile }}/profile.json
+          if-no-files-found: warn
+          retention-days: 30

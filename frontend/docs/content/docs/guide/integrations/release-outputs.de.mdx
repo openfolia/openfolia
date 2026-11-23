@@ -1,0 +1,109 @@
+---
+title: 'Veröffentlichte Dateien für Portale'
+description: 'Die PDFs einer Veröffentlichung einzeln oder als ZIP herunterladen, ihre Offline-Pakete, und auf dauerhafte Adressen verlinken, die immer die neueste Veröffentlichung öffnen.'
+articleId: 'guide.integrations.release-outputs'
+---
+
+Eine Veröffentlichung erstellt im Hintergrund ein PDF je Handbuch, Variante und Sprache. Ein Portal
+oder eine App lädt diese Dateien herunter oder verlinkt auf die dauerhafte Adresse eines
+Handbuchs, die immer die neueste Veröffentlichung öffnet. Die Routen gehören zur
+[Delivery API](/de/api/delivery). Was der Editor davon zeigt, steht unter
+[Die Dateien herunterladen](/de/guide/releases/download) und
+[Dauerhafte Adressen](/de/guide/releases/stable-addresses).
+
+## Die Dateien einer Veröffentlichung herunterladen
+
+1. Suchen Sie die Veröffentlichung: `GET /releases` listet sie, `GET /releases/<releaseId>` liefert
+   eine mit `meta.outputs`, dem Stand ihrer Dateien (`planning`, `rendering`, `done` oder `failed`,
+   mit Zählungen). Fragen Sie sie erneut ab, solange sie `planning` oder `rendering` ist.
+2. Listen Sie ihre Dateien:
+
+   ```sh
+   curl -gs -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/releases/<releaseId>/outputs?filter[state]=done"
+   ```
+
+   Filter: `filter[manual]`, `filter[lang]`, `filter[kind]` (`pdf`, `offline-package`),
+   `filter[state]` (`queued`, `rendering`, `done`, `failed`). Seitenweise.
+
+3. Laden Sie eine herunter: `GET /releases/<releaseId>/outputs/<outputId>/file`. Bis sie `done`
+   ist, ist das 409 `output-not-ready`; eine Datei wird nie auf Anfrage erstellt.
+4. Oder alle auf einmal: `GET /releases/<releaseId>/outputs/archive` streamt ein ZIP jeder fertigen
+   Datei, die Einträge `<manual>/<lang>/<variant>.pdf` benannt. `X-Ccms-Archive-Files` sagt, wie
+   viele es enthält, `X-Ccms-Archive-Left-Out`, wie viele noch nicht fertig sind. Keine fertige ist
+   409 `release-archive-empty`; eines größer als `CCMS_RELEASE_ARCHIVE_MAX_BYTES` (standardmäßig
+   2 GiB) ist 422 `release-archive-too-large`, und seine Dateien lassen sich weiter einzeln laden.
+   Das Archiv enthält nur die PDFs, nie ein Offline-Paket.
+
+Die Bytes einer Datei ändern sich nie: Sie ist `private, max-age=31536000, immutable`, mit ihrem
+Hash als ETag. Ein Leser sieht eine Datei nur, wenn eine seiner Rollen ihr ganzes Handbuch abdeckt
+(seine Zielgruppe, die Sprache und die Ausgangssprache, jeden Modultyp und jede Facette); alle
+anderen erhalten 404, wie für eine fehlende. Ein Leser mit engerem Leseumfang liest stattdessen die
+PDF-Route des Handbuchs, für seinen Leseumfang erstellt. Die Dateien einer zurückgezogenen
+Veröffentlichung bleiben lesbar, mit `meta.withdrawn: true`.
+
+## Offline-Pakete
+
+Eine Veröffentlichung erhält außerdem ein Offline-Paket je konfigurierter Sprache und
+Zielgruppenstufe, bis zur höchsten Stufe, die eines ihrer Handbücher hat: ein ZIP, das sich ohne
+Netzwerk aus dem Dateisystem öffnen lässt, am Computer oder auf dem Telefon. Es wird erstellt,
+sobald die PDFs der Veröffentlichung fertig sind, und mit ihren Dateien gelistet
+(`filter[kind]=offline-package`): `kind` `offline-package`, seine Stufe in `audience`, `manual` und
+`variant` null. Seine Dateiroute antwortet mit `application/zip`, benannt
+`offline_<audience>_<lang>_<revision>.zip`.
+
+Entpackt listet `index.html` die Handbücher, die diese Stufe liest, jede Variante als Seite neben
+ihrem PDF, mit einer Suche über Titel und Überschriften. Ein Paket enthält nur, was seine Stufe
+liest: Ein Handbuch, Modul, Bild oder eine angehängte Datei darüber ist nicht darin.
+`manifest.json` nennt Veröffentlichung, Produkt, Produktversion, Sprache und Stufe sowie jede Datei
+mit ihrer Größe und ihrem SHA-256; ein Handbuch, das sich am Tag der Veröffentlichung nicht lesen
+ließ, steht unter `leftOut`. Ein SVG-Bild oder -Symbol wird entschärft geschrieben, nur seine
+Zeichnung: kein Skript, kein Ereignis-Handler, keine eingebettete Seite, keine
+Animation (ein Stylesheet nur, wenn es nichts außerhalb lädt) und kein Verweis nach außen, sodass es auch einzeln geöffnet nichts ausführt. Eines, das
+sich nicht als SVG lesen lässt, fehlt (`leftOut`, `unsafe-svg`). Eine angehängte HTML-, XML- oder
+Skriptdatei liegt als `.bin` im Paket, öffnet also keine Seite; ihr Link speichert sie weiter unter
+ihrem eigenen Namen. Ein Leser sieht ein Paket nur, wenn eine seiner Rollen dessen ganze
+Stufe in dessen Sprache liest; alle anderen erhalten 404.
+
+Die Seiten führen kein Skript außer der Suche aus und lassen nichts von außerhalb des Pakets zu
+(eine Content Security Policy). Ein Paket, das größer als `CCMS_RELEASE_ARCHIVE_MAX_BYTES` wäre
+oder mehr als 50.000 Dateien hätte, schlägt mit `offline-package-too-large` fehl; die PDFs bleiben.
+Ein Betreiber schaltet die Pakete mit `CCMS_OFFLINE_PACKAGES=false` ab.
+
+Die iiRDS- und DITA-Pakete einer Veröffentlichung werden auf Anfrage erstellt: siehe
+[iiRDS](/de/guide/releases/iirds) und [DITA](/de/guide/releases/dita).
+
+## Auf die neueste Veröffentlichung verlinken
+
+Eine dauerhafte Adresse ist `/d/<product>/<manual>/<variant>/<lang>`: Sie öffnet das Handbuch als
+Webseite in der neuesten nicht zurückgezogenen Veröffentlichung des Produkts. `…/pdf` ist das PDF
+dieser Veröffentlichung, `…/qr.svg` oder `…/qr.png` ein QR-Code der Adresse. `<lang>@<revision>`
+legt eine Veröffentlichung fest.
+
+`GET /stable-addresses` listet sie, eine je Datei einer Veröffentlichung, die der Leser lesen darf,
+mit den Adressen `latest` und `pinned`, jede mit `html` und `pdf` als `path` und als vollständige
+`url` (null, bis der Betrieb `CCMS_PUBLIC_URL` setzt). Filter: `filter[release]`,
+`filter[product]`, `filter[manual]`, `filter[lang]`.
+
+Was eine dauerhafte Adresse antwortet:
+
+| Antwort | Wann                                                                                                    |
+| ------- | ------------------------------------------------------------------------------------------------------- |
+| 200     | Die Seite, das PDF oder der QR-Code.                                                                    |
+| 301     | Eine verschobene Adresse (ein neuer Slug, ein früherer, die Schreibweise einer Sprache), zur gültigen.  |
+| 300     | Der Veröffentlichung fehlt diese Sprache: eine Seite mit Links auf die vorhandenen Sprachen (Standard). |
+| 302     | Der Veröffentlichung fehlt diese Sprache, und das Projekt schickt Leser zur Ausgangssprache.            |
+| 409     | `output-not-ready`: Das PDF ist noch nicht erstellt; `Retry-After` sagt, wann erneut zu fragen ist.     |
+| 410     | Eine festgelegte Veröffentlichung wurde zurückgezogen: ein Hinweis mit Link auf die neueste Adresse.    |
+| 429     | `rate-limited`: mehr als `CCMS_DELIVERY_PER_MINUTE` Seiten, PDFs und QR-Codes pro Minute.               |
+
+Wer sie öffnen darf, regelt `delivery.access` in `openfolia.yaml`, höchstens so weit, wie der Betrieb
+erlaubt (`CCMS_DELIVERY_MAX_ACCESS`): `public`-Adressen lesen als öffentliche Zielgruppe, wer auch
+fragt, und beachten kein Token; `signed-in`-Adressen brauchen ein Token oder eine Sitzung; `off`
+ist 404. Seiten, PDFs und QR-Codes sind `no-cache` mit einem ETag: Ein Cache davor prüft jedes Mal
+nach, und eine neue Veröffentlichung oder eine Rücknahme erreicht die Leser sofort.
+Abfrageparameter wie `utm_*` werden dort übergangen (`CCMS_DELIVERY_IGNORED_QUERY`); jeder andere
+ist 400.
+
+Eine statische Website der veröffentlichten Handbücher, aus der API erstellt, ist das
+[statische Portal](/de/guide/integrations/static-portal).

@@ -1,0 +1,30 @@
+= Frequently asked questions
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[variant#electric,when="drive in (electric)"]
+====
+[faq#faq-noise]
+.Why does the vehicle make a humming sound at low speed?
+=====
+[#faq-noise-a]
+The electric model plays a sound up to 20 km/h so that pedestrians hear it coming. This is required by law.
+=====
+====
+
+[faq#faq-clock]
+.Why is the clock one hour out?
+====
+[#faq-clock-a]
+The clock changes to summer time by itself only when automatic time is on. Set it as described in "Setting the clock".
+====
+
+[faq#faq-tyres]
+.How often should I check the tyre pressure?
+====
+[#faq-tyres-a]
+Every two weeks and before a long journey, with cold tyres.
+====

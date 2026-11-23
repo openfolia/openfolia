@@ -1,0 +1,155 @@
+---
+import defaultFavicon from '@openfolia/theme/brand/favicon.svg?url';
+import markLight from '@openfolia/theme/brand/openfolia-mark-color-light.svg?url';
+import markDark from '@openfolia/theme/brand/openfolia-mark-color-dark.svg?url';
+import portalCss from '../styles/portal.css?url';
+import { PAGE_CSP } from '../lib/csp.ts';
+import { languageName, textsFor } from '../lib/i18n.ts';
+import { href, languageRoot, siteBrand, snapshot } from '../lib/site.ts';
+
+interface Props {
+  title: string;
+  /** The page's path under the language's site, for the language switch. */
+  path?: string;
+  current?: 'start' | 'manuals' | 'search' | 'lost';
+  /** The running head's guide words: where the reader stands (the product, the manual). */
+  guide?: readonly [string, string];
+  /** The product the page belongs to: its tab in the thumb index is the current one. */
+  product?: string;
+}
+
+const { title, path = '', current, guide, product } = Astro.props;
+const s = snapshot();
+const t = textsFor(s.lang);
+const brand = siteBrand();
+const siteName = brand.name ?? t.siteTitle;
+const root = languageRoot(s.lang);
+const products = s.releases.map((r) => ({ id: r.product, label: r.productLabel }));
+const thumbs = products.length > 1;
+// The running head's compact search: on every page but the two that lead with a search field.
+const compactSearch = current !== 'start' && current !== 'search' && current !== 'lost';
+const currentProduct = products.find((p) => p.id === product);
+---
+
+<!doctype html>
+<html lang={s.lang} dir={s.dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content={PAGE_CSP} />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title === siteName ? title : `${title} · ${siteName}`}</title>
+    {brand.favicon ? <link rel="icon" href={brand.favicon} /> : <link rel="icon" href={defaultFavicon} type="image/svg+xml" />}
+    {brand.appIcon && <link rel="apple-touch-icon" href={brand.appIcon} />}
+    <link rel="stylesheet" href={portalCss} />
+    {brand.colours && <link rel="stylesheet" href={href('brand.css')} />}
+    {/*
+      Light or dark before anything paints. After the stylesheets: a script there holds the
+      first paint until they apply, without which Chrome aborts some page-to-page transitions.
+    */}
+    <script is:inline src={href('theme.js')}></script>
+    <slot name="head" />
+  </head>
+  <body class:list={{ 'has-thumbs': thumbs }} data-page={current ?? 'manual'}>
+    <a class="skip-link" href="#main">{t.skipToContent}</a>
+    <header class="runhead">
+      <a class="brand" href={href()}>
+        {
+          brand.logoLight ? (
+            <>
+              <img class="brand__logo brand__logo--light" src={brand.logoLight} alt={siteName} />
+              <img class="brand__logo brand__logo--dark" src={brand.logoDark} alt={siteName} />
+            </>
+          ) : (
+            <>
+              <img class="brand__mark brand__logo--light" src={markLight} alt="" width="28" height="28" />
+              <img class="brand__mark brand__logo--dark" src={markDark} alt="" width="28" height="28" />
+              <span class="brand__name">{siteName}</span>
+            </>
+          )
+        }
+        {brand.logoLight && <span class="brand__section" aria-hidden="true">{t.siteTitle}</span>}
+      </a>
+      {
+        guide && (
+          <p class="runhead__guide">
+            <span class="runhead__word">{guide[0]}</span>
+            <span class="runhead__word runhead__word--manual">{guide[1]}</span>
+            <span class="runhead__word runhead__word--section" data-guide-section hidden></span>
+          </p>
+        )
+      }
+      {
+        compactSearch && (
+          <form class="minisearch" action={href('search/')} method="get" role="search">
+            <label class="visually-hidden" for="head-q">{t.searchLabel}</label>
+            <svg class="minisearch__icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+            <input id="head-q" name="q" type="search" placeholder={t.searchShort} autocomplete="off" enterkeyhint="search" />
+          </form>
+        )
+      }
+      <nav class="runhead__nav" aria-label={t.mainNav}>
+        <a href={href('manuals/')} aria-current={current === 'manuals' ? 'page' : undefined}>{t.manuals}</a>
+        <a class:list={['runhead__search-link', { 'is-redundant': compactSearch }]} href={href('search/')} aria-current={current === 'search' ? 'page' : undefined}>{t.search}</a>
+      </nav>
+      <div class="runhead__tools">
+        {
+          s.languages.length > 1 && (
+            <nav class="langs" aria-label={t.language}>
+              {s.languages.map((lang) => (
+                <a href={`${root}${lang}/${path}`} lang={lang} hreflang={lang} aria-current={lang === s.lang ? 'true' : undefined} title={languageName(lang)}>
+                  <span aria-hidden="true">{lang.toUpperCase()}</span>
+                  <span class="visually-hidden">{languageName(lang)}</span>
+                </a>
+              ))}
+            </nav>
+          )
+        }
+        <button class="icon-button" type="button" data-theme-toggle aria-pressed="false" hidden aria-label={t.darkMode}>
+          <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M20.5 13.4A8.5 8.5 0 1 1 10.6 3.5a6.6 6.6 0 0 0 9.9 9.9z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path></svg>
+          <svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+      {
+        thumbs && (
+          <details class="prodswitch" data-prodswitch>
+            <summary>
+              <span class="prodswitch__label">{t.productSwitch}</span>
+              <span class="prodswitch__value">{currentProduct?.label ?? t.allProducts}</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </summary>
+            <ul class="prodswitch__list">
+              {products.map((p) => (
+                <li>
+                  <a href={href(`#product-${p.id}`)} aria-current={p.id === product ? 'true' : undefined}>{p.label}</a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )
+      }
+    </header>
+    {
+      thumbs && (
+        <nav class="thumbs" aria-label={t.products} data-thumbs>
+          <ul>
+            {products.map((p) => (
+              <li>
+                <a class="thumb" href={href(`#product-${p.id}`)} data-product={p.id} aria-current={p.id === product ? 'true' : undefined}>
+                  <span>{p.label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <script>
+      import { startChrome } from '../scripts/chrome.ts';
+      startChrome(document);
+    </script>
+  </body>
+</html>

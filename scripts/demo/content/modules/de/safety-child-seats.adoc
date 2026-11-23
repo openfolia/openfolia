@@ -1,0 +1,19 @@
+= Kindersitze
+:schema-version: 1
+:module-type: safety
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Kindersitz
+
+[safety#unsecured,severity=warning,symbols=w001]
+.Kinder ohne passenden Kindersitz
+====
+[#unsecured-text]
+Der Sicherheitsgurt allein schützt ein kleines Kind bei einem Unfall nicht.
+
+[#unsecured-measures]
+* [[unsecured-m1]]Verwenden Sie einen Kindersitz, der zu Größe und Gewicht des Kindes passt.
+* [[unsecured-m2]]Befestigen Sie den Kindersitz an der [.term.child-seat-anchorage]##Kindersitzverankerung## oder mit dem Sicherheitsgurt, wie es seine Anleitung vorgibt.
+* [[unsecured-m3]]Lassen Sie Kinder niemals allein im Fahrzeug.
+====

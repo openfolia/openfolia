@@ -1,0 +1,15 @@
+schemaVersion: 1
+status: approved
+domain: breakdown
+languages:
+  en:
+    preferred: jacking point
+    definition: A reinforced point on the sill, marked by a notch, where the jack is placed.
+  de:
+    preferred: Wagenheberaufnahme
+    allowed:
+      - term: Wagenheberansatzpunkt
+    definition: Eine verstärkte Stelle am Schweller, durch eine Kerbe markiert, an der der Wagenheber angesetzt wird.
+  fr:
+    preferred: point de levage
+    definition: Un point renforcé du bas de caisse, marqué d'une encoche, où l'on place le cric.

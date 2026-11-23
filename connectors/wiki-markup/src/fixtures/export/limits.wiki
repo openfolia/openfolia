@@ -1,0 +1,19 @@
+---
+id: 1043
+title: Pressure limits
+labels: [tank]
+order: 2
+---
+h1. Limits
+
+The maximum pressure holds for water (H~2~O) and x^2^ too. Back to [Filling the tank].
+
+* Tanks up to 4 bar.
+** In a frost-free room only.
+* Never above +35 degrees+.
+
+{chart:type=bar}
+| a | 1 |
+{chart}
+
+See [another space page|OTHER:Some page] and !missing.png!.

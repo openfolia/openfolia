@@ -1,0 +1,324 @@
+/*
+ * Tailwind CSS v4 entry for everything built on `frontend/ui`: an app imports this one file.
+ * The design tokens come from `frontend/theme` (plain CSS variables); this file maps them to
+ * Tailwind's theme so utilities like `bg-primary` and `rounded-md` resolve to them.
+ */
+/*
+ * ng-icon sets an icon's colour inside its own cascade layer, which the browser would otherwise
+ * order after Tailwind's and so let it win over every `text-*` class on an icon (a checkbox's
+ * check took the text colour instead of `text-primary-foreground`). Declared first, it is lowest.
+ */
+@layer ng-icon;
+@import 'tailwindcss' source(none);
+@import 'tw-animate-css';
+@import '@openfolia/theme/theme.css';
+/* Positions the overlays Zard's tooltip (and later dialog, popover) open through the CDK. */
+@import '@angular/cdk/overlay-prebuilt.css';
+
+/*
+ * Scan only this library's templates here (an app adds its own `@source`), so a build never
+ * depends on the directory it runs from.
+ */
+@source '../';
+
+/*
+ * Zard's own utilities and the state variants its components use (`data-checked:`,
+ * `data-selected:`, …): each matches the `data-state` value or the bare attribute.
+ */
+/*
+ * `no-scrollbar` lives here, not in utilities.css, because combobox and command
+ * carry it in their variants — it has to ship with every install, while
+ * utilities.css is opt-in.
+ */
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+ * `scrollbar-thin` is opt-in, for the same reason `no-scrollbar` lives here rather
+ * than in `utilities.css`: it has to be available to every install, not layered on
+ * top as an extra registry item.
+ *
+ * It used to ship differently — a CLI constant literally named `windowsScrollbar`
+ * wrote a bare, unscoped `::-webkit-scrollbar` rule into every project's global
+ * stylesheet, restyling every scroll surface in the host app (not just zard's),
+ * and repainting them on any `--muted` / `--muted-foreground` change. That constant
+ * is gone; this utility is the scoped replacement a consumer applies deliberately.
+ *
+ * `scrollbar-width` / `scrollbar-color` are the standard CSS properties and the
+ * primary mechanism here — Firefox and current Chromium/Edge honor them directly,
+ * so the thin, token-colored scrollbar renders without any WebKit-specific rule.
+ * The `&::-webkit-scrollbar*` rules are a scoped fallback for WebKit engines that
+ * still ignore `scrollbar-color` (older Safari); they never apply outside this
+ * class.
+ */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) var(--muted);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    border-radius: 5px;
+    background: var(--muted);
+  }
+}
+
+/* Custom variants */
+@custom-variant data-open {
+  &:where([data-state='open']),
+  &:where([data-open]:not([data-open='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-closed {
+  &:where([data-state='closed']),
+  &:where([data-closed]:not([data-closed='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-checked {
+  &:where([data-state='checked']),
+  &:where([data-checked]:not([data-checked='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-unchecked {
+  &:where([data-state='unchecked']),
+  &:where([data-unchecked]:not([data-unchecked='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-selected {
+  &:where([data-selected]:not([data-selected='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-disabled {
+  &:where([data-disabled='true']),
+  &:where([data-disabled]:not([data-disabled='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-active {
+  &:where([data-state='active']),
+  &:where([data-active]:not([data-active='false'])) {
+    @slot;
+  }
+}
+
+@custom-variant data-horizontal {
+  &:where([data-orientation='horizontal']) {
+    @slot;
+  }
+}
+
+@custom-variant data-vertical {
+  &:where([data-orientation='vertical']) {
+    @slot;
+  }
+}
+
+/* Dark utilities apply under `.dark`, except inside a `.light` scope (screen 0's light panel). */
+@custom-variant dark (&:is(.dark *):not(.light *));
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-muted: var(--destructive-muted);
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-muted: var(--warning-muted);
+  --color-info: var(--info);
+  --color-info-muted: var(--info-muted);
+  --color-safety-danger: var(--safety-danger);
+  --color-safety-danger-foreground: var(--safety-danger-foreground);
+  --color-safety-warning: var(--safety-warning);
+  --color-safety-warning-foreground: var(--safety-warning-foreground);
+  --color-safety-caution: var(--safety-caution);
+  --color-safety-caution-foreground: var(--safety-caution-foreground);
+  --color-safety-notice: var(--safety-notice);
+  --color-safety-notice-foreground: var(--safety-notice-foreground);
+  --color-safety-symbol-background: var(--safety-symbol-background);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/*
+ * The crossfade when someone changes the theme (`withThemeFade`): one fade of the whole page
+ * over a snapshot, 300 ms ease-out. Reduced motion never starts it.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: ease-out;
+}
+
+/* The theme choice's sun or moon during that fade (`themeIconMotion`): the old one turns away,
+   the new one turns in and settles with a small overshoot. */
+::view-transition-group(theme-icon) {
+  animation-duration: 300ms;
+}
+::view-transition-old(theme-icon) {
+  animation: of-theme-icon-out 300ms ease-out both;
+  mix-blend-mode: normal;
+}
+::view-transition-new(theme-icon) {
+  animation: of-theme-icon-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  mix-blend-mode: normal;
+}
+
+@keyframes of-theme-icon-out {
+  to {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.4);
+  }
+}
+@keyframes of-theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.4);
+  }
+}
+
+/*
+ * Toasts rise in from below and slide out to the side (the toaster sits bottom right). Angular's
+ * `animate.enter` / `animate.leave` add these classes and wait for the animation to finish.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .of-toast-enter {
+    animation: of-toast-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .of-toast-leave {
+    animation: of-toast-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .of-toast-enter {
+    animation: of-toast-fade 150ms ease-out;
+  }
+  .of-toast-leave {
+    animation: of-toast-fade 150ms ease-in reverse forwards;
+  }
+}
+@keyframes of-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.96);
+  }
+}
+@keyframes of-toast-out {
+  to {
+    opacity: 0;
+    transform: translateX(calc(100% + 1rem));
+  }
+}
+@keyframes of-toast-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * The autosave state (`of-save-status`): a new state fades in where the old one stood. Opacity
+ * only, so nothing beside it moves. Off under reduced motion.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .of-status-enter {
+    animation: of-status-in 200ms ease-out;
+  }
+}
+@keyframes of-status-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * A table row a list frame moves or fades (#385): its divider is a collapsed table border, which
+ * never moves with the row, so while the row animates the border is hidden and the divider is
+ * drawn on its cells instead.
+ */
+tr.of-list-moving {
+  /* At once (no colour transition), or the border would fade out while the row moves. */
+  @apply border-b-transparent transition-none;
+}
+tr.of-list-moving > td {
+  /* Inside the cell, at its bottom edge (an outer shadow is not painted in a collapsed table). */
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+/*
+ * Route changes: the page a `router-outlet[ofRouteFade]` shows (the element right after the
+ * outlet) fades in. Opacity only, so nothing moves and no transform makes the page the
+ * containing block of its fixed children while it runs. Off under reduced motion.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .of-route-fade + * {
+    animation: of-route-fade 200ms ease-out;
+  }
+}
+@keyframes of-route-fade {
+  from {
+    opacity: 0;
+  }
+}

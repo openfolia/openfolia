@@ -1,0 +1,1 @@
+ALTER TABLE "change_sets" ADD COLUMN "base_released" boolean DEFAULT false NOT NULL;

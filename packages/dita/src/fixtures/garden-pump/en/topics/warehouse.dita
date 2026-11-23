@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="warehouse" xml:lang="en">
+  <title>Reused content</title>
+  <body>
+    <note id="unplug" type="important">Unplug the pump before you work on it.</note>
+  </body>
+</topic>

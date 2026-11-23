@@ -1,0 +1,22 @@
+= Setting the clock
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: clock, time, display
+
+[#intro]
+The vehicle sets the clock automatically from the navigation signal. You can also set it by hand.
+
+[procedure#steps]
+.Set the clock
+. [[step-menu]]In the centre display, open [.ui]##Settings## › [.ui]##Date and time##.
+. [[step-auto]]Switch [.ui]##Automatic time## off.
+. [[step-set]]Set the hours and minutes with the arrows, then tap [.ui]##Save##.
+
+[NOTE#note-auto]
+====
+[#note-auto-text]
+With automatic time on, the clock also changes to summer time and back by itself.
+====

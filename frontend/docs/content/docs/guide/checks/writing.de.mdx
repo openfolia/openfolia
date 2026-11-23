@@ -1,0 +1,106 @@
+---
+title: 'Terminologie und Stil'
+description: 'Verbotene Benennungen und der Hausstil, im Text jedes Moduls vor Überprüfung und Veröffentlichung geprüft, und in der CI.'
+articleId: 'guide.checks.writing'
+---
+
+Diese Prüfungen lesen, was ein Modul sagt: die Wörter seiner Absätze, Titel, Listeneinträge,
+Alternativtexte, Sicherheitshinweise und anderer übersetzbarer Text. Code, wörtliche Blöcke und
+durchgereichte Blöcke werden nie gelesen. Sie sind Warnungen, außer die Konfiguration Ihres
+Projekts macht sie blockierend.
+
+## Begriffe
+
+Die Begriffe Ihrer [Terminologie](/de/guide/writing/terminology) nennen je Sprache die Benennungen,
+die nicht verwendet werden dürfen.
+
+- **Verbotene Benennung**: Der Text verwendet eine verbotene Benennung eines freigegebenen Begriffs
+  in der Sprache des Moduls. Sie wird als ganzes Wort und ohne Rücksicht auf Groß- und
+  Kleinschreibung gefunden, ohne Wortendungen: „Lader“ wird in „Stecken Sie den lader ein“
+  gefunden, nicht in „Ladern“. Die Details sagen, was stattdessen zu schreiben ist: die bevorzugte
+  Benennung des Begriffs, in der gefundenen Schreibweise.
+- Dieselbe Prüfung meldet einen **veralteten Begriff**: jede Benennung eines als veraltet
+  markierten Begriffs, mit der bevorzugten Benennung seines Ersatzes, wenn der Begriff einen nennt.
+  Das ist immer eine Warnung.
+
+Ein vorgeschlagener Begriff gilt noch nicht und prüft nichts. Eine verbotene Benennung ist
+blockierend, wenn die Konfiguration es sagt:
+
+```yaml
+terminology:
+  forbiddenIsBlocking: true
+```
+
+## Stilregeln
+
+Ihr Hausstil, als Regeln in `openfolia.yaml`, je Sprache:
+
+```yaml
+styleRules:
+  de:
+    maxSentenceWords: 25
+    rules:
+      - id: zwecks
+        words: zwecks
+        message: Schreiben Sie „für“ oder „um … zu“.
+      - id: benutzen
+        pattern: '\bbenutz(?:en|t)\b'
+        message: Schreiben Sie „verwenden“.
+        replacement: verwenden
+        severity: blocking
+```
+
+- **Stilregel**: Der Text trifft auf eine Regel. Eine Regel ist eine Wortfolge (`words`, als ganze
+  Wörter ohne Rücksicht auf die Schreibweise gefunden) oder ein Muster (`pattern`), mit der
+  Meldung, die die schreibende Person liest, und wahlweise dem, was stattdessen zu schreiben ist.
+  Eine Regel ist eine Warnung, außer ihre `severity` ist `blocking`.
+- Dieselbe Prüfung meldet einen Satz mit mehr als `maxSentenceWords` Wörtern.
+
+Ein Muster ist ein kleiner Teil regulärer Ausdrücke: Zeichen, `.`, Klassen wie `[a-z]` und `\w`,
+Gruppen, `|`, `?`, `*`, `+`, Anzahlen bis 20, `^`, `$` und `\b`. Es wird in einer Zeit geprüft, die
+nur mit dem Text wächst, sodass kein Muster die Prüfungen aufhalten kann. Ein Muster außerhalb
+dieses Teils (Rückverweise, Vorausschau) wird beim Speichern der Konfiguration abgelehnt, mit dem
+Grund. Die [Referenz zu `openfolia.yaml`](/de/reference/project-config) nennt jeden Schlüssel.
+
+**Text nicht geprüft** (Warnung): Der Text eines Moduls ist länger, als die Prüfungen lesen
+(1.000.000 Zeichen), hat mehr Befunde, als sie auflisten (1.000), oder die Stilregeln brauchten zu
+lange. Was danach kommt, wurde nicht geprüft: Teilen Sie das Modul, oder beheben Sie die ersten
+Befunde.
+
+## Beim Schreiben
+
+Der Modul-Editor führt dieselben Prüfungen beim Tippen aus, in der Sprache des Moduls, mit den
+Begriffen und Stilregeln der Überarbeitung, die Sie bearbeiten. Sie laufen, wenn Sie innehalten, und
+nur auf dem Text, den Sie geändert haben.
+
+- Ein Ergebnis ist **unterstrichen**: gepunktet, bei einem blockierenden dicker, mit einem
+  Warnsymbol neben seinem Absatz. Zeigen Sie darauf oder setzen Sie den Cursor hinein und drücken
+  Sie **Alt+Enter**, um seine Karte zu öffnen: was falsch ist, die Anmerkung des Begriffs und was
+  stattdessen zu schreiben ist. **Ersetzen** setzt die Korrektur ein, als ein Schritt, den
+  **Strg+Z** (**Cmd+Z** auf dem Mac) zurücknimmt. **Hier ignorieren** blendet dieses Ergebnis in
+  diesem Text aus, bis Sie das Modul schließen; die Prüfungen vor Überprüfung und Veröffentlichung
+  melden es weiterhin.
+- Der Reiter **Vorschläge** der Seitenleiste listet jedes Ergebnis unter **Schreibprüfung** auf, mit
+  **Ersetzen**, **Anzeigen** (markiert den Text) und **Hier ignorieren**.
+- Tippen Sie die ersten drei Buchstaben der bevorzugten Benennung eines freigegebenen Begriffs,
+  erscheint der Rest grau: **Tab** setzt ihn ein, als Begriffslink; **Escape** verwirft
+  ihn. Tippen Sie eine erlaubte Benennung ganz, wird angeboten, sie ebenso zu verlinken. Um einen
+  Begriff per Suche einzufügen, wählen Sie **Begriff** im **/**-Menü oder unter **Einfügen** in der
+  Werkzeugleiste.
+- Ein Begriffslink ist dünn unterstrichen. Zeigen Sie darauf oder lassen Sie den Cursor darin,
+  erscheint seine Definition.
+
+Die Vorschläge der [Stilprüfung](/de/guide/writing/style-review) sind ebenfalls im Text markiert
+(gestrichelt), mit **Übernehmen** und **Verwerfen** in ihrer Karte.
+
+## In der CI
+
+Dieselben Prüfungen laufen auf einem Inhalts-Repository auch über die Befehlszeile, für eine
+Pipeline:
+
+```sh
+pnpm nx run api:check-content -- --content pfad/zum/inhalt --ref main
+```
+
+Der Befehl gibt eine Zeile je Prüfung aus und endet mit 1, wenn eine Prüfung blockierend ist, mit 0
+bei nur Warnungen. `--manual <id>` prüft ein Handbuch, `--format json` gibt JSON aus.

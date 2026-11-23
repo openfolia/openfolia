@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE troubleshooting PUBLIC "-//OASIS//DTD DITA Troubleshooting//EN" "troubleshooting.dtd">
+<troubleshooting id="fault" xml:lang="de">
+  <title>Die Pumpe läuft nicht an</title>
+  <troublebody>
+    <condition>
+      <p>Die Pumpe macht beim Einschalten kein Geräusch.</p>
+    </condition>
+    <troubleSolution>
+      <cause>
+        <p>Der Filter ist verstopft.</p>
+      </cause>
+      <remedy>
+        <steps>
+          <step>
+            <cmd>Ziehen Sie den Netzstecker.</cmd>
+          </step>
+          <step>
+            <cmd>Spülen Sie den Filter unter klarem Wasser aus.</cmd>
+          </step>
+        </steps>
+      </remedy>
+    </troubleSolution>
+  </troublebody>
+</troubleshooting>

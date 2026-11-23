@@ -1,0 +1,40 @@
+---
+title: 'Sprachen von rechts nach links'
+description: 'Arabisch, Hebräisch und andere Sprachen von rechts nach links schreiben und ansehen: Der Text läuft von rechts, der Editor drumherum bleibt in Ihrer Sprache.'
+articleId: 'guide.writing.right-to-left'
+---
+
+Arabisch, Hebräisch und andere Sprachen, die von rechts nach links geschrieben werden, bearbeiten,
+zeigen und drucken Sie von rechts nach links. Sie stellen nichts ein: Jede Sprache bringt ihre
+Richtung mit.
+
+## Ein Modul von rechts nach links bearbeiten
+
+1. Öffnen Sie das Modul und wählen Sie im Kopf seine Sprache, etwa **AR**.
+2. Tippen Sie wie in jeder anderen Sprache. Der Text beginnt rechts, Listen und Tabellen laufen von
+   rechts, und die **Gliederung** folgt.
+
+Werkzeugleiste, Menüs und Seitenleiste bleiben in der Sprache Ihres Editors, von links nach rechts
+auf Deutsch oder Englisch. Ein lateinischer Produktname, eine Zahl oder Code im arabischen Text
+behält seine eigene Reihenfolge.
+
+![Ein arabisches Modul: der Text von rechts im Editor und in der Vorschau, die Werkzeugleiste auf Deutsch](/images/guide/de/writing-right-to-left.webp)
+
+## Vorschau und Druck
+
+Die Vorschau eines Moduls von rechts nach links ist eine Seite von rechts nach links; ihr Menü
+**Sprache** wechselt in eine andere Sprache. Auch das PDF spiegelt die Seite: Ränder, Kopf- und
+Fußzeile, Listen, Tabellen und die Legende eines Bilds mit Positionsnummern wechseln die Seite. Code
+und Adressen bleiben von links nach rechts.
+
+Ein Modul, das es in der Sprache noch nicht gibt, erscheint in seiner Ausgangssprache, von links nach
+rechts, mitten im Handbuch von rechts nach links.
+
+## Wer die Richtung festlegt
+
+Jede Sprache nimmt ihre Richtung aus ihrer Schrift, also sind Arabisch und Hebräisch ohne
+Einrichtung von rechts nach links. Administratoren sehen die Richtung jeder Sprache in den
+Spracheinstellungen des Projekts: **Links nach rechts** oder **Rechts nach links**. Eine
+Administratorin oder ein Administrator kann sie in der Konfiguration anders festlegen.
+Eine dort festgelegte Richtung für eine Sprache, die das Projekt nicht hat, bewirkt nichts: `GET /config`
+listet sie in `meta.directionIssues`, und das nächste Speichern der Einstellungen lässt sie weg.

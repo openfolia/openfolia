@@ -1,0 +1,69 @@
+---
+title: 'Such-API'
+description: 'Module, Handbücher und Begriffe über die API suchen: die Abfrage, die Filter, die Reihenfolge, das Hervorheben und die Grenzen.'
+articleId: 'guide.integrations.search'
+---
+
+`GET /search` findet Module, Handbücher und Begriffe unter dem, was der Leser sehen darf, bei
+`?ref=` wie jeder Lesezugriff auf Inhalte. Die Route gehört zur [Delivery API](/de/api/delivery)
+und braucht `content.read`.
+
+## Suchen
+
+```sh
+curl -gs -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/search?filter[q]=akku&filter[lang]=de&page[size]=20"
+```
+
+- **`filter[q]`**: 1 bis 200 Zeichen; höchstens 8 Wörter werden verwendet. Groß- und
+  Kleinschreibung und diakritische Zeichen spielen keine Rolle (`ä` ist `a`, `ß` ist `ss`), und
+  jedes Wort muss passen.
+- **Wo gesucht wird:** im Titel, in den Schlagwörtern, den FAQ-Fragen und dem Text eines Moduls;
+  im Titel eines Handbuchs; in den bevorzugten, erlaubten und verbotenen Benennungen eines Begriffs
+  und in seiner Definition.
+- **Filter**, alle optional, und alle angegebenen müssen zutreffen: `filter[lang]`,
+  `filter[resourceType]` (`Module`, `Manual` oder `Term`) und für Module `filter[type]` (ein
+  Modultyp), `filter[audience]`, `filter[facet]=<Facette>:<Wert>` und `filter[keyword]` (die
+  letzten beiden wiederholbar). Mit einem Modulfilter darf `filter[q]` fehlen: Dann ist jedes
+  Modul, das die Filter durchlassen, ein Treffer, nach Titel sortiert.
+- Seitenweise wie jede Liste (`page[number]`, `page[size]`). Jeder andere Parameter ist 400
+  `unsupported-parameter`.
+
+## Treffer
+
+Jeder Treffer ist ein `SearchResult`: `attributes` enthält `resourceType`, `resourceId`, `lang`,
+`title` und, wenn Text passte, `blockId` (der Block, Schritt oder FAQ-Eintrag des Treffers);
+`relationships` verweist auf die Ressource. `meta` enthält:
+
+- `matchedOn`: `title`, `keyword`, `question`, `text`, `meaning` oder ohne Abfrage `filter`;
+- `excerpt`: reiner Text, nie Markup;
+- `matches`: `{ start, end }`-Positionen im Auszug, sodass Sie durch Zerschneiden des Texts
+  hervorheben und nie HTML einfügen.
+
+Die Treffer kommen in der Reihenfolge dessen, was passte: zuerst der Titel, dann Schlagwörter,
+Fragen und Text. Ein Treffer enthält nie Inhalte außerhalb des Leseumfangs des Lesers, und
+`meta.page.total` zählt nur, was er sehen darf.
+
+## Wortformen, Tippfehler und Bedeutung
+
+Mit der Standardsuche in Postgres (`CCMS_SEARCH_ADAPTER=postgres`) ist nichts einzurichten:
+
+- **Wortformen** in der Sprache des Moduls: `startet` findet `starten`.
+- **Tippfehler** in Titeln und Schlagwörtern.
+- **Bedeutung**, wenn der Betrieb die semantische Suche eingeschaltet hat: Die Worte eines Lesers
+  finden ein Modul, das dasselbe mit anderen sagt. Ohne sie verlässt kein Text den Server. Siehe
+  [Semantische Suche](/de/guide/self-hosting/semantic-search).
+
+`CCMS_SEARCH_ADAPTER=memory` vergleicht nur Wörter.
+
+## Grenzen
+
+| Antwort                | Wann                                                                                                    | Einstellung                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 429 `rate-limited`     | Ein Leser hat mehr Suchen pro Minute angefragt als erlaubt (jede Seite zählt) oder mehr als 2 zugleich. | `CCMS_SEARCH_PER_MINUTE` (120)     |
+| 503 `database-timeout` | Eine Suche hat ihr Zeitbudget in der Datenbank aufgebraucht.                                            | `CCMS_SEARCH_TIMEOUT_MS` (5000 ms) |
+| 503 `search-busy`      | Der Server führt schon so viele Suchen aus wie erlaubt, und keine wurde innerhalb von 2 s fertig.       | `CCMS_SEARCH_CONCURRENCY` (4)      |
+
+Jede trägt `Retry-After`: Warten Sie so lange und fragen Sie erneut. Die Grenzen gelten je Server,
+hinter mehreren Servern erhält ein Leser also entsprechend mehr. Nie eine halbe Seite: Eine Suche
+antwortet vollständig oder gar nicht.

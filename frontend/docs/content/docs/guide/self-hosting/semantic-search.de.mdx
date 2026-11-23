@@ -1,0 +1,157 @@
+---
+title: 'Suche und semantische Suche'
+description: 'Die Suche in Postgres, das Finden nach Bedeutung mit einem Embeddings-Endpunkt und pgvector, und wie lange der Suchindex Texte behält.'
+articleId: 'guide.self-hosting.semantic-search'
+---
+
+Standardmäßig indiziert der Server die Inhalte in Postgres, während gesucht wird: Wörter in allen
+ihren Formen in der Sprache der Inhalte, und Tippfehler in Titeln und Schlagwörtern. Es ist nichts
+einzurichten. `CCMS_SEARCH_ADAPTER=memory` sucht stattdessen im Speicher jedes Servers, nur nach
+Wortübereinstimmung, für kleine Installationen.
+
+## Nach Bedeutung finden
+
+Die semantische Suche ist standardmäßig aus, und dann verlässt kein Text den Server. Mit ihr
+findet eine Suche nach „Zelle ersetzen“ auch „Batterie wechseln“. Sie braucht einen
+Embeddings-Endpunkt und pgvector in Postgres.
+
+**Ist sie an, verlässt Modultext den Server.** Ein Hintergrund-Job sendet jeden indizierten Text an
+den Endpunkt (Titel, Schlagwörter, Block- und FAQ-Text dessen, was gesucht wurde, die Entwürfe von
+Überarbeitungen für ihre Autoren eingeschlossen), und jede Suche sendet ihre Anfrage. Betreiben Sie
+das Modell selbst, neben der API im selben Netz, es sei denn, Sie nehmen hin, dass die Inhalte an
+einen gehosteten Anbieter gehen.
+
+1. **Postgres mit pgvector.** `deploy/compose.vector.yaml` baut dasselbe Postgres wie
+   `compose.yaml`, mit einkompiliertem pgvector. Es läuft auf dem vorhandenen Volume `postgres`,
+   ohne Dump oder Wiederherstellung:
+
+   ```sh
+   docker compose -f compose.yaml -f compose.vector.yaml up -d --build --wait
+   ```
+
+   Nennen Sie beide Dateien in jedem späteren `docker compose`-Befehl, oder setzen Sie
+   `COMPOSE_FILE=compose.yaml:compose.vector.yaml` in `deploy/.env`. Ein verwaltetes Postgres muss
+   die Erweiterung `vector` anbieten; die API legt sie selbst an.
+
+2. **Der Endpunkt,** in `deploy/api.env`:
+
+   ```sh
+   CCMS_EMBEDDER_URL=http://embedder:8000/v1/embeddings   # die volle URL, an die gesendet wird
+   CCMS_EMBEDDER_MODEL=<der Name des Modells>
+   CCMS_EMBEDDER_DIMENSIONS=384                           # die Länge der Vektoren des Modells
+   ```
+
+   Jeder Endpunkt, der `{ "model", "input": [Texte] }` annimmt und mit
+   `{ "data": [{ "embedding": [...], "index": 0 }] }` antwortet, funktioniert. Braucht er einen
+   Schlüssel, geben Sie ihn aus einer Datei, `CCMS_EMBEDDER_API_KEY_FILE`, gesetzt unter den
+   Diensten `api` und `worker` in einer `compose.override.yaml`, wie es der
+   [Blob-Speicher](/de/guide/self-hosting/blob-store) zeigt, nie in `api.env`; mit Schlüssel muss
+   die URL `https://` sein (außer zu localhost). Die URL enthält nie Zugangsdaten, eine Abfrage oder
+   ein Fragment. Compose liest die Ergänzung nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben ist:
+   siehe [Eigene Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt).
+
+3. Starten Sie API und Worker neu: `docker compose up -d --wait`.
+
+Der Server bettet den indizierten Text im Hintergrund ein (der Job `search.embed`), legt den
+Vektorindex bei der ersten Suche an und findet nach Bedeutung, sobald der Text eingebettet ist.
+Ist der Endpunkt nicht erreichbar, sucht der Server weiter nach Wörtern, und der Job versucht es
+erneut. Ohne pgvector protokolliert die API das und sucht nach Wörtern.
+
+`CCMS_EMBEDDER_TIMEOUT_MS` begrenzt eine Anfrage an den Endpunkt (Standard 10 s).
+`CCMS_EMBEDDER_MIN_SIMILARITY` (0 bis 100, Standard 50) legt fest, wie nah eine Bedeutung sein
+muss, um allein nach Bedeutung gefunden zu werden: Erhöhen Sie den Wert, wenn unpassende Treffer
+erscheinen, senken Sie ihn, wenn Umschreibungen fehlen. Ein Wechsel des Modells oder seiner
+Dimensionen bettet alles neu ein.
+
+## Der lokale Embedding-Worker
+
+`deploy/compose.embedder.yaml` betreibt ein kleines Embedding-Modell auf der CPU neben der API,
+sodass die semantische Suche funktioniert, ohne dass Text die Installation verlässt. Der Worker
+stellt keinerlei Netzverbindung her: Sie laden das Modell einmal selbst, und er läuft in einem Netz
+ohne Weg nach außen. Ohne die Datei ändert sich nichts.
+
+1. **Laden Sie einmal ein Modell.** Jedes nach ONNX exportierte Sentence-Embedding-Modell mit
+   seiner `tokenizer.json`, das:
+
+   - **mehrsprachig** ist und die Sprachen Ihrer Inhalte abdeckt;
+   - für **Satz-Embeddings** gemacht ist (Texte gleicher Bedeutung bekommen nahe Vektoren);
+   - **höchstens 2.000 Dimensionen** hat;
+   - unter einer Lizenz steht, die Ihnen den Betrieb erlaubt.
+
+   Ein kleines Modell mit etwa 100 Millionen Parametern und 384 Dimensionen genügt. Seine
+   Modellkarte nennt das Pooling (`mean` oder `cls`) und ob es ein Präfix erwartet.
+
+   ```sh
+   cd deploy
+   mkdir -p embedder-model
+   curl -fL -o embedder-model/model.onnx     <die ONNX-Datei des Modells>
+   curl -fL -o embedder-model/tokenizer.json <seine tokenizer.json>
+   sha256sum embedder-model/model.onnx embedder-model/tokenizer.json
+   ```
+
+2. **Legen Sie es fest,** in `deploy/.env`:
+
+   ```sh
+   CCMS_EMBEDDER_MODEL=<ein Name dafür>
+   CCMS_EMBEDDER_DIMENSIONS=384
+   CCMS_EMBEDDER_MODEL_SHA256=<die Prüfsumme von model.onnx>
+   CCMS_EMBEDDER_TOKENIZER_SHA256=<die Prüfsumme von tokenizer.json>
+   ```
+
+   Ergänzen Sie `CCMS_EMBEDDER_POOLING=cls` oder `CCMS_EMBEDDER_PREFIX`, wenn die Modellkarte sie
+   verlangt. Eine Datei mit anderer Prüfsumme wird abgelehnt, und der Worker startet nicht. Die
+   Compose-Datei setzt `CCMS_EMBEDDER_URL`, `_MODEL` und `_DIMENSIONS` der API selbst; lassen Sie
+   diese und `CCMS_EMBEDDER_API_KEY` aus `api.env` heraus.
+
+3. **Starten Sie** mit pgvector und dem Worker:
+
+   ```sh
+   docker compose -f compose.yaml -f compose.vector.yaml -f compose.embedder.yaml up -d --build --wait
+   ```
+
+   Nennen Sie alle drei Dateien in jedem späteren Befehl, oder setzen Sie
+   `COMPOSE_FILE=compose.yaml:compose.vector.yaml:compose.embedder.yaml` in `deploy/.env`.
+
+Der Worker veröffentlicht keinen Port: Nur die API und die Worker erreichen ihn. Er lädt das Modell
+einmal, bettet eine Anfrage nach der anderen mit `CCMS_EMBEDDER_THREADS` Threads ein (Standard 2)
+und lässt `CCMS_EMBEDDER_QUEUE` Anfragen warten (Standard 8). `OPENFOLIA_EMBEDDER_MEMORY`
+(Standard 2g) und `OPENFOLIA_EMBEDDER_CPUS` (Standard ohne Grenze) begrenzen seinen Container. Ein
+kleines Modell braucht etwa 500 MB Speicher und bettet eine Anfrage in Millisekunden ein. Die
+[Einstellungsreferenz](/de/reference/settings), „Embedding worker“, nennt jede Einstellung.
+
+## Wie lange der Index Texte behält
+
+Der Suchindex ist abgeleitet. Eine Bereinigung läuft stündlich auf jedem Prozess, der
+Hintergrundarbeit erledigt (`CCMS_ROLE` `all` oder `worker`), begrenzt pro Lauf:
+
+- Der Index eines Commits, in dem seit `CCMS_SEARCH_SWEEP_AFTER_DAYS` (Standard 7) niemand gesucht
+  hat, wird gelöscht, danach die Dokumente, die kein Index mehr nennt.
+- Text, den so lange kein Dokument verwendet, wird ebenfalls gelöscht, mit seinen Embeddings
+  jedes Modells.
+- So ist der Text eines gelöschten Entwurfs, oder von Inhalten, die sich seit einem alten Commit
+  geändert haben, etwa die doppelte Frist nach der letzten Suche aus der Datenbank verschwunden.
+- Nach einem Wechsel des Modells oder dem Abschalten der semantischen Suche bleiben die Embeddings
+  des alten Modells `CCMS_SEARCH_MODEL_KEPT_DAYS` (Standard 7) erhalten, sodass ein Zurückwechseln
+  nichts neu einbettet. Dann löscht die Bereinigung sie und protokolliert es.
+
+Der Index eines Commits wird als Mitgliedermengen gespeichert, die er mit den Commits davor teilt:
+Ein neuer Commit speichert nur die Mengen, die seine Änderungen berühren, keine Zeile pro Dokument.
+
+## Den Index neu aufbauen
+
+```sh
+docker compose exec api node dist/modules/index-rebuild.main.js
+```
+
+Das baut den Modulindex neu auf und leert den Suchindex; die nächste Suche in jedem Commit
+schreibt ihn wieder. Texte und ihre Embeddings bleiben, sodass nur neuer Text eingebettet wird. Mit
+`--drop-embeddings` gehen auch alle Embeddings: Alles, was danach gesucht wird, geht erneut an den
+Endpunkt, und wird bei einem gehosteten Anbieter erneut bezahlt.
+
+## Grenzen
+
+`CCMS_SEARCH_PER_MINUTE` (Suchen pro Person und Minute), `CCMS_SEARCH_TIMEOUT_MS` (die Zeit, die
+eine Suche in der Datenbank verbringen darf) und `CCMS_SEARCH_CONCURRENCY` (gleichzeitige Suchen
+pro Server) schützen den Server. Jeder Server zählt für sich. Die
+[Referenz der Einstellungen](/de/reference/settings) nennt Bereiche und Standards, und die
+[Such-API](/de/guide/integrations/search), was ein Client sieht.

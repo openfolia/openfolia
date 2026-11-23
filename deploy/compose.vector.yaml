@@ -1,0 +1,12 @@
+# Postgres with pgvector, for semantic search (deploy/README.md, "Semantic search"):
+#
+#   docker compose -f compose.yaml -f compose.vector.yaml up -d --build
+#
+# The same Postgres as compose.yaml (version and digest) with the pgvector extension added
+# (docker/postgres/Dockerfile): a drop-in on the existing `postgres` volume. Only needed with
+# an embedder configured (CCMS_EMBEDDER_URL in api.env).
+services:
+  postgres:
+    image: ${OPENFOLIA_IMAGES:-openfolia}/postgres-vector:${OPENFOLIA_VERSION:-local}
+    build:
+      context: docker/postgres

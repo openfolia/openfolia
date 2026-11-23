@@ -1,0 +1,36 @@
+{
+  "name": "@openfolia/connector-tracker",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "openfolia-tracker-connector": "./dist/main.js",
+    "ccms-tracker-connector": "./dist/main.js"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "connector-tracker",
+    "tags": [
+      "type:connector"
+    ]
+  },
+  "dependencies": {
+    "@openfolia/connector-wiki-markup": "workspace:*",
+    "@openfolia/content-model": "workspace:*",
+    "tslib": "^2.3.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.6.7"
+  }
+}

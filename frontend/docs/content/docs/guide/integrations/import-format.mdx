@@ -1,0 +1,167 @@
+---
+title: 'Import format'
+description: 'Bring content from another system: write an import bundle, check it with a dry run, then apply it into a revision.'
+articleId: 'guide.integrations.import-format'
+---
+
+Content from another system comes in as an **import bundle**: a ZIP that a converter you write makes
+from the other system's export. The server checks the bundle against the target branch and writes it
+into a new revision (a change set), reviewed like any other. No converter for a particular system
+ships with the product.
+
+## The bundle
+
+A ZIP holding:
+
+| Path              | What                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `import.json`     | the content: `modules`, `manuals`, where they came from (`source`), what did not map (`report`) |
+| `assets/<sha256>` | every image and attachment, named by the SHA-256 of its bytes (64 lowercase hex digits)         |
+
+A block refers to a file as `sha256:<hash>`. Any other file in the archive is ignored with a
+warning. The [import format reference](/reference/import-format) is the JSON Schema of
+`import.json`, field by field; `packages/content-model/docs/import-format.md` in the repository
+explains each field and how to write a converter.
+
+A small `import.json` with one module, in the sample content's terms:
+
+```json
+{
+  "formatVersion": 1,
+  "source": { "system": "Example Wiki", "exportedAt": "2026-11-02" },
+  "modules": [
+    {
+      "schemaVersion": 1,
+      "id": "charging-the-battery",
+      "meta": {
+        "title": "Charging the battery",
+        "type": "procedure",
+        "lang": "en",
+        "audience": "public",
+        "source": { "system": "Example Wiki", "id": "PAGE-17" }
+      },
+      "blocks": [
+        {
+          "type": "paragraph",
+          "id": "intro",
+          "content": [
+            { "type": "text", "text": "Charge the battery before first use." }
+          ]
+        }
+      ]
+    }
+  ],
+  "report": [
+    { "sourceId": "PAGE-17", "message": "An embedded video was left out." }
+  ]
+}
+```
+
+- A translation is the same `id` with another `meta.lang` and the same block IDs.
+- Set `meta.source` on every module, so each one can be traced back to where it came from.
+- Put everything the converter could not map into `report`: it is shown in the import's report
+  for a person to follow up.
+
+## Check it, then apply it
+
+Importing needs a role with **admin.roles**, plus **content.edit** and **content.read**. Each item
+is checked against your scope as saving it would be.
+
+So an import is made by a person, never by an integration: a service account cannot hold a role
+with **admin.roles**, so its token is refused (403 `forbidden`). In the editor, **Admin**, then
+**Import**, does all of the steps below without a terminal: see [Import content](/guide/admin/import).
+For a script, the requests below carry a signed-in person's session: the cookie
+`__Host-openfolia-session`, kept in curl's cookie file `cookies.txt`. That file acts as you until the session ends, for up to
+the session's lifetime: make it readable by you only, never put the cookie or the password on a
+command line, and sign out when you are done.
+
+## Sign in for the import
+
+With password sign-in on, sign in from the shell. `umask 077` makes the cookie file readable by you
+only; `read -rs` reads the password without showing it, and the request body goes in on stdin
+(`printf` is built into the shell), so neither appears in the shell's history or the process list:
+
+```sh
+umask 077
+read -r EMAIL
+read -rs PASSWORD
+printf '{"data":{"type":"PasswordSignIn","attributes":{"email":"%s","password":"%s"}}}' \
+  "$EMAIL" "$PASSWORD" |
+  curl -s -c cookies.txt -H 'Content-Type: application/vnd.api+json' --data-binary @- \
+    https://docs.example.com/api/auth/password/sign-in
+unset PASSWORD
+```
+
+A password holding `"` or `\` must be escaped for JSON (`\"`, `\\`). A wrong address or password
+is 401 `invalid-credentials`. Where people sign in only with a provider, the session lives in the
+browser, and these requests cannot carry it: an import through the API then needs that person to
+sign in with a password, or with a code by email where that is on: `POST /auth/email-code/request`
+(type `EmailCodeRequest`) mails the code, and `POST /auth/email-code/sign-in` (type
+`EmailCodeSignIn`, the address and the code, sent the same way as the password above) sets the
+cookie. See [Sign-in with email and password](/guide/self-hosting/password-sign-in) and
+[Sign-in with a code by email](/guide/self-hosting/email-code-sign-in).
+
+When you are done, sign out, which ends the session on the server, then delete the file:
+
+```sh
+curl -s -b cookies.txt -X POST -H 'Content-Type: application/vnd.api+json' \
+  https://docs.example.com/api/auth/sign-out
+rm cookies.txt
+```
+
+## Import
+
+1. **Dry run.** Upload the bundle with `dryRun=true`. Nothing is stored:
+
+   ```sh
+   curl -s -b cookies.txt -H "X-Ccms-Request: 1" \
+     -F file=@bundle.zip -F dryRun=true \
+     https://docs.example.com/api/imports
+   ```
+
+   `meta.report` says, item by item, whether it would be created, updated, skipped or refused,
+   and why, with the bundle's issues and the counts. `valid` and `applicable` say whether it can
+   be applied; `applicableWithoutRefused`, whether it can be applied without its refused items
+   (step 3).
+
+2. **Upload to apply.** Send the same, with `-b cookies.txt`, without `dryRun`. The answer is 201
+   with the import, kept for an hour (`attributes.expiresAt`). Add `updateExisting=true` to update
+   modules and manuals that exist already; without it they are skipped. `baseRef` names another
+   branch to check against (default: the server's default branch).
+3. **Apply.** It answers 202 and writes the import in the background into a new change set,
+   `Import of <file name>`:
+
+   ```sh
+   curl -s -b cookies.txt -X POST -H 'Content-Type: application/vnd.api+json' \
+     https://docs.example.com/api/imports/<importId>/apply
+   ```
+
+   An import with a refused item is refused (422 `import-not-applicable`). To import the rest
+   without the refused items, send `{"meta":{"skipRefused":true}}` as the body
+   (`-d '{"meta":{"skipRefused":true}}'`). It works for every importer, but only when the report
+   says `applicableWithoutRefused`: the server checked the bundle without the refused items, and
+   it decides every other item exactly as the report does. It is false when something else needs a
+   refused item (a manual that names a refused module, a module that shows a refused file). Exactly
+   the refused items are left out. The change set's description and every commit message list them
+   with why, and the import's report keeps them.
+
+4. **Follow it.** `GET /imports/<importId>` (with `-b cookies.txt`) shows its state, progress and,
+   once done, its change set. Review and merge that change set as any other. Then sign out as
+   above.
+
+A form needs `X-Ccms-Request` (any value), which a cross-site form cannot send. Importing the same
+bundle again writes nothing for what is unchanged.
+
+## What is refused
+
+- An archive that is not a safe ZIP: a path leaving its folder, links, the same path twice,
+  encryption, ZIP64, or too many, too deep or too large files (422 `invalid-archive`, with
+  `meta.reason`).
+- An item outside your scope, one with a validation error, or a file the upload rules refuse.
+- A reference to a file the bundle does not carry, unless you may already read it on the server
+  (`missing-asset`).
+
+The size limits are settings: `CCMS_IMPORT_MAX_BYTES`, `CCMS_IMPORT_MAX_FILES`,
+`CCMS_IMPORT_MAX_UNPACKED_BYTES`, `CCMS_IMPORT_MAX_PATH_DEPTH` and the others in the
+[settings reference](/reference/settings). For a DITA project, see
+[DITA import](/guide/integrations/dita-import).

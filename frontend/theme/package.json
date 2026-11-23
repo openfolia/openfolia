@@ -1,0 +1,19 @@
+{
+  "name": "@openfolia/theme",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "nx": {
+    "name": "theme"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./theme.css": "./src/theme.css",
+    "./fonts/*": "./src/fonts/*",
+    "./brand/*": "./src/brand/*"
+  },
+  "devDependencies": {
+    "postcss": "^8.5.33"
+  }
+}

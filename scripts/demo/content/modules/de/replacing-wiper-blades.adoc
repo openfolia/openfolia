@@ -1,0 +1,20 @@
+= Wischerblätter wechseln
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Scheibenwischer
+
+[#intro]
+Wechseln Sie die Wischerblätter einmal im Jahr oder sobald sie Schlieren hinterlassen.
+
+[procedure#steps]
+.Wischerblatt wechseln
+. [[step-service]]Drücken Sie innerhalb von zehn Sekunden nach dem Ausschalten den Wischerhebel nach unten: Die Wischer fahren in die Servicestellung.
+. [[step-lift]]Klappen Sie den Wischerarm von der Windschutzscheibe ab.
+. [[step-release]]Drücken Sie die Entriegelungstaste und ziehen Sie das Wischerblatt vom Arm.
++
+[#img-wiper]
+image::demo-image:wiper-blade["Abgeklappter Wischerarm, Entriegelungstaste gedrückt, Wischerblatt wird abgezogen",width=45%]
+. [[step-fit]]Schieben Sie das neue Wischerblatt auf den Arm, bis es einrastet, und klappen Sie den Arm zurück.

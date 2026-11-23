@@ -1,0 +1,64 @@
+---
+title: 'Eine Übersetzung importieren'
+description: 'Die zurückgeschickte Datei der Agentur prüfen, über Blöcke mit geändertem Quelltext entscheiden und sie in eine neue Überarbeitung importieren.'
+articleId: 'guide.translations.import'
+---
+
+Schickt die Agentur einen Delta-Export zurück, importieren Sie ihn. Der Editor prüft zuerst jede
+Einheit der Datei und importiert nichts, bis Sie es sagen. Der Import landet dann in einer neuen
+Überarbeitung, die wie jede andere Änderung geprüft wird.
+
+## Die Datei prüfen
+
+1. Wählen Sie **Übersetzungen** in der Seitenleiste, dann **Übersetzung importieren**.
+2. Legen Sie die Datei auf **Übersetzte XLIFF-, ZIP-Datei oder ein COTI-Paket hier ablegen** ab
+   oder wählen Sie sie. Es ist eine XLIFF-2.0-Datei, ein ZIP davon (eine je Sprache) oder das
+   [COTI-Paket](/de/guide/translations/export#als-coti-paket-senden), das ein Übersetzungssystem
+   zurückgeschickt hat. Aus einem Paket werden nur die XLIFF-Dateien gelesen, die seine
+   Projektbeschreibungen nennen.
+3. Der Editor prüft jede Einheit. Die Zahlen zeigen, wie viele **Einheiten bereit zum Import**
+   sind, wie viele **brauchen eine Entscheidung** und wie viele **können nicht importiert
+   werden**.
+
+![Übersetzung importieren: die bereiten Einheiten und eine, die nicht importiert werden kann, je Modul gelistet](/images/guide/de/translation-import.webp)
+
+Der Bericht darunter listet die Einheiten je Modul. Wählen Sie darüber einen Zustand, etwa
+**Bereit** oder **Fehlerhafte Auszeichnung**, um nur diese zu sehen. Eine Einheit, die nicht
+importiert werden kann, sagt warum, etwa **Die Übersetzung ist leer.** Bitten Sie die Agentur, sie
+erneut zu senden.
+
+## Über geänderten Quelltext entscheiden
+
+Eine Einheit zeigt **Quelle geändert**, wenn ihr englischer Text nach dem Export geändert wurde.
+Die Übersetzung passt zum alten Text. Die Einheit zeigt **Quelle beim Export**, **Quelle jetzt**
+und die Übersetzung. Wählen Sie für jede:
+
+- **Importieren und als veraltet markieren**: Die Übersetzung kommt hinein, und der Block bleibt
+  veraltet, bis er neu übersetzt ist. Das ist die Voreinstellung.
+- **Diese Einheit überspringen**: Sie wird ausgelassen.
+
+**Alle behalten** und **Alle überspringen** entscheiden für jede geänderte Einheit auf einmal.
+
+## Importieren
+
+1. Wählen Sie **… Einheiten importieren** (die Zahl sagt, was hineinkommt).
+2. Der Editor legt eine neue Überarbeitung mit der Übersetzung an. **Importiert** sagt, wie viele
+   Einheiten darin sind, bereit zur Prüfung.
+3. Wählen Sie **In der Prüfung öffnen**, um sie einzureichen, oder **Weitere Datei importieren**.
+
+Der Import legt eine Überarbeitung an. Er braucht darum die Berechtigung, Inhalte zu bearbeiten,
+neben der, die Übersetzung zu verwalten. Eine Prüfung wird eine Stunde aufbewahrt. Danach wählen
+Sie **Erneut prüfen**.
+
+## Wenn die Datei abgelehnt wird
+
+Der Editor sagt, warum. Häufige Gründe:
+
+- **Die Datei nennt keinen Delta-Export, den Sie sehen dürfen. Importieren Sie die Datei eines
+  Ihrer Exporte.**
+- **Der Delta-Export wurde abgebrochen; seine Blöcke wurden seitdem vielleicht erneut gesendet.**
+- **Die Dateien stammen aus verschiedenen Delta-Exporten. Importieren Sie einen Export nach dem
+  anderen.**
+- **Das COTI-Paket konnte nicht gelesen werden: Seine Projektbeschreibung ist beschädigt,
+  unsicher oder nennt eine Datei, die es nicht enthält.** Fordern Sie das Paket beim
+  Übersetzungssystem erneut an, mit seinen Ordnern und Dateinamen, wie sie gesendet wurden.

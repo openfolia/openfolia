@@ -1,0 +1,12 @@
+= Zu diesem Serviceheft
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: technician
+:facet-product: fenna
+
+[#intro]
+Dieses Heft richtet sich an Fachwerkstätten. Es beschreibt die planmäßige Wartung des {model-name} und die dafür nötigen Arbeiten.
+
+[#qualified]
+Arbeiten Sie am Hochvoltsystem des Elektromodells nur mit der Qualifikation, die in Ihrem Land dafür vorgeschrieben ist.

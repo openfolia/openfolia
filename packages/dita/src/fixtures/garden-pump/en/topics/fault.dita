@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE troubleshooting PUBLIC "-//OASIS//DTD DITA Troubleshooting//EN" "troubleshooting.dtd">
+<troubleshooting id="fault" xml:lang="en">
+  <title>The pump does not start</title>
+  <troublebody>
+    <condition>
+      <p>The pump makes no sound when it is switched on.</p>
+    </condition>
+    <troubleSolution>
+      <cause>
+        <p>The filter is blocked.</p>
+      </cause>
+      <remedy>
+        <steps>
+          <step>
+            <cmd>Unplug the pump.</cmd>
+          </step>
+          <step>
+            <cmd>Rinse the filter under clear water.</cmd>
+          </step>
+        </steps>
+      </remedy>
+    </troubleSolution>
+  </troublebody>
+</troubleshooting>

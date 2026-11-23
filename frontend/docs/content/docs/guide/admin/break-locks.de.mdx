@@ -1,0 +1,30 @@
+---
+title: 'Sperren freigeben, die jemand hält'
+description: 'Ein Modul übernehmen, alle Sperren einer Person freigeben, die gegangen ist, oder alle Sperren einer Überarbeitung aufheben.'
+articleId: 'guide.admin.break-locks'
+---
+
+Wer ein Modul bearbeitet, hält seine Sperre, damit niemand sonst es gleichzeitig ändert. Eine
+Sperre bleibt, solange die Überarbeitung ihres Inhabers offen ist. Ist der Inhaber abwesend oder
+gegangen, kann ein Admin sie freigeben.
+
+## Ein Modul
+
+Öffnen Sie das Modul und wählen Sie **Bearbeitung übernehmen**. Sie sagen, warum, die andere
+Person wird informiert, und ihr Editor wird schreibgeschützt. Siehe
+[Sperren und Übernehmen](/de/guide/writing/locks-and-taking-over).
+
+## Alle Sperren einer Person, die gegangen ist
+
+Deaktivieren Sie die Person unter **Verwaltung › Benutzer** (siehe
+[Benutzer und Rollen](/de/guide/admin/users-and-roles)). Alle Sperren, die sie hält, werden
+aufgehoben, und die Meldung sagt, wie viele. Die Sperren eines Service-Accounts werden genauso
+aufgehoben, wenn er deaktiviert wird.
+
+## Alle Sperren einer Überarbeitung oder eines Inhabers auf einmal
+
+Dafür hat der Editor keine Schaltfläche. Ein Werkzeug oder Skript mit dem Zugriff eines Admins
+erledigt das über die API (`POST /locks/break`, mit einem Kommentar): Es hebt alle Sperren einer
+Überarbeitung oder eines Inhabers auf, und jede aufgehobene Sperre wird im
+[Audit-Log](/de/guide/admin/audit-log) als **Sperre aufgehoben** festgehalten. Die Inhaber werden
+informiert. Siehe die [API-Referenz](/de/api).

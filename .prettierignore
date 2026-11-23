@@ -1,0 +1,19 @@
+# Add files here to ignore them from prettier formatting
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+pnpm-lock.yaml
+# Byte-exact test fixtures
+packages/*/src/fixtures/*.yaml
+packages/*/src/fixtures/*.adoc
+# Written by drizzle-kit, never by hand
+backend/api/migrations/
+frontend/editor/src/app/api/schema.d.ts
+backend/api/openapi/delivery.yaml
+# Written by pnpm licences:notice, never by hand
+THIRD-PARTY-NOTICES.md
+# Third-party files, copied verbatim (backend/api/tests/iirds/vendor/README.md)
+backend/api/tests/iirds/vendor/
+# Fetched by the tests, third-party (backend/api/tests/iirds/fetch-validator.ts)
+backend/api/.cache/

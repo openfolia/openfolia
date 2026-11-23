@@ -1,0 +1,57 @@
+---
+title: 'Backups'
+description: 'Den Backup-Schlüssel erstellen, Zeitplan, Aufbewahrung und Speicherort festlegen und prüfen, ob die Backups funktionieren.'
+articleId: 'guide.admin.backups'
+---
+
+Backups sichern die Datenbank und die Inhalte, verschlüsselt für einen Backup-Schlüssel, nach
+einem Zeitplan. Die Seite richtet sie ein; ein Backup-Dienst auf dem Server erstellt sie. Dafür
+braucht es eine Rolle mit **admin.backups**.
+
+![Die Seite Backups, bevor Backups eingerichtet sind: Status, Backup-Schlüssel und Zeitplan](/images/guide/de/admin-backups.webp)
+
+## Den Backup-Schlüssel erstellen
+
+1. Öffnen Sie **Verwaltung**, dann **Backups**.
+2. Wählen Sie **Backup-Schlüssel erstellen**.
+3. **Ihr Backup-Schlüssel** wird einmal angezeigt. Wählen Sie **Kopieren** oder **Herunterladen** und
+   bewahren Sie ihn getrennt von diesem Server auf: in einem Passwort-Manager oder ausgedruckt in
+   einem Tresor. Ohne ihn lässt sich kein Backup wiederherstellen.
+4. Kreuzen Sie **Ich habe den Schlüssel sicher aufbewahrt** an, oder kopieren oder laden Sie ihn
+   herunter, und wählen Sie dann **Fertig**.
+
+**Schlüssel rotieren** erstellt später einen neuen Schlüssel für alle künftigen Backups. Behalten
+Sie auch den alten, bis die damit erstellten Backups gelöscht sind.
+
+## Zeitplan und Aufbewahrung festlegen
+
+1. Schalten Sie **Backups an** ein.
+2. Wählen Sie unter **Zeitplan** **Täglich**, **Wöchentlich**, **Alle paar Stunden** oder
+   **Eigener** (ein Cron-Ausdruck), dann **Uhrzeit** und **Zeitzone**.
+3. Legen Sie unter **Aufbewahren** fest, wie viele Backups **Täglich**, **Wöchentlich** und
+   **Monatlich** bleiben. Das neueste Backup bleibt immer.
+4. Wählen Sie unter **Speicherort** das **Backup-Volume** (auf Wunsch einen **Unterordner des
+   Backup-Volumes**) oder **S3-kompatibel** mit **Endpunkt**, **Bucket** und Schlüsseln.
+5. Wählen Sie unter **Prüfung**, wie jedes Backup geprüft wird: **Nach jedem Lauf prüfen**, und
+   **Durch Entschlüsseln prüfen**, um genau das Gespeicherte zu prüfen.
+6. Wählen Sie **Änderungen speichern**. **Nächste Läufe** zeigt, wann die nächsten Backups
+   laufen.
+
+Der Wert unter **Geheimer Zugriffsschlüssel** eines S3-Speichers wird versiegelt gespeichert:
+Danach steht dort nur noch **Gesetzt**.
+
+## Prüfen, ob es funktioniert
+
+- **Speicherort testen** schreibt eine Testdatei, liest sie zurück und löscht sie.
+- **Jetzt sichern** erstellt sofort ein Backup.
+- **Verlauf** listet jeden Lauf mit Ergebnis, Größe und Dauer und ob er geprüft wurde.
+
+Beide Schaltflächen brauchen den Backup-Dienst. Läuft er nicht, sagt die Seite das; die
+Einstellungen bleiben erhalten und gelten, sobald er läuft. **Status** oben sagt, wann das letzte
+gute Backup erstellt wurde, und warnt, wenn das zu lange her ist.
+
+## Wiederherstellen
+
+Ein Backup wird auf dem Server wiederhergestellt, mit dem Backup-Schlüssel, von der Person, die
+den Server betreibt. Nach einer Wiederherstellung auf einem anderen Datenbankserver ist ein weiterer Schritt
+nötig: siehe [Nach einer Wiederherstellung](/de/guide/self-hosting/after-a-restore).

@@ -1,0 +1,21 @@
+= Dimensions et poids
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: dimensions, poids
+
+[#table,cols="2,1,1",options=header]
+.Dimensions et poids
+|===
+|[[dm-h-what]]Valeur |[[dm-h-hb]]Berline |[[dm-h-es]]Break
+|[[dm-length]]Longueur |[[dm-length-hb]]4 180 mm |[[dm-length-es]]4 520 mm
+|[[dm-width]]Largeur sans rétroviseurs |[[dm-width-hb]]1 790 mm |[[dm-width-es]]1 790 mm
+|[[dm-height]]Hauteur |[[dm-height-hb]]1 460 mm |[[dm-height-es]]1 490 mm
+|[[dm-load]]Volume du coffre |[[dm-load-hb]]380 l |[[dm-load-es]]580 l
+|[[dm-roof]]Charge sur le toit |[[dm-roof-hb]]50 kg |[[dm-roof-es]]75 kg
+|===
+
+[#weights]
+Le poids total autorisé en charge et les charges par essieu de votre véhicule figurent sur la plaque constructeur, dans l'encadrement de porte côté passager.

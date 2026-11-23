@@ -1,0 +1,9 @@
+= Secure the vehicle
+:schema-version: 1
+:module-type: snippet
+:lang: en
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Stop on firm, level ground away from traffic, apply the [.term.parking-brake]##parking brake## and switch on the hazard warning lights.

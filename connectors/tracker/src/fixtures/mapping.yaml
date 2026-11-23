@@ -1,0 +1,32 @@
+# The sample connector's mapping onto a target configuration (the sample repository's:
+# module type `concept`, audiences `public`/`internal`, facet `region`, variant attribute `model`).
+system: Issue tracker
+language: en
+include:
+  kinds: [feature]
+  states: [done]
+  labels: [release-note]
+module:
+  id: 'note-{id}'
+  type: concept
+  audience:
+    from: labels
+    values: { internal-only: internal }
+    default: public
+  facets:
+    region:
+      from: fields.region
+      values: { North: north, South: south }
+markup:
+  safety:
+    warning: { severity: caution, symbols: [w001] }
+manual:
+  id: release-notes
+  title: Release notes
+  variants:
+    - { model: small }
+    - { model: large }
+  showIn:
+    attribute: model
+    from: fields.models
+    values: { Small: small, Large: large }

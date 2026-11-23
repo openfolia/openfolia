@@ -1,0 +1,42 @@
+---
+title: 'Terminologie exportieren'
+description: 'Die Terminologie über die API als TBX oder CSV herunterladen, für ein Übersetzungswerkzeug oder eine Tabellenkalkulation.'
+articleId: 'guide.integrations.terminology-export'
+---
+
+`GET /terms/export` lädt jeden Begriff einer Referenz als eine Datei herunter: TBX für ein
+Übersetzungswerkzeug oder CSV für eine Tabellenkalkulation. Die Route gehört zur
+[Delivery API](/de/api/delivery) und braucht `content.read`. Begriffe haben keine Zielgruppe,
+jeder Leser der Referenz erhält also jeden Begriff.
+
+## Herunterladen
+
+```sh
+# TBX, alle Sprachen
+curl -s -OJ -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/terms/export?format=tbx"
+
+# CSV, nur Deutsch, beim Tag einer Veröffentlichung
+curl -s -OJ -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/terms/export?format=csv&lang=de&ref=<tag>"
+```
+
+| Parameter | Was                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `format`  | Erforderlich: `tbx` oder `csv`.                                                                       |
+| `lang`    | Optional: eine Sprache. Ein Begriff ohne sie wird ausgelassen.                                        |
+| `ref`     | Optional: ein Zweig, Tag oder Commit, bei dem gelesen wird (Standard: der Standardzweig des Servers). |
+
+- **TBX** ist TBX-Basic (ISO 30042:2019), `application/x-tbx+xml`.
+- **CSV** hat eine Zeile je Begriff und Sprache, `text/csv`. Eine Zelle, die eine
+  Tabellenkalkulation als Formel ausführen würde, beginnt mit `'`; beim Öffnen der Datei wird also
+  nichts ausgeführt.
+
+Die Antwort ist ein Download (`Content-Disposition: attachment`) namens `terms.<format>`, mit
+`lang` `terms-<lang>.<format>`, und `X-Ccms-Terms` sagt, wie viele Begriffe er enthält. Ihre Fehler
+sind JSON:API-Dokumente: 400 `invalid-parameter` für ein fehlendes oder unbekanntes `format` oder
+ein fehlerhaftes `lang`, 400 `unsupported-parameter` für jeden anderen Parameter. Eine Datei in
+`terms/`, die kein Begriff ist, wird ausgelassen.
+
+Einen TBX-Import gibt es nicht: Begriffe werden im Editor bearbeitet, in einer Überarbeitung.
+Einzelne Begriffe als JSON:API lesen Sie mit `GET /terms` und `GET /terms/<termId>`.

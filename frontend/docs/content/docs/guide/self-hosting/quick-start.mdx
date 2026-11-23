@@ -1,0 +1,142 @@
+---
+title: 'Quick start'
+description: 'Start a deployment with one command, or step by step, and make the first admin.'
+articleId: 'guide.self-hosting.quick-start'
+---
+
+You need Docker with Compose 2.24 or newer, on Linux or any machine with Docker, and a checkout of
+the repository.
+
+## One command
+
+```sh
+deploy/self-host.sh --admin you@example.com
+```
+
+It:
+
+1. makes the settings file `deploy/.env` when there is none: a random Postgres password (the file
+   readable by you only), `CCMS_PUBLIC_URL` (the editor's address, `http://127.0.0.1:8080/` at
+   first) and the first admin, `CCMS_FIRST_ADMIN_EMAIL`. An existing file is kept as it is;
+2. builds the images from the checkout, or pulls them when `OPENFOLIA_IMAGES` is set;
+3. offers the sample content when there is no content repository yet (never forced);
+4. starts the stack and waits until every service is healthy;
+5. prints the editor's address and the first admin's one-time link.
+
+Open the link, choose a password, and you are signed in as the admin.
+
+| Option                         | What it does                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `--admin <email>`              | The first admin. Asked for when unset and there is a terminal.                       |
+| `--name <name>`                | Their name (default: the part of the address before `@`).                            |
+| `--sample`, `--no-sample`      | Put the sample content in without asking, or never.                                  |
+| `--yes`                        | Ask nothing: no sample unless `--sample`, no admin unless `--admin`.                 |
+| `--build`, `--pull`, `--as-is` | The images: built from the checkout, pulled from `OPENFOLIA_IMAGES`, or as they are. |
+| `--help`                       | List the options.                                                                    |
+
+Run it again at any time, for example after an upgrade: it keeps the settings file, the volumes
+and the content, and makes no second admin.
+
+## Step by step
+
+1. **Settings.** Create `deploy/.env` with a Postgres password, and keep the file: Postgres reads
+   the password only on its first start.
+
+   ```sh
+   cd deploy
+   printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+   chmod 600 .env
+   ```
+
+2. **Images.** Pull the published images for a pinned version:
+
+   ```sh
+   printf 'OPENFOLIA_IMAGES=ghcr.io/<owner>/openfolia\nOPENFOLIA_VERSION=v1.2.3\n' >> .env
+   docker compose pull
+   ```
+
+   This pulls the API (the worker runs the same image), the editor and the backup image. The MCP
+   server is pulled with them when you run it (`docker compose --profile mcp pull`).
+
+   Or build them from the checkout, and then name both files in every `docker compose` command
+   (or set `COMPOSE_FILE=compose.yaml:compose.build.yaml` in the settings file):
+
+   ```sh
+   docker compose -f compose.yaml -f compose.build.yaml build
+   ```
+
+   **Your own additions.** Other pages add settings in `deploy/api.env`, and secrets from files
+   in a `compose.override.yaml` next to `compose.yaml`. Make `deploy/api.env` readable by you only
+   from the start (in `deploy/`: `touch api.env && chmod 600 api.env`), as it can hold secrets. Compose reads
+   `compose.override.yaml` by itself only when a command names no file with `-f` and no
+   `COMPOSE_FILE` is set. With `-f`, name it too
+   (`-f compose.yaml -f compose.build.yaml -f compose.override.yaml`). `deploy/self-host.sh`
+   always names its files, so for the script, and best for every command, set
+   `COMPOSE_FILE=compose.yaml:compose.override.yaml` (with `compose.build.yaml` between them when
+   building) in `deploy/.env`. Otherwise the override is silently left out.
+
+3. **Content.** Put your content repository on the data volume
+   ([Content repository](/guide/self-hosting/content-repository)), or the sample to try it out:
+
+   ```sh
+   docker compose run --rm --no-deps api node docker/sample-content.mjs
+   ```
+
+4. **Start**, and check the API's health:
+
+   ```sh
+   docker compose up -d --wait
+   curl -s http://127.0.0.1:3000/health
+   ```
+
+   The editor is at `http://127.0.0.1:8080`, the API at `http://127.0.0.1:3000`.
+
+5. **The first admin**: see below.
+6. **A first token** for API clients, printed once. The account is made with the roles given (by
+   their IDs) when it does not exist:
+
+   ```sh
+   docker compose exec api node dist/database/service-token.main.js <account> --role <role>
+   ```
+
+   Later tokens are made in **Admin**, **Service accounts**
+   ([Service accounts](/guide/admin/service-accounts)).
+
+## The first admin
+
+**From the settings.** Set `CCMS_FIRST_ADMIN_EMAIL` (and `CCMS_FIRST_ADMIN_NAME`) before the first
+start. On its first start on an instance **without users**, the API makes that user with the role
+`admin` (every permission; the role too when missing). With password sign-in on, it logs a
+one-time link to choose a password. Once the instance has a user, the setting does nothing but say
+so in the log.
+
+**The link in the log** is what makes one command enough, but logs are kept and copied. So it
+works for **one hour**, once, and closes as soon as the admin signs in another way (with the
+provider, or with a code by email). Anyone who can read the API's log in that hour can use it. To
+keep it out of the log, set `CCMS_FIRST_ADMIN_LINK_LOG=false`: the admin is made without a link.
+
+**From the command line**, at any time. It makes the user (and the role `admin` when missing) and
+prints a link on your terminal only, never to the log. The link works `CCMS_INVITE_DAYS` days
+(default 7; set in `deploy/api.env`), once; running it again makes a new one, and the earlier
+one, the logged one too, stops working:
+
+```sh
+docker compose exec api node dist/database/first-admin.main.js you@example.com \
+  --name "Your Name" --editor https://docs.example.com/
+```
+
+`--editor` is the editor's address as people open it (default: `CCMS_PUBLIC_URL`). With OpenID
+Connect, or with codes by email alone, the admin signs in that way instead of with a password:
+see [OpenID Connect](/guide/self-hosting/oidc) and
+[Sign-in with a code by email](/guide/self-hosting/email-code-sign-in). Everyone else is added in
+**Admin**, **Users** ([Users and roles](/guide/admin/users-and-roles)).
+
+## Before real use
+
+- Put a reverse proxy with TLS in front, and set `CCMS_PUBLIC_URL` to its `https://` address:
+  [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
+- Set up the backups: [Backups](/guide/self-hosting/backups).
+- Where your organisation has an identity provider, sign in with it:
+  [OpenID Connect](/guide/self-hosting/oidc).
+- Leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset where people sign in:
+  [Authentication modes](/guide/self-hosting/authentication).

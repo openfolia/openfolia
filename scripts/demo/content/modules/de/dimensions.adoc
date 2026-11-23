@@ -1,0 +1,21 @@
+= Abmessungen und Gewichte
+:schema-version: 1
+:module-type: reference
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Abmessungen, Gewicht
+
+[#table,cols="2,1,1",options=header]
+.Abmessungen und Gewichte
+|===
+|[[dm-h-what]]Wert |[[dm-h-hb]]Fließheck |[[dm-h-es]]Kombi
+|[[dm-length]]Länge |[[dm-length-hb]]4.180 mm |[[dm-length-es]]4.520 mm
+|[[dm-width]]Breite ohne Spiegel |[[dm-width-hb]]1.790 mm |[[dm-width-es]]1.790 mm
+|[[dm-height]]Höhe |[[dm-height-hb]]1.460 mm |[[dm-height-es]]1.490 mm
+|[[dm-load]]Laderaum |[[dm-load-hb]]380 l |[[dm-load-es]]580 l
+|[[dm-roof]]Dachlast |[[dm-roof-hb]]50 kg |[[dm-roof-es]]75 kg
+|===
+
+[#weights]
+Das zulässige Gesamtgewicht und die Achslasten Ihres Fahrzeugs stehen auf dem Typschild im Türrahmen auf der Beifahrerseite.

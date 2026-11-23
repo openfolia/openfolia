@@ -1,0 +1,27 @@
+{
+  "title": "Self-hosting and operations",
+  "pages": [
+    "overview",
+    "quick-start",
+    "workers",
+    "content-repository",
+    "authentication",
+    "oidc",
+    "password-sign-in",
+    "email-code-sign-in",
+    "reverse-proxy",
+    "coolify",
+    "email",
+    "blob-store",
+    "database",
+    "secret-key",
+    "backups",
+    "after-a-restore",
+    "audit-log",
+    "semantic-search",
+    "sizing",
+    "upgrades",
+    "smoke-test",
+    "licence"
+  ]
+}

@@ -1,0 +1,88 @@
+---
+title: 'Dimensionierung und Grenzen'
+description: 'Speicher und CPU für PDFs, die Skalierungs-Benchmarks und ihre Profile, und die Grenzen für Paket-Downloads.'
+articleId: 'guide.self-hosting.sizing'
+---
+
+Der meiste Speicher und die meiste CPU gehen in das Erzeugen von PDFs. Der Rest des Servers liest
+Git und Postgres und bleibt klein.
+
+## PDFs
+
+Jeder PDF-Worker-Prozess braucht bis zu etwa 450 MB. Sie starten mit dem ersten PDF.
+
+| Einstellung               | Was                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_PDF_WORKERS`        | PDF-Worker-Prozesse, 1 bis 64. Standard: einer pro freier CPU; mit `CCMS_ROLE=api` höchstens 2, nur für PDFs von Lesenden.                                                             |
+| `CCMS_PDF_QUEUE`          | PDFs, die auf einen freien Worker warten dürfen, bevor Anfragen 503 mit `Retry-After` bekommen (Standard 4 pro Worker).                                                                |
+| `CCMS_PDF_TIMEOUT_MS`     | Die Frist für ein PDF, Warten eingeschlossen (Standard 60 s). Ein Reverse Proxy davor muss mindestens so lange zulassen.                                                               |
+| `CCMS_RENDER_CONCURRENCY` | Dateien von Veröffentlichungen, die ein Server gleichzeitig auf diesen Workern erzeugt. Standard: die Hälfte; auf einem Worker (`CCMS_ROLE=worker`), der keine Lesenden bedient, alle. |
+
+PDFs und Vorschauen von Lesenden gehen vor wartenden Dateien von Veröffentlichungen. Laufen API und
+Worker getrennt, haben sie den Pool der API für sich: gemessen mit dem Profil `large`, während ein
+Rückstand erzeugt wurde, dauerte eine Vorschau im Median 1,1 s statt 6,8 s in einem Prozess, auf einer ausgelasteten
+Testmaschine.
+
+**Ein Beispiel:** Mit getrennter API und getrennten Workern
+([Worker](/de/guide/self-hosting/workers)) braucht es für PDFs etwa
+`Worker × CCMS_PDF_WORKERS × 450 MB`, dazu die 2 × 450 MB der API. Auf einem Server mit 8 CPUs und 8
+GB setzen Sie `CCMS_PDF_WORKERS=3` in `deploy/worker.env` und `OPENFOLIA_WORKER_CPUS=3` in
+`deploy/.env` und betreiben 2 Worker: etwa 3,6 GB in der Spitze, und 2 CPUs bleiben der API. Mit
+einer CPU-Grenze geben Sie jedem Worker so viele PDF-Worker wie CPUs: Der Standard zählt die CPUs
+des Hosts, nicht die Grenze.
+
+**Zeichen, dass es zu klein ist:** Lesende bekommen 503 für PDFs (die Warteschlange ist voll),
+oder Dateien von Veröffentlichungen erscheinen lange nicht. **Verwaltung › System** zeigt die
+wartenden Jobs und warnt, wenn Jobs warten und seit 5 Minuten kein Worker einen genommen hat.
+Fügen Sie dann Worker hinzu, wenn nötig auf weiteren Hosts, mit demselben Postgres und einem
+S3-[Blob-Speicher](/de/guide/self-hosting/blob-store).
+
+## Die Datenbank und der Speicherplatz
+
+- Der Datenbankpool und seine Auslastung: [Datenbank](/de/guide/self-hosting/database).
+- Backups brauchen mit der Standard-Aufbewahrung etwa das 25-Fache eines Backups am Speicherort:
+  [Backups auf dem Server](/de/guide/self-hosting/backups).
+
+## Die Skalierungs-Benchmarks
+
+Das Produkt wird in einer festgelegten Größe gemessen, mit Werkzeugen im Repository
+(`scripts/perf/README.md`). Ein Generator erzeugt ein Inhalts-Repository, Medien und eine
+Datenbank eines Profils:
+
+| Profil  | Module | Handbücher | Sprachen | Medien | Commits | Veröffentlichungen | Offene Überarbeitungen | Audit-Ereignisse |
+| ------- | -----: | ---------: | -------: | -----: | ------: | -----------------: | ---------------------: | ---------------: |
+| `small` |    400 |         20 |        4 |    170 |   1.000 |                  5 |                     15 |            5.000 |
+| `large` |  5.000 |        300 |        8 |  3.000 |  20.000 |                 50 |                    200 |          100.000 |
+| `xl`    | 20.000 |      1.200 |        8 | 12.000 |  80.000 |                200 |                    800 |          400.000 |
+
+`large` ist die Größe, in der das Produkt schnell bleiben muss; `xl` ist das Vierfache, um zu
+finden, wo es nicht mehr skaliert. Um auf Ihrer eigenen Hardware zu messen, aus einem Checkout
+mit laufendem Entwicklungs-Postgres (`docker compose up -d` im Wurzelverzeichnis des Repositorys):
+
+```sh
+pnpm perf:seed --profile large
+pnpm nx run api:perf-scale -- --profile large
+```
+
+Der Benchmark misst jede Liste, jeden Lesezugriff, PDFs, Importe, den Übersetzungs-Rundlauf, die
+MCP-Werkzeuge und einen Lauf mit 20 und 50 gleichzeitig Lesenden, und schreibt einen Bericht als
+Markdown und JSON nach `.local/perf/<Profil>/reports/`. Messen Sie auf einer ruhigen Maschine: Eine
+Zeile, die bei einer Last über der Zahl der Kerne entstand, ist als „busy“ markiert und sagt nichts
+über das Produkt.
+
+## Paket-Downloads
+
+iiRDS- und DITA-Pakete sind große Dateien; ihre Downloads sind deshalb begrenzt. Der Server sendet
+höchstens 4 jeder Art gleichzeitig, und eine lesende Person darf `CCMS_PACKAGE_SENDS_PER_ACTOR`
+davon halten (Standard 1, höchstens 3). Darüber hinaus bekommt die Anfrage 429 `rate-limited`,
+bevor etwas von der Datei gesendet wird. Ein Download wird abgebrochen:
+
+- wenn `CCMS_PACKAGE_SEND_IDLE_TIMEOUT_MS` lang (Standard 60 s) kein Byte gelesen wird;
+- wenn er im Mittel langsamer als `CCMS_PACKAGE_SEND_MIN_BYTES_PER_SECOND` gelesen wird
+  (Standard 16384), sobald diese erste Wartezeit vorbei ist;
+- wenn er nach `CCMS_PACKAGE_SEND_TIMEOUT_MS` (Standard eine halbe Stunde) noch läuft.
+
+Die alten Namen, `CCMS_DITA_SEND_IDLE_TIMEOUT_MS`, `CCMS_DITA_SEND_TIMEOUT_MS`,
+`CCMS_DITA_SEND_MIN_BYTES_PER_SECOND` und `CCMS_DITA_SENDS_PER_ACTOR`, werden noch gelesen, wenn
+der neue Name nicht gesetzt ist, mit einer Warnung beim Start. Neben ihm gesetzt, muss jeder
+denselben Wert haben. Benennen Sie sie um.

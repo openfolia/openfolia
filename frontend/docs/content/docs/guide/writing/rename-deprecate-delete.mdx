@@ -1,0 +1,57 @@
+---
+title: 'Change an ID, deprecate or delete a module'
+description: 'Give a module a new ID with every reference rewritten, mark it as deprecated, or delete it with Undo.'
+articleId: 'guide.writing.rename-deprecate-delete'
+---
+
+A module you no longer want as it is can get a new ID, be deprecated, or be deleted. Each is a
+change in your draft revision, reviewed like any other. See
+[Start a revision](/guide/change-sets/start-a-revision).
+
+![A module's More actions menu: Show in audit log, Deprecate… and Delete…](/images/guide/en/module-actions.webp)
+
+## Change a module's ID
+
+The ID names the module in manuals and in other modules. Changing it rewrites all of them.
+
+1. Open the module and choose **Details** in the side panel.
+2. Choose **Change ID** beside the module's ID.
+3. Enter the **New ID**: lowercase letters, digits and single hyphens, for example
+   `battery-charging`.
+4. Check what moves: the line under the field names the languages of the module it moves, and
+   the files naming it that it rewrites, such as manuals.
+5. Choose **Change ID**.
+
+![Change ID open in the Details: the new ID and the two manuals it rewrites](/images/guide/en/module-change-id.webp)
+
+The toast offers **Undo**. The ID cannot change while someone edits the module, or a module or
+manual naming it, in another revision.
+
+## Deprecate a module
+
+A deprecated module stays readable and stays in the manuals that include it, but they are warned.
+It takes effect once the revision is merged.
+
+1. Open the module, in its source language.
+2. Choose **More actions** (**…**) at the top right, then **Deprecate…**.
+3. Enter a **Reason**: one line, shown wherever the module appears as deprecated.
+4. Optionally, choose the module that replaces it under **Replaced by (optional)**.
+5. Choose **Deprecate**.
+
+The module now shows **Deprecated** with its reason and replacement. In **Content**, turn on
+**Show deprecated** to list deprecated modules. To take it back, choose **More actions**, then
+**Undo deprecation**.
+
+## Delete a module
+
+1. Open the module and choose **More actions**, then **Delete…**. Or, in **Content**, choose **…**
+   at the end of the module's row, then **Delete…**.
+2. Under **What to delete**, choose **Only the … version** for one language, or **The whole
+   module, in every language**.
+3. Read **Where it is used**: the manuals and modules that still use it. It can still be deleted;
+   the checks then report these uses until they are fixed.
+4. Choose **Delete module**, or **Delete … version** for one language.
+
+The toast offers **Undo**. Undo works while the revision is a draft. Published content keeps the
+module until the revision is merged. A deleted module keeps its history: see
+[A module's history](/guide/writing/history).

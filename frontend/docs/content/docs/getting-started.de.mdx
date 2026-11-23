@@ -1,0 +1,66 @@
+---
+title: Erste Schritte
+description: OpenFolia mit den Beispielinhalten auf dem eigenen Rechner starten und die API zum ersten Mal aufrufen.
+---
+
+Diese Seite bringt OpenFolia lokal mit einem Beispiel-Inhaltsrepository zum Laufen. Für den
+Betrieb auf einem Server siehe [Selbst betreiben](/de/self-hosting).
+
+Oder lassen Sie Ihren Coding-Agenten es mit Ihnen installieren und starten:
+
+<AgentInstall lang="de" />
+
+## Voraussetzungen
+
+- Docker mit Compose 2.24 oder neuer.
+- Für die Arbeit am Code: Node 24 und pnpm 11.
+
+## Die Container starten
+
+Am schnellsten geht es mit der Container-Einrichtung in `deploy/` und den Beispielinhalten.
+Legen Sie `deploy/.env` mit einem Postgres-Passwort an, bauen Sie die Images, legen Sie die
+Beispielinhalte auf das Datenvolume und starten Sie:
+
+```sh
+cd deploy
+printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose run --rm --no-deps api node docker/sample-content.mjs
+docker compose up -d --wait
+curl -s http://127.0.0.1:3000/health
+```
+
+Der Editor läuft unter `http://127.0.0.1:8080`, die API unter `http://127.0.0.1:3000`, ihre
+interaktive Referenz unter `/docs`. [Selbst betreiben](/de/self-hosting) erklärt jeden Schritt.
+
+## Der erste API-Aufruf
+
+Jede Route außer `/health`, `/about` und der API-Referenz braucht ein Token. Erzeugen Sie das
+Token eines Dienstkontos (es wird einmal ausgegeben) und listen Sie die Handbücher der
+Beispielinhalte auf:
+
+```sh
+docker compose exec api node dist/database/service-token.main.js <account> --role <role>
+curl -s -H "Authorization: Bearer <token>" http://127.0.0.1:3000/manuals
+```
+
+Die [Delivery API](/de/api/delivery) beschreibt die Routen, die ein Portal oder eine Integration
+liest.
+
+## Aus dem Quellcode
+
+```sh
+pnpm install
+docker compose up -d          # Postgres und S3-kompatibler Speicher für die Entwicklung
+pnpm nx run api:setup-local   # ein Beispiel-Inhaltsrepository und lokale Einstellungen
+pnpm nx run api:serve-local   # die API auf diesen Beispielinhalten
+```
+
+## Wie es weitergeht
+
+- [Die Demo ausprobieren](/de/demo): ein Befehl, kein Docker, und ein Rundgang als Autorin, Prüfer
+  und Administratorin.
+- [Konfiguration](/de/configuration): die Einstellungen und die Projektkonfiguration.
+- [Benutzerhandbuch](/de/guide): Schreiben, Prüfen und Freigeben im Editor.
+- [Fast alles ist Inhalt](/de/guide/getting-started/content): was im Inhaltsrepository liegt, was
+  in der Datenbank, und was zu sichern ist.

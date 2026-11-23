@@ -1,0 +1,31 @@
+#!/bin/sh
+# Runs after every merge and pull, once installed by `pnpm setup:git-hooks` (a copy in the
+# repository's .git/hooks; scripts/setup-git-hooks.mjs). A textually clean merge can still
+# break the build (two changes that each passed alone), so the checks of every project the
+# merge touched run at once: `pnpm check:changed` (nx affected: test, lint, typecheck, build),
+# from the commit before the merge (ORIG_HEAD) to the merged one.
+# It can't undo the merge: it only says what failed, loudly. SKIP_POST_MERGE_CHECK=1 skips it once.
+[ -n "$SKIP_POST_MERGE_CHECK" ] && exit 0
+[ -f package.json ] || exit 0
+# Git exports GIT_DIR, GIT_INDEX_FILE and the like to a hook; every child process below (and
+# the tests in the checks) would aim its git calls at this repository instead of their own.
+for name in GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE GIT_PREFIX \
+  GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM BASE_BRANCH; do
+  unset "$name"
+done
+if [ ! -d node_modules ]; then
+  echo "post-merge: no node_modules here; run pnpm install, then pnpm check:changed."
+  exit 0
+fi
+# New or changed dependencies first, or the check fails on a missing package.
+if ! git diff --quiet ORIG_HEAD HEAD -- pnpm-lock.yaml; then
+  echo "post-merge: pnpm-lock.yaml changed: pnpm install --frozen-lockfile ..."
+  pnpm install --frozen-lockfile || echo "post-merge: pnpm install FAILED; run it by hand."
+fi
+echo "post-merge: pnpm check:changed (a clean merge can still break the build) ..."
+if ! pnpm check:changed --base=ORIG_HEAD --head=HEAD; then
+  echo ""
+  echo "post-merge: check:changed FAILED after this merge (the failing tasks are listed above). Fix it now, naming the two changes that collided."
+fi
+exit 0

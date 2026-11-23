@@ -1,0 +1,31 @@
+---
+title: 'Who opens the addresses'
+description: 'Whether anyone, only signed-in clients or no one opens a project’s stable addresses, and what keeps old links working.'
+articleId: 'guide.releases.address-access'
+---
+
+Who may open a project's stable addresses is set in its configuration. The address dialog says
+which applies, in one line above the addresses.
+
+## The three levels
+
+- **Anyone can open these addresses, without signing in.** The address answers as the public
+  sees it, even to someone signed in: what a reader gets from a printed code is the same for
+  everyone.
+- **Only clients that send an API token open these addresses: a browser or a scanned code cannot
+  sign in there yet, so print them once the project makes them public.**
+- **Stable addresses are turned off for this project: these addresses do not open.**
+
+The level is a setting of the project, changed in a reviewed revision. The server may allow less
+than the project asks for; then the addresses open only as far as the server allows, and each
+manual's checks warn with **Address access capped**.
+
+## Links that keep working
+
+- Tracking parameters, such as `utm_source=newsletter` added to a shared link, are ignored:
+  the address opens as without them.
+- A manual's address can be changed in the project's delivery settings. Its former address
+  keeps opening it. If an address or former address of one manual is another manual's ID, the
+  manual's checks report **Address taken**: change one of them.
+
+Your administrator sets which tracking parameters are ignored and the most the server allows.

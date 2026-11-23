@@ -1,0 +1,32 @@
+= Service schedule
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: technician
+:facet-product: fenna
+:keywords: maintenance, inspection
+
+[#intro]
+Service the vehicle at whichever interval comes first.
+
+[#table,cols="2,1",options=header]
+.Service schedule
+|===
+|[[ss-h-work]]Work |[[ss-h-interval]]Interval
+|[[ss-inspection]]Inspection with fault memory read-out |[[ss-inspection-i]]Every year or 20,000 km
+|[[ss-brake]]Change the brake fluid |[[ss-brake-i]]Every 2 years
+|[[ss-filter]]Replace the pollen filter |[[ss-filter-i]]Every year
+|[[ss-wipers]]Replace the wiper blades |[[ss-wipers-i]]Every year
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Petrol model: change the engine oil and its filter every year or 20,000 km, and the spark plugs every 60,000 km.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Electric model: check the high-voltage system and the coolant of the battery every 2 years.
+====

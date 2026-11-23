@@ -1,0 +1,53 @@
+---
+title: 'Veraltete und fehlende Übersetzungen'
+description: 'Was die Übersetzungsabzeichen bedeuten, wann eine Übersetzung veraltet und wo der Editor es zeigt.'
+articleId: 'guide.translations.outdated'
+---
+
+Eine Übersetzung wird Block für Block mit ihrer Quelle verglichen. Ändert sich der Quelltext eines
+Blocks, ist die Übersetzung dieses Blocks veraltet. Der Rest des Moduls bleibt aktuell.
+
+## Was die Abzeichen bedeuten
+
+Der Übersetzungsstand und die Berichte verwenden dieselben vier Zustände. Jeder
+hat seinen eigenen Punkt, so sagen es Wort und Form, nicht nur die Farbe.
+
+| Abzeichen           | Bedeutung                                                                    |
+| ------------------- | ---------------------------------------------------------------------------- |
+| **Aktuell**         | Jeder Block ist aus dem Quelltext übersetzt, wie er jetzt ist.               |
+| **Veraltet**        | Der Quelltext einiger Blöcke hat sich seit ihrer Übersetzung geändert.       |
+| **Bei der Agentur** | Die Blöcke wurden in einem Delta-Export gesendet und sind noch nicht zurück. |
+| **Nicht übersetzt** | Es gibt keine Fassung in dieser Sprache.                                     |
+
+In der Matrix zählt eine veraltete Zelle ihre Blöcke: **2 veraltet** heißt, zwei Blöcke müssen
+neu übersetzt werden.
+
+## Wann ein Block veraltet
+
+- Sein Text hat sich in der Quellsprache geändert: ein Wort, ein Satz, ein Querverweis.
+- Eine Änderung, die den Text nur neu formatiert, ohne ihn zu ändern, zählt nicht.
+- Eine im Editor begonnene Sprachfassung hat noch keinen Nachweis der Quelle, aus der sie
+  übersetzt wurde. Sie gilt in jedem Block als veraltet, bis eine Übersetzung davon importiert
+  wurde.
+
+Eine geänderte Modul-ID lässt die Übersetzungen, wie sie waren. Siehe
+[Ein übersetztes Modul umbenennen oder löschen](/de/guide/translations/rename-and-delete).
+
+## Wo Sie es sehen
+
+- **Übersetzungen**: der Tab **Stand**. Wählen Sie **Anzeigen**, **Veraltet**, um nur diese zu
+  listen. Siehe [Sehen, was übersetzt werden muss](/de/guide/translations/status).
+- Die Prüfungen eines Handbuchs melden **Veraltete Übersetzung** und **Fehlende Übersetzung** je
+  Sprache. Eine fehlende Übersetzung heißt, dass das Handbuch dort die
+  Quellsprache zeigt. Siehe [Übersetzungsprüfungen](/de/guide/checks/translation).
+- **Berichte**: Der Tab **Übersetzungen** zählt sie je Handbuch und Sprache. Siehe
+  [Übersetzungsberichte](/de/guide/translations/reports).
+
+In **Inhalte** zeigt die Spalte **Sprachen** nur, ob ein Modul eine Fassung in jeder Sprache hat,
+nicht, ob sie veraltet ist.
+
+## Auf den aktuellen Stand bringen
+
+Senden Sie die veralteten Blöcke in einem [Delta-Export](/de/guide/translations/export) und
+[importieren](/de/guide/translations/import) Sie, was zurückkommt. Oder öffnen Sie die
+Sprachfassung und ändern Sie den Text selbst.

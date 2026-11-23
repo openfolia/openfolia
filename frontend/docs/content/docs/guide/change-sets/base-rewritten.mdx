@@ -1,0 +1,40 @@
+---
+title: 'When main was replaced'
+description: 'Main’s history was rewritten since your revision started: move your changes onto the current main.'
+articleId: 'guide.change-sets.base-rewritten'
+---
+
+Sometimes an admin replaces the history of **main**, for example after restoring a backup. A
+revision started before that no longer fits onto main. The editor then says so at the top of the
+page: **The main branch was replaced since this revision started**.
+
+Your changes are safe. But the revision can be neither updated nor merged as it is: the button
+beside the revision menu shows **Can't update from main**, and merging is blocked.
+
+## Move your changes
+
+Only the revision's author can do this.
+
+1. Choose **Move my changes onto the current main** in the notice.
+2. Wait while the editor moves them. It makes a new revision on the current main, with your
+   changes in it, and closes the old one.
+3. The editor switches to the new revision by itself. A message says your changes are now on the
+   current main. If they were moved already, from another tab say, the message offers **Open it**
+   instead.
+
+Review starts again for the new revision: submit it for review when it is ready.
+
+## When some changes do not fit
+
+A file may have changed on the current main as well. The editor then leaves that file as main has
+it, and the button shows **Apply by hand** with the number of files. A dialog lists them: **Some
+changes need you on the current main**.
+
+1. Choose **Open** beside each file. The list counts the blocks you changed in it.
+2. Make your changes again, and let the file save.
+3. Choose **Done** when every file is done.
+
+## Someone else's revision
+
+If the revision is not yours, the notice says that its author moves the changes. Tell them, or
+wait for them.

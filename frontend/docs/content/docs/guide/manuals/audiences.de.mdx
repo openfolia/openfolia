@@ -1,0 +1,47 @@
+---
+title: 'Zielgruppen'
+description: 'Zielgruppen halten Module für eine engere Zielgruppe aus einem Handbuch heraus und außer Reichweite von Lesenden, deren Bereich auf eine weitere beschränkt ist.'
+articleId: 'guide.manuals.audiences'
+---
+
+Eine Zielgruppe sagt, für wen Inhalte sind. Ihr Admin legt die Stufen in den Projekteinstellungen
+fest, von der offensten zur am stärksten eingeschränkten. In den Beispielinhalten: **Public**, dann
+**Internal**.
+
+## Einem Modul seine Zielgruppe geben
+
+1. Öffnen Sie das Modul und wählen Sie **Details** in der Seitenleiste.
+2. Wählen Sie seine **Zielgruppe**.
+
+Ein Modul ohne Zielgruppe zählt als die am stärksten eingeschränkte Stufe. Der Reiter **Details**
+nennt sie: **Nicht gesetzt: zählt als Internal**; die Inhaltsliste zeigt **Internal
+(nicht gesetzt)**.
+
+Der Filter **Zielgruppe** der Inhaltsliste findet Module nach der Stufe, als die sie zählen.
+**Internal + nicht gesetzt** zeigt also die internen Module und die ohne Zielgruppe. **Public**
+zeigt nur die öffentlichen. Die Suche und die API filtern genauso.
+
+## Einem Handbuch seine Zielgruppe geben
+
+Setzen Sie die **Zielgruppe** in den Einstellungen des Handbuchs: siehe
+[Einstellungen eines Handbuchs](/de/guide/manuals/settings). Ein Handbuch lässt jedes Modul weg,
+das für eine engere Zielgruppe bestimmt ist als seine eigene. Mit **Nicht gesetzt (jede
+Zielgruppe)** lässt es keines weg.
+
+Angenommen, das Bedienhandbuch ist **Public** und eines seiner Module **Internal**: Das öffentliche
+Handbuch wird ohne es erstellt. Das Modul bleibt in der Gliederung, und die Prüfungen melden es als
+**Über der Zielgruppe des Handbuchs**, damit es niemand übersieht.
+
+![Die Prüfungen des Handbuchs: Laden, auf Internal gesetzt, ist Über der Zielgruppe des Handbuchs](/images/guide/de/manual-above-audience.webp)
+
+Um es zurückzuholen, geben Sie dem Modul die Zielgruppe des Handbuchs oder eine weitere, oder
+entfernen Sie es aus der Gliederung. Ein Sicherheitsblatt folgt derselben Regel: Seine Quelle ist
+ein Handbuch für dieselbe oder eine weitere Zielgruppe. Siehe
+[Ein Sicherheitsblatt erstellen](/de/guide/manuals/safety-leaflet).
+
+## Auf eine Zielgruppe beschränkte Lesende
+
+Eine Rolle lässt sich auf Zielgruppen beschränken: **Bis** zu einer Stufe. Wer diese Rolle hat,
+liest nur Inhalte für diese Stufe oder eine weitere; Module für eine engere Zielgruppe bleiben für
+sie verborgen. Ihr Admin legt das im **Geltungsbereich** der Rolle fest: siehe
+[Benutzer und Rollen](/de/guide/admin/users-and-roles).

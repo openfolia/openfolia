@@ -1,0 +1,67 @@
+---
+title: 'Terminologie'
+description: 'Die Wörter festhalten, die alle verwenden sollen, die markieren, die niemand verwenden soll, und die Begriffe für die Übersetzung exportieren.'
+articleId: 'guide.writing.terminology'
+---
+
+Begriffe sind die Wörter, mit denen Ihre Handbücher Dinge benennen: die Vorzugsbenennung in jeder
+Sprache, zulässige und verbotene Varianten und eine Definition. Module verlinken Begriffe, und ein
+Handbuch mit Glossar führt die Begriffe auf, die es verlinkt.
+
+![Die Seite Terminologie mit den Begriffen und den Details eines veralteten Begriffs](/images/guide/de/terminology.webp)
+
+## Einen Begriff finden
+
+1. Wählen Sie **Terminologie** in der Seitenleiste. Die Tabelle zeigt jeden Begriff in jeder
+   Sprache.
+2. Grenzen Sie die Liste mit **Sprache**, **Fachgebiet** und **Status** ein, oder tippen Sie in
+   **Begriffe und Definitionen durchsuchen**.
+3. Wählen Sie einen Begriff, um seine **Begriffsdetails** neben der Liste zu öffnen.
+
+## Einen Begriff anlegen
+
+Begriffe ändern Sie wie Module in einer Überarbeitung im Entwurf. Siehe
+[Eine Überarbeitung anlegen](/de/guide/change-sets/start-a-revision).
+
+1. Wählen Sie **Neuer Begriff**.
+2. Geben Sie die **Vorzugsbenennung** und ihre **Sprache** ein. Die **ID** wird daraus gebildet und
+   lässt sich später nicht ändern.
+3. Geben Sie bei Bedarf ein **Fachgebiet (optional)** ein.
+4. Wählen Sie **Begriff hinzufügen**.
+
+Füllen Sie dann die Details aus: **Zulässige Varianten** und **Verbotene Varianten** (Wort eingeben
+und <kbd>Eingabe</kbd> drücken) und die **Definition**, je Sprache. Jede Änderung wird sofort in
+der Überarbeitung gespeichert.
+
+## Einen Begriff als veraltet kennzeichnen
+
+1. Öffnen Sie den Begriff.
+2. Setzen Sie **Status** auf **Veraltet**.
+3. Wählen Sie unter **Ersetzt durch** den Begriff, der stattdessen gilt, oder lassen Sie **Kein
+   Ersatz**.
+
+Ein Modul, das noch einen veralteten Begriff verlinkt, bekommt in seinen Prüfungen eine Warnung:
+**Veralteter Begriff**, mit dem Ersatz. Siehe [Prüfungen ausführen](/de/guide/checks/run-checks).
+
+## Einen Begriff löschen
+
+Wählen Sie in seinen Details **Begriff löschen**, dann noch einmal **Begriff löschen**. Die Meldung
+bietet **Rückgängig** an.
+
+Einen Begriff, den ein Modul verlinkt oder den ein anderer Begriff als Ersatz nennt, können Sie
+nicht löschen. Die Details nennen die Module oder Begriffe, die ihn halten.
+
+## Begriffslinks und das Glossar
+
+Ein Begriffslink markiert ein Wort im Text eines Moduls als den Begriff. Im Editor ist er dünn
+unterstrichen, und der Mauszeiger darauf zeigt die Definition, wie in der Vorschau. Um beim Schreiben
+einen Begriff zu verlinken, übernehmen Sie seinen Vorschlag mit **Tab** oder wählen Sie **Begriff**
+im **/**-Menü (siehe [Terminologie und Stil](/de/guide/checks/writing)). Ein Handbuch mit Glossar
+führt am Ende jeden Begriff auf, den es verlinkt, in seinen Webseiten und im PDF, und jeder
+Begriffslink führt dorthin. Die Überschrift des Glossars kann Ihr Admin in den Ausgabetexten
+ändern.
+
+## Die Begriffe exportieren
+
+Wählen Sie oben auf der Seite **TBX** oder **CSV**. Die Datei enthält die Begriffe so, wie die
+gewählte Überarbeitung sie liest: TBX für Übersetzungswerkzeuge, CSV für eine Tabellenkalkulation.

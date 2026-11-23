@@ -1,0 +1,17 @@
+system: Example wiki
+language: en
+moduleType: concept
+audience: public
+labels:
+  tank:
+    facets: { region: [north] }
+  customer-facing:
+    audience: public
+safety:
+  warning: { severity: warning, symbols: [w001] }
+orderedLists: procedure
+manual:
+  id: pump-guide
+  title: Pump guide
+  variants:
+    - { model: small }

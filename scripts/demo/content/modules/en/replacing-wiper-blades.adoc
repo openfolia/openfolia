@@ -1,0 +1,20 @@
+= Replacing the wiper blades
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: wipers
+
+[#intro]
+Replace the wiper blades once a year, or as soon as they leave streaks.
+
+[procedure#steps]
+.Replace a wiper blade
+. [[step-service]]Within ten seconds of switching the vehicle off, push the wiper lever down: the wipers move to the service position.
+. [[step-lift]]Lift the wiper arm away from the windscreen.
+. [[step-release]]Press the release button and pull the blade off the arm.
++
+[#img-wiper]
+image::demo-image:wiper-blade["Wiper arm lifted, release button pressed, blade sliding off",width=45%]
+. [[step-fit]]Push the new blade onto the arm until it clicks, and fold the arm back.

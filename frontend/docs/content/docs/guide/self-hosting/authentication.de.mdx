@@ -1,0 +1,79 @@
+---
+title: 'Anmeldemodi'
+description: 'Wie sich Personen und Programme anmelden: die Anmeldeverfahren, Token-Modus und Demo-Modus und wie der Editor ein Token schützt, das er hinzufügt.'
+articleId: 'guide.self-hosting.authentication'
+---
+
+Personen melden sich im Editor an; Programme senden das Token eines Service-Accounts. Welche
+Anmeldeverfahren der Editor anbietet, wird an der API eingestellt:
+
+| Verfahren                   | Eingerichtet mit                                               | Seite                                                                            |
+| --------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| E-Mail-Adresse und Passwort | standardmäßig an (`CCMS_PASSWORD_SIGN_IN`)                     | [Anmeldung mit Passwort](/de/guide/self-hosting/password-sign-in)                |
+| Ein Einmal-Code per E-Mail  | an, sobald E-Mail eingerichtet ist (`CCMS_EMAIL_CODE_SIGN_IN`) | [Anmeldung mit einem Code per E-Mail](/de/guide/self-hosting/email-code-sign-in) |
+| OpenID Connect              | `CCMS_OIDC_ISSUER` und seine Einstellungen                     | [OpenID Connect](/de/guide/self-hosting/oidc)                                    |
+
+Programme (Portale, Pipelines, Skripte) senden `Authorization: Bearer <token>`, das Token eines
+[Service-Accounts](/de/guide/admin/service-accounts), dessen Rollen nur das Nötige enthalten.
+
+## Token-Modus
+
+`CCMS_AUTH_MODE=token` ist der Standard und der richtige Modus überall, wo echte Personen arbeiten.
+Nur Tokens von Service-Accounts und angemeldete Sitzungen authentifizieren.
+
+**Lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer.** `CCMS_API_TOKEN` ist ein
+gemeinsames Token für den lokalen Betrieb und den Demo-Modus. Ist es im Token-Modus gesetzt, wirkt
+es als schreibgeschützter Dienst, der alles liest, auch Entwürfe, und die API warnt beim Start. Mit
+OpenID Connect startet die API damit nicht. Fügt der Editor es hinzu (`CCMS_EDITOR_API_TOKEN`),
+könnte jeder, der den Editor erreicht, jeden Entwurf lesen, ohne sich anzumelden.
+
+Ist die Anmeldung mit Passwort aus und sind weder OpenID Connect noch Codes per E-Mail eingerichtet,
+lädt der Editor, und seine Anmeldeseite sagt, dass keine Anmeldung eingerichtet ist.
+
+Fehlgeschlagene Authentifizierungen zählen je Client-Adresse (`CCMS_AUTH_FAILURES_MAX`, Standard
+20 pro Minute); darüber erhält ein Client 429 `too-many-failed-attempts`, bis das Zeitfenster
+endet. Hinter einem Proxy ist die Adresse die, die `CCMS_TRUST_PROXY` die API glauben lässt:
+[Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy).
+
+## Demo-Modus
+
+Nur zum Ausprobieren in einem privaten Netz. **Jeder, der den Editor erreicht, kann als beliebiger
+Benutzer handeln, auch als Admin.** Verwenden Sie ihn nie, wo sich echte Personen anmelden; er lässt
+sich nicht zusammen mit OpenID Connect oder der Anmeldung mit Passwort einschalten.
+
+1. Erzeugen Sie ein zufälliges Token: `openssl rand -hex 32`.
+2. Setzen Sie in `deploy/.env` `CCMS_AUTH_MODE=demo`, `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN`
+   auf dieses Token und `CCMS_EDITOR_HOSTS` auf die Hostnamen, unter denen der Editor geöffnet
+   wird, zum Beispiel `docs.internal.example,127.0.0.1`.
+3. Starten Sie den Stack und spielen Sie dann die Beispielbenutzer ein:
+
+   ```sh
+   docker compose exec api node dist/database/seed.main.js --example
+   ```
+
+Die Anmeldeseite des Editors listet dann die eingespielten Benutzer. Betreiben Sie eine
+Demo-Instanz in einem privaten Netz oder hinter einem Proxy, der Personen vorher authentifiziert.
+
+## Wie der Editor ein Token schützt, das er hinzufügt
+
+Der Editor fügt nie ein Token hinzu, wenn `CCMS_EDITOR_API_TOKEN` nicht gesetzt ist, und startet
+mit einem Token nur, wenn auch `CCMS_EDITOR_HOSTS` gesetzt ist. Mit einem Token schützt sein Proxy
+es vor anderen Websites:
+
+- **Liste der Hosts.** Nur die Hosts in `CCMS_EDITOR_HOSTS` werden bedient. Jeder andere `Host`
+  erhält 421 und wird nie weitergeleitet. Das verhindert DNS-Rebinding, bei dem eine Seite unter
+  einem anderen Hostnamen, der auf diesen Server zeigt, ihren eigenen Namen als `Host` und `Origin`
+  mitschickt.
+- **Origin.** Eine `/api`-Anfrage, deren `Origin` nicht der des Editors ist, wird abgelehnt (403
+  `cross-origin-request`).
+- **Gleiche Herkunft erkennbar.** Eine `/api`-Anfrage muss den `Origin` des Editors oder
+  `Sec-Fetch-Site: same-origin` tragen, das Browser bei den eigenen Anfragen des Editors senden.
+  Ein fremdes Bild, ein fremder Link oder ein Skript ohne einen dieser Header wird abgelehnt, bevor
+  das Token hinzukommt. Browser senden `Sec-Fetch-Site` nur an eine sichere Herkunft; öffnen Sie
+  einen Demo-Editor daher über HTTPS oder unter `localhost` oder `127.0.0.1`.
+
+Ein Programm, das den Editor direkt erreicht, kann diese Header selbst senden. Deshalb gehört eine
+Demo-Instanz in ein privates Netz.
+
+Ohne Token gibt der Editor den eigenen `Authorization`-Header des Browsers weiter, und die Prüfung
+des Origin gilt weiterhin für jede `/api`-Anfrage.

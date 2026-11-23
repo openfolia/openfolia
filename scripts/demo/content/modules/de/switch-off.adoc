@@ -1,0 +1,9 @@
+= Fahrzeug ausschalten
+:schema-version: 1
+:module-type: snippet
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Schalten Sie das Fahrzeug aus: Drücken Sie die Taste [.ui]##START/STOP## und warten Sie, bis die Instrumententafel erlischt.

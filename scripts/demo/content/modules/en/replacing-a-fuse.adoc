@@ -1,0 +1,26 @@
+= Replacing a fuse
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: fuse
+
+[#intro]
+If a function fails, check its fuse first. The fuses and what they protect are listed in xref:fuses.adoc[].
+
+[#ref-off]
+module::switch-off[]
+
+[procedure#steps]
+.Replace a fuse
+. [[step-open]]Open the cover of the fuse box at the right end of the dashboard.
+. [[step-pull]]Pull the fuse out with the plastic puller clipped inside the cover.
+. [[step-check]]A fuse with a broken wire has blown. Replace it with a fuse of the same rating.
+. [[step-close]]Close the cover.
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+On right-hand drive vehicles, the fuse box is at the left end of the dashboard.
+====

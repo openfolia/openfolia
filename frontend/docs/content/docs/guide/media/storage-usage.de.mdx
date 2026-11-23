@@ -1,0 +1,44 @@
+---
+title: 'Belegter Speicher'
+description: 'Wie viel Speicher die hochgeladenen Dateien belegen, gemessen am Limit, falls eine gesetzt ist, und wie Sie Platz schaffen.'
+articleId: 'guide.media.storage-usage'
+---
+
+Bilder, Anhänge und die archivierten PDFs von Veröffentlichungen belegen Speicher. Eine Installation kann
+ein Speicherlimit haben. Die Verwaltung sieht, wie viel belegt ist und was am meisten Platz
+braucht.
+
+## Den belegten Speicher sehen
+
+1. Wählen Sie **Verwaltung** in der Seitenleiste, dann **System**.
+2. Die Karte **Speicher** zeigt die Summe, etwa **1,7 MB belegt**. Mit einem Limit zeigt sie
+   **… von … belegt**, einen Balken und den Anteil am Limit.
+
+![Die Karte Speicher: die belegte Summe sowie Medien, archivierte PDFs, Git-Inhalte und Datenbank](/images/guide/de/media-storage.webp)
+
+Unter der Summe teilt die Karte sie auf:
+
+- **Medien (Bilder und Anhänge)** und **Archivierte PDFs (Veröffentlichungen)** zählen zum Limit.
+- **Git-Inhalte (zur Information)** und **Datenbank (zur Information)** zählen nicht.
+
+Die Summen folgen jedem Hochladen und Löschen und werden regelmäßig neu gezählt. Die Karte sagt,
+wann: **Neu gezählt …**. **Größte Dateien** unter den Karten listet die hochgeladenen Dateien von
+der größten an. Wählen Sie eine, um sie in der Medienbibliothek zu öffnen.
+
+Ohne Limit sagt die Karte **Für diese Installation ist kein Speicherlimit festgelegt.** Wer den
+Server betreibt, setzt das Limit (`CCMS_STORAGE_LIMIT_BYTES`, siehe
+[Einstellungen](/de/reference/settings)).
+
+## Wenn der Speicher knapp wird
+
+Ab 80 % des Limits warnt die Karte: etwa **Der Speicher ist zu 85 % belegt**. Ist das Limit
+erreicht, sagt sie **Das Speicherlimit ist erreicht**, und jeder neue Upload wird abgelehnt. Wer dann hochlädt,
+liest **Der Speicher dieser Installation ist voll: Die Datei wurde nicht gespeichert. Löschen Sie
+Dateien, die niemand verwendet, oder bitten Sie eine Administratorin oder einen Administrator um
+mehr Speicher.**
+
+Archivierte PDFs von Veröffentlichungen werden nie abgelehnt.
+
+Um Platz zu schaffen, wählen Sie **Unbenutzte Dateien anzeigen** auf der Karte. Das öffnet die
+Liste **Unbenutzt** der Medienbibliothek. Siehe
+[Dateien hochladen und aufräumen](/de/guide/media/uploads-and-unused).

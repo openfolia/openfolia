@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/vitest",
+    "rootDir": ".",
+    "types": ["vitest/globals", "node"],
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["vitest.config.mts", "tests/**/*.test.ts"],
+  "references": []
+}

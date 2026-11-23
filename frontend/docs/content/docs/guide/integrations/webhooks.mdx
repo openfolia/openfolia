@@ -1,0 +1,100 @@
+---
+title: 'Receiving webhooks'
+description: 'Receive the signed events a webhook subscriber is sent: the body, the headers, checking the signature, answering and retries.'
+articleId: 'guide.integrations.webhooks'
+---
+
+A webhook subscriber is told of releases, withdrawals, deprecations and translation imports
+without polling. An admin adds the subscriber and gives you its signing secret: see
+[Webhooks](/guide/admin/webhooks). This page is for the receiver.
+
+## What arrives
+
+Each event is a `POST` of JSON to the subscriber's `https://` URL:
+
+```json
+{
+  "type": "manual.released",
+  "idempotencyKey": "…",
+  "occurredAt": "2026-11-20T09:30:00.000Z",
+  "data": {}
+}
+```
+
+`data` holds IDs and what changed, never content: fetch the content through the
+[Delivery API](/guide/integrations/delivery-api). The events are `manual.released`,
+`module.released`, `release.withdrawn`, `module.deprecated`, `manual.deprecated` and
+`translation.imported`; **Send test event** sends a `ping`. A subscriber hears only of content its
+owner may read, within its audience limit.
+
+The headers:
+
+| Header             | What                                                                      |
+| ------------------ | ------------------------------------------------------------------------- |
+| `Content-Type`     | `application/json`                                                        |
+| `User-Agent`       | `openfolia-webhooks/1`                                                    |
+| `X-Ccms-Event`     | the event's type                                                          |
+| `X-Ccms-Delivery`  | the delivery's ID                                                         |
+| `Idempotency-Key`  | the event's key: the same event always has the same key                   |
+| `X-Ccms-Signature` | `t=<unix seconds>,v1=<hex>`, with a second `v1` while a secret is rotated |
+
+Custom headers the admin set up (an `Authorization` header of your own, say) come with every
+delivery too.
+
+## Check the signature
+
+Check every delivery before you act on it:
+
+1. Read the raw body as bytes, before parsing it.
+2. Split `X-Ccms-Signature` at `,`, and take `t` and every `v1`.
+3. Refuse a `t` more than 5 minutes from your clock: it may be a replay.
+4. Compute HMAC-SHA256 over `<t>.<raw body>` (the timestamp in decimal, a full stop, the body),
+   keyed with the whole secret as UTF-8, `whsec_` included, as lowercase hex.
+5. Compare it with each `v1` in constant time. Accept when one matches.
+6. Ignore an `Idempotency-Key` you have handled already.
+
+In Node.js:
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+export function verify(header, rawBody, secret, now = Date.now()) {
+  if (typeof header !== 'string') return false;
+  let t;
+  const candidates = [];
+  for (const part of header.split(',')) {
+    const [key, value = ''] = part.trim().split('=', 2);
+    if (key === 't' && /^\d{1,12}$/.test(value)) t = Number(value);
+    if (key === 'v1' && /^[0-9a-f]{64}$/.test(value)) candidates.push(value);
+  }
+  if (t === undefined || Math.abs(Math.floor(now / 1000) - t) > 300)
+    return false;
+  const expected = createHmac('sha256', secret)
+    .update(`${t}.`)
+    .update(rawBody)
+    .digest();
+  return candidates.some((v) =>
+    timingSafeEqual(Buffer.from(v, 'hex'), expected),
+  );
+}
+```
+
+Keep the secret on the receiver only, never in its URL or in code. After a **Rotate secret**, the
+old secret signs beside the new one for a day, so switch when you like within it.
+
+## Answer, and retries
+
+- Answer with any **2xx** to accept a delivery. It is never sent again.
+- Anything else counts as failed: another status, a redirect (none is followed), no answer within
+  the timeout (10 s by default) or a broken connection. The delivery is tried 9 times, 30 s apart
+  at first and doubling each time, about two hours in all. Then it is failed, and an admin can
+  retry it by hand.
+- Delivery is at least once: an event can arrive twice with the same `Idempotency-Key`. Keep the
+  keys you handled.
+- After 5 deliveries in a row fail for good, the subscriber is turned off until an admin turns it
+  on again.
+
+Answer quickly, and do the work afterwards. For a copy of the content that must never miss an
+event, let a webhook only wake up a reader of the [change feed](/guide/integrations/change-feed):
+it carries the release, withdrawal and deprecation events, with the same keys, and loses nothing
+while you are down. It does not carry `translation.imported`: that one comes only as a webhook.

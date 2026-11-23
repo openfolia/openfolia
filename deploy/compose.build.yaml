@@ -1,0 +1,30 @@
+# Builds the images from this checkout instead of pulling them (deploy/README.md):
+#
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#
+# They are tagged as compose.yaml names them: ${OPENFOLIA_IMAGES:-openfolia}/<image>:${OPENFOLIA_VERSION:-local}.
+services:
+  api:
+    build:
+      context: ..
+      target: api
+  worker:
+    build:
+      context: ..
+      target: api
+  editor:
+    build:
+      context: ..
+      target: editor
+  mcp:
+    build:
+      context: ..
+      target: mcp
+  backup:
+    build:
+      context: ..
+      target: backup
+  restore:
+    build:
+      context: ..
+      target: backup

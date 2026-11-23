@@ -1,0 +1,86 @@
+---
+title: 'E-Mail'
+description: 'E-Mail über Ihren eigenen SMTP-Server versenden: die Einstellungen, TLS, das Passwort aus einer Datei, E-Mails im eigenen Branding, die Prüfung.'
+articleId: 'guide.self-hosting.email'
+---
+
+Der Server versendet E-Mails über Ihren eigenen Mailserver (SMTP): Einladungen, Links zum
+Zurücksetzen des Passworts, Anmeldecodes und andere Nachrichten. Ohne Mailserver wird nichts
+versendet, und der Editor bietet Anmeldelinks stattdessen zum Kopieren an.
+
+Jede E-Mail trägt Produktname, Logo und Farbe aus **Verwaltung › Branding**, ist in der Sprache
+der Person geschrieben (Englisch oder Deutsch) und hat einen HTML- und einen Textteil. Ihre Links
+beginnen alle mit `CCMS_PUBLIC_URL`.
+
+## Einrichten
+
+1. Tragen Sie die Einstellungen in `deploy/.env` ein (`compose.yaml` gibt sie an die API und an
+   die Worker weiter, die die E-Mails versenden):
+
+   ```sh
+   CCMS_MAIL_URL=smtp://mail.example.com:587        # oder smtps://mail.example.com:465
+   CCMS_MAIL_FROM=docs@example.com                  # nur die Adresse; der Absendername ist der Produktname
+   CCMS_MAIL_USER=docs@example.com                  # nur wenn der Server eine Anmeldung verlangt
+   CCMS_MAIL_PASSWORD_FILE=/run/secrets/mail-password
+   CCMS_PUBLIC_URL=https://docs.example.com/        # die Basis jedes Links in einer E-Mail
+   ```
+
+   Die URL enthält nur Host und Port: nie einen Benutzer, ein Passwort, einen Pfad oder eine
+   Abfrage.
+
+2. Geben Sie den Containern die Passwortdatei als Compose-Secret, in einer
+   `compose.override.yaml` neben `compose.yaml`:
+
+   ```yaml
+   services:
+     api:
+       secrets: [mail-password]
+     worker:
+       secrets: [mail-password]
+   secrets:
+     mail-password:
+       file: /srv/secrets/mail-password
+   ```
+
+   Der Benutzer der Container muss die Datei lesen können; für andere auf dem Host bleibt sie
+   unlesbar. `CCMS_MAIL_PASSWORD` geht auch, aber die Datei hat Vorrang, wenn beide gesetzt sind.
+   Compose liest die Ergänzung nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben ist: siehe [Eigene
+   Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt).
+
+3. Starten Sie neu: `docker compose up -d --wait`.
+
+## TLS
+
+- `smtps://` verwendet TLS ab dem ersten Byte (Standard-Port 465).
+- Bei `smtp://` (Standard-Port 587) ist STARTTLS Pflicht (`CCMS_MAIL_REQUIRE_TLS`, Standard
+  `true`): Ein Server ohne STARTTLS bekommt nichts, nicht einmal die Anmeldung. Setzen Sie es nur
+  für ein Relay in einem Netz, dem Sie vertrauen, auf `false`.
+- Das Zertifikat des Servers wird immer geprüft. Hat eine private Zertifizierungsstelle es
+  signiert, setzen Sie `CCMS_MAIL_CA_FILE` auf deren PEM-Datei.
+
+## Der Instanzschlüssel
+
+Eine wartende E-Mail wird mit dem [Instanzschlüssel](/de/guide/self-hosting/secret-key)
+versiegelt, da sie einen Anmeldelink enthalten kann. Ohne Schlüssel bleibt E-Mail aus: Die API
+protokolliert das beim Start, und **Verwaltung › System** nennt den Grund.
+
+## Sprache
+
+Eine E-Mail geht in der Sprache der Person hinaus, wenn der Server sie kennt, sonst in
+`CCMS_MAIL_LANGUAGE` (`en` oder `de`, Standard `en`).
+
+## Prüfen
+
+1. Öffnen Sie **Verwaltung › System**. Die Karte **E-Mail** zeigt Server, TLS-Modus und Absender,
+   nie den Benutzer oder das Passwort.
+2. Wählen Sie **Test-E-Mail senden**. Sie geht an Ihre eigene Adresse.
+
+E-Mails werden im Hintergrund versendet und wiederholt, sechsmal in wachsenden Abständen; eine
+Ablehnung durch den Mailserver ist sofort endgültig. Eine E-Mail, die endgültig scheitert, steht
+im [Audit-Log](/de/guide/admin/audit-log) als `mail.failed`, mit dem Grund, nie mit Adresse oder
+Inhalt.
+
+## Was gespeichert bleibt
+
+Eine wartende E-Mail liegt versiegelt in der Datenbank, bis sie versendet ist oder endgültig
+gescheitert. Dann wird sie gelöscht; kein Text einer E-Mail bleibt gespeichert.

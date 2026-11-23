@@ -1,0 +1,35 @@
+---
+title: Configuration
+description: The two places OpenFolia is configured, the server's settings and each content repository's openfolia.yaml.
+---
+
+OpenFolia is configured in two places:
+
+- **The server's settings**, from its environment: where the content repository and the
+  database are, how clients sign in, storage, limits, workers. The
+  [settings reference](/reference/settings) lists every one, generated from `.env.example`.
+- **The project configuration**, `openfolia.yaml` at the root of each content repository: its
+  languages, module types, audiences, facets, variant attributes, safety symbols, the labels
+  printed in outputs, the terminology and style rules per language (`styleRules`,
+  `terminology`, [Terminology and style](/guide/checks/writing)), and how releases and deliveries
+  behave. The
+  [`openfolia.yaml` reference](/reference/project-config) lists every key, generated from the content
+  model's schema. It is content: a change to it goes through a change set and review
+  ([Almost everything is content](/guide/getting-started/content)).
+
+## Settings to look at first
+
+| Setting             | What it decides                                                               |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `CCMS_CONTENT_DIR`  | The content repository (a bare Git repository).                               |
+| `CCMS_DATABASE_URL` | The Postgres database.                                                        |
+| `CCMS_AUTH_MODE`    | How a request with the shared token acts: `token` (default) or `demo`.        |
+| `CCMS_BLOB_DRIVER`  | Where images, attachments and release files are stored: `fs` or `s3`.         |
+| `CCMS_PUBLIC_URL`   | The address readers reach the instance at, for stable addresses and QR codes. |
+| `CCMS_TRUST_PROXY`  | Which proxies in front of the API to believe for client addresses.            |
+
+## Roles and permissions
+
+Who may do what is data, not configuration: roles bundle [permissions](/reference/permissions)
+with a scope, and are managed in the editor's admin area or through the
+[Management API](/api/management).

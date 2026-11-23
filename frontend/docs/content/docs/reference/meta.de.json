@@ -1,0 +1,11 @@
+{
+  "title": "Referenz",
+  "pages": [
+    "errors",
+    "permissions",
+    "settings",
+    "project-config",
+    "import-format",
+    "mcp-tools"
+  ]
+}

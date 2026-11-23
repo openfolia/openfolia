@@ -1,0 +1,17 @@
+= Changing the brake fluid
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: technician
+:facet-product: fenna
+:keywords: brakes, brake fluid
+
+[#intro]
+Brake fluid absorbs water over time, which lowers its boiling point. Change it every two years.
+
+[procedure#steps]
+.Change the brake fluid
+. [[step-reservoir]]Draw off the old brake fluid from the reservoir under the bonnet.
+. [[step-fill]]Fill the reservoir with new brake fluid DOT 4 up to the MAX mark.
+. [[step-bleed]]Bleed each wheel brake in turn, starting at the rear right, until clear fluid comes out without bubbles.
+. [[step-check]]Fill up to the MAX mark and check the pedal travel before the test drive.

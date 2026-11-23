@@ -1,0 +1,9 @@
+= Immobiliser le véhicule
+:schema-version: 1
+:module-type: snippet
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[#text]
+Arrêtez-vous sur un sol ferme et plat, à l'écart de la circulation, serrez le [.term.parking-brake]##frein de stationnement## et allumez les feux de détresse.

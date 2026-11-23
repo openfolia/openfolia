@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import SearchField from '../components/SearchField.astro';
+import { textsFor } from '../lib/i18n.ts';
+import { href, snapshot } from '../lib/site.ts';
+
+const t = textsFor(snapshot().lang);
+---
+
+<Base title={t.notFoundTitle} current="lost">
+  <div class="lost">
+    <p class="lost__folio" aria-hidden="true">404</p>
+    <h1 class="lost__title">{t.notFoundTitle}</h1>
+    <p class="lost__text">{t.notFoundText} {t.notFoundHint}</p>
+    <SearchField id="lost-q" size="large" />
+    <p class="lost__back">
+      <a class="arrow-link" href={href('manuals/')}>{t.backToManuals} <span aria-hidden="true">→</span></a>
+    </p>
+  </div>
+</Base>

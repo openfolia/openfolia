@@ -1,0 +1,49 @@
+node_modules/
+dist/
+out-tsc/
+*.tsbuildinfo
+coverage/
+.env
+.env.*
+!.env.example
+# Local test data (created by `pnpm nx run api:setup-local`)
+.local/
+*.log
+.DS_Store
+.idea/
+
+# Organisation-specific docs (never committed)
+docs/internal/
+vitest.config.*.timestamp*
+.vitest
+.nx/cache
+.nx/workspace-data
+
+# Agent workflow (local state, never committed)
+.claude/worktrees/
+.claude/handover/
+.claude/board/
+.claude/stacks/
+.claude/settings.local.json
+.review/
+.factory-tmp/
+
+# Angular build cache
+.angular/
+# The iiRDS validator rules the API tests fetch (backend/api/tests/iirds/fetch-validator.ts)
+backend/api/.cache/
+# The OASIS DITA grammar files the DITA tests fetch (packages/dita/src/testing/fetch-grammars.ts)
+packages/dita/.cache/
+
+# A deployment's own files beside deploy/compose.yaml (settings with secrets, backups):
+# never in a build context or a commit (deploy/README.md).
+deploy/api.env
+deploy/worker.env
+deploy/*.env
+deploy/backups/
+# The embedding worker's model files (deploy/compose.embedder.yaml): fetched by whoever deploys, never committed.
+deploy/embedder-model/
+*.dump
+
+# The demo set-up for the films (scripts/demo/, docs/demo-videos.md): runs, log, state
+.demo/

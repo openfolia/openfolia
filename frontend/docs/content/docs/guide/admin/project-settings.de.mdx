@@ -1,0 +1,83 @@
+---
+title: 'Projekteinstellungen'
+description: 'Sprachen, Modultypen, Zielgruppen und die übrigen Projekteinstellungen in einer Überarbeitung ändern, ein Thema pro Seite.'
+articleId: 'guide.admin.project-settings'
+---
+
+Die Projekteinstellungen legen fest, was Inhalte enthalten dürfen: ihre Sprachen, Modultypen,
+Zielgruppen, Facetten, Variantenmerkmale und mehr. Sie liegen in den Inhalten, neben den Modulen.
+Eine Änderung kommt deshalb in eine Überarbeitung und wird vor dem Übernehmen geprüft, wie die
+Änderung an einem Modul. Siehe [Fast alles ist Inhalt](/de/guide/getting-started/content).
+
+## Ein Thema öffnen
+
+1. Öffnen Sie **Verwaltung**, dann **Projekteinstellungen**.
+2. Wählen Sie ein Thema in der Liste neben der Leiste. Jedes Thema ist eine eigene Seite.
+
+![Das Thema Modultypen der Projekteinstellungen, in einer Überarbeitung geöffnet](/images/guide/de/admin-settings.webp)
+
+Auch die Palette findet jedes Thema über seinen Namen. Siehe
+[Sich in der Verwaltung zurechtfinden](/de/guide/admin/navigation).
+
+## Eine Einstellung ändern
+
+1. Wählen oder beginnen Sie oben im Überarbeitungsmenü eine Überarbeitung. Ohne eine zeigt die
+   Seite die Einstellungen und sagt „Wählen oder beginnen Sie eine Überarbeitung, um die
+   Projekteinstellungen zu ändern“.
+2. Ändern Sie, was nötig ist. Jede Änderung wird sofort in der Überarbeitung gespeichert. Eine
+   Meldung bestätigt sie, ihr **Rückgängig** nimmt sie zurück.
+3. Reichen Sie die Überarbeitung wie gewohnt zur Prüfung ein. **In Prüfung öffnen** öffnet sie
+   dort.
+
+Wie eine Änderung der Einstellungen geprüft wird:
+[Einstellungen und Begriffe prüfen](/de/guide/review/configuration-changes).
+
+Nur eine Überarbeitung zugleich darf die Projekteinstellungen ändern. Solange eine andere das tut,
+sagt die Seite das, und Sie können sie ändern, sobald diese zusammengeführt oder verworfen ist.
+
+## Die Themen
+
+| Thema                  | Was es enthält                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| **Sprachen**           | Die Quellsprache und die Übersetzungssprachen, mit ihrer Schreibrichtung.                           |
+| **Modultypen**         | Die Arten von Modulen; welche **Eingeschränkt**, **Textbausteine** oder **Sicherheitsinhalt** sind. |
+| **Zielgruppen**        | Für wen Inhalte sind, von der offensten zur am stärksten eingeschränkten.                           |
+| **Facetten**           | Klassifizierungen der Module, jede mit ihren Werten.                                                |
+| **Variantenmerkmale**  | Worin sich Varianten unterscheiden. Siehe [Variantenmerkmale](/de/guide/variants/attributes).       |
+| **Textattribute**      | Benannte Texte in Inhalten, etwa ein Produktname.                                                   |
+| **Ausgabetexte**       | Die festen Texte, die eine Ausgabe druckt, je Sprache.                                              |
+| **Überschriften**      | Wie tief Überschriften in einem Modul gehen dürfen.                                                 |
+| **Sicherheitssymbole** | Die Symbole, die Sicherheitshinweise zeigen dürfen.                                                 |
+| **Code-Sprachen**      | Die Sprachen, die ein Codeblock neben den eingebauten anbietet.                                     |
+| **Prüfung**            | Wer die eigene Überarbeitung freigeben darf.                                                        |
+
+In einer Liste klicken Sie auf eine Bezeichnung, um sie umzubenennen, oder nutzen das Menü **⋯**
+daneben. Ziehen Sie eine Zeile an ihrem Griff, um die Reihenfolge zu ändern. Die ID neben jeder
+Bezeichnung speichern die Inhalte: Sie entsteht aus der Bezeichnung und lässt sich nach dem
+Hinzufügen nicht mehr ändern.
+
+## Bezeichnungen in weiteren Sprachen
+
+Eine Bezeichnung, etwa die eines Modultyps oder einer Zielgruppe, kann in jeder Übersetzungssprache
+einen eigenen Text haben. Der Editor zeigt Bezeichnungen in Ihrer Oberflächensprache, PDFs und das
+Portal in der Sprache des Handbuchs. Eine Sprache ohne eigenen Text zeigt den der Ausgangssprache.
+
+1. Wählen Sie die Sprachenzahl neben einer Bezeichnung, zum Beispiel **0/2**.
+2. Der Text in der Ausgangssprache ist erforderlich. Füllen Sie die anderen aus, die Sie haben.
+3. Lassen Sie ein Feld leer, gilt dort der Text der Ausgangssprache.
+
+Facettenwerte und Variantenwerte haben dieselben Felder in ihren Details. Bezeichnungen gehen mit
+einem Delta-Export auch an Übersetzer: siehe [Texte von Seitengestaltung, Handbuch und Bezeichnungen](/de/guide/translations/special-texts).
+
+## Etwas entfernen, das Inhalte nutzen
+
+Einen Wert, den Inhalte noch nutzen, können Sie nicht entfernen, denn diese Inhalte wären dann
+ungültig. Der Editor sagt, wo er verwendet wird. Ändern Sie zuerst diese Inhalte, oder archivieren
+Sie den Wert, wo das Thema **Archivieren** anbietet: Inhalte behalten ihn, und Auswahllisten bieten
+ihn nicht mehr an.
+
+## Prüfung: gilt sofort
+
+**Prüfung** unter **Installation** ist das einzige Thema außerhalb einer Überarbeitung. Es gilt
+sofort für die ganze Installation. Siehe
+[Die eigene Überarbeitung freigeben](/de/guide/review/self-approval).

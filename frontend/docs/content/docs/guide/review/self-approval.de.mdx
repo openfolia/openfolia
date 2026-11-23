@@ -1,0 +1,61 @@
+---
+title: 'Die eigene Überarbeitung freigeben'
+description: 'In einem kleinen Team Autoren ihre eigenen Überarbeitungen freigeben lassen, und wer als Autor zählt.'
+articleId: 'guide.review.self-approval'
+---
+
+Standardmäßig prüft jede Überarbeitung jemand anderes als ihr Autor: das Vier-Augen-Prinzip. Ein
+Team aus einer oder zwei Personen hat nicht für jede Prüfung eine zweite Person. Eine
+Administratorin oder ein Administrator kann Autoren dann erlauben, ihre eigenen Überarbeitungen
+freizugeben.
+
+## Einschalten
+
+1. Wählen Sie **Verwaltung**, dann **Projekteinstellungen**.
+2. Wählen Sie unter **Installation** den Punkt **Prüfung**.
+3. Wählen Sie unter **Wer die eigene Überarbeitung freigeben darf** eine Möglichkeit:
+   - **Niemand: Vier-Augen-Prinzip**: die Voreinstellung.
+   - **Ihr Autor darf die Prüfung geben**: Die Abzeichnung eines eingeschränkten Typs braucht
+     weiter jemand anderen.
+   - **Ihr Autor darf Prüfung und Abzeichnungen geben**: Ein Autor bringt seine Überarbeitung
+     allein bis zur Freigabe.
+
+![Projekteinstellungen, Installation, Prüfung: die drei Möglichkeiten, Ihr Autor darf die Prüfung geben gewählt](/images/guide/de/review-self-approval-setting.webp)
+
+Die Wahl wird sofort gespeichert und gilt für die ganze Installation. Sie gehört zu keiner
+Überarbeitung. Autoren brauchen weiter die Rechte, alles zu prüfen und abzunehmen, was ihre
+Überarbeitung ändert. Bereits erteilte Freigaben bleiben, wenn die Wahl zurückgestellt wird.
+
+## Die eigene Überarbeitung freigeben
+
+Ist die eigene Freigabe erlaubt, sagt die Seitenleiste Ihrer eigenen Überarbeitung in Prüfung:
+**Das Vier-Augen-Prinzip ist für diese Installation aus: Sie dürfen Ihre eigene Überarbeitung
+freigeben. Abzeichnungen braucht weiter jemand anderes.**
+
+1. Schreiben Sie bei Bedarf einen **Prüfkommentar**.
+2. Wählen Sie **Freigeben**.
+
+Die Karte **Freigaben** zeigt dann das Abzeichen **Vom Autor freigegeben**, und der Schritt lautet
+**Vom Autor freigegeben, Sample Admin**. Das Audit-Log kennzeichnet die Freigabe mit **Durch den
+Autor**.
+
+![Eine freigegebene Überarbeitung mit dem Abzeichen Vom Autor freigegeben in der Karte Freigaben](/images/guide/de/review-self-approved.webp)
+
+Mit **Änderungen anfordern** zurückgeben kann ein Autor seine eigene Überarbeitung nie, was auch
+gewählt ist.
+
+## Wer als Autor zählt
+
+Das Vier-Augen-Prinzip und die eigene Freigabe gelten für alle, die die Überarbeitung geschrieben
+haben, nicht nur für die Person, die sie begonnen hat:
+
+- Alle, deren Speicherpunkte darin sind.
+- Wer eine Korrektur geschrieben hat, die jemand anderes nach main übertragen oder auf ein neues
+  main verschoben hat. Die Korrektur bleibt ihre, auch wenn die übertragende Person sie von Hand
+  neu geschrieben hat.
+- Nicht, wessen Änderungen außerhalb des Editors in den Branch kamen, etwa durch einen Push ins
+  Inhalts-Repository. Diese Änderungen nennen niemanden.
+
+Zählen Sie als Autor, sind **Freigeben**, **Abzeichnen** und **Änderungen anfordern** für Sie
+ausgegraut: **Sie haben diese Überarbeitung ganz oder teilweise geschrieben: Jemand anderes prüft
+sie.**

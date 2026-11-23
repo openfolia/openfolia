@@ -1,0 +1,19 @@
+= Child seats
+:schema-version: 1
+:module-type: safety
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: child seat
+
+[safety#unsecured,severity=warning,symbols=w001]
+.Children without a suitable child seat
+====
+[#unsecured-text]
+A seat belt alone does not protect a small child in an accident.
+
+[#unsecured-measures]
+* [[unsecured-m1]]Use a child seat that suits the child's height and weight.
+* [[unsecured-m2]]Fix the child seat to the [.term.child-seat-anchorage]##child seat anchorage## or with the seat belt, as its own instructions say.
+* [[unsecured-m3]]Never leave children alone in the vehicle.
+====

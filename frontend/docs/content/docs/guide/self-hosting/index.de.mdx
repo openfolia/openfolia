@@ -1,0 +1,132 @@
+---
+title: 'Betrieb'
+description: 'Eine Instanz betreiben und warten.'
+articleId: 'guide.self-hosting'
+---
+
+Dieser Abschnitt richtet sich an die Person, die den Server betreibt. Für das Schreiben, Prüfen,
+Übersetzen und Verwalten brauchen Sie ihn nicht. Beginnen Sie mit
+[Was läuft](/de/guide/self-hosting/overview) und dem
+[Schnellstart](/de/guide/self-hosting/quick-start).
+
+Zwei Referenzen werden aus dem Quellcode erzeugt: Die
+[Einstellungsreferenz](/de/reference/settings) nennt jede Einstellung, ihr Format und ihren
+Standard, die [Fehlercodes](/de/reference/errors) sagen, was jeder Fehler bedeutet, den der Server
+meldet. [Konfiguration](/de/configuration) unterscheidet die Einstellungen des Servers von der
+`openfolia.yaml` jedes Inhalts-Repositorys.
+
+Was eine Administratorin oder ein Administrator im Editor erledigt (Benutzer, Backups, die
+Systemseite), steht unter [Verwaltung](/de/guide/admin).
+
+<Cards>
+  <Card
+    title="Was läuft"
+    href="/de/guide/self-hosting/overview"
+    description="Die Container, die Volumes, die abgesicherten Images."
+  />
+  <Card
+    title="Schnellstart"
+    href="/de/guide/self-hosting/quick-start"
+    description="Ein Befehl oder Schritt für Schritt, und der erste Admin."
+  />
+  <Card
+    title="Worker"
+    href="/de/guide/self-hosting/workers"
+    description="Die API und die Hintergrundarbeit, getrennt skaliert."
+  />
+  <Card
+    title="Inhalts-Repository"
+    href="/de/guide/self-hosting/content-repository"
+    description="Das Bare-Git-Repository auf dem Daten-Volume."
+  />
+  <Card
+    title="Anmeldemodi"
+    href="/de/guide/self-hosting/authentication"
+    description="Anmeldeverfahren, Token-Modus und Demo-Modus."
+  />
+  <Card
+    title="Anmeldung mit OpenID Connect"
+    href="/de/guide/self-hosting/oidc"
+    description="Ihr Identitätsanbieter, Gruppen und Sitzungen."
+  />
+  <Card
+    title="Anmeldung mit E-Mail und Passwort"
+    href="/de/guide/self-hosting/password-sign-in"
+    description="Passwörter, Einladungen, Links zum Zurücksetzen und Sperre."
+  />
+  <Card
+    title="Anmeldung mit einem Code per E-Mail"
+    href="/de/guide/self-hosting/email-code-sign-in"
+    description="Einmalcodes per E-Mail, mit oder ohne Passwörter."
+  />
+  <Card
+    title="Reverse Proxy mit TLS"
+    href="/de/guide/self-hosting/reverse-proxy"
+    description="TLS, die Client-Adresse, dauerhafte Adressen und Caches."
+  />
+  <Card
+    title="Beispiel: Coolify"
+    href="/de/guide/self-hosting/coolify"
+    description="Die Compose-Datei als eine Ressource, mit Deploy-Webhook."
+  />
+  <Card
+    title="E-Mail"
+    href="/de/guide/self-hosting/email"
+    description="Ihr SMTP-Server, TLS und die Test-E-Mail."
+  />
+  <Card
+    title="Blob-Speicher"
+    href="/de/guide/self-hosting/blob-store"
+    description="Dateien auf dem Daten-Volume oder in einem S3-kompatiblen Bucket."
+  />
+  <Card
+    title="Datenbank"
+    href="/de/guide/self-hosting/database"
+    description="Postgres, Migrationen, Bereitschaft und der Pool."
+  />
+  <Card
+    title="Instanzschlüssel"
+    href="/de/guide/self-hosting/secret-key"
+    description="Der Schlüssel, der gespeicherte Geheimnisse versiegelt, und seine Rotation."
+  />
+  <Card
+    title="Backups auf dem Server"
+    href="/de/guide/self-hosting/backups"
+    description="Der Backup-Dienst, Prüfen, Wiederherstellen, S3."
+  />
+  <Card
+    title="Nach einer Wiederherstellung"
+    href="/de/guide/self-hosting/after-a-restore"
+    description="Der eine Schritt nach einer Wiederherstellung auf einem anderen Datenbankserver."
+  />
+  <Card
+    title="Senke und Aufbewahrung des Audit-Logs"
+    href="/de/guide/self-hosting/audit-log"
+    description="Eine Senke für das Audit-Log, und die Aufbewahrung."
+  />
+  <Card
+    title="Suche und semantische Suche"
+    href="/de/guide/self-hosting/semantic-search"
+    description="Suche in Postgres, nach Bedeutung, und Aufbewahrung des Index."
+  />
+  <Card
+    title="Dimensionierung und Grenzen"
+    href="/de/guide/self-hosting/sizing"
+    description="Speicher und CPU, Benchmarks, Grenzen für Paket-Downloads."
+  />
+  <Card
+    title="Upgrades"
+    href="/de/guide/self-hosting/upgrades"
+    description="Sichern, Images holen, starten: Migrationen laufen beim Start."
+  />
+  <Card
+    title="Smoke-Test"
+    href="/de/guide/self-hosting/smoke-test"
+    description="Eine Installation prüfen, und die Testskripte."
+  />
+  <Card
+    title="Lizenz und Quellcode"
+    href="/de/guide/self-hosting/licence"
+    description="Die AGPL, das Quellcode-Angebot und GET /about."
+  />
+</Cards>

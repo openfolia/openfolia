@@ -1,0 +1,17 @@
+= Remplacer le liquide de frein
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: technician
+:facet-product: fenna
+:keywords: freins, liquide de frein
+
+[#intro]
+Le liquide de frein absorbe l'humidité avec le temps, ce qui abaisse son point d'ébullition. Remplacez-le tous les deux ans.
+
+[procedure#steps]
+.Remplacer le liquide de frein
+. [[step-reservoir]]Aspirez l'ancien liquide de frein du réservoir situé sous le capot.
+. [[step-fill]]Remplissez le réservoir de liquide de frein DOT 4 neuf jusqu'au repère MAX.
+. [[step-bleed]]Purgez chaque frein de roue l'un après l'autre, en commençant par l'arrière droit, jusqu'à ce que le liquide sorte clair et sans bulles.
+. [[step-check]]Complétez jusqu'au repère MAX et contrôlez la course de la pédale avant l'essai sur route.

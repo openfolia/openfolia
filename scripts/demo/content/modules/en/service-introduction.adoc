@@ -1,0 +1,12 @@
+= About this service booklet
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: technician
+:facet-product: fenna
+
+[#intro]
+This booklet is for qualified workshops. It describes the scheduled maintenance of the {model-name} and the work it needs.
+
+[#qualified]
+Work on the high-voltage system of the electric model only with the qualification your country requires for it.

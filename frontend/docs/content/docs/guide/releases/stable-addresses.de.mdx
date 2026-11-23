@@ -1,0 +1,49 @@
+---
+title: 'Dauerhafte Adressen'
+description: 'Eine Adresse pro Produkt, Handbuch, Variante und Sprache, die immer die neueste Veröffentlichung öffnet.'
+articleId: 'guide.releases.stable-addresses'
+---
+
+Jedes veröffentlichte Handbuch hat für jedes Produkt, jede Variante und jede Sprache eine
+dauerhafte Adresse. Drucken Sie sie auf ein Produkt, ein Etikett oder einen Umschlag, oder
+verlinken Sie sie: Sie öffnet immer die neueste Veröffentlichung des Produkts, der Link veraltet
+also nie.
+
+## Die Adresse einer Datei finden
+
+1. Wählen Sie **Veröffentlichungen** in der Seitenleiste, dann die Veröffentlichung, dann
+   **Dateien und Änderungen**.
+2. Wählen Sie unter **Dateien** **Adresse** in der Zeile der Datei.
+
+Der Dialog zeigt zwei Adressen, jede mit **Kopieren**:
+
+- **Neueste Veröffentlichung:** öffnet die neueste Veröffentlichung dieses Produkts. Diese Adresse gehört
+  auf Produkte, Etiketten und Umschläge.
+- **Diese Veröffentlichung:** öffnet immer genau diese Veröffentlichung, auch wenn es neuere gibt.
+
+![Der Adressdialog: die neueste Adresse, die dieser Veröffentlichung und der QR-Code](/images/guide/de/release-address.webp)
+
+## Auf der Seite des Handbuchs
+
+Auch die Seite des Handbuchs führt seine Adressen auf, unter **Dauerhafte Adressen**: eine Zeile
+pro Produkt und Variante, in der gewählten Sprache. **Adresse** in einer Zeile öffnet denselben
+Dialog. Ein Handbuch bekommt seine Adressen, sobald eine Veröffentlichung es enthält.
+
+## Wie die Adresse aufgebaut ist
+
+Eine Adresse nennt Produkt, Handbuch, Variante und Sprache, etwa
+`/d/north/operating/model=small/en`. Die Adresse einer bestimmten Veröffentlichung hängt ihre
+Version an: `…/en@2.0`. Sie öffnet das Handbuch als Webseite; mit `/pdf` dahinter öffnet sie sein
+PDF.
+
+Die neueste Veröffentlichung ist die neueste der veröffentlichten Inhalte, die nicht
+zurückgezogen ist. Eine Veröffentlichung aus einer
+[Wartungslinie](/de/guide/releases/maintenance-lines) wird nie die neueste.
+
+## Wenn der Dialog keine vollständige Adresse zeigt
+
+Für vollständige Adressen und QR-Codes braucht der Server seine öffentliche Adresse. Fehlt sie,
+zeigt der Dialog nur die Pfade und sagt das; bitten Sie Ihre Administration, sie einzustellen.
+
+Wer die Adressen öffnen darf, ist eine Einstellung des Projekts: siehe
+[Wer die Adressen öffnet](/de/guide/releases/address-access).

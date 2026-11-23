@@ -1,0 +1,49 @@
+---
+title: OpenFolia documentation
+description: Modular documentation, assembled into manuals for every variant and language.
+---
+
+OpenFolia is a headless documentation platform. Content is written once as small modules, then
+assembled into manuals for each product variant and language. Authors work in a web editor
+on drafts that go through review before they are released. Every release is served by a JSON:API
+and rendered to PDF and HTML, so the same content reaches print, a portal and other systems.
+
+Almost everything in it is content: the modules, and also the manuals, the project settings, the
+page designs and the terms, all versioned in Git and changed through review. See
+[Almost everything is content](/guide/getting-started/content).
+
+<AgentInstall />
+
+<Cards>
+  <Card
+    title="Getting started"
+    href="/getting-started"
+    description="Run it on your machine with the sample content."
+  />
+  <Card
+    title="Self-hosting"
+    href="/self-hosting"
+    description="Run it on a server with containers."
+  />
+  <Card
+    title="API reference"
+    href="/api"
+    description="The Delivery API for integrators, and the Management API."
+  />
+  <Card
+    title="User guide"
+    href="/guide"
+    description="For writers, reviewers, translators and admins."
+  />
+</Cards>
+
+## Reference
+
+The reference is generated from the source code, so it always matches the release it belongs to:
+
+- [API reference](/api): every route of the Delivery API and the Management API, with schemas,
+  code samples and a playground.
+- [Error codes](/reference/errors), [permissions](/reference/permissions) and
+  [settings](/reference/settings).
+- [Project configuration (`openfolia.yaml`)](/reference/project-config),
+  [import format](/reference/import-format) and the [MCP tools](/reference/mcp-tools).

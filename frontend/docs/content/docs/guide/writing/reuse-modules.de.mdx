@@ -1,0 +1,48 @@
+---
+title: 'Ein Modul wiederverwenden'
+description: 'Ein Modul oder einen Block daraus in ein anderes einfügen, synchron gehalten, oder darauf verlinken.'
+articleId: 'guide.writing.reuse-modules'
+---
+
+Schreiben Sie einen Text einmal und verwenden Sie ihn in vielen Modulen: Fügen Sie das Modul dort
+ein, wo Sie es brauchen. Eine Änderung daran erscheint dann überall, wo es eingefügt ist.
+
+1. Setzen Sie die Einfügemarke dorthin, wo das Modul stehen soll.
+2. Wählen Sie **Einfügen** und dann **Modulverweis**. Oder tippen Sie `/modul` und drücken Sie
+   <kbd>Eingabe</kbd>.
+3. Tippen Sie unter **Modulverweis einfügen** in **Module suchen** und grenzen Sie die Liste mit
+   **Filter** ein.
+4. Wählen Sie ein Modul. Sein Text erscheint in der Vorschau neben der Liste. So prüfen Sie, ob es
+   das richtige ist.
+5. Wählen Sie unter **Einfügen**, wie:
+   - **Ganzes Modul, synchron gehalten**: Das Modul wird hier eingefügt, wie es ist.
+   - **Ein Block daraus**: nur ein Block des Moduls, etwa eine Tabelle, ein Sicherheitshinweis
+     oder ein Absatz. Die Vorschau wird zu einer Liste der Blöcke des Moduls: Wählen Sie den, der
+     eingefügt werden soll.
+   - **Nur Link**: ein Querverweis im Text, der zum Modul führt.
+6. Wählen Sie **Einfügen**.
+
+Das eingefügte Modul erscheint in einem Rahmen: **Hier eingefügt, an eigener Stelle bearbeitet**.
+Um seinen Text zu ändern, öffnen Sie es aus dem Rahmen und bearbeiten Sie es dort.
+
+## Ein Block eines Moduls
+
+![Modulverweis einfügen mit „Ein Block daraus“: die Blöcke des Moduls in der Vorschau, ein Sicherheitshinweis gewählt](/images/guide/de/writing-reuse-one-block.webp)
+
+Ein einzeln eingefügter Block bleibt synchron wie ein ganzes Modul: Ändert sich der Block in
+seinem Modul, erscheint die Änderung auch hier. Sein Rahmen nennt den Block mit seinem Typ und
+Text. **Öffnen** öffnet sein Modul an diesem Block.
+
+Varianten gelten wie überall: Ein Block in einem Variantenblock seines Moduls wird nur in den
+Varianten eingefügt, die ihn zeigen.
+
+Wird der Block später aus seinem Modul entfernt, sagt der Rahmen **Den Block „…“ gibt es in diesem
+Modul nicht**, und die Prüfungen melden einen **Defekten Modulverweis** (blockierend). Wählen Sie
+einen anderen Block oder entfernen Sie den Verweis.
+
+## Wenn es sich nicht einfügen lässt
+
+Ein Modul kann sich nicht selbst enthalten und auch kein Modul, das es schon enthält. Der Dialog
+sagt das: Eine solche Schleife würde nie enden. Das gilt auch für einen Block eines Moduls: Ein
+Modul, das dieses schon enthält, gibt auch keinen seiner Blöcke her, und ein Modul kann keinen
+eigenen Block einfügen.

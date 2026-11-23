@@ -1,0 +1,89 @@
+---
+title: 'Die Delivery-API'
+description: 'Veröffentlichte Inhalte für ein Portal, eine App oder eine Integration lesen: was die Routen liefern und eine erste Anfrage.'
+articleId: 'guide.integrations.delivery-api'
+---
+
+Die Delivery-API ist der Teil der API für alle, die einen eigenen Viewer, ein Portal oder eine
+Integration bauen: lesende Routen über die Inhalte, nichts zum Schreiben, Prüfen oder Verwalten.
+Jede Route ist `GET` und braucht ein Token, dessen Rolle `content.read` enthält, mit drei
+Ausnahmen: `GET /health` braucht nichts; die dauerhaften Adressen unter `/d/` brauchen kein Token,
+wo die `openfolia.yaml` sie öffentlich macht (siehe
+[Wer die Adressen öffnet](/de/guide/releases/address-access)); und `GET /preview/{name}` und
+`GET /preview/fonts/{name}` (die Stylesheets und Schriften der HTML-Seiten) brauchen ein Token,
+aber keine Berechtigung.
+Die [Referenz der Delivery-API](/de/api/delivery) enthält jede Route mit ihren Parametern, Schemas
+und einem Playground sowie das OpenAPI-Dokument zum Herunterladen.
+
+## Was sie liefert
+
+| Routen                                                                               | Was                                                                                                                        |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `/config`, `/refs`                                                                   | Die Projektkonfiguration (Sprachen, Modultypen, Zielgruppen, Variantenmerkmale) und die Refs.                              |
+| `/modules`, `/modules/{lang}/{id}`                                                   | Einzelne Module, ihre Historie und Vergleiche.                                                                             |
+| `/manuals`, `/manuals/{id}`, `/manuals/{id}/variants/{variant}/{lang}`               | Handbücher und das aufgelöste Handbuch: eine Variante und Sprache, die Module in Lesereihenfolge.                          |
+| `…/html`, `…/pdf`, `/modules/{lang}/{id}/preview`                                    | Die Darstellung des Servers, als HTML-Seite oder PDF.                                                                      |
+| `/assets/{hash}`, `/symbols/{id}`                                                    | Bilder und Anhänge über ihren Hash, Sicherheitssymbole.                                                                    |
+| `/releases`, `/releases/{id}`, `/releases/{id}/changes`, `/changelog`                | Veröffentlichungen, was jede geändert hat, das Änderungsprotokoll.                                                         |
+| `/releases/{id}/outputs`, `…/outputs/archive`, `…/iirds-packages`, `…/dita-packages` | Die Dateien einer Veröffentlichung und ihre [iiRDS](/de/guide/releases/iirds)- und [DITA](/de/guide/releases/dita)-Pakete. |
+| `/search`, `/chunks`, `/changes`                                                     | Suche, Chunks für das Retrieval, der Änderungs-Feed.                                                                       |
+| `/terms`, `/terms/export`                                                            | Die Terminologie.                                                                                                          |
+| `/d/…`, `/stable-addresses`                                                          | Die stabilen Adressen der Handbücher und ihre QR-Codes.                                                                    |
+
+Lesen Sie `GET /config`, statt Sprachen, Modultypen oder Varianten anzunehmen: Sie sind
+Konfiguration.
+
+## Eine erste Anfrage
+
+Mit dem [Token eines Service-Accounts](/de/guide/integrations/authentication) und der API über den
+Host des Editors (`https://docs.example.com/api`):
+
+1. Listen Sie die Veröffentlichungen auf, die neueste zuerst:
+
+   ```sh
+   curl -gs 'https://docs.example.com/api/releases?page[size]=5' \
+     -H "Authorization: Bearer $DOCS_TOKEN" \
+     -H 'Accept: application/vnd.api+json'
+   ```
+
+   Jede Veröffentlichung hat ihren Tag in `attributes.tag`.
+
+2. Lesen Sie ein Handbuch genau so, wie es veröffentlicht wurde, indem Sie diesen Tag als `ref`
+   übergeben:
+
+   ```sh
+   curl -s 'https://docs.example.com/api/manuals/operating?ref=<tag>' \
+     -H "Authorization: Bearer $DOCS_TOKEN" \
+     -H 'Accept: application/vnd.api+json'
+   ```
+
+   Das Handbuch nennt die Varianten, die es veröffentlicht, jede als Slug. Verwenden Sie den Slug
+   genau so, wie er angegeben ist.
+
+3. Lösen Sie es für eine Variante und eine Sprache auf:
+   `GET /manuals/operating/variants/{variant}/en?ref=<tag>`.
+
+Halten Sie das Token wie oben in einer Umgebungsvariable oder im Secret-Speicher Ihrer Plattform,
+nie in der URL.
+
+## Bei einem Ref lesen
+
+- Der **Tag einer Veröffentlichung** bewegt sich nie: Lesen Sie ihn, um genau das zu bekommen, was
+  veröffentlicht wurde.
+- `main` sind die neuesten veröffentlichten Inhalte; es kann sich bewegen.
+- Eine **Commit-ID** ändert sich nie, eine damit gelesene Antwort also auch nicht. Ein Token mit
+  nur `content.read` darf einen Commit aber nur lesen, solange `main` oder ein Tag auf ihn zeigt;
+  danach antwortet er 404 `not-found`. Der Header `X-Ccms-Commit` jeder Antwort nennt den Commit,
+  aus dem sie gelesen wurde.
+
+Blättern, Caching und das Fehlerformat sind auf jeder Route gleich:
+[JSON:API-Konventionen](/de/guide/integrations/json-api).
+
+## Auf dem Laufenden bleiben
+
+- [Der Änderungs-Feed](/de/guide/integrations/change-feed) sagt, was seit Ihrer letzten Anfrage
+  veröffentlicht, zurückgezogen oder als veraltet markiert wurde.
+- [Webhooks](/de/guide/integrations/webhooks) wecken Ihre Integration, wenn das geschieht.
+- [Chunks](/de/guide/integrations/chunks) und die [Suche](/de/guide/integrations/search) dienen
+  Retrieval und Suche, die [Ausgaben einer Veröffentlichung](/de/guide/integrations/release-outputs)
+  den Dateien.

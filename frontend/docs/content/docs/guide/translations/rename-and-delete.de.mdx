@@ -1,0 +1,42 @@
+---
+title: 'Ein übersetztes Modul umbenennen oder löschen'
+description: 'Was mit den Übersetzungen eines Moduls geschieht, wenn Sie seine ID ändern oder es löschen.'
+articleId: 'guide.translations.rename-and-delete'
+---
+
+Die Übersetzungen eines Moduls sind ihm über seine ID zugeordnet. Ändern Sie die ID oder löschen
+Sie das Modul, folgen die Übersetzungen und ihre Nachweise, damit der Übersetzungsstand stimmt.
+
+## Die ID ändern
+
+**ID ändern** im Tab **Details** des Moduls verschiebt das Modul in allen Sprachen auf einmal. Der
+Dialog listet die Sprachen und die Dateien, die das Modul nennen. Siehe
+[Ein Modul umbenennen, als veraltet kennzeichnen oder löschen](/de/guide/writing/rename-deprecate-delete).
+
+Für die Übersetzungen heißt das:
+
+- Jede Sprachfassung zieht zur neuen ID um, mit ihrem Nachweis der Quelle, aus der sie übersetzt
+  wurde.
+- Eine Übersetzung bleibt so aktuell, wie sie war. Ein Querverweis auf das Modul, der in einem
+  anderen Modul umgeschrieben wird, macht auch dessen Übersetzungen nicht veraltet.
+- Die Zeile des Moduls in **Übersetzungen** erscheint unter der neuen ID.
+
+Solange Blöcke des Moduls bei der Agentur sind, lässt sich die ID nicht ändern. Der Editor meldet
+**Teile dieses Moduls sind bei einem Übersetzungsdienstleister. Importieren oder stornieren Sie
+zuerst den Übersetzungsauftrag.** Importieren Sie die Datei oder stornieren Sie den Export im Tab
+**Aufträge**, dann ändern Sie die ID.
+
+## Eine Sprachfassung oder das Modul löschen
+
+**Löschen …** im Menü **Weitere Aktionen** des Moduls fragt **Was gelöscht wird**:
+
+- **Nur die Fassung auf Deutsch** (oder eine andere Sprache): Die Übersetzung und ihr Nachweis
+  entfallen. Die Zelle in **Übersetzungen** zeigt wieder **Nicht übersetzt**.
+- **Das ganze Modul, in allen Sprachen**: Jede Fassung und jeder Nachweis entfallen. Die Zeile
+  verschwindet aus dem Übersetzungsstand.
+
+Eine später neu begonnene Fassung startet ohne Nachweis. Sie gilt in jedem Block als veraltet, bis
+eine Übersetzung davon importiert wurde.
+
+Das Löschen geschieht in Ihrer Überarbeitung. **Rückgängig** bringt es zurück, solange die
+Überarbeitung ein Entwurf ist.

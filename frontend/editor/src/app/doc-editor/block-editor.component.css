@@ -1,0 +1,437 @@
+/* The document inside the block editor. Colours only through the theme's tokens. */
+
+.doc-editor-content {
+  max-width: 48rem;
+  margin-inline: auto;
+  /* The wider side is the grips' gutter, at the start: on the right in right-to-left text. */
+  padding-block: 2rem 3rem;
+  padding-inline: 3rem 2.5rem;
+  min-height: 16rem;
+  outline: none;
+  line-height: 1.6;
+}
+
+/*
+ * Space below each block of a flow (the document, a section), never above: the grip's anchor
+ * goes right before a block, so the block's top is the anchor's top and nothing moves when the
+ * anchor comes and goes.
+ */
+:is(.doc-editor-content, .doc-editor-content section) > :where(*) {
+  margin: 0 0 0.75em;
+}
+
+:is(.doc-editor-content, .doc-editor-content section) > :where(:last-child) {
+  margin-bottom: 0;
+}
+
+/* A section heading is its section's title, sized by how deep the section is. */
+:is(.doc-editor-content, .doc-editor-lifted) [data-node='title'] {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted)
+  section
+  section
+  > [data-node='title'] {
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted)
+  section
+  section
+  section
+  > [data-node='title'] {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted) [data-node='list'] {
+  padding-inline-start: 1.5rem;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted) [data-node='listItem'] {
+  display: list-item;
+  list-style-type: disc;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted)
+  [data-node='list'][data-ordered='true']
+  > [data-node='listItem'] {
+  list-style-type: decimal;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted) code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--muted);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.3em;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted) [data-mark='ui'] {
+  font-weight: 500;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted) a[data-mark='link'] {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* A term link (#245, #247): subtle, a thin solid underline, apart from the writing checks'
+   dotted and dashed ones; its definition shows on hover and when the caret rests in it. */
+:is(.doc-editor-content, .doc-editor-lifted) [data-mark='term'] {
+  text-decoration: underline solid var(--muted-foreground);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* Inline atoms (an attribute, a cross-reference, a key): chips, read as one unit. */
+:is(.doc-editor-content, .doc-editor-lifted)
+  :is([data-node='attribute'], [data-node='xref']) {
+  border-radius: 0.25rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  padding: 0 0.25em;
+}
+
+/* A key combination: one key cap per key (`inline/inline-views.ts`). */
+:is(.doc-editor-content, .doc-editor-lifted) .doc-editor-key {
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  padding: 0 0.3em;
+}
+
+:is(.doc-editor-content, .doc-editor-lifted)
+  :is(p, [data-node='title'], [data-node='itemText']).is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+}
+
+/*
+ * A block taken as a whole (selected as a node). A text block gets a soft background
+ * that reaches past its text without moving it; a block without text of its own gets the ring,
+ * offset from its content. The person typing in a block sees no frame at all.
+ */
+.doc-editor-content p.ProseMirror-selectednode {
+  outline: none;
+  border-radius: 0.25rem;
+  background: var(--accent);
+  box-shadow: 0 0 0 0.375rem var(--accent);
+}
+
+.doc-editor-content
+  :is(
+    section,
+    [data-node='list'],
+    [data-node='listItem']
+  ).ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 0.375rem;
+  border-radius: 0.25rem;
+}
+
+/*
+ * The grip: a zero-height anchor right before the block (a formatting context of its own, so no
+ * margin collapses through it), the grip against it in the gutter, centred on the block's first
+ * line: its top padding plus half its line height. Each block type says its own.
+ */
+.doc-editor-grip-anchor {
+  display: flow-root;
+  position: relative;
+  height: 0;
+  margin: 0 !important;
+  --grip-pad: 0rem;
+  --grip-line: 1.6rem;
+}
+
+/* A section's grip lines up with its heading, by how deep the section is. */
+.doc-editor-grip-anchor:has(+ section) {
+  --grip-line: 1.875rem;
+}
+
+section > .doc-editor-grip-anchor:has(+ section) {
+  --grip-line: 1.625rem;
+}
+
+section section > .doc-editor-grip-anchor:has(+ section) {
+  --grip-line: 1.7rem;
+}
+
+.doc-editor-grip {
+  position: absolute;
+  touch-action: none;
+  inset-inline-start: -1.75rem;
+  top: calc(var(--grip-pad) + var(--grip-line) / 2 - 0.75rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  color: var(--muted-foreground);
+  cursor: grab;
+}
+
+.doc-editor-grip:hover,
+.doc-editor-grip[data-state='open'] {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.doc-editor-content .suggestion {
+  color: var(--muted-foreground);
+}
+
+@media (pointer: coarse) {
+  .doc-editor-grip-anchor {
+    display: none;
+  }
+}
+
+/*
+ * A table: a grid of its columns' relative widths (`--table-columns`, set by its node view).
+ * Rows add no box of their own, so a cell spanning rows or columns sits where HTML puts it. The
+ * lines between cells are the grid's 1px gaps over a border-coloured background; the title (the
+ * caption) sits above, over the frame, on the page's own background.
+ */
+:is(.doc-editor-content, .doc-editor-lifted) .doc-editor-table {
+  display: grid;
+  grid-template-columns: var(--table-columns, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: var(--border);
+}
+
+.doc-editor-table > [data-node='title'] {
+  grid-column: 1 / -1;
+  order: -1;
+  margin: -1px -1px 0;
+  padding: 0 0 0.375rem;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.75rem !important;
+  font-weight: 400 !important;
+  font-style: italic;
+  line-height: 1.4 !important;
+}
+
+.doc-editor-table > [data-node='tableRow'] {
+  display: contents;
+}
+
+.doc-editor-table [data-node='tableCell'] {
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--card);
+  overflow-wrap: anywhere;
+}
+
+/* The header row: a muted band, medium weight. */
+.doc-editor-table[data-header]
+  > [data-node='tableRow']:nth-child(1 of [data-node='tableRow'])
+  > [data-node='tableCell'] {
+  background: var(--muted);
+  font-weight: 500;
+}
+
+.doc-editor-table [data-node='tableCell'] > :where(*) {
+  margin: 0;
+}
+
+.doc-editor-table [data-node='tableCell'] > :where(* + *) {
+  margin-top: 0.5em;
+}
+
+/* A block with a problem (a validation issue, a block that cannot be saved yet): a dashed
+ * outline that takes no room, in the problem's colour; its text is the block's description. */
+.doc-editor-content .doc-editor-issue {
+  outline: 1px dashed var(--warning);
+  outline-offset: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.doc-editor-content .doc-editor-issue-error {
+  outline-color: var(--destructive);
+}
+
+/* A block not finished yet (no text, a variant block without its variants): a normal step of
+ * writing, so a quiet outline in the muted draft tone of the save status, never red. */
+.doc-editor-content .doc-editor-issue-draft {
+  outline-style: dotted;
+  outline-color: var(--muted-foreground);
+}
+
+/*
+ * The documentation blocks (`blocks/`): Angular node views on `@openfolia/ui`'s safety notice,
+ * variant block and module reference card. A block selected as a whole gets the ring, at the
+ * radius of its own frame.
+ */
+.doc-editor-content .doc-block.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 0.125rem;
+  border-radius: var(--radius);
+}
+
+.doc-editor-content .doc-block[data-node='moduleRef'].ProseMirror-selectednode {
+  border-radius: calc(var(--radius) + 4px);
+}
+
+/*
+ * A procedure's steps (`listItem`s in its content): numbered by the editor, the number in the
+ * gutter before each step's text; a sub-step (a procedure in a step) counts on its own. A step's
+ * result (the first paragraph of its blocks) is set off by the word before it, which the node
+ * view sets in the UI language (`--procedure-result-label`). The title is a small bold line.
+ */
+[data-content='procedure'] {
+  counter-reset: procedure-step;
+}
+
+[data-content='procedure'] > [data-node='listItem'] {
+  display: block;
+  list-style: none;
+  counter-increment: procedure-step;
+  position: relative;
+  padding-inline-start: 1.75rem;
+}
+
+[data-content='procedure'] > [data-node='listItem']::before {
+  content: counter(procedure-step) '.';
+  position: absolute;
+  inset-inline-start: 0;
+  min-width: 1.25rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-content='procedure'] > [data-node='listItem'] > :where(*) {
+  margin: 0;
+}
+
+[data-content='procedure'] > [data-node='listItem'] > :where(* + *) {
+  margin-top: 0.25em;
+}
+
+[data-content='procedure']
+  > [data-node='listItem']
+  > [data-node='itemText']
+  + p::before {
+  content: var(--procedure-result-label, '');
+  margin-inline-end: 0.375rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-content='procedure']
+  > [data-node='listItem']
+  > [data-node='itemText']
+  + p.is-empty::before {
+  float: none;
+  height: auto;
+}
+
+[data-content='procedure'] > [data-node='title'] {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* A step's grip lines up with its text. */
+[data-content='procedure'] > .doc-editor-grip-anchor {
+  --grip-pad: 0rem;
+  --grip-line: 1.4rem;
+}
+
+/* A code block's text: whitespace is kept (the frame sets it), and no line wraps mid-word. */
+[data-content='literal'] {
+  white-space: pre-wrap;
+  min-height: 1.25rem;
+}
+
+/* The grip lines up with the first line of a documentation block's frame. */
+.doc-editor-grip-anchor:has(+ .doc-block) {
+  --grip-pad: 0.5rem;
+  --grip-line: 1.5rem;
+}
+
+.doc-editor-grip-anchor:has(+ .doc-block[data-node='moduleRef']) {
+  --grip-pad: 0.75rem;
+  --grip-line: 2rem;
+}
+
+/*
+ * A documentation block comes in by fading and growing from its place, and leaves a blank of its
+ * height that closes. Only for someone who has not asked for less motion: otherwise it simply
+ * appears, and no blank is left (`block-motion.ts`).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .doc-block-enter {
+    animation: doc-block-enter 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .doc-block-leave {
+    overflow: hidden;
+    pointer-events: none;
+    animation: doc-block-leave 200ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  }
+}
+
+/* Wins over the flow's block margin by coming later; the animation's margin wins over it. */
+.doc-editor-content .doc-block-leave {
+  height: 0;
+  margin: 0;
+}
+
+@keyframes doc-block-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes doc-block-leave {
+  from {
+    height: var(--leave-height);
+    margin-bottom: 0.75em;
+  }
+  to {
+    height: 0;
+    margin-bottom: 0;
+  }
+}
+
+/*
+ * A blank line the caret left collapses before it goes (`plugins/blank-lines.ts`): its height
+ * and the space after it shrink to nothing, so the blocks below close up without a jump. Under
+ * reduced motion it goes at once and this never shows.
+ */
+@keyframes doc-editor-blank-leave {
+  from {
+    max-height: 1.6em;
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+  }
+}
+
+.doc-editor-blank-leaving {
+  overflow: hidden;
+  animation: doc-editor-blank-leave 200ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}

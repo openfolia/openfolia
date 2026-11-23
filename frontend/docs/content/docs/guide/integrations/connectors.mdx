@@ -1,0 +1,122 @@
+---
+title: 'Import connectors'
+description: 'Move pages of a wiki markup in once, or bring items of an issue tracker in again and again, always into a change set to review.'
+articleId: 'guide.integrations.connectors'
+---
+
+Connectors bring content from other tools in through the
+[import format](/guide/integrations/import-format), the only way in: they make an import bundle,
+and the import checks it and writes it into a change set, reviewed like any other. A connector
+publishes nothing. Connectors are optional tools of their own, in `connectors/` of the source;
+the platform does not depend on them, and they call nothing you did not configure (no
+telemetry).
+
+| Connector                  | For                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Wiki markup converter      | moving a wiki's pages in once: pages of a generic wiki markup become an import bundle                              |
+| Tracker connector (sample) | release notes or feature descriptions from an issue tracker's items, run on a schedule or when the source calls it |
+
+Which source field becomes which module type, audience, facet or variant is a mapping file, never
+code. Every value in it must be one your `openfolia.yaml` configures: the bundle is checked against it
+before anything is written.
+
+## Move a wiki in
+
+1. Export the pages as files: one `<name>.wiki` file per page, its attachments in a folder
+   `<name>/` beside it. A page may start with front matter naming its `id`, `title`, `labels` and
+   `order`.
+2. Write the mapping: the language, the module type, the audience, what a page label sets, how
+   info, tip, note and warning boxes map (as notes or safety notices), and optionally a manual
+   listing every page.
+3. Convert, checking against your configuration:
+
+   ```sh
+   node connectors/wiki-markup/dist/main.js export/ --mapping mapping.yaml \
+     --out bundle.zip --config openfolia.yaml
+   ```
+
+4. Read what it printed: every construct it could not convert, by page and block, starting with a
+   stable code such as `[unknown-macro]` or `[page-link-outside]`. The same list is in the bundle's
+   `report`, and in the import's report. Nothing is dropped silently: an unknown macro is kept
+   verbatim as a passthrough block, and text whose formatting has no counterpart (colour,
+   underline, a mention) is kept as plain text.
+5. Import `bundle.zip` as on [Import format](/guide/integrations/import-format): a dry run first,
+   then upload and apply it, and review its change set.
+
+Converting the same export again gives the same module and block IDs, so a second import with
+`updateExisting=true` updates what changed and skips the rest.
+
+## Bring tracker items in on a schedule
+
+The tracker connector is a sample: it reads items (ID, kind, state, title, a description in the
+wiki markup, labels and fields) from a file. A connector for a real tracker replaces that source
+with one reading the tracker's API, at the address and with the credential you give it.
+
+Each run converts the items the mapping includes (by kind, state and label) into one module each,
+and optionally a manual listing them, each entry shown in the variants an item's field maps to.
+It checks the bundle with a dry run first: when nothing changed, it stops there and writes
+nothing. Otherwise it imports it into a new change set and submits that for review.
+
+An import is made by a person, so the connector acts with your session, like the requests on
+[Import format](/guide/integrations/import-format#sign-in-for-the-import): sign in with curl into
+a cookie file readable by you only, then run it:
+
+```sh
+export CCMS_CONNECTOR_API_URL=https://docs.example.com/api
+export CCMS_CONNECTOR_SESSION_FILE=$HOME/.openfolia/cookies.txt
+node connectors/tracker/dist/main.js --mapping mapping.yaml --items items.json --every 60
+```
+
+- `--every 60` runs it every hour until stopped; without it, it runs once, for cron.
+- The connector calls `CCMS_CONNECTOR_API_URL` only: https, or http to this machine. It refuses a
+  cookie file others can read, reads it again on every run (signing in again renews it), and
+  never prints it.
+- The change set is yours, so you cannot approve it: another reviewer approves it, and it is
+  merged as any other.
+- While an open change set holds a module a run would change (the previous run's, still in
+  review), the run writes nothing and says which change set holds it; the first run after it is
+  merged or abandoned picks the changes up.
+
+## Start a run from the source
+
+Instead of waiting for the schedule, the source can start a run: when an item changes, it calls
+the connector, which answers at once and queues the run. Start the connector with `--listen` and
+a secret only it and the source know:
+
+```sh
+export CCMS_CONNECTOR_WEBHOOK_SECRET=$(openssl rand -hex 32)   # give the source the same value
+node connectors/tracker/dist/main.js --mapping mapping.yaml --items items.json --listen 8080 --every 1440
+```
+
+It listens on `127.0.0.1:8080` (`--listen 0.0.0.0:8080` for every address); put it behind your
+reverse proxy with https when the source calls from elsewhere. With `--every` too, the schedule
+still runs, as a fallback for a call that never came. The source sends `POST /trigger`, signed:
+
+- **The signature** is the header `X-Openfolia-Signature: t=<unix seconds>,v1=<hex>`: HMAC-SHA256
+  with the secret over the timestamp, a full stop and the raw body, as lowercase hex (the recipe
+  the platform's own webhooks use). The body can be anything up to 64 KiB, the source's event for
+  instance: it is checked, never read. The run fetches the items from the source as any run does.
+
+  ```sh
+  body='{"event":"item.changed"}'; t=$(date +%s)
+  sig=$(printf '%s.%s' "$t" "$body" | openssl dgst -sha256 -hmac "$CCMS_CONNECTOR_WEBHOOK_SECRET" -hex | sed 's/^.* //')
+  curl -X POST https://connector.example.com/trigger -H "X-Openfolia-Signature: t=$t,v1=$sig" --data "$body"
+  ```
+
+- **Refused:** a missing or wrong signature, or one whose time lies more than five minutes behind
+  the connector's clock, more than a minute ahead, or before the connector started (401); the
+  same signed request sent again (409); a body over 64 KiB (413). After 60 such refusals a minute
+  from one address, it answers 429 (with `Retry-After`) instead; a correctly signed request is
+  never held back that way. Keep the source's clock right (one running behind is refused for that
+  long after each start of the connector), and sign every attempt anew. A 409 means the same
+  request arrived already, so its run is queued: treat it as delivered.
+- **Queued, never two at once.** The answer is 202, `{"run":"queued"}`, before the run starts.
+  Runs go one after the other, at most one a minute; triggers while a run waits fold into it
+  (`already-queued`), and one during a run asks for one more after it. Scheduled and triggered
+  runs share that queue.
+- **The same outcomes:** a triggered run is a run like any other. It stops at `nothing-new` or
+  `held`, or imports into a new change set submitted for review, and prints that line.
+- Stopping it (Ctrl-C, SIGTERM) closes the listener, drops the run still waiting and lets the run
+  under way finish.
+
+The connectors' READMEs list the markup they read, every report code and every mapping key.

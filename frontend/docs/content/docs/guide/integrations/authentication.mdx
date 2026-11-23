@@ -1,0 +1,75 @@
+---
+title: 'Authenticate with a service account token'
+description: 'Get a token for your integration, send it, and handle an expired, revoked or refused one.'
+articleId: 'guide.integrations.authentication'
+---
+
+A program that calls the API, such as a portal build, a pipeline or an agent, authenticates as a
+**service account** with a token of its own (`ccms_sat_…`). The token acts through the service
+account's roles, and nothing else.
+
+## Get a token
+
+- **From an admin:** an admin creates the service account, gives it a role and issues a token in
+  the editor ([Service accounts and tokens](/guide/admin/service-accounts)), or through the API
+  (`POST /service-accounts/{id}/tokens`). The token is shown once.
+- **The first one of a deployment**, before anyone can sign in, on the server's command line. It
+  makes the service account with the roles given when it does not exist yet, and prints the token
+  once:
+
+  ```sh
+  docker compose exec api node dist/database/service-token.main.js portal-build \
+    --role <role> --name "Portal build, production" --days 90
+  ```
+
+  The roles must exist, and none may hold `admin.roles`. For an account that exists already, leave
+  out `--role`: its roles are changed in the editor.
+
+For an integration that only reads released content, the role should hold **only `content.read`**,
+in the scope it needs (languages, module types, audience levels). Such a token reads `main` and
+release tags, never drafts.
+
+## Send it
+
+Send the token in the `Authorization` header of every request, and nowhere else:
+
+```sh
+curl -s https://docs.example.com/api/releases \
+  -H 'Authorization: Bearer ccms_sat_…' \
+  -H 'Accept: application/vnd.api+json'
+```
+
+Never put it in a URL. The token is meant for your server: keep it out of browser apps and apps you
+hand to others. Read it from your platform's secret store at run time, rather than writing it into
+code or a repository.
+
+## Expiry, rotation and revocation
+
+- **Expiry:** a token expires 90 days after it is issued by default, and at most 366 days after.
+  The editor offers 30, 90, 180 or 365 days; the command line takes `--days`.
+- **Rotation:** issue a new token, switch the client to it, then revoke the old one. Issue one token
+  per client, so you can revoke one without stopping the others.
+- **Revocation** applies from the next request, and cannot be undone. Deactivating the service
+  account stops all its tokens until it is reactivated.
+
+## When a token is refused
+
+| Status | `code`                        | What happened                                                      |
+| ------ | ----------------------------- | ------------------------------------------------------------------ |
+| 401    | `unauthorized`                | No token, or a wrong one.                                          |
+| 401    | `token-expired`               | The token has expired: issue a new one.                            |
+| 401    | `token-revoked`               | The token was revoked.                                             |
+| 403    | `service-account-deactivated` | The service account is deactivated.                                |
+| 403    | `forbidden`                   | The token's roles lack the permission the route needs.             |
+| 429    | `too-many-failed-attempts`    | Too many failed attempts from one address; wait for `Retry-After`. |
+
+Content outside the token's scope answers `404 not-found`, exactly like content that does not exist,
+so a route never reveals what lies outside it. Each route's permission is in the
+[permissions reference](/reference/permissions), and each code in the
+[error codes](/reference/errors).
+
+## Writing with a token
+
+A request that changes something (any method but `GET`, `HEAD` and `OPTIONS`) must send
+`Content-Type: application/vnd.api+json`, also without a body. See
+[JSON:API conventions](/guide/integrations/json-api).

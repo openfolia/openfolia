@@ -1,0 +1,26 @@
+= Instrument panel
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: instruments, warning lights
+
+[#intro]
+The instrument panel shows the speed, the warning and indicator lights and messages from the vehicle.
+
+[#img-cluster]
+image::demo-image:instrument-panel["Instrument panel with speedometer, display and warning lights",width=80%]
+<.> [callout#i-speed,x=0.25,y=0.5,label-x=0.25,label-y=0.06] Speedometer
+<.> [callout#i-display,x=0.5,y=0.5,label-x=0.5,label-y=0.06] Display with clock and messages
+<.> [callout#i-energy,x=0.75,y=0.5,label-x=0.75,label-y=0.06] Fuel gauge or battery charge
+<.> [callout#i-lights,x=0.5,y=0.86,label-x=0.9,label-y=0.94] Warning and indicator lights
+
+[variant#uk,when="market in (uk)"]
+====
+[#uk-text]
+On vehicles for the UK, the speedometer shows miles per hour, with kilometres per hour on the inner scale.
+====
+
+[#ref-lights]
+module::warning-lights[]

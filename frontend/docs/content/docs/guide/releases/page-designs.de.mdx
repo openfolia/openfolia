@@ -1,0 +1,175 @@
+---
+title: 'Seitengestaltungen'
+description: 'Die Gestaltung anlegen und ändern, mit der das PDF eines Handbuchs gedruckt wird, mit Live-Vorschau, und festlegen, welches Handbuch welche nutzt.'
+articleId: 'guide.releases.page-designs'
+---
+
+Eine Seitengestaltung bestimmt, wie das PDF eines Handbuchs aussieht: Seitenformat, Titelseite,
+Farben, Schriften, Kopf- und Fußzeile, Überschriften, Tabellen und Sicherheitshinweise.
+Gestaltungen sind Inhalt: Sie ändern sie in einer eigenen Überarbeitung, und sie gelten, sobald
+diese zusammengeführt ist. Siehe
+[Fast alles ist Inhalt](/de/guide/getting-started/content).
+
+## Die Seitengestaltungen öffnen
+
+1. Beginnen oder wählen Sie eine eigene Überarbeitung im Entwurf.
+2. Wählen Sie **Verwaltung** in der Seitenleiste, dann **Seitengestaltung**.
+
+Die Liste zeigt jede Gestaltung mit ihrer ID, ihrem Layout und der Zahl ihrer Probleme. Eine
+Gestaltung zu ändern braucht eine Rolle, die alle Inhalte bearbeiten darf; alle anderen sehen sie
+schreibgeschützt, mit dem Grund.
+
+![Die Liste der Seitengestaltungen, darüber die Standardgestaltung](/images/guide/de/page-design-list.webp)
+
+## Eine Gestaltung anlegen
+
+1. Wählen Sie **Neue Gestaltung**.
+2. Geben Sie unter **Name** einen Namen ein. Die **ID** wird daraus gebildet; sie lässt sich später nicht
+   ändern.
+3. Schalten Sie **Als Standardgestaltung verwenden** ein, damit jedes Handbuch ohne eigene
+   Gestaltung damit gedruckt wird.
+4. Wählen Sie **Gestaltung anlegen**. Die Gestaltung öffnet sich.
+
+## Eine Gestaltung ändern
+
+Wählen Sie eine Gestaltung in der Liste. Jede Änderung wird sofort in Ihrer Überarbeitung
+gespeichert; **Rückgängig** nimmt die letzte zurück. Die Abschnitte von oben nach unten:
+
+- **Layout:** wie die Titelseite aufgebaut ist: **Klassisch**, **Bildbetont** oder **Schlicht**.
+- **Seite:** das **Seitenformat** (**A4**, **US Letter** oder **A5**), die Ränder und
+  **Doppelseitig gedruckt**.
+- **Logo**, **Farben** und **Schriften**: siehe
+  [Schriften und Titelbilder](/de/guide/releases/page-design-assets).
+- **Felder der Titelseite:** welche Angaben die Titelseite zeigt, in welcher Reihenfolge. Ziehen
+  Sie eine Zeile am Griff.
+- **Text auf Titel- und Rückseite:** eigener Text auf der Titelseite (unten).
+- **Rückseite:** das Impressum, als letzte Seite oder auf der Innenseite des Titelblatts (unten).
+- **Kopf- und Fußzeile:** was jede Innenseite links, in der Mitte und rechts zeigt, etwa den
+  **Titel des Handbuchs** und die **Seitenzahl**.
+- **Überschriften**, **Fließtext**, **Tabellen** und **Schritte und Hinweise**.
+- **Sicherheitshinweise:** die **Sicherheitsnorm**, **ANSI Z535** oder **ISO 3864**. Ihre Farben,
+  Signalwörter und Symbole sind **Von der Norm festgelegt**.
+
+![Eine Seitengestaltung: Name, Layout und Seite neben der Vorschau](/images/guide/de/page-design-editor.webp)
+
+## Die Vorschau
+
+**Vorschau** zeigt die Titelseite und eine Innenseite eines echten Handbuchs mit der Gestaltung,
+während Sie sie ändern. Wählen Sie darüber **Handbuch**, **Variante** und **Sprache**, und blättern
+Sie mit den Pfeilen. **Layoutwarnungen** darunter sagen, wenn etwas nicht passt, etwa eine
+gekürzte Kopfzeile; **Alles passt.**, wenn alles stimmt.
+
+## Text auf der Titelseite
+
+**Text auf Titel- und Rückseite** nimmt freien Text für die Stellen des Layouts auf, etwa **Über dem
+Titel** oder **Fuß der Titelseite**:
+
+1. Wählen Sie oben die **Sprache**. Die Ausgangssprache steht zuerst.
+2. Öffnen Sie eine Stelle und schreiben Sie. Um Daten des Handbuchs wie die Produktversion
+   einzufügen, wählen Sie **Einfügen**, dann **Platzhalter**, oder tippen Sie <kbd>{"{"}</kbd>.
+3. Für eine andere Sprache wählen Sie diese und schreiben ihren eigenen Text. Eine Sprache ohne
+   eigenen Text druckt den der Ausgangssprache: Die Zahl neben jeder Sprache zählt die Texte, die
+   ihr fehlen.
+
+![Der Text der Titelseite auf Englisch, mit einem Platzhalter, neben der Vorschau](/images/guide/de/page-design-regions.webp)
+
+## Rückseite und Impressum
+
+**Rückseite** druckt das Impressum: die Herstellerangaben, die Dokumentnummer, das Datum der
+Veröffentlichung und einen Urheberrechtsvermerk.
+
+1. Schalten Sie **Rückseite drucken** ein.
+2. Wählen Sie unter **Position** **Letzte Seite** (nach dem Inhalt; bei doppelseitigem Druck eine
+   linke Seite) oder **Innenseite des Titelblatts** (auf der Rückseite des Titelblatts, vor dem
+   Inhaltsverzeichnis).
+3. Schalten Sie **Dokumentnummer zeigen** und **Datum der Veröffentlichung zeigen** ein oder aus.
+4. Geben Sie den **Urheberrechtsvermerk** ein. Bei mehreren Sprachen wählen Sie über dem Feld
+   eine Sprache, um ihr einen eigenen Vermerk zu geben; eine Sprache ohne eigenen druckt den der
+   Ausgangssprache.
+
+Den eigenen Text der Rückseite bearbeiten Sie unter **Text auf Titel- und Rückseite**. Die
+Veröffentlichung und ihr Datum werden eingesetzt, wenn das PDF einer Veröffentlichung entsteht,
+etwa **2.3** und **20. November 2026**; die PDF-Vorschau und ein Download vor einer
+Veröffentlichung lassen sie weg.
+
+![Der Abschnitt Rückseite mit den Herstellerangaben aus den Projekteinstellungen](/images/guide/de/page-design-back-page.webp)
+
+### Die Herstellerangaben
+
+Den Hersteller legen Sie einmal für das Projekt fest, nicht je Gestaltung: Wählen Sie
+**Verwaltung**, **Projekteinstellungen**, dann **Hersteller**, in einer eigenen Überarbeitung.
+Geben Sie **Name**, **Adresse** (jede Adresszeile in einer eigenen Zeile), **Kontakt** und
+**Website** ein (eine vollständige Adresse wie `https://example.com`). Die Rückseite jeder
+Gestaltung druckt sie, ebenso jeder Text mit einem Hersteller-Platzhalter wie **Herstellername**.
+
+Schalten Sie **Vor einer Veröffentlichung ohne Herstellerangaben warnen** ein, damit die Prüfungen
+jedes Handbuchs **Herstellerangaben fehlen** melden, solange die Angaben leer sind.
+
+![Die Herstellerangaben in den Projekteinstellungen](/images/guide/de/settings-manufacturer.webp)
+
+## Kleine Seiten: A5 und Faltblätter
+
+Für kurze Dokumente wie ein [Sicherheitsblatt](/de/guide/manuals/safety-leaflet) wählen Sie **A5**,
+das Layout **Schlicht**, kleinere Schrift und Ränder. Die Gestaltung **Safety leaflet** der
+Beispielinhalte ist so eine. Ein Sicherheitshinweis bleibt immer ganz auf einer Seite. Einer, der
+höher ist als eine ganze Seite, wird auf mehrere Seiten verteilt, und die Prüfungen des Handbuchs
+melden **Sicherheitshinweis auf mehrere Seiten verteilt**.
+
+## Welche Gestaltung ein Handbuch nutzt
+
+- Der Standard: **Standardgestaltung** über der Liste. Handbücher ohne eigene Gestaltung werden
+  damit gedruckt. Sie zu ändern braucht eine Rolle, die die Projekteinstellungen ändern darf; in den
+  veröffentlichten Inhalten beginnt **In einem Entwurf ändern** eine Überarbeitung dafür.
+- Die eigene eines Handbuchs: in den **Einstellungen** des Handbuchs unter
+  **Seitengestaltung**. **Projektstandard (…)** folgt dem
+  Standard und nennt ihn, etwa **Projektstandard (Eingebaute Gestaltung)**.
+
+Die PDF-Vorschau und die Dateien einer Veröffentlichung nennen die verwendete Gestaltung, etwa
+**Gestaltung: Eingebaute Gestaltung**. Ein Handbuch, das eine nicht vorhandene Gestaltung nennt, wird mit der
+eingebauten Gestaltung gedruckt, und seine Prüfungen melden **Unbekannte Seitengestaltung**.
+
+Eine Gestaltung, die der Standard oder ein Handbuch noch nutzt, lässt sich nicht löschen. Wählen
+Sie dort zuerst eine andere Gestaltung.
+
+## Eigene Vorlagen
+
+Eine Organisation kann ihre PDFs mit einer eigenen Typst-Vorlage gestalten statt mit der des
+Layouts. Eine Vorlage ist ein Ordner im Inhalts-Repository, `templates/<Name>/`, mit der
+Einstiegsdatei `manual.typ`. Sie ist Inhalt: Sie ändern ihre Dateien in einer eigenen
+Überarbeitung, im Editor (siehe [Eigene Vorlagen](/de/guide/releases/page-design-templates)) oder
+indem Sie sie in das Repository übertragen, und sie werden mit der Überarbeitung geprüft, die sie
+ändert.
+
+1. Wählen Sie unter **Layout** die Vorlage bei **Vorlage**. **Die Vorlage des Layouts** nutzt
+   keine eigene.
+2. Die Vorschau zeigt das Handbuch damit. Das Layout bestimmt weiterhin die Plätze auf der
+   Titelseite.
+
+**Wo Sie beginnen.** Die Beispielvorlage ist das Layout **Klassisch** als eigene Dateien:
+`manual.typ` (die Titelseite), `design.typ` (die Einstellungen der Gestaltung, Kopf- und
+Fußzeile, die Rückseite) und `default.typ` (der Stil jedes Blocks). In `templates/<Name>/`
+kopiert, druckt sie genau das, was **Klassisch** druckt; ändern Sie, was Sie brauchen. Die
+Beispielinhalte haben sie als `templates/example/`.
+
+**Was eine Vorlage festlegt.** Die Funktionen, die das erzeugte Handbuch aufruft: `manual` (eine
+Show-Regel über das ganze Dokument), `anchor`, `safety`, `admonition`, `procedure`, `ui`,
+`code-span`, `kbd`, `xref` und `unconverted`, und wenn sie will, `attachment`, `header-cell`,
+`faq`, `term`, `glossary-entry`, `callout-image` und `callout-ref`. Die Einstellungen der
+Gestaltung liest sie mit `json(bytes(sys.inputs.at("openfolia-design")))`, ihre Texte aus dem Zustand
+`"openfolia-design"`. Jedes PDF muss weiterhin PDF/UA-1 erfüllen: Ein Bild braucht einen
+Alternativtext oder ist als Schmuck markiert.
+
+**Was eine Vorlage lesen kann.** Nur die Dateien in ihrem eigenen Ordner (mit relativen Pfaden
+wie `#import "parts.typ"` oder `#image("logo.svg", alt: "…")`), Logo, Schriften und Bilder der
+Gestaltung und die Bilder des Handbuchs. Nie eine andere Vorlage, ein Modul, die
+Projekteinstellungen, die Dateien des Servers oder das Netz; Typst-Pakete lassen sich nicht
+importieren. Eine Vorlage, die zu lange läuft oder zu viel Speicher braucht, wird angehalten.
+
+**Eine Vorlage mit einem Fehler.** Die Vorschau zeigt, wo: Datei, Zeile und Spalte, und warum. Das
+PDF wird damit nicht erstellt, und die Prüfungen melden **Vorlage der Seitengestaltung
+fehlerhaft** als blockierend, bei jedem Handbuch, das die Gestaltung nutzt, und in einer
+Überarbeitung, die die Gestaltung oder ihre Vorlage ändert, bei der Gestaltung selbst: Eine solche
+Überarbeitung lässt sich erst übernehmen, wenn die Vorlage behoben ist. Bis dahin bleibt die
+veröffentlichte Vorlage in Gebrauch. Eine Gestaltung, die eine Vorlage nennt, die es im Repository
+nicht gibt, wird mit der Vorlage ihres Layouts gedruckt, und die Prüfungen melden **Unbekannte
+Vorlage der Seitengestaltung**.

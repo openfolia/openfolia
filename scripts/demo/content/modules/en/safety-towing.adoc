@@ -1,0 +1,28 @@
+= Jacking and hot parts
+:schema-version: 1
+:module-type: safety
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: jack, hot brakes
+
+[safety#jack,severity=danger,symbols=w001]
+.Vehicle falling off the jack
+====
+[#jack-text]
+A vehicle on a jack can slip and crush anyone underneath it.
+
+[#jack-measures]
+* [[jack-m1]]Never lie or reach under a vehicle that stands only on the jack.
+* [[jack-m2]]Use only the [.term.jacking-point]##jacking points## marked on the sill.
+====
+
+[safety#hot-brakes,severity=caution,symbols=w017]
+.Hot brakes and exhaust
+====
+[#hot-brakes-text]
+After driving, brake discs and, on the petrol model, the exhaust can be hot enough to burn skin.
+
+[#hot-brakes-measures]
+* [[hot-brakes-m1]]Let the wheels cool down before you touch the brakes.
+====

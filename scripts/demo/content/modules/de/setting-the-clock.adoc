@@ -1,0 +1,22 @@
+= Uhr stellen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Uhr, Uhrzeit, Anzeige
+
+[#intro]
+Das Fahrzeug stellt die Uhr automatisch nach dem Navigationssignal. Sie können sie auch von Hand stellen.
+
+[procedure#steps]
+.Uhr stellen
+. [[step-menu]]Öffnen Sie im Mitteldisplay [.ui]##Einstellungen## › [.ui]##Datum und Uhrzeit##.
+. [[step-auto]]Schalten Sie [.ui]##Automatische Uhrzeit## aus.
+. [[step-set]]Stellen Sie Stunden und Minuten mit den Pfeilen ein und tippen Sie auf [.ui]##Speichern##.
+
+[NOTE#note-auto]
+====
+[#note-auto-text]
+Bei eingeschalteter automatischer Uhrzeit stellt sich die Uhr auch selbst auf Sommerzeit um und zurück.
+====

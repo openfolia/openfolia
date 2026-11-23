@@ -1,0 +1,21 @@
+= Warning lights
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: warning lights
+
+[#intro]
+A red light means: stop as soon as it is safe. A yellow light means: have it checked soon.
+
+[#lights-table,cols="1,2",options=header]
+.Warning lights and what to do
+|===
+|[[wl-h-light]]Light |[[wl-h-do]]What to do
+|[[wl-brake]]Brake system (red) |[[wl-brake-do]]Stop. Check the brake fluid level. Do not drive on.
+|[[wl-airbag]]Airbag (red) |[[wl-airbag-do]]Have the airbag system checked straight away.
+|[[wl-tyre]]Tyre pressure (yellow) |[[wl-tyre-do]]Check the tyre pressures and correct them.
+|[[wl-battery]]12 V battery (red) |[[wl-battery-do]]Stop and call roadside assistance.
+|[[wl-power]]Reduced power (yellow) |[[wl-power-do]]Drive on carefully and have the vehicle checked.
+|===

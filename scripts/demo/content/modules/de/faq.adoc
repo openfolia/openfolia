@@ -1,0 +1,30 @@
+= Häufige Fragen
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[variant#electric,when="drive in (electric)"]
+====
+[faq#faq-noise]
+.Warum summt das Fahrzeug bei langsamer Fahrt?
+=====
+[#faq-noise-a]
+Das Elektromodell gibt bis 20 km/h ein Geräusch ab, damit Fußgänger es kommen hören. Das ist gesetzlich vorgeschrieben.
+=====
+====
+
+[faq#faq-clock]
+.Warum geht die Uhr eine Stunde falsch?
+====
+[#faq-clock-a]
+Die Uhr stellt sich nur dann selbst auf Sommerzeit um, wenn die automatische Uhrzeit eingeschaltet ist. Stellen Sie sie wie unter „Uhr stellen“ beschrieben.
+====
+
+[faq#faq-tyres]
+.Wie oft sollte ich den Reifendruck prüfen?
+====
+[#faq-tyres-a]
+Alle zwei Wochen und vor jeder längeren Fahrt, bei kalten Reifen.
+====

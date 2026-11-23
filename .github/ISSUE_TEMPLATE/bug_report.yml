@@ -1,0 +1,53 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **A security vulnerability?** Don't open an issue: report it privately as `SECURITY.md` (at the root of the repository) describes, through the repository's Security tab.
+
+        Please keep names of organisations, clients and people out of the report, and use invented example content.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The steps, with a minimal example (a request, a module, a manifest) if you have one.
+      placeholder: |
+        1. pnpm nx run api:setup-local && pnpm nx run api:serve-local
+        2. GET /modules?ref=main
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release, or the commit on main.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - API
+        - Editor
+        - PDF rendering
+        - Content model or content repository
+        - MCP server
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Logs (without tokens or personal data), screenshots, your environment (Node, OS, browser).

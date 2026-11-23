@@ -1,0 +1,9 @@
+# Cuts the whole stack off the network, for deploy/semantic-search-test.sh: the stack's default
+# network becomes internal too (no route out of the host, no published port). Never part of a
+# deployment: an internal network publishes nothing, so the editor and the API are unreachable.
+services:
+  api:
+    ports: !reset []
+networks:
+  default:
+    internal: true

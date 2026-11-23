@@ -1,0 +1,147 @@
+---
+title: 'Schnellstart'
+description: 'Eine Installation mit einem Befehl oder Schritt für Schritt starten und den ersten Admin anlegen.'
+articleId: 'guide.self-hosting.quick-start'
+---
+
+Sie brauchen Docker mit Compose 2.24 oder neuer, unter Linux oder auf einem beliebigen Rechner mit
+Docker, und einen Checkout des Repositorys.
+
+## Ein Befehl
+
+```sh
+deploy/self-host.sh --admin you@example.com
+```
+
+Das Skript:
+
+1. legt die Einstellungsdatei `deploy/.env` an, wenn es keine gibt: ein zufälliges
+   Postgres-Passwort (die Datei nur für Sie lesbar), `CCMS_PUBLIC_URL` (die Adresse des Editors,
+   zunächst `http://127.0.0.1:8080/`) und den ersten Admin, `CCMS_FIRST_ADMIN_EMAIL`. Eine
+   vorhandene Datei bleibt unverändert;
+2. baut die Images aus dem Checkout oder lädt sie, wenn `OPENFOLIA_IMAGES` gesetzt ist;
+3. bietet die Beispielinhalte an, wenn es noch kein Inhalts-Repository gibt (nie erzwungen);
+4. startet den Stack und wartet, bis jeder Dienst bereit ist;
+5. gibt die Adresse des Editors und den Einmal-Link des ersten Admins aus.
+
+Öffnen Sie den Link, wählen Sie ein Passwort, und Sie sind als Admin angemeldet.
+
+| Option                         | Was sie tut                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `--admin <email>`              | Der erste Admin. Wird erfragt, wenn nicht gesetzt und ein Terminal da ist.             |
+| `--name <name>`                | Sein Name (Standard: der Teil der Adresse vor `@`).                                    |
+| `--sample`, `--no-sample`      | Die Beispielinhalte ohne Rückfrage einspielen oder nie.                                |
+| `--yes`                        | Nichts fragen: keine Beispielinhalte ohne `--sample`, kein Admin ohne `--admin`.       |
+| `--build`, `--pull`, `--as-is` | Die Images: aus dem Checkout gebaut, von `OPENFOLIA_IMAGES` geladen oder wie sie sind. |
+| `--help`                       | Die Optionen auflisten.                                                                |
+
+Sie können es jederzeit erneut ausführen, etwa nach einem Upgrade: Es behält die
+Einstellungsdatei, die Volumes und die Inhalte und legt keinen zweiten Admin an.
+
+## Schritt für Schritt
+
+1. **Einstellungen.** Legen Sie `deploy/.env` mit einem Postgres-Passwort an und bewahren Sie die
+   Datei auf: Postgres liest das Passwort nur beim ersten Start.
+
+   ```sh
+   cd deploy
+   printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+   chmod 600 .env
+   ```
+
+2. **Images.** Laden Sie die veröffentlichten Images in einer festen Version:
+
+   ```sh
+   printf 'OPENFOLIA_IMAGES=ghcr.io/<owner>/openfolia\nOPENFOLIA_VERSION=v1.2.3\n' >> .env
+   docker compose pull
+   ```
+
+   Das lädt die API (der Worker läuft mit demselben Image), den Editor und das Backup-Image. Den
+   MCP-Server lädt es mit, wenn Sie ihn betreiben (`docker compose --profile mcp pull`).
+
+   Oder bauen Sie sie aus dem Checkout und nennen Sie dann in jedem `docker compose`-Befehl beide
+   Dateien (oder setzen Sie `COMPOSE_FILE=compose.yaml:compose.build.yaml` in der
+   Einstellungsdatei):
+
+   ```sh
+   docker compose -f compose.yaml -f compose.build.yaml build
+   ```
+
+   **Eigene Ergänzungen.** Andere Seiten ergänzen Einstellungen in `deploy/api.env` und Geheimnisse
+   aus Dateien in einer `compose.override.yaml` neben `compose.yaml`. Machen Sie `deploy/api.env`
+   von Anfang an nur für Sie lesbar (in `deploy/`: `touch api.env && chmod 600 api.env`), da sie Geheimnisse enthalten
+   kann. Compose liest `compose.override.yaml` von selbst nur, wenn ein Befehl keine Datei mit `-f`
+   nennt und `COMPOSE_FILE` nicht gesetzt ist. Mit `-f` nennen Sie sie mit
+   (`-f compose.yaml -f compose.build.yaml -f compose.override.yaml`). `deploy/self-host.sh` nennt
+   seine Dateien immer; setzen Sie deshalb für das Skript, und am besten für jeden Befehl,
+   `COMPOSE_FILE=compose.yaml:compose.override.yaml` (beim Bauen mit `compose.build.yaml`
+   dazwischen) in `deploy/.env`. Sonst bleibt die Ergänzung stillschweigend unbeachtet.
+
+3. **Inhalte.** Legen Sie Ihr Inhalts-Repository auf das Daten-Volume
+   ([Inhalts-Repository](/de/guide/self-hosting/content-repository)) oder zum Ausprobieren die
+   Beispielinhalte:
+
+   ```sh
+   docker compose run --rm --no-deps api node docker/sample-content.mjs
+   ```
+
+4. **Starten** und den Zustand der API prüfen:
+
+   ```sh
+   docker compose up -d --wait
+   curl -s http://127.0.0.1:3000/health
+   ```
+
+   Der Editor ist unter `http://127.0.0.1:8080` erreichbar, die API unter `http://127.0.0.1:3000`.
+
+5. **Der erste Admin**: siehe unten.
+6. **Ein erstes Token** für API-Clients, einmal ausgegeben. Der Account wird mit den angegebenen
+   Rollen (über ihre IDs) angelegt, wenn es ihn noch nicht gibt:
+
+   ```sh
+   docker compose exec api node dist/database/service-token.main.js <account> --role <role>
+   ```
+
+   Weitere Tokens erstellen Sie unter **Verwaltung**, **Service-Accounts**
+   ([Service-Accounts](/de/guide/admin/service-accounts)).
+
+## Der erste Admin
+
+**Aus den Einstellungen.** Setzen Sie `CCMS_FIRST_ADMIN_EMAIL` (und `CCMS_FIRST_ADMIN_NAME`) vor
+dem ersten Start. Beim ersten Start auf einer Instanz **ohne Benutzer** legt die API diesen
+Benutzer mit der Rolle `admin` an (alle Berechtigungen; auch die Rolle, falls sie fehlt). Ist die
+Anmeldung mit Passwort an, schreibt sie einen Einmal-Link zum Wählen des Passworts ins Log. Sobald
+die Instanz einen Benutzer hat, bewirkt die Einstellung nichts mehr außer einem Hinweis im Log.
+
+**Der Link im Log** macht einen einzigen Befehl möglich, aber Logs werden aufbewahrt und kopiert.
+Deshalb gilt er **eine Stunde**, einmal, und schließt sich, sobald sich der Admin auf andere Weise
+anmeldet (beim Anbieter oder mit einem Code per E-Mail). Wer das Log der API in dieser Stunde lesen
+kann, kann ihn verwenden. Damit er nicht ins Log gelangt, setzen Sie
+`CCMS_FIRST_ADMIN_LINK_LOG=false`: Der Admin wird dann ohne Link angelegt.
+
+**Über die Kommandozeile**, jederzeit. Der Befehl legt den Benutzer an (und die Rolle `admin`,
+falls sie fehlt) und gibt einen Link nur in Ihrem Terminal aus, nie ins Log. Der Link gilt
+`CCMS_INVITE_DAYS` Tage (Standard 7; gesetzt in `deploy/api.env`), einmal; ein erneuter Aufruf
+erzeugt einen neuen, und der frühere, auch der aus dem Log, gilt nicht mehr:
+
+```sh
+docker compose exec api node dist/database/first-admin.main.js you@example.com \
+  --name "Ihr Name" --editor https://docs.example.com/
+```
+
+`--editor` ist die Adresse des Editors, wie man ihn öffnet (Standard: `CCMS_PUBLIC_URL`). Mit
+OpenID Connect oder nur mit Codes per E-Mail meldet sich der Admin auf diesem Weg an statt mit
+einem Passwort: siehe [OpenID Connect](/de/guide/self-hosting/oidc) und
+[Anmeldung mit einem Code per E-Mail](/de/guide/self-hosting/email-code-sign-in). Alle anderen
+fügen Sie unter **Verwaltung**, **Benutzer** hinzu
+([Benutzer und Rollen](/de/guide/admin/users-and-roles)).
+
+## Vor dem echten Betrieb
+
+- Stellen Sie einen Reverse Proxy mit TLS davor und setzen Sie `CCMS_PUBLIC_URL` auf seine
+  `https://`-Adresse: [Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy).
+- Richten Sie die Backups ein: [Backups](/de/guide/self-hosting/backups).
+- Hat Ihre Organisation einen Identitätsanbieter, melden Sie sich damit an:
+  [OpenID Connect](/de/guide/self-hosting/oidc).
+- Lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer, wo sich Personen anmelden:
+  [Anmeldemodi](/de/guide/self-hosting/authentication).

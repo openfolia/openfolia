@@ -1,0 +1,50 @@
+---
+title: OpenFolia-Dokumentation
+description: Modulare Dokumentation, zu Handbüchern für jede Variante und Sprache zusammengestellt.
+---
+
+OpenFolia ist eine Headless-Dokumentationsplattform. Inhalte werden einmal als kleine Module
+geschrieben und dann zu Handbüchern für jede Produktvariante und Sprache zusammengestellt.
+Autorinnen und Autoren arbeiten in einem Web-Editor an Entwürfen, die vor der Freigabe geprüft
+werden. Jede Veröffentlichung wird über eine JSON:API ausgeliefert und als PDF und HTML erzeugt, sodass
+derselbe Inhalt Druck, Portal und andere Systeme erreicht.
+
+Fast alles darin ist Inhalt: die Module, aber auch die Handbücher, die Projekteinstellungen, die
+Seitengestaltungen und die Begriffe, alle in Git versioniert und über die Prüfung geändert. Siehe
+[Fast alles ist Inhalt](/de/guide/getting-started/content).
+
+<AgentInstall lang="de" />
+
+<Cards>
+  <Card
+    title="Erste Schritte"
+    href="/de/getting-started"
+    description="Auf dem eigenen Rechner mit den Beispielinhalten starten."
+  />
+  <Card
+    title="Selbst betreiben"
+    href="/de/self-hosting"
+    description="Mit Containern auf einem Server betreiben."
+  />
+  <Card
+    title="API-Referenz"
+    href="/de/api"
+    description="Die Delivery API für Integrationen und die Management API."
+  />
+  <Card
+    title="Benutzerhandbuch"
+    href="/de/guide"
+    description="Für Schreibende, Prüfende, Übersetzende und Admins."
+  />
+</Cards>
+
+## Referenz
+
+Die Referenz wird aus dem Quellcode erzeugt und passt so immer zu ihrer Version:
+
+- [API-Referenz](/de/api): jede Route der Delivery API und der Management API, mit Schemas,
+  Codebeispielen und einer Testumgebung.
+- [Fehlercodes](/de/reference/errors), [Berechtigungen](/de/reference/permissions) und
+  [Einstellungen](/de/reference/settings).
+- [Projektkonfiguration (`openfolia.yaml`)](/de/reference/project-config),
+  [Importformat](/de/reference/import-format) und die [MCP-Werkzeuge](/de/reference/mcp-tools).

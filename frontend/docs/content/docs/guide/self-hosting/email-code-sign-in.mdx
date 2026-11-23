@@ -1,0 +1,81 @@
+---
+title: 'Sign-in with a code by email'
+description: 'One-time codes by email, beside passwords or as the only way to sign in: the settings, the limits and when a code ends.'
+articleId: 'guide.self-hosting.email-code-sign-in'
+---
+
+With a code by email, people sign in without a password: the sign-in page offers **Email me a
+code**, the person enters their address, and gets a six-digit code and a link that signs them in.
+It needs [email](/guide/self-hosting/email) set up, and never works in demo mode.
+
+## Beside passwords
+
+`CCMS_EMAIL_CODE_SIGN_IN` is on by default wherever email (`CCMS_MAIL_URL`, and the
+[secret key](/guide/self-hosting/secret-key) it needs) is set up and
+[password sign-in](/guide/self-hosting/password-sign-in) is on. Set it to `off` to turn it off.
+
+Anyone with an active account and an email address may use it, with a password or without one, so
+people who prefer codes never need to set one.
+
+## Codes alone
+
+To sign in with codes only, without passwords or an identity provider, set up
+[email](/guide/self-hosting/email) in `deploy/.env` (`compose.yaml` passes the `CCMS_MAIL_*`
+settings on from there):
+
+```sh
+CCMS_MAIL_URL=smtp://mail.example.com:587
+CCMS_MAIL_FROM=docs@example.com
+CCMS_PUBLIC_URL=https://docs.example.com/
+```
+
+and the two sign-in settings in `deploy/api.env` (`compose.yaml` does not pass them on, so in
+`deploy/.env` they would change nothing):
+
+```sh
+CCMS_PASSWORD_SIGN_IN=off
+CCMS_EMAIL_CODE_SIGN_IN=on
+```
+
+With `CCMS_PASSWORD_SIGN_IN=off`, only an explicit `on` offers codes, and `on` without
+`CCMS_MAIL_URL` is refused at start-up. The sign-in page then shows only **Email me a code**. The
+first admin (`CCMS_FIRST_ADMIN_EMAIL`, or `first-admin`) signs in with a code at their address: the
+start-up log says so instead of printing a link.
+
+The same setting also offers codes beside [OpenID Connect](/guide/self-hosting/oidc) with passwords
+off. Keep in mind that a code is a way in that does not pass through the provider.
+
+## The code
+
+- **Six digits and a link**, each working once, for `CCMS_EMAIL_CODE_MINUTES` minutes (1 to 60,
+  default 10). The link is in the email only when `CCMS_PUBLIC_URL` is set.
+- **A new code** revokes the earlier one.
+- **The same answer** for any address, known or not, so the page never tells whether someone has an
+  account.
+
+## Limits
+
+Requests for a code and wrong codes each count per account, under `CCMS_PASSWORD_FAILURES_MAX`
+(apart from passwords and from each other), and per client address, under
+`CCMS_AUTH_FAILURES_MAX`. Past either, the answer is 429 `too-many-failed-attempts`. Once the wrong
+codes use up the account's tries, the code is revoked. Each code also takes five tries at most.
+
+## When an open code ends
+
+A code, and its link, stop working when:
+
+- the person sets a password through a link, or changes their password;
+- the account is deactivated;
+- the person's address changes, by an admin, by the identity provider at sign-in or by the seed:
+  a code works only while the address it was mailed to is still the person's;
+- it is used, runs out, or a newer code replaces it.
+
+A code asked for while the password is set or changed ends with it too.
+
+## Turning it off
+
+Setting `CCMS_EMAIL_CODE_SIGN_IN=off` refuses new codes and ends the sessions begun with a code.
+Sessions have the same limits as every other sign-in: 8 hours without a request
+(`CCMS_SESSION_IDLE_MINUTES`) and 7 days at most (`CCMS_SESSION_MAX_HOURS`).
+
+As with passwords, leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset where people sign in.

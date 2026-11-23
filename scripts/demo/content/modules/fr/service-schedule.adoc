@@ -1,0 +1,32 @@
+= Plan d'entretien
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: technician
+:facet-product: fenna
+:keywords: entretien, inspection
+
+[#intro]
+Effectuez l'entretien du véhicule à la première des deux échéances atteinte.
+
+[#table,cols="2,1",options=header]
+.Plan d'entretien
+|===
+|[[ss-h-work]]Travaux |[[ss-h-interval]]Intervalle
+|[[ss-inspection]]Inspection avec lecture de la mémoire des défauts |[[ss-inspection-i]]Tous les ans ou tous les 20 000 km
+|[[ss-brake]]Remplacer le liquide de frein |[[ss-brake-i]]Tous les 2 ans
+|[[ss-filter]]Remplacer le filtre d'habitacle |[[ss-filter-i]]Tous les ans
+|[[ss-wipers]]Remplacer les balais d'essuie-glace |[[ss-wipers-i]]Tous les ans
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Modèle essence : vidangez l'huile moteur et remplacez son filtre tous les ans ou tous les 20 000 km, et remplacez les bougies d'allumage tous les 60 000 km.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Modèle électrique : contrôlez le système haute tension et le liquide de refroidissement de la batterie tous les 2 ans.
+====

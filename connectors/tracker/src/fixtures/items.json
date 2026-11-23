@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "id": "PRJ-101",
+      "kind": "feature",
+      "state": "done",
+      "title": "Faster charging",
+      "body": "The battery now charges *twice as fast*.\n\nh1. What changes\n\n* Charging takes 2 hours.\n* The charger shows the time left.\n\n{warning:title=Hot surface}\nLet the charger cool down before you touch it.\n{warning}\n\nSee [PRJ-102] too.",
+      "labels": ["release-note", "public"],
+      "fields": { "models": ["Small", "Large"], "region": "North" },
+      "updatedAt": "2026-11-01"
+    },
+    {
+      "id": "PRJ-102",
+      "kind": "feature",
+      "state": "done",
+      "title": "Quiet mode",
+      "body": "A new quiet mode lowers the fan speed.\n\n{roadmap-widget}\n\n-Old behaviour- is gone.",
+      "labels": ["release-note", "internal-only"],
+      "fields": { "models": ["Large", "Mini"], "region": "South" },
+      "updatedAt": "2026-11-03"
+    },
+    {
+      "id": "PRJ-103",
+      "kind": "bug",
+      "state": "done",
+      "title": "Fix the display flicker",
+      "body": "The display no longer flickers.",
+      "labels": [],
+      "fields": {}
+    },
+    {
+      "id": "PRJ-104",
+      "kind": "feature",
+      "state": "open",
+      "title": "Remote start",
+      "body": "Not done yet.",
+      "labels": ["release-note"],
+      "fields": {}
+    }
+  ]
+}

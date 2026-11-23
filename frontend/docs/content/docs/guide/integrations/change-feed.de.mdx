@@ -1,0 +1,89 @@
+---
+title: 'Änderungs-Feed'
+description: 'Verfolgen, was veröffentlicht, zurückgezogen oder als veraltet markiert wurde, Seite für Seite mit einem Cursor, und eine Kopie der Inhalte aktuell halten.'
+articleId: 'guide.integrations.change-feed'
+---
+
+`GET /changes` meldet, was veröffentlicht, zurückgezogen oder als veraltet markiert wurde, in der
+Reihenfolge, in der es geschah, so wie der Leser es lesen darf. Ein Abnehmer, der ausgefallen war,
+holt ab seinem Cursor auf; einer, der neu beginnt, erhält zuerst einen Gesamtstand. Der Feed
+gehört zur [Delivery API](/de/api/delivery) und braucht ein Token, dessen Rolle `content.read`
+enthält (siehe [Authentifizierung](/de/guide/integrations/authentication)).
+
+## Den Feed lesen
+
+1. Fragen Sie die erste Seite ohne Cursor ab:
+
+   ```sh
+   curl -gs -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/changes?page[size]=200"
+   ```
+
+   Die erste Seite beginnt mit einem Gesamtstand: ein Ereignis `chunk.upserted` für jeden Chunk,
+   den Sie in der jetzt gültigen Veröffentlichung lesen dürfen (vor der ersten Veröffentlichung
+   keiner), dann die Ereignisse danach.
+
+2. Speichern Sie, was die Ereignisse sagen, und behalten Sie dann `meta.page.cursor` (auch in
+   `links.next`).
+3. Fragen Sie damit die nächste Seite ab: `?page[cursor]=<cursor>`. Jede Seite hat einen Cursor,
+   auch wenn Sie aufgeholt haben (`meta.upToDate` ist dann true). Warten Sie eine Minute oder auf
+   einen [Webhook](/de/guide/integrations/webhooks) und fragen Sie erneut.
+
+`page[size]` ist standardmäßig 50, höchstens 200. Kein Ereignis wird über Seiten hinweg
+ausgelassen oder doppelt gemeldet, was auch immer in der Zwischenzeit veröffentlicht wird. Ein
+zweimal angewendetes Ereignis ändert nichts weiter. Speichern Sie den Cursor deshalb erst, nachdem
+Sie seine Seite gespeichert haben: Ein Absturz dazwischen meldet diese Seite erneut.
+
+## Die Ereignisse
+
+Jeder Eintrag ist ein `Change`: Seine `id` ist der Idempotenzschlüssel des Ereignisses,
+`attributes` enthält `event`, `occurredAt` und `data`.
+
+| Ereignis                                 | Was es meldet                                                                                                                                             |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `manual.released`, `module.released`     | Eine Veröffentlichung hat ein Handbuch oder ein Modul geändert, so wie Webhooks es senden.                                                                |
+| `release.withdrawn`                      | Eine Veröffentlichung wurde zurückgezogen.                                                                                                                |
+| `module.deprecated`, `manual.deprecated` | Ein Modul oder Handbuch wurde als veraltet markiert, mit seinem Ersatz, wenn Sie diesen lesen dürfen.                                                     |
+| `chunk.upserted`                         | Ein [Chunk](/de/guide/integrations/chunks) ist neu oder geändert: `chunkId`, `moduleId`, `lang`, `contentHash` und die `release`, in der er zu lesen ist. |
+| `chunk.removed`                          | Einen Chunk entfernen: dieselben IDs und ein `reason`.                                                                                                    |
+
+Die ersten fünf haben genau die Form und die Schlüssel, die die
+[Webhooks](/de/guide/integrations/webhooks) senden, ein Abnehmer kann also beides nutzen. Einen
+geänderten Chunk lesen Sie mit `GET /chunks` bei `?ref=<data.release.commit>` mit `filter[module]`
+und `filter[lang]`. Berechnen Sie sein Embedding nur dann neu, wenn sein `contentHash` neu ist.
+
+Der `reason` einer Entfernung ist `deprecated` (ohne Ersatz als veraltet markiert), `withdrawn`
+(seine Veröffentlichung wurde zurückgezogen) oder `gone` (gelöscht oder nicht mehr für Sie lesbar;
+der Feed sagt nie, was davon).
+
+Der Feed folgt dem aktuellen Leseumfang des Lesers: Wird er enger, kommen die Chunks, die Sie
+nicht mehr lesen dürfen, als `chunk.removed` (`gone`), nur an Sie; wird er weiter, kommen die
+neuen als `chunk.upserted`. Entwürfe, Prüfungen und Importe stehen nie darin.
+
+## Wenn ein Cursor nicht mehr funktioniert
+
+Der Cursor ist undurchsichtig und für Sie versiegelt: Er läuft nicht von selbst ab und nützt
+niemand anderem. Diese Antworten sagen, was zu tun ist:
+
+| Antwort              | Warum                                                                                                                                                                                                           | Was zu tun ist                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 400 `cursor-expired` | Der geheime Schlüssel der Instanz wurde gewechselt, der Cursor wurde jemand anderem ausgestellt oder verändert.                                                                                                 | Ohne Cursor neu beginnen.                             |
+| 410 `cursor-gone`    | Die Inhalte, auf denen der Cursor steht, sind nicht mehr im Repository (etwa nach einem Umschreiben der Historie), oder der Cursor stammt von vor der Wiederherstellung der Datenbank von einem anderen Server. | Neu abgleichen, siehe unten.                          |
+| 503 `outbox-blocked` | Der Server wurde auf einen anderen Datenbankserver wiederhergestellt, und der Betrieb hat das noch nicht abgeschlossen.                                                                                         | Cursor behalten und erneut versuchen (`Retry-After`). |
+| 429 `rate-limited`   | Sie haben eine weitere Seite angefragt, während eine noch erstellt wurde.                                                                                                                                       | `Retry-After` abwarten und erneut fragen.             |
+| 404 `not-configured` | Der Server hat keinen geheimen Schlüssel der Instanz.                                                                                                                                                           | Wenden Sie sich an den Betrieb.                       |
+
+**Neu abgleichen** auf eine von zwei Arten:
+
+- **Von vorn:** Entfernen Sie jeden aus dem Feed gespeicherten Chunk und lesen Sie erneut ohne
+  Cursor.
+- **Ab einer Veröffentlichung**, um zu behalten, was sich nicht geändert hat: Wählen Sie das `tag`
+  einer Veröffentlichung aus `GET /releases`, blättern Sie durch `GET /chunks?ref=<tag>` und
+  speichern Sie jeden Chunk nach `id`; ein Embedding brauchen nur `contentHash`-Werte, die Sie noch
+  nicht haben. Entfernen Sie jeden gespeicherten Chunk, den diese Liste nicht nannte. Lesen Sie
+  dann den Feed erneut ohne Cursor: Sein Gesamtstand aktualisiert, was sich seitdem geändert hat,
+  und kostet für den Rest kein Embedding.
+
+Die ganze Schleife eines Retrieval-Index beschreibt
+[Anbindung an eine RAG-Pipeline](/de/guides/rag). Die Seite des Betriebs bei einer
+Wiederherstellung ist [Nach einer Wiederherstellung](/de/guide/self-hosting/after-a-restore).

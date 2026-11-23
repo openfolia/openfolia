@@ -1,0 +1,30 @@
+= Votre véhicule en un coup d'œil
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: vue d'ensemble
+
+[#intro]
+La {model-name} est une voiture compacte à cinq places, équipée de pneus de dimension {tyre-size}.
+
+[#img-overview]
+image::demo-image:vehicle-overview["Vue latérale du véhicule avec ses principaux éléments repérés",width=90%]
+<.> [callout#v-bonnet,x=0.2,y=0.42,label-x=0.12,label-y=0.08] Déverrouillage du capot
+<.> [callout#v-mirror,x=0.34,y=0.46,label-x=0.34,label-y=0.08] Rétroviseur extérieur
+<.> [callout#v-flap,x=0.855,y=0.57,label-x=0.9,label-y=0.08] Trappe à carburant ou trappe de recharge
+<.> [callout#v-jack,x=0.36,y=0.79,label-x=0.4,label-y=0.95] Point de levage
+<.> [callout#v-wheel,x=0.22,y=0.8,label-x=0.1,label-y=0.95] Roue avant
+
+[variant#estate,when="body in (estate)"]
+====
+[#estate-text]
+Le break possède un toit plus long avec des barres de toit longitudinales et un coffre de 580 l derrière la banquette arrière.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Le modèle électrique dispose d'une batterie de 58 kWh sous le plancher et de sa prise de recharge derrière la trappe de l'aile arrière gauche.
+====

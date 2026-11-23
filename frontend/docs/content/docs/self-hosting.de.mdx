@@ -1,0 +1,62 @@
+---
+title: Selbst betreiben
+description: OpenFolia auf dem eigenen Server betreiben, mit Containern, Postgres und einem eigenen Git-Repository.
+---
+
+OpenFolia läuft als einige Container und Postgres aus einer Compose-Datei: `deploy/compose.yaml`.
+Die vollständige Anleitung für den Betrieb mit allen Optionen ist `deploy/README.md` im
+Repository; diese Seite fasst sie zusammen, und die
+[Anleitung für den Betrieb](/de/guide/self-hosting) hat eine Seite je Thema.
+
+## Was läuft
+
+| Dienst     | Was er ist                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| `postgres` | Betriebsdaten: Benutzer, Rollen, Sperren, Kommentare, Workflow, das Audit-Log, ein Index.                |
+| `api`      | Die JSON:API, mit Git, dem PDF-Renderer, den Schriften und den Migrationen.                              |
+| `worker`   | Hintergrundarbeit: Dateien der Veröffentlichungen, Importe, Webhooks, Aufräumläufe. Skaliert horizontal. |
+| `editor`   | Der Editor als statischer Build hinter nginx, das auch `/api` an die API weiterleitet.                   |
+| `mcp`      | Optional: der MCP-Server für KI-Assistenten über die freigegebenen Inhalte.                              |
+| `backup`   | Geplante, verschlüsselte und geprüfte Sicherungen.                                                       |
+
+Alles Dauerhafte liegt in drei Volumes: der Datenbank, dem Datenvolume (das
+Inhaltsrepository, die Dateien und der Instanzschlüssel) und den Sicherungen.
+
+## Schnellstart
+
+Ein Coding-Agent kann all das für Sie erledigen und fragt Sie bei jeder Entscheidung: Er folgt
+der [Installationsanleitung für Agenten](/de/agents), festgelegt auf diese Version.
+
+<AgentInstall lang="de" />
+
+Sie brauchen Docker mit Compose 2.24 oder neuer.
+
+1. **Einstellungen:** Legen Sie `deploy/.env` mit mindestens `POSTGRES_PASSWORD` an (erzeugt,
+   zum Beispiel mit `openssl rand -hex 24`) und bewahren Sie die Datei auf: Postgres liest das
+   Passwort nur beim ersten Start.
+2. **Images:** Laden Sie die veröffentlichten Images einer festen Version
+   (`OPENFOLIA_IMAGES`, `OPENFOLIA_VERSION`) oder bauen Sie sie aus dem Quellcode.
+3. **Inhalte:** Legen Sie Ihr Inhaltsrepository auf das Datenvolume, oder zum Ausprobieren die
+   Beispielinhalte.
+4. **Start:** `docker compose up -d --wait`, dann `GET /health` prüfen.
+5. **Ein erstes Token** für API-Clients: das Token eines Dienstkontos, einmal ausgegeben.
+
+## Einstellungen
+
+Der Server wird über seine Umgebung konfiguriert. Jede Einstellung mit Format und Standardwert
+steht in der [Referenz der Einstellungen](/de/reference/settings);
+[Konfiguration](/de/configuration) sagt, welche zuerst wichtig sind. Geheimnisse können aus
+Dateien kommen (`<NAME>_FILE`), zum Beispiel aus Compose-Secrets.
+
+## Betrieb
+
+Die Betriebsanleitung (`deploy/README.md`) behandelt jedes dieser Themen ausführlich:
+
+- **Inhaltsrepository:** ein Bare-Git-Repository auf dem Datenvolume, die maßgebliche Quelle.
+- **Anmeldung:** Dienstkonten und Tokens; der Demo-Modus nur für Vorführungen.
+- **Sicherungen:** geplant, verschlüsselt und geprüft, auf ein Volume oder S3-kompatiblen
+  Speicher.
+- **Aktualisierungen:** die Hinweise zur Aktualisierung im [Änderungsprotokoll](/de/changelog)
+  lesen, sichern, die nächste feste Version laden, starten; die Migrationen laufen beim Start.
+- **Reverse Proxy mit TLS:** die Container lauschen nur auf `127.0.0.1`, für einen Proxy davor.
+- **Worker:** die Hintergrundrollen und wie man sie skaliert.

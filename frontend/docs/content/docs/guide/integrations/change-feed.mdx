@@ -1,0 +1,81 @@
+---
+title: 'Change feed'
+description: 'Follow what was released, withdrawn or deprecated, page by page with a cursor, and keep a copy of the content in step.'
+articleId: 'guide.integrations.change-feed'
+---
+
+`GET /changes` tells what was released, withdrawn or deprecated, in the order it happened, as the
+reader may read it. A consumer that was down catches up from its cursor; one that starts fresh
+gets a snapshot first. It is part of the [Delivery API](/api/delivery) and needs a token whose
+role holds `content.read` (see [Authentication](/guide/integrations/authentication)).
+
+## Read the feed
+
+1. Ask for the first page without a cursor:
+
+   ```sh
+   curl -gs -H "Authorization: Bearer $TOKEN" \
+     "https://docs.example.com/api/changes?page[size]=200"
+   ```
+
+   The first page starts with a snapshot: a `chunk.upserted` event for every chunk you may read
+   at the release standing now (none before the first release), then the events after it.
+
+2. Store what the events say, then keep `meta.page.cursor` (also in `links.next`).
+3. Ask for the next page with it: `?page[cursor]=<cursor>`. Every page has a cursor, also once
+   you are caught up (`meta.upToDate` is then true). Wait a minute, or for a
+   [webhook](/guide/integrations/webhooks), and ask again.
+
+`page[size]` is 50 by default, at most 200. No event is skipped or told twice across pages,
+whatever is released meanwhile. Applying an event twice changes nothing more, so save the cursor
+after you stored its page: a crash in between tells that page again.
+
+## The events
+
+Each item is a `Change`: its `id` is the event's idempotency key, `attributes` hold `event`,
+`occurredAt` and `data`.
+
+| Event                                    | What it says                                                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `manual.released`, `module.released`     | A release changed a manual or a module, as webhooks send it.                                                                           |
+| `release.withdrawn`                      | A release was withdrawn.                                                                                                               |
+| `module.deprecated`, `manual.deprecated` | A module or manual was deprecated, with its replacement when you may read it.                                                          |
+| `chunk.upserted`                         | A [chunk](/guide/integrations/chunks) is new or changed: `chunkId`, `moduleId`, `lang`, `contentHash` and the `release` to read it at. |
+| `chunk.removed`                          | Drop a chunk: the same IDs and a `reason`.                                                                                             |
+
+The first five have exactly the shapes and keys the [webhooks](/guide/integrations/webhooks)
+send, so a consumer can use either. To read an upserted chunk, ask `GET /chunks` at
+`?ref=<data.release.commit>` with `filter[module]` and `filter[lang]`. Embed it again only when
+its `contentHash` is new.
+
+A removal's `reason` is `deprecated` (deprecated without a replacement), `withdrawn` (its release
+was withdrawn) or `gone` (deleted, or no longer yours to read; the feed never says which).
+
+The feed follows the reader's scope now: when it narrows, the chunks you may no longer read come
+as `chunk.removed` (`gone`), to you only; when it widens, the new ones come as `chunk.upserted`.
+Drafts, reviews and imports are never in it.
+
+## When a cursor stops working
+
+The cursor is opaque and sealed for you: it does not expire on its own and is of no use to anyone
+else. These answers say what to do:
+
+| Answer               | Why                                                                                                                                                                | What to do                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| 400 `cursor-expired` | The instance secret key was rotated, the cursor was issued to someone else, or changed.                                                                            | Start again without a cursor.               |
+| 410 `cursor-gone`    | The content the cursor stands on is gone from the repository (a history rewrite, say), or the cursor is from before the database was restored from another server. | Resync, below.                              |
+| 503 `outbox-blocked` | The server was restored onto another database server and the operator has not finished.                                                                            | Keep your cursor and retry (`Retry-After`). |
+| 429 `rate-limited`   | You asked for another page while one was still being made.                                                                                                         | Wait `Retry-After` and ask again.           |
+| 404 `not-configured` | The server has no instance secret key.                                                                                                                             | Ask the operator.                           |
+
+**Resync** in one of two ways:
+
+- **From the start:** drop every chunk you stored from the feed, then read again without a cursor.
+- **From a release**, to keep what has not changed: pick a release's `tag` from `GET /releases`,
+  page through `GET /chunks?ref=<tag>` and store each chunk by `id`, embedding only a
+  `contentHash` you do not have. Drop every stored chunk that listing did not name. Then read the
+  feed again without a cursor: its snapshot upserts what changed since, and costs no embedding for
+  the rest.
+
+For the whole loop of a retrieval index, see [Integrating with a RAG pipeline](/guides/rag). The
+operator's side of a restore is [After a restore](/guide/self-hosting/after-a-restore).

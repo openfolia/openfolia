@@ -1,0 +1,30 @@
+= Rad wechseln
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Reifenpanne, Rad, Wagenheber
+
+[#intro]
+Reserverad, Wagenheber und Radschlüssel liegen unter dem Boden des Laderaums.
+
+[#ref-secure]
+module::secure-vehicle[]
+
+[#ref-warn]
+module::warning-triangle[]
+
+[procedure#steps]
+.Rad wechseln
+. [[step-loosen]]Lösen Sie die [.term.wheel-bolt]##Radschrauben## um eine Umdrehung, solange das Rad noch auf dem Boden steht.
+. [[step-jack]]Setzen Sie den Wagenheber an der [.term.jacking-point]##Wagenheberaufnahme## an, die dem Rad am nächsten ist, und heben Sie das Fahrzeug an, bis das Rad frei ist.
++
+[#img-jack]
+image::demo-image:wheel-change["Wagenheber an der Aufnahme am Schweller, Rad vom Boden abgehoben",width=60%]
+. [[step-remove]]Drehen Sie die Radschrauben heraus und nehmen Sie das Rad ab.
+. [[step-fit]]Setzen Sie das Reserverad auf und drehen Sie die Radschrauben von Hand ein.
+. [[step-lower]]Lassen Sie das Fahrzeug ab und ziehen Sie die Radschrauben über Kreuz fest.
+
+[#after]
+Prüfen Sie den Druck des Reserverads so bald wie möglich und lassen Sie den beschädigten Reifen reparieren oder ersetzen.

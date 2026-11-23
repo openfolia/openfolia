@@ -1,0 +1,19 @@
+= Hochvoltsystem
+:schema-version: 1
+:module-type: safety
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Hochvolt, Elektro
+
+[safety#hv-shock,severity=danger,symbols=w012]
+.Stromschlag durch das Hochvoltsystem
+====
+[#hv-shock-text]
+Das [.term.high-voltage-system]##Hochvoltsystem## arbeitet mit bis zu 400 V. Das Berühren seiner Bauteile kann tödliche Verletzungen verursachen.
+
+[#hv-shock-measures]
+* [[hv-shock-m1]]Öffnen, entfernen oder reparieren Sie niemals Bauteile mit orangefarbenen Leitungen oder Abdeckungen.
+* [[hv-shock-m2]]Schalten Sie das Fahrzeug nach einem Unfall aus und halten Sie Abstand zu beschädigten Hochvoltbauteilen.
+* [[hv-shock-m3]]Überlassen Sie alle Arbeiten am Hochvoltsystem einer qualifizierten Fachwerkstatt.
+====

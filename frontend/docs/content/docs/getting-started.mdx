@@ -1,0 +1,64 @@
+---
+title: Getting started
+description: Run OpenFolia on your machine with the sample content, and make your first API call.
+---
+
+This page gets OpenFolia running locally on a sample content repository. To run it on a server,
+see [Self-hosting](/self-hosting).
+
+Or let your coding agent install and start it for you, with you:
+
+<AgentInstall />
+
+## What you need
+
+- Docker with Compose 2.24 or newer.
+- For working on the code: Node 24 and pnpm 11.
+
+## Start the containers
+
+The quickest way is the container setup in `deploy/` with the sample content. Create
+`deploy/.env` with a Postgres password, build the images, put the sample content on the data
+volume and start:
+
+```sh
+cd deploy
+printf 'POSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose run --rm --no-deps api node docker/sample-content.mjs
+docker compose up -d --wait
+curl -s http://127.0.0.1:3000/health
+```
+
+The editor is at `http://127.0.0.1:8080` and the API at `http://127.0.0.1:3000`, with its
+interactive reference at `/docs`. [Self-hosting](/self-hosting) explains each step.
+
+## A first API call
+
+Every route except `/health`, `/about` and the API reference needs a token. Make a service
+account's token (it is printed once), then list the manuals of the sample content:
+
+```sh
+docker compose exec api node dist/database/service-token.main.js <account> --role <role>
+curl -s -H "Authorization: Bearer <token>" http://127.0.0.1:3000/manuals
+```
+
+The [Delivery API](/api/delivery) describes the routes a portal or an integration reads.
+
+## From the source
+
+```sh
+pnpm install
+docker compose up -d          # Postgres and S3-compatible storage, for development
+pnpm nx run api:setup-local   # a sample content repository and local settings
+pnpm nx run api:serve-local   # the API on that sample content
+```
+
+## Next steps
+
+- [Try the demo](/demo): one command, no Docker, and a walkthrough as an author, a reviewer and
+  an admin.
+- [Configuration](/configuration): the settings and the project configuration.
+- [User guide](/guide): writing, reviewing and releasing in the editor.
+- [Almost everything is content](/guide/getting-started/content): what lives in the content
+  repository, what lives in the database, and what to back up.

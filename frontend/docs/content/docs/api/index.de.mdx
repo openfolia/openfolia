@@ -1,0 +1,43 @@
+---
+title: 'API-Referenz'
+description: 'Die zwei APIs von OpenFolia: die Delivery API für Integrationen und die Management API.'
+---
+
+OpenFolia hat einen Server mit zwei API-Referenzen. Beide werden aus den Controllern und Schemas
+des Servers erzeugt und passen so immer zu ihrer Version. Die Seiten der einzelnen Operationen
+sind auf Englisch.
+
+<Cards>
+  <Card
+    title="Delivery API"
+    href="/de/api/delivery"
+    description="Freigegebene Inhalte lesen: Module, Handbücher, Veröffentlichungen, PDFs, HTML, Bilder, Chunks, den Änderungs-Feed. Für Portale, Apps und RAG-Pipelines."
+  />
+  <Card
+    title="Management API"
+    href="/de/api/management"
+    description="Alles Weitere, was der Editor nutzt: Überarbeitungen, Prüfung, Veröffentlichungen, Übersetzungen, Benutzer und Rollen, Webhooks, Sicherungen."
+  />
+</Cards>
+
+## Die Dokumente herunterladen
+
+Beide Dokumente, OpenAPI 3.0, mit der Adresse dieser API als Server:
+
+<OpenAPIDownload api="delivery" lang="de" />
+
+<OpenAPIDownload api="management" lang="de" />
+
+## Konventionen
+
+- **JSON:API:** Antworten sind `application/vnd.api+json`-Dokumente. Ressourcen sind
+  `{ type, id, attributes, relationships, meta }`; `attributes` enthalten gespeicherte Daten,
+  `meta`, was der Server daraus ableitet.
+- **Listen sind seitenweise:** `page[number]` und `page[size]`, mit `meta.page` und `links`.
+  Nicht dokumentierte Abfrageparameter werden mit 400 `unsupported-parameter` abgelehnt.
+- **Fehler** sind `{ errors: [{ status, title, detail, code, source?, meta? }] }` auf jeder Route,
+  mit einem stabilen `code`: siehe [Fehlercodes](/de/reference/errors).
+- **Authentifizierung:** `Authorization: Bearer <token>`, das Token eines Dienstkontos. Jede
+  Route braucht eine [Berechtigung](/de/reference/permissions).
+- **Refs:** Inhaltsrouten lesen bei `?ref=` (ein Branch, ein Tag oder ein Commit), ohne Angabe beim
+  Standard-Ref des Servers; jede Antwort nennt den gelesenen Commit in `X-Ccms-Commit`.

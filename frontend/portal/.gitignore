@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-dev
+dist-fixture
+dist.next
+.astro
+.e2e
+*.tsbuildinfo

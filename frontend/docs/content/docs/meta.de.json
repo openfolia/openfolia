@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "index",
+    "getting-started",
+    "demo",
+    "self-hosting",
+    "configuration",
+    "---Anleitungen---",
+    "guides",
+    "guide",
+    "---Referenz---",
+    "api",
+    "reference",
+    "---Projekt---",
+    "changelog",
+    "agents",
+    "contributing"
+  ]
+}

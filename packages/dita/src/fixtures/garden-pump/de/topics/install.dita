@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="install" xml:lang="de">
+  <title>Pumpe aufstellen</title>
+  <shortdesc>Stellen Sie die Pumpe neben der Regentonne auf.</shortdesc>
+  <taskbody>
+    <prereq id="before">
+      <note conref="warehouse.dita#warehouse/unplug"/>
+    </prereq>
+    <steps id="install-steps">
+      <step id="place">
+        <cmd>Stellen Sie die Pumpe auf eine ebene Fläche.</cmd>
+      </step>
+      <step id="connect">
+        <cmd>Schließen Sie den Schlauch am Auslass an.</cmd>
+        <info>
+          <hazardstatement id="hot" type="caution">
+            <messagepanel>
+              <typeofhazard>Heiße Oberfläche.</typeofhazard>
+              <consequence>Das Motorgehäuse wird im Betrieb heiß.</consequence>
+              <howtoavoid>Lassen Sie die Pumpe abkühlen, bevor Sie sie berühren.</howtoavoid>
+            </messagepanel>
+            <hazardsymbol href="../../images/hot-surface.png"/>
+          </hazardstatement>
+        </info>
+      </step>
+      <step id="timer" product="pro">
+        <cmd>Stellen Sie den <uicontrol>Timer</uicontrol>-Schalter ein.</cmd>
+      </step>
+    </steps>
+    <result id="done">
+      <p>Die Pumpe ist bereit.</p>
+    </result>
+  </taskbody>
+</task>

@@ -1,0 +1,3 @@
+-- Baseline: no tables yet. Applying it creates Drizzle's migrations table
+-- (drizzle.__drizzle_migrations), which proves the chain; tables arrive with
+-- the issues that need them, one migration each.

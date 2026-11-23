@@ -1,0 +1,18 @@
+= Reifendruck prüfen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Reifen, Reifendruck
+
+[#intro]
+Prüfen Sie den Reifendruck bei kalten Reifen, spätestens alle zwei Wochen. Die richtigen Werte finden Sie unter xref:tyre-pressures.adoc[] und auf dem Aufkleber im Rahmen der Fahrertür.
+
+[procedure#steps]
+.Reifendruck prüfen
+. [[step-cap]]Schrauben Sie die Ventilkappe ab.
+. [[step-gauge]]Drücken Sie das Prüfgerät auf das Ventil und lesen Sie den Druck ab.
+. [[step-adjust]]Füllen Sie Luft nach oder lassen Sie Luft ab, bis der Druck stimmt.
+. [[step-close]]Schrauben Sie die Ventilkappe wieder auf.
+. [[step-reset]]Bestätigen Sie nach einer Änderung den neuen Druck im Mitteldisplay unter [.ui]##Fahrzeug## › [.ui]##Reifendruck##.

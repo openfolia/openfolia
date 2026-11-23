@@ -1,0 +1,12 @@
+= Service et assistance
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Faites entretenir votre véhicule par un partenaire de service agréé Orvik, conformément au plan d'entretien. Votre partenaire de service répond aussi à vos questions sur votre véhicule.
+
+[#breakdown]
+En cas de panne, appelez le numéro d'assistance dépannage indiqué sur l'autocollant du pare-brise.

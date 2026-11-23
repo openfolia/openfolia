@@ -1,0 +1,28 @@
+= Fluids and capacities
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: fluids, capacities
+
+[#table,cols="2,2",options=header]
+.Fluids and capacities
+|===
+|[[fc-h-what]]Fluid |[[fc-h-value]]Specification and capacity
+|[[fc-washer]]Washer fluid |[[fc-washer-v]]4.0 l, with antifreeze in winter
+|[[fc-brake]]Brake fluid |[[fc-brake-v]]DOT 4, 0.7 l
+|[[fc-coolant]]Coolant |[[fc-coolant-v]]Silicate-free coolant, ready mixed
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Fuel tank: 45 l of unleaded petrol, at least 95 RON. Engine oil: 4.2 l, viscosity 0W-30.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Battery: 58 kWh usable. The drive unit needs no oil change.
+====

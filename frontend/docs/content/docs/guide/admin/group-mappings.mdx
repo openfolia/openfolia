@@ -1,0 +1,43 @@
+---
+title: 'Group mappings'
+description: 'Give the members of a group from your identity provider a role, and take it away again.'
+articleId: 'guide.admin.group-mappings'
+---
+
+When people sign in through an identity provider, the provider tells the editor which groups they
+are in. A group mapping gives every member of a group a role. A person's groups are the ones the
+provider sent at their last sign-in.
+
+## Add a mapping
+
+1. Open **Admin**, then **Group mappings**.
+2. Choose **Add mapping**.
+3. Under **Group**, type the group's name exactly as the identity provider sends it. Upper and
+   lower case count.
+4. Under **Role**, choose the role.
+5. Choose **Add mapping**.
+
+![The Add group mapping dialog with a group name and the role still to choose](/images/guide/en/admin-group-mappings.webp)
+
+Members who signed in through the group before hold the role at once; the others from their next
+sign-in. The same group and role twice is refused.
+
+Until an identity provider is set up for sign-in, the page says so. You can add mappings already:
+they apply once people sign in with one.
+
+## See which groups give a role
+
+The **Role** filter above the list shows the mappings of one role. From **Roles**, **Show the
+groups that give this role** opens the list filtered to that role.
+
+A role held through a group is marked with the group symbol on the **Users** page and under **Who
+holds it** on the **Roles** page: **Through a sign-in group**. To change it, change the mapping,
+not the person.
+
+## Remove a mapping
+
+1. Choose **Remove** in the mapping's row, and confirm.
+2. The group's members lose the role at once, unless it was given to them directly.
+
+A removal that would leave nobody who can manage roles is refused: **This mapping stays**. Give a
+role with **admin.roles** to someone directly first, then remove the mapping.

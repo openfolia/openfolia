@@ -1,0 +1,25 @@
+= Starten und Ausschalten
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Starten, Zündung
+
+[#intro]
+Das Fahrzeug startet mit dem Schlüssel in der Tasche: Sie müssen keinen Schlüssel einstecken.
+
+[procedure#start]
+.Fahrzeug starten
+. [[start-brake]]Treten Sie das Bremspedal und halten Sie es.
+. [[start-button]]Drücken Sie die Taste [.ui]##START/STOP##.
++
+[#start-ready]
+Der Benzinmotor springt an. Beim Elektromodell zeigt die Anzeige [.ui]##READY##: Das Fahrzeug ist lautlos fahrbereit.
+. [[start-gear]]Wählen Sie [.ui]##D## oder [.ui]##R## und lösen Sie die Feststellbremse.
+
+[procedure#stop]
+.Fahrzeug ausschalten
+. [[stop-park]]Halten Sie an und wählen Sie [.ui]##P##.
+. [[stop-brake]]Ziehen Sie die [.term.parking-brake]##Feststellbremse## an.
+. [[stop-off]]Drücken Sie die Taste [.ui]##START/STOP##.

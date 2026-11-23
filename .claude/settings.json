@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status --short)",
+      "Bash(git branch --list)",
+      "Bash(git branch --show-current)",
+      "Bash(git worktree list)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(pnpm check)",
+      "Bash(pnpm check:changed)",
+      "Bash(pnpm test)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm build)",
+      "Bash(pnpm review:diff)",
+      "Bash(pnpm review:diff *)",
+      "Bash(pnpm slot list)",
+      "Bash(pnpm nx run-many -t *)",
+      "Bash(pnpm nx affected -t *)",
+      "Bash(pnpm nx show projects)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)"
+    ],
+    "deny": [
+      "Bash(git log *--output*)",
+      "Bash(git log *--ext-diff*)",
+      "Bash(git log *--textconv*)",
+      "Bash(git log *-O*)",
+      "Bash(git log *--open-files-in-pager*)",
+      "Bash(git diff *--output*)",
+      "Bash(git diff *--ext-diff*)",
+      "Bash(git diff *--textconv*)",
+      "Bash(git diff *-O*)",
+      "Bash(git diff *--open-files-in-pager*)",
+      "Bash(git show *--output*)",
+      "Bash(git show *--ext-diff*)",
+      "Bash(git show *--textconv*)",
+      "Bash(git show *-O*)",
+      "Bash(git show *--open-files-in-pager*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+---
+title: 'DITA-Pakete'
+description: 'Eine Ausgabe einer Veröffentlichung als DITA-1.3-Projekt erhalten: eine Map, Topics, Medien und die DITAVAL-Datei der Variante.'
+articleId: 'guide.releases.dita'
+---
+
+Eine Ausgabe einer Veröffentlichung (ein Handbuch in einer Variante und einer Sprache) lässt sich
+als **DITA-1.3**-Projekt in einer ZIP-Datei herunterladen. Das Paket entsteht auf Anfrage aus der
+Veröffentlichung, so wie sie veröffentlicht wurde: Dieselbe Ausgabe mit denselben Optionen ergibt
+für alle Lesenden dieselben Bytes. Eine Ansicht im Editor gibt es dafür noch nicht: Es kommt über
+die [Delivery-API](/de/guide/integrations/delivery-api), mit einem Token, das `content.read`
+enthält.
+
+Der Export verwendet die DITA-Abbildung in `openfolia.yaml` (`dita`, dieselbe wie der
+[DITA-Import](/de/guide/integrations/dita-import)) in umgekehrter Richtung. Ohne Abbildung gilt die
+Standardabbildung des Imports.
+
+## Ein Paket herunterladen
+
+1. Finden Sie die Veröffentlichung: `GET /releases` listet sie auf, die neueste zuerst, mit ihren
+   IDs.
+2. Listen Sie ihre Pakete auf: `GET /releases/{releaseId}/dita-packages`, eines je Ausgabe, die Sie
+   lesen dürfen, gefiltert mit `filter[manual]` und `filter[lang]`. Jedes hat `manual`, `variant`,
+   `lang` und `fileName` der Ausgabe. Das Auflisten erzeugt nichts.
+3. Wahlweise erzeugt `GET /releases/{releaseId}/dita-packages/{packageId}` das Paket und beschreibt
+   es: `meta.size`, `meta.languages`, `meta.references`, `meta.topics`, `meta.media` und
+   `meta.warnings`.
+4. Laden Sie es herunter: `GET /releases/{releaseId}/dita-packages/{packageId}/file`, eine Datei vom
+   Typ `application/zip` mit dem Namen `<manual>_<variant>_<lang>_<revision>-dita.zip`. Der Header
+   `X-Ccms-Dita-Warnings` nennt die Zahl der Warnungen.
+
+```sh
+curl -sf -o operating-dita.zip \
+  -H "Authorization: Bearer $DOCS_TOKEN" \
+  "https://docs.example.com/api/releases/$RELEASE/dita-packages/$PACKAGE/file?languages=all"
+```
+
+## Optionen
+
+Die Schritte 3 und 4 nehmen dieselben zwei Parameter:
+
+| Parameter    | Werte                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `languages`  | `output` (Standard): die Sprache der Ausgabe. `all`: jede konfigurierte Sprache, in der Sie das ganze Handbuch lesen dürfen. |
+| `references` | `conref` (Standard): Modulverweise als DITA-Inhaltsverweise. `resolved`: der verwiesene Inhalt an Ort und Stelle.            |
+
+Ein anderer Wert ist 400 `invalid-parameter`, ein anderer Parameter 400 `unsupported-parameter`.
+
+## Was das Paket enthält
+
+- `<lang>/<manual>.ditamap`: die Map, eine je Sprache.
+- `<lang>/<module>.dita`: jedes Modul als Topic.
+- `filters/<variant>.ditaval`: die DITAVAL-Datei der Variante, für die Bedingungen, die als
+  Filterattribute erhalten bleiben.
+- `images/`, `files/` und `symbols/`: die Bilder, die angehängten Dateien und die
+  Sicherheitssymbole.
+
+Das Paket lässt sich über den DITA-Import wieder importieren.
+
+## Warnungen
+
+Was DITA nicht ausdrücken kann, fällt nie stillschweigend weg: Jeder Verlust ist eine Warnung,
+einmal je Code, Modul und Sprache, mit einer Anzahl. Manches wird gar nicht geschrieben
+(`module-not-exported`, `missing-translation`, `missing-asset`), manches in anderer Form
+(`procedure-as-list`, `safety-as-note`, `section-flattened`, `faq`, …). Sie stehen in
+`meta.warnings` von Schritt 3.
+
+## Wenn es abgelehnt wird
+
+| Status | `code`                     | Warum                                                                                                      |
+| ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 404    | `not-found`                | Keine solche Veröffentlichung, oder eine Ausgabe, die nicht zu ihr gehört oder die Sie nicht lesen dürfen. |
+| 422    | `dita-package-too-large`   | Das Paket überschreitet seine Grenzen oder die Grenze für Archive.                                         |
+| 422    | `dita-notices-unsupported` | Ein abgeleitetes Handbuch, das Sicherheitshinweise sammelt: Sein Inhalt sind keine Topics.                 |
+| 429    | `rate-limited`             | Zu viele Pakete werden erzeugt oder gesendet; warten Sie, bis `Retry-After` abläuft.                       |
+| 503    | `blob-store-unavailable`   | Der Blob-Speicher antwortet nicht; warten Sie, bis `Retry-After` abläuft.                                  |
+
+Wie viele Pakete gleichzeitig gesendet werden, ist je Server und je Lesendem begrenzt: siehe
+[Dimensionierung](/de/guide/self-hosting/sizing).

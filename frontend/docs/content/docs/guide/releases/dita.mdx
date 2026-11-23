@@ -1,0 +1,75 @@
+---
+title: 'DITA packages'
+description: 'Get a release output as a DITA 1.3 project: a map, topics, media and the variant’s DITAVAL file.'
+articleId: 'guide.releases.dita'
+---
+
+A release output (a manual in one variant and language) can be downloaded as a **DITA 1.3**
+project in a ZIP file. The package is made on request from the release as it was released, so the
+same output and options give the same bytes for every reader. There is no editor screen for it yet:
+it comes through the [Delivery API](/guide/integrations/delivery-api), with a token that holds
+`content.read`.
+
+The export uses the DITA mapping in `openfolia.yaml` (`dita`, the one the
+[DITA import](/guide/integrations/dita-import) uses) read backwards. Without a mapping, it uses the
+import's default.
+
+## Download a package
+
+1. Find the release: `GET /releases` lists them, newest first, with their IDs.
+2. List its packages: `GET /releases/{releaseId}/dita-packages`, one per output you may read,
+   filtered with `filter[manual]` and `filter[lang]`. Each has the output's `manual`, `variant`,
+   `lang` and `fileName`. Listing makes nothing.
+3. Optionally, `GET /releases/{releaseId}/dita-packages/{packageId}` makes the package and describes
+   it: `meta.size`, `meta.languages`, `meta.references`, `meta.topics`, `meta.media` and
+   `meta.warnings`.
+4. Download it: `GET /releases/{releaseId}/dita-packages/{packageId}/file`, an `application/zip`
+   file named `<manual>_<variant>_<lang>_<revision>-dita.zip`. The header `X-Ccms-Dita-Warnings`
+   gives the number of warnings.
+
+```sh
+curl -sf -o operating-dita.zip \
+  -H "Authorization: Bearer $DOCS_TOKEN" \
+  "https://docs.example.com/api/releases/$RELEASE/dita-packages/$PACKAGE/file?languages=all"
+```
+
+## Options
+
+Steps 3 and 4 take the same two parameters:
+
+| Parameter    | Values                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `languages`  | `output` (default): the output's language. `all`: every configured language you may read the whole manual in.      |
+| `references` | `conref` (default): module references as DITA content references. `resolved`: the referenced content put in place. |
+
+Another value is 400 `invalid-parameter`, another parameter 400 `unsupported-parameter`.
+
+## What the package holds
+
+- `<lang>/<manual>.ditamap`: the map, one per language.
+- `<lang>/<module>.dita`: each module as a topic.
+- `filters/<variant>.ditaval`: the variant's DITAVAL file, for the conditions kept as filter
+  attributes.
+- `images/`, `files/` and `symbols/`: the images, the attached files and the safety symbols.
+
+The package imports again through the DITA import.
+
+## Warnings
+
+What DITA cannot say is never dropped silently: each loss is a warning, once per code, module and
+language, with a count. Some content is not written at all (`module-not-exported`,
+`missing-translation`, `missing-asset`), some is written in another form (`procedure-as-list`,
+`safety-as-note`, `section-flattened`, `faq`, …). They are in `meta.warnings` of step 3.
+
+## When it is refused
+
+| Status | `code`                     | Why                                                                      |
+| ------ | -------------------------- | ------------------------------------------------------------------------ |
+| 404    | `not-found`                | No such release, or an output that is not its own or you may not read.   |
+| 422    | `dita-package-too-large`   | The package is past its bounds or the archive's size limit.              |
+| 422    | `dita-notices-unsupported` | A derived manual that gathers safety notices: its content is not topics. |
+| 429    | `rate-limited`             | Too many packages being made or sent; wait for `Retry-After`.            |
+| 503    | `blob-store-unavailable`   | The blob store does not answer; wait for `Retry-After`.                  |
+
+How many packages are sent at once is bounded per server and per reader:
+see [sizing](/guide/self-hosting/sizing).

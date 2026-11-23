@@ -1,0 +1,106 @@
+schemaVersion: 1
+name: Product line
+preset: classic
+page:
+  size: a4
+  margins:
+    top: 26
+    right: 22
+    bottom: 24
+    left: 22
+  doubleSided: true
+colours:
+  primary: "#1f4e79"
+  accent: "#b45309"
+  text: "#1f2328"
+fonts:
+  embeddingAllowed: false
+logo:
+  light: sha256:1111111111111111111111111111111111111111111111111111111111111111
+titlePage:
+  fields:
+    - title
+    - product
+    - variant
+    - document-number
+    - release
+    - date
+regions:
+  above-title:
+    de: |-
+      [#intro]
+      Originalbetriebsanleitung für placeholder:product[]
+    en: |-
+      [#intro]
+      Original instructions for placeholder:product[]
+  footer: |-
+    [#doc-number]
+    placeholder:document-number[] · placeholder:release[]
+  back: |-
+    [#imprint]
+    {product-name} · placeholder:date[]
+
+    [variant#us-only,when="market in (us)"]
+    ====
+    [#us-note]
+    Made for the US market.
+    ====
+coverImage:
+  default:
+    asset: sha256:2222222222222222222222222222222222222222222222222222222222222222
+  variants:
+    - when: model in (l-400)
+      asset: sha256:3333333333333333333333333333333333333333333333333333333333333333
+      alt:
+        de: Das Modell L-400
+        en: The L-400 model
+backPage:
+  position: last
+  copyright:
+    de: © Example Works. Alle Rechte vorbehalten.
+    en: © Example Works. All rights reserved.
+  documentNumber: true
+  date: true
+header:
+  default:
+    left: placeholder:title[]
+    right: placeholder:chapter[]
+  even:
+    left: placeholder:chapter[]
+    right: placeholder:title[]
+footer:
+  default:
+    left: placeholder:document-number[]
+    centre: placeholder:language[]
+    right:
+      de: Seite placeholder:page[] von placeholder:page-count[]
+      en: Page placeholder:page[] of placeholder:page-count[]
+  first:
+    right: placeholder:page[]
+headings:
+  numbering:
+    - decimal
+    - decimal
+    - none
+  sizes:
+    - 3xl
+    - 2xl
+    - xl
+    - base
+  colour: primary
+  pageBreakBeforeLevel1: true
+body:
+  fontSize: 10
+  lineHeight: 1.45
+  paragraphSpacing: 7
+  columns: 1
+tables:
+  headerTint: true
+  borders: horizontal
+  zebra: true
+steps:
+  marker: filled-circle
+notes:
+  style: framed
+safety:
+  standard: iso-3864

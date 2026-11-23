@@ -1,0 +1,18 @@
+= Checking the tyre pressure
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: tyres, tyre pressure
+
+[#intro]
+Check the tyre pressure with cold tyres, at the latest every two weeks. The right values are in xref:tyre-pressures.adoc[] and on the label in the driver's door frame.
+
+[procedure#steps]
+.Check the tyre pressure
+. [[step-cap]]Unscrew the valve cap.
+. [[step-gauge]]Press the tyre gauge onto the valve and read the pressure.
+. [[step-adjust]]Add or let out air until the pressure is right.
+. [[step-close]]Screw the valve cap back on.
+. [[step-reset]]After a change, confirm the new pressure in the centre display under [.ui]##Vehicle## › [.ui]##Tyre pressure##.

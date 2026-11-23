@@ -1,0 +1,97 @@
+---
+title: 'Audit log sink and retention'
+description: 'Copy the audit log to an HTTPS endpoint or a syslog server as it grows, remove old events after a period, and protect the log in the database.'
+articleId: 'guide.self-hosting.audit-log'
+---
+
+Admins read the audit log in the editor ([Audit log](/guide/admin/audit-log)). As the operator,
+you can copy it, as it grows, to a place of your own (a sink), and have old events removed after a
+period. Both are settings in `deploy/api.env`, read when the server starts; they run in the worker
+(or in the single process with `CCMS_ROLE=all`).
+
+## A sink
+
+| Setting                      | What                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `CCMS_AUDIT_SINK_URL`        | `https://host[:port]/path` or `syslog+tls://host[:port]` (port 6514 by default). No credentials in it. |
+| `CCMS_AUDIT_SINK_SECRET`     | The HTTPS sink's signing secret: `whsec_` and 64 lowercase hex digits. Required with `https://`.       |
+| `CCMS_AUDIT_SINK_CA_FILE`    | A PEM file of certificates to trust instead of the system's (a private CA), mounted into the worker.   |
+| `CCMS_AUDIT_SINK_POLL_MS`    | How often new events go out (default 3000 ms).                                                         |
+| `CCMS_AUDIT_SINK_TIMEOUT_MS` | One delivery's whole time (default 10000 ms).                                                          |
+
+Make the secret with `openssl rand -hex 32` and put `whsec_` in front. Give it from a file:
+`CCMS_AUDIT_SINK_SECRET_FILE`, a Compose secret under `/run/secrets/`, set under the `api` and
+`worker` services in a `compose.override.yaml` as the [blob store](/guide/self-hosting/blob-store)
+shows for its key, never in `api.env` (the backup service reads that file too, and stops on a
+`_FILE` it cannot read). Compose reads the override only when no `-f` and no `COMPOSE_FILE` is
+given: see [Your own additions](/guide/self-hosting/quick-start#step-by-step). The sink's
+certificate is always checked.
+
+**What the sink guarantees:** every event at least once, in order. Its position is kept in the
+database, so a restart goes on where it stopped. A failed delivery is tried again after 30 s,
+doubling up to 10 minutes, until it succeeds, and nothing after it goes first. An event can arrive
+twice: dedupe by its `id` together with its `at`. Setting a sink on an installation with history
+sends the whole log first.
+
+- **HTTPS:** batches of up to 100 events, each `POST`ed as `{"events": [...]}`, every event as
+  the JSON Lines export writes it. The body is signed in the header `X-Ccms-Signature`
+  (`t=<unix seconds>,v1=<hex>`: HMAC-SHA256 of `<t>.<body>` with the secret), as webhooks are:
+  check it the way [Webhooks](/guide/integrations/webhooks) describes. Answer with any 2xx;
+  anything else, a redirect too, counts as failed. The URL may be on your own network.
+- **Syslog over TLS:** one RFC 5424 message per event, framed as RFC 5425 says, APP-NAME `openfolia`,
+  MSGID the event's action, the message the event as JSON. Syslog has no acknowledgement: an event
+  counts as delivered once it is written to the connection. Raise the collector's message size
+  limit (some cut at 8 KiB), as an event's details can be up to 64 KiB.
+
+## Retention
+
+`CCMS_AUDIT_KEEP_DAYS` (1 to 36500; unset: kept for ever) removes events older than that many
+days, at start-up and daily, in batches. Each removal is itself recorded in the log, as
+`audit-log.prune`, with the cut-off, how many and the first and last ID. With a sink set, it never
+removes an event the sink has not sent.
+
+## Protect the log in the database
+
+The database refuses every change to an audit event, and every removal but retention's, which
+goes through the database function `audit_events_prune`. With one database role owning
+everything, as `deploy/compose.yaml` runs it, those guards hold. To have the grants hold too, run
+the migrations as the owner and the API as a role of its own, without `DELETE` on the table:
+
+```sql
+-- as the owner, after the migrations; ccms_app is the API's role
+GRANT SELECT, INSERT ON audit_events TO ccms_app;          -- never UPDATE, DELETE or TRUNCATE
+GRANT EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) TO ccms_app;
+```
+
+The API needs its usual rights on every other table, `audit_sink` included (`SELECT`, `INSERT`,
+`UPDATE`).
+
+## After a restore
+
+After a [restore](/guide/self-hosting/backups) onto another database server with a sink set (then
+or later), the sink sends nothing and logs an error until its position is set right once. Run
+this as the database owner, best right after the restore and before the first start, else with
+the API and the worker stopped, as a script (`psql -f`, or on stdin), and put in the highest event
+ID your collector holds:
+
+```sql
+BEGIN;
+UPDATE audit_sink SET last_tx_id = '1',
+  last_id = LEAST((SELECT min(e.id) - 1 FROM audit_events e
+                   WHERE (e.tx_id, e.id) > (audit_sink.last_tx_id, audit_sink.last_id)),
+                  audit_sink.last_id)
+  WHERE last_tx_id <> '0';
+UPDATE audit_sink SET blocked = false;
+ALTER TABLE audit_events DISABLE TRIGGER audit_events_append_only;
+UPDATE audit_events SET tx_id = '1';
+ALTER TABLE audit_events ENABLE TRIGGER audit_events_append_only;
+SELECT setval(pg_get_serial_sequence('audit_events', 'id'),
+              GREATEST(<highest id the collector holds>, (SELECT max(id) FROM audit_events)));
+COMMIT;
+VACUUM audit_events;
+```
+
+A restore also drops the grants of a separate API role: run the `GRANT`s above again, and
+`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`.
+A restore drill must not send to your collector: leave `CCMS_AUDIT_SINK_URL` unset there and skip
+this step.

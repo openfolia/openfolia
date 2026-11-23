@@ -1,0 +1,28 @@
+= Betriebsstoffe und Füllmengen
+:schema-version: 1
+:module-type: reference
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Betriebsstoffe, Füllmengen
+
+[#table,cols="2,2",options=header]
+.Betriebsstoffe und Füllmengen
+|===
+|[[fc-h-what]]Betriebsstoff |[[fc-h-value]]Spezifikation und Füllmenge
+|[[fc-washer]]Scheibenwaschwasser |[[fc-washer-v]]4,0 l, im Winter mit Frostschutz
+|[[fc-brake]]Bremsflüssigkeit |[[fc-brake-v]]DOT 4, 0,7 l
+|[[fc-coolant]]Kühlmittel |[[fc-coolant-v]]Silikatfreies Kühlmittel, gebrauchsfertig gemischt
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Kraftstofftank: 45 l bleifreies Benzin, mindestens 95 ROZ. Motoröl: 4,2 l, Viskosität 0W-30.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Batterie: 58 kWh nutzbar. Die Antriebseinheit braucht keinen Ölwechsel.
+====

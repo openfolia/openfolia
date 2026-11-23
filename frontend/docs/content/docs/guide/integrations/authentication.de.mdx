@@ -1,0 +1,76 @@
+---
+title: 'Mit dem Token eines Service-Accounts authentifizieren'
+description: 'Ein Token für Ihre Integration erhalten, es senden und mit einem abgelaufenen, widerrufenen oder abgelehnten Token umgehen.'
+articleId: 'guide.integrations.authentication'
+---
+
+Ein Programm, das die API aufruft, etwa ein Portal-Build, eine Pipeline oder ein Agent,
+authentifiziert sich als **Service-Account** mit einem eigenen Token (`ccms_sat_…`). Das Token
+handelt mit den Rollen des Service-Accounts und mit nichts sonst.
+
+## Ein Token erhalten
+
+- **Von einem Admin:** Ein Admin legt den Service-Account an, gibt ihm eine Rolle und stellt im
+  Editor ein Token aus ([Service-Accounts und Tokens](/de/guide/admin/service-accounts)) oder über
+  die API (`POST /service-accounts/{id}/tokens`). Das Token wird einmal angezeigt.
+- **Das erste einer Installation**, bevor sich jemand anmelden kann, auf der Kommandozeile des
+  Servers. Der Befehl legt den Service-Account mit den angegebenen Rollen an, wenn es ihn noch nicht
+  gibt, und gibt das Token einmal aus:
+
+  ```sh
+  docker compose exec api node dist/database/service-token.main.js portal-build \
+    --role <role> --name "Portal-Build, Produktion" --days 90
+  ```
+
+  Die Rollen müssen existieren, und keine darf `admin.roles` enthalten. Für einen bestehenden
+  Account lassen Sie `--role` weg: Seine Rollen ändern Sie im Editor.
+
+Für eine Integration, die nur veröffentlichte Inhalte liest, sollte die Rolle **nur `content.read`**
+enthalten, im Bereich, den sie braucht (Sprachen, Modultypen, Zielgruppen). Ein solches Token liest
+`main` und die Tags der Veröffentlichungen, nie Entwürfe.
+
+## Das Token senden
+
+Senden Sie das Token im Header `Authorization` jeder Anfrage und nirgends sonst:
+
+```sh
+curl -s https://docs.example.com/api/releases \
+  -H 'Authorization: Bearer ccms_sat_…' \
+  -H 'Accept: application/vnd.api+json'
+```
+
+Setzen Sie es nie in eine URL. Das Token ist für Ihren Server bestimmt: Halten Sie es aus
+Browser-Apps und aus Apps heraus, die Sie an andere weitergeben. Lesen Sie es zur Laufzeit aus dem
+Secret-Speicher Ihrer Plattform, statt es in Code oder ein Repository zu schreiben.
+
+## Ablauf, Wechsel und Widerruf
+
+- **Ablauf:** Ein Token läuft standardmäßig 90 Tage nach der Ausstellung ab, höchstens nach 366
+  Tagen. Der Editor bietet 30, 90, 180 oder 365 Tage an; die Kommandozeile nimmt `--days`.
+- **Wechsel:** Stellen Sie ein neues Token aus, stellen Sie den Client darauf um und widerrufen Sie
+  dann das alte. Stellen Sie je Client ein Token aus, damit Sie eines widerrufen können, ohne die
+  anderen anzuhalten.
+- **Widerruf** gilt ab der nächsten Anfrage und lässt sich nicht rückgängig machen. Wird der
+  Service-Account deaktiviert, handeln alle seine Tokens nicht mehr, bis er wieder aktiviert wird.
+
+## Wenn ein Token abgelehnt wird
+
+| Status | `code`                        | Was passiert ist                                                                |
+| ------ | ----------------------------- | ------------------------------------------------------------------------------- |
+| 401    | `unauthorized`                | Kein Token oder ein falsches.                                                   |
+| 401    | `token-expired`               | Das Token ist abgelaufen: Stellen Sie ein neues aus.                            |
+| 401    | `token-revoked`               | Das Token wurde widerrufen.                                                     |
+| 403    | `service-account-deactivated` | Der Service-Account ist deaktiviert.                                            |
+| 403    | `forbidden`                   | Den Rollen des Tokens fehlt die Berechtigung, die die Route braucht.            |
+| 429    | `too-many-failed-attempts`    | Zu viele Fehlversuche von einer Adresse; warten Sie, bis `Retry-After` abläuft. |
+
+Inhalte außerhalb des Bereichs des Tokens antworten mit `404 not-found`, genau wie Inhalte, die es
+nicht gibt. So verrät eine Route nie, was außerhalb liegt. Die Berechtigung jeder Route steht in der
+[Referenz der Berechtigungen](/de/reference/permissions), jeder Code in den
+[Fehlercodes](/de/reference/errors).
+
+## Mit einem Token schreiben
+
+Eine Anfrage, die etwas ändert (jede Methode außer `GET`, `HEAD` und `OPTIONS`), muss
+`Content-Type: application/vnd.api+json` senden, auch ohne Body. Siehe
+[JSON:API-Konventionen](/de/guide/integrations/json-api).

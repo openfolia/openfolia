@@ -1,0 +1,65 @@
+# The docs image's web server (deploy/docker/docs/Dockerfile): the static export of frontend/docs
+# in /srv/docs, on port 8080, plain HTTP behind the platform's proxy, which terminates TLS.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+# Every response's security headers, the error pages' too. The site is a static export: Next.js
+# puts each page's data in inline scripts, and the pages set inline styles, so both need
+# 'unsafe-inline' (no page shows text a visitor sent). connect-src: the site itself (the search
+# index) and the API the reference's playground calls (DOCS_API_ORIGIN, set by the image's build).
+(security-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' {$DOCS_API_ORIGIN}; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+}
+
+:8080 {
+	root * /srv/docs
+	encode zstd gzip
+	import security-headers
+
+	# The container's health check (Dockerfile HEALTHCHECK, the platform's probe).
+	handle /healthz {
+		header Cache-Control "no-store"
+		respond "ok" 200
+	}
+
+	handle {
+		# Hashed build files: their name changes with their content.
+		@hashed path /_next/static/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		# Everything else (the pages, llms.txt, the search index, the Markdown pages, the OpenAPI
+		# documents, the feeds, images) is revalidated on every use, by its ETag.
+		@mutable not path /_next/static/*
+		header @mutable Cache-Control "no-cache"
+
+		# Clean addresses: /guide/x is the folder guide/x/ (a redirect to the address with the
+		# slash, which the site's own links use) or the file guide/x.html.
+		try_files {path} {path}.html
+		file_server {
+			hide .*
+		}
+	}
+
+	# A path without a file: the site's 404 page, with status 404.
+	handle_errors 404 {
+		import security-headers
+		header Cache-Control "no-cache"
+		rewrite * /404.html
+		file_server
+	}
+	handle_errors {
+		import security-headers
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Review and approval",
+  "pages": [
+    "workflow",
+    "list",
+    "compare",
+    "comments",
+    "approvals",
+    "configuration-changes",
+    "self-approval",
+    "missing-branch"
+  ]
+}

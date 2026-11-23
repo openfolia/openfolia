@@ -1,0 +1,58 @@
+= Charging the battery
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: customer
+:facet-product-line: lifters
+:keywords: battery, maintenance
+:source-system: legacy-cms
+:source-id: TOPIC-00412
+
+[#intro]
+The {product-name} charges automatically at the charging station. Charge manually only after a deep discharge.
+
+[safety#warn-voltage,severity=warning,symbols=w012]
+.Electrical voltage at the charging contacts
+====
+[#warn-voltage-consequence]
+Touching live contacts can cause burns.
+
+[#warn-voltage-measures]
+* [[warn-voltage-m1]]Switch off the charger before you touch the contacts.
+* [[warn-voltage-m2]]Wear insulating gloves.
+====
+
+[procedure#steps]
+.Charge manually
+. [[step-park]]Select [.ui]##Park## on the control panel.
+. [[step-connect]]Connect the charging cable to the socket callout:img-socket#socket[].
++
+[#img-socket]
+image::sha256:9f2c1e5b8a7d6c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b["Charging socket on the rear panel, cable plugged in",width=60%]
+<.> [callout#socket,x=0.42,y=0.55,label-x=0.1,label-y=0.2] Charging socket
+<.> [callout#status-light,x=0.7,y=0.3] [.ui]##Status## light
+<.> [callout#app-pairing,x=0.8,y=0.75,when="model in (l-400)"] Pairing button for the app
+. [[step-wait]]Wait until the status light turns green.
++
+[variant#step-wait-l400,when="model in (l-400) && software >= 2.3"]
+====
+[NOTE#step-wait-l400-note]
+=====
+[#step-wait-l400-text]
+The charging progress is also shown in the app.
+=====
+====
+
+[#charge-times,cols="2,>1",options=header]
+.Charging times
+|===
+|[[ct-h1]]Model |[[ct-h2]]Time
+|[[ct-r1c1]]L-200 |[[ct-r1c2]]2 h
+|[[ct-r2c1]]L-400 |[[ct-r2c2]]3 h
+|===
+
+[#ref-disposal]
+module::battery-disposal[]
+
+[#see-also]
+See also xref:charging-station.adoc#status-lights[].

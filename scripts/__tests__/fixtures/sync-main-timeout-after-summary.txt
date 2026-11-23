@@ -1,0 +1,175 @@
+sync:main: check:changed (a clean merge can still break the build) …
+$ node scripts/check.mjs affected --base=c5268d25c04afce09556eef6434a34fc1f0d1eb7 --head=488d64e2bdd191cddcae21c42cfb61940d133938
+
+ NX   Running targets test, lint, typecheck, build for 16 projects and 9 tasks they depend on:
+
+- api
+- content-editor-model
+- content-model
+- content-repo
+- dita
+- docs
+- editor-e2e
+- editor
+- mcp
+- render-html
+- render-typst
+- theme
+- ui
+- workflow
+- xliff
+- xml
+
+
+✔  nx run content-model:build  [local cache]
+✔  nx run mcp:build  [local cache]
+✔  nx run xml:build  [local cache]
+✔  nx run theme:typecheck  [local cache]
+✔  nx run workflow:licences  [existing outputs match the cache, left as is]
+✔  nx run content-model:test  [local cache]
+✔  nx run editor-e2e:typecheck
+✔  nx run docs:lint
+✔  nx run docs:test
+
+> nx run api:test
+
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.1.0 [39m[90m/repo/backend/api[39m
+
+ [32m✓[39m [30m[46m api [49m[39m tests/release-outputs.e2e.spec.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 92359[2mms[22m[39m
+   [32m✓[39m release outputs [2m(11)[22m
+     [33m[2m✓[22m[39m renders every manual in each variant and language for a product’s first release[33m 14447[2mms[22m[39m
+     [33m[2m✓[22m[39m shows a reader only the outputs of manuals they may read (404 for the others)[33m 400[2mms[22m[39m
+     [33m[2m✓[22m[39m downloads all of a release’s done files as one ZIP, each with the bytes the file route serves (#469)[33m 2858[2mms[22m[39m
+     [33m[2m✓[22m[39m renders only what the next release changed; the rest points at the previous files[33m 14130[2mms[22m[39m
+     [33m[2m✓[22m[39m finishes a planning or rendering cut off and run again without lost or doubled rows[33m 2361[2mms[22m[39m
+     [33m[2m✓[22m[39m fails a render that cannot succeed, tells of it, keeps the previous file and retries on request[33m 8791[2mms[22m[39m
+     [33m[2m✓[22m[39m tells the publishers of a failed output, then that it is ready after all once a late file finishes it (#551)[33m 2473[2mms[22m[39m
+     [33m[2m✓[22m[39m plans a release again for a publisher, adding nothing it has[33m 1403[2mms[22m[39m
+     [33m[2m✓[22m[39m shows where a release’s files wait behind a later release’s, moves one asked for ahead, and plans the rest again (#497)[33m 20951[2mms[22m[39m
+     [33m[2m✓[22m[39m answers 404 for an unknown release or output[33m 638[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/change-sets/repos/git-change-set-merges.spec.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 105178[2mms[22m[39m
+   [32m✓[39m GitChangeSetBranches.merge [2m(9)[22m
+     [33m[2m✓[22m[39m updates a change-set branch from its base, and only a change-set branch[33m 15823[2mms[22m[39m
+     [33m[2m✓[22m[39m records a merge commit with the change set, the actor and the approvals[33m 13509[2mms[22m[39m
+     [33m[2m✓[22m[39m finds a landed merge by reachability, with its merge commit and merger[33m 7031[2mms[22m[39m
+     [33m[2m✓[22m[39m finds the merge commit however many commits landed on the base after it[33m 13470[2mms[22m[39m
+     [33m[2m✓[22m[39m never fast-forwards a merge with approvals[33m 11683[2mms[22m[39m
+     [33m[2m✓[22m[39m fast-forwards by default, and is up to date the second time[33m 4431[2mms[22m[39m
+     [33m[2m✓[22m[39m returns conflicts as data and moves nothing[33m 10417[2mms[22m[39m
+     [33m[2m✓[22m[39m tells a racing loser where the target moved; its retry lands on top[33m 20245[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a change-set branch as target, unrelated histories and forged trailers[33m 8568[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m tests/webhooks.e2e.spec.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 106552[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/outbox/repos/drizzle-outbox-feed.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1116[2mms[22m[39m
+   [32m✓[39m DrizzleOutboxFeed [2m(3)[22m
+     [33m[2m✓[22m[39m reads from the start, in transaction order, and moves the cursor by compare-and-swap[33m 563[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/backups/repos/age-archive.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 7583[2mms[22m[39m
+   [32m✓[39m age archives [2m(4)[22m
+     [33m[2m✓[22m[39m extracts files and folders, and refuses an archive with a link before extracting anything[33m 1541[2mms[22m[39m
+     [33m[2m✓[22m[39m unpacks a backup for a check without the instance secret key, and with it for a restore[33m 3233[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a manifest that names a path outside the backup, or a part it does not hold[33m 2764[2mms[22m[39m
+[33m[Nest] 10034  - [39m11/20/2026, 10:57:22 PM [33m   WARN[39m [38;5;3m[ReleaseDiffStore] [39m[33mCould not keep the diff of aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa against bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: relation "release_diffs" does not exist[39m
+[31m[Nest] 10804  - [39m11/20/2026, 10:57:22 PM [31m  ERROR[39m [38;5;3m[BlobStore] [39m[31mBlob folder: ENOTDIR: not a directory, mkdir '/tmp/openfolia-blobs-2f26GX/file/blobs'[39m
+ [32m✓[39m [30m[46m api [49m[39m src/releases/repos/drizzle-release-diff-store.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 857[2mms[22m[39m
+   [32m✓[39m DrizzleReleaseDiffStore [2m(3)[22m
+     [33m[2m✓[22m[39m keeps a diff per pair of commits, a first release’s too, and reads it back as JSON[33m 474[2mms[22m[39m
+[31m[Nest] 10804  - [39m11/20/2026, 10:57:22 PM [31m  ERROR[39m [38;5;3m[BlobStore] [39m[31mBlob folder: ENOTDIR: not a directory, mkdir '/tmp/openfolia-blobs-2f26GX/file/blobs/tmp'[39m
+[31m[Nest] 10804  - [39m11/20/2026, 10:57:22 PM [31m  ERROR[39m [38;5;3m[BlobStore] [39m[31mS3 head in bucket unreachable failed: connect ECONNREFUSED 127.0.0.1:9[39m
+[31m[Nest] 10804  - [39m11/20/2026, 10:57:22 PM [31m  ERROR[39m [38;5;3m[BlobStore] [39m[31mS3 get in bucket unreachable failed: connect ECONNREFUSED 127.0.0.1:9[39m
+[31m[Nest] 10804  - [39m11/20/2026, 10:57:22 PM [31m  ERROR[39m [38;5;3m[BlobStore] [39m[31mS3 ping in bucket unreachable failed: connect ECONNREFUSED 127.0.0.1:9[39m
+ [32m✓[39m [30m[46m api [49m[39m src/blobs/repos/blob-stores.spec.ts [2m([22m[2m39 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m[33m 716[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/webhooks/repos/node-webhook-sender.spec.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 446[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/modules/repos/drizzle-module-index-store.spec.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1784[2mms[22m[39m
+   [32m✓[39m DrizzleModuleIndexStore, odd content [2m(1)[22m
+     [33m[2m✓[22m[39m resolves only the entries the reader may see, not their conditions[33m 873[2mms[22m[39m
+   [32m✓[39m caching [2m(2)[22m
+     [33m[2m✓[22m[39m never gives a reader a 304 for a response made for another scope[33m 685[2mms[22m[39m
+     [33m[2m✓[22m[39m never shares a cached PDF between readers of different scopes[33m 425[2mms[22m[39m
+[31m[Nest] 47415  - [39m11/20/2026, 11:00:55 PM [31m  ERROR[39m [38;5;3m[ApiExceptionFilter] [39mError: the database went away
+    at DrizzleChangeSetStore.insert [90m(/repo/backend/api/[39mtests/change-sets.e2e.spec.ts:335:41[90m)[39m
+    at work [90m(/repo/backend/api/[39msrc/change-sets/core/actions/create-change-set.action.ts:148:24[90m)[39m
+    at [90m/repo/backend/api/[39msrc/database/drizzle-unit-of-work.ts:91:30
+     [33m[2m✓[22m[39m tells its holder, from another of their change sets, which one holds it and whether it changed it; released there only unchanged (#472)[33m 4447[2mms[22m[39m
+     [33m[2m✓[22m[39m breaks all locks of a change set or a holder at once, with a count[33m 1165[2mms[22m[39m
+     [33m[2m✓[22m[39m is released when its change set is abandoned, and none is taken for a closed one[33m 485[2mms[22m[39m
+     [33m[2m✓[22m[39m is taken only by the change set’s author, for a change set that exists[33m 574[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a malformed subject, naming the member at fault[33m 449[2mms[22m[39m
+     [33m[2m✓[22m[39m lists newest first, paged and filtered, as JSON:API matching its schema[33m 1078[2mms[22m[39m
+   [32m✓[39m what a refusal tells (#121, #125) [2m(4)[22m
+     [33m[2m✓[22m[39m answers another author’s change set exactly as a missing one to an actor who may not read them[33m 933[2mms[22m[39m
+     [33m[2m✓[22m[39m answers releasing someone’s lock exactly as a missing one to an actor who may not know of it[33m 360[2mms[22m[39m
+     [33m[2m✓[22m[39m answers locking a hidden module exactly as a missing one[33m 796[2mms[22m[39m
+     [33m[2m✓[22m[39m lists and reads only the locks within the reader’s scope, counted before paging[33m 1063[2mms[22m[39m
+ 
+ NX   Running targets test, lint, typecheck, build for 16 projects and 9 tasks they depend on failed
+
+Failed tasks:
+
+- api:test
+
+Output of 69 successful tasks were not shown. Run with --verbose or --output-style=static to see it.
+
+
+ NX   Nx detected 2 flaky tasks
+
+  api:test
+  render-html:test
+
+Flaky tasks can disrupt your CI pipeline. Automatically retry them with Nx Cloud. Learn more at https://nx.dev/ci/features/flaky-tasks
+
+[32m✓[39m [30m[46m api [49m[39m tests/release-changes.e2e.spec.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 14935[2mms[22m[39m
+   [32m✓[39m release notes, changes and the changelog [2m(6)[22m
+     [33m[2m✓[22m[39m lists every manual as added for a product’s first release[33m 2796[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/preview/api/preview-page.spec.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/project/core/actions/project.actions.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/jobs/core/job-handlers.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/access/core/effective-permissions.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/health/core/actions/check-health.action.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/addresses/api/page-etag.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/addresses/core/delivery-limit.spec.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/content/core/released.spec.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/content/core/readable-refs.spec.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/base/core/paging.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/assets/api/asset-file.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m [30m[46m api [49m[39m src/access/api/sign-in.controller.spec.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [2m[90m↓[39m[22m [30m[46m api [49m[39m src/change-sets/repos/lock-contention.postgres.spec.ts [2m([22m[2m2 tests[22m[2m | [22m[33m2 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m [30m[46m api [49m[39m tests/search-budget-postgres.e2e.spec.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m [30m[46m api [49m[39m src/change-sets/repos/save-points.postgres.spec.ts [2m([22m[2m3 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[46m api [49m[39m tests/refresh.e2e.spec.ts[2m > [22mupdating a change set from main[2m > [22mkeeps only a file saved since the conflict, or one kept by choice
+[31m[1mError[22m: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+[36m [2m❯[22m tests/refresh.e2e.spec.ts:[2m300:3[22m[39m
+    [90m298|[39m   })[33m;[39m
+    [90m299|[39m
+    [90m300|[39m   it('keeps only a file saved since the conflict, or one kept by choic…
+    [90m   |[39m   [31m^[39m
+    [90m301|[39m     [35mconst[39m late [33m=[39m [35mawait[39m [34mcreate[39m(other[33m,[39m [32m'Late again'[39m)[33m;[39m
+    [90m302|[39m     [35mconst[39m winner [33m=[39m [35mawait[39m [34mcreate[39m(author[33m,[39m [32m'Winner again'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m303 passed[39m[22m[2m | [22m[33m3 skipped[39m[90m (307)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m3547 passed[39m[22m[2m | [22m[33m18 skipped[39m[90m (3566)[39m
+[2m   Start at [22m 22:54:36
+[2m   Duration [22m 566.56s[2m (tests 82%, import 17%, transform 1%)[22m
+
+[2m    Isolate [22m [33m307 workers spawned[39m[2m · ~151ms startup each (spawn + environment, per file)[22m
+[2m            [22m [2mat least ~11.41s faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+
+Warning: command "vitest run" exited with non-zero status code
+
+  Run duration:      9m 35s
+  Cache:             40/69 hit (58%)
+  Critical path:     9m 29s (4 tasks)
+  Recoverable time:  5.5s (1% of the run)
+
+  Recommendations:
+    - Speed up or split the longest tasks on the critical path:
+        api:test    9m 28s
+[ELIFECYCLE] Command failed with exit code 1.

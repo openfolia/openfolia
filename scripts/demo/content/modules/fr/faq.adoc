@@ -1,0 +1,30 @@
+= Questions fréquentes
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[variant#electric,when="drive in (electric)"]
+====
+[faq#faq-noise]
+.Pourquoi le véhicule émet-il un bourdonnement à basse vitesse ?
+=====
+[#faq-noise-a]
+Le modèle électrique émet un son jusqu'à 20 km/h pour que les piétons l'entendent arriver. C'est une obligation légale.
+=====
+====
+
+[faq#faq-clock]
+.Pourquoi l'horloge a-t-elle une heure d'écart ?
+====
+[#faq-clock-a]
+L'horloge ne passe d'elle-même à l'heure d'été que si l'heure automatique est activée. Réglez-la comme décrit dans « Régler l'heure ».
+====
+
+[faq#faq-tyres]
+.À quelle fréquence dois-je contrôler la pression des pneus ?
+====
+[#faq-tyres-a]
+Toutes les deux semaines et avant un long trajet, pneus froids.
+====

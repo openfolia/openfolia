@@ -1,0 +1,111 @@
+---
+import Base from '../../layouts/Base.astro';
+import { countText, textsFor } from '../../lib/i18n.ts';
+import { catalogue, formatDate, href, manualPath } from '../../lib/site.ts';
+
+const { s, cards, products, attributes } = catalogue();
+const t = textsFor(s.lang);
+/** Rows a page of the list shows. */
+const PAGE_SIZE = 12;
+/** Variant links a row shows before "+n more". */
+const FOLD = 3;
+const texts = { count: t.manualCount, pageOf: t.pageOf };
+---
+
+<Base title={t.allManuals} path="manuals/" current="manuals">
+  <div class="listpage">
+    <header class="listpage__head">
+      <h1 class="listpage__title">{t.allManuals}</h1>
+      <p class="count" data-count={JSON.stringify(texts)} data-lang={s.lang} role="status" aria-live="polite">
+        {countText(t.manualCount, cards.length, s.lang)}
+      </p>
+    </header>
+    {
+      cards.length === 0 ? (
+        <p class="empty empty--page">{t.noManuals}</p>
+      ) : (
+        <>
+          <details class="filters" data-filters-panel hidden open>
+            <summary>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+              <span>{t.filters}</span>
+              <span class="filters__count" data-filters-count hidden></span>
+              <svg class="chevron" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </summary>
+          <form class="filterbar" data-filters aria-label={t.filters}>
+            {products.length > 1 && (
+              <label class="field">
+                <span class="field__label">{t.product}</span>
+                <select name="product">
+                  <option value="">{t.allProducts}</option>
+                  {products.map((p) => <option value={p.id}>{p.label}</option>)}
+                </select>
+              </label>
+            )}
+            {attributes.map((a) => (
+              <label class="field">
+                <span class="field__label">{a.label}</span>
+                <select name={`variant:${a.id}`}>
+                  <option value="">{t.allValues}</option>
+                  {a.values.map((v) => <option value={v.id}>{v.label}</option>)}
+                </select>
+              </label>
+            ))}
+            <label class="field field--grow">
+              <span class="field__label">{t.filterByTitle}</span>
+              <input type="search" name="q" autocomplete="off" />
+            </label>
+          </form>
+          </details>
+          <div class="sheet">
+            <div class="scroller" data-list tabindex="0" aria-label={t.allManuals}>
+              <ul class="rows" data-fold={FOLD}>
+                {cards.map(({ release, manual }) => (
+                  <li class="row" data-card data-product={release.product} data-title={manual.title.toLocaleLowerCase(s.lang)}>
+                    <a class="row__title" href={href(manualPath(release, manual, manual.variants[0]!))}>{manual.title}</a>
+                    <p class="row__product">
+                      <span>{release.productLabel}</span>
+                      <span class="row__release">{t.release(release.revision, formatDate(release.publishedAt, s.lang))}</span>
+                    </p>
+                    {manual.variants.length > 1 ? (
+                      <ul class="row__variants" aria-label={t.variants} data-variants>
+                        {manual.variants.map((v) => (
+                          <li data-values={JSON.stringify(v.values)}>
+                            <a href={href(manualPath(release, manual, v))}>{v.label}</a>
+                          </li>
+                        ))}
+                        {manual.variants.length > FOLD && (
+                          <li class="row__more" data-more hidden>
+                            <button type="button" data-more-button data-template={t.moreVariants}>{t.moreVariants.replace('{n}', String(manual.variants.length - FOLD))}</button>
+                          </li>
+                        )}
+                      </ul>
+                    ) : (
+                      <span class="row__variants row__variants--one" data-values={JSON.stringify(manual.variants[0]!.values)}>{manual.variants[0]!.label}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p class="empty" data-no-match hidden>{t.noMatch}</p>
+            </div>
+            <nav class="pager" data-pager data-size={PAGE_SIZE} aria-label={t.pagination} hidden>
+              <button type="button" data-prev disabled>
+                <span aria-hidden="true" class="pager__arrow">←</span>
+                {t.previous}
+              </button>
+              <span class="pager__label" data-page-label></span>
+              <button type="button" data-next>
+                {t.next}
+                <span aria-hidden="true" class="pager__arrow">→</span>
+              </button>
+            </nav>
+          </div>
+        </>
+      )
+    }
+  </div>
+  <script>
+    import { filterManuals } from '../../scripts/filters.ts';
+    filterManuals(document);
+  </script>
+</Base>

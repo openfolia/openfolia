@@ -1,0 +1,122 @@
+---
+title: 'Reverse proxy with TLS'
+description: 'Put a proxy with TLS in front of the editor, believe the right client address, and serve the stable addresses to readers and caches.'
+articleId: 'guide.self-hosting.reverse-proxy'
+---
+
+The containers listen on `127.0.0.1` only. Put a reverse proxy in front of the editor: it
+terminates TLS and forwards everything to the editor's port (8080). The editor serves the app and
+passes `/api` and the stable addresses `/d/` to the API on the stack's own network.
+
+## What the proxy must do
+
+1. **Run on the same machine**, and leave `OPENFOLIA_BIND` at `127.0.0.1`. Publishing the ports
+   wider (`0.0.0.0`) bypasses host firewall rules and serves plain HTTP.
+2. **Keep the `Host` header.** The editor compares each request's `Origin` with its `Host` and
+   refuses one from another origin. Caddy and Traefik keep it by default; nginx needs
+   `proxy_set_header Host $host;`.
+3. **Append the client's address** to `X-Forwarded-For`, as a plain address without a port. Caddy
+   does; nginx needs `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.
+4. **Allow large bodies.** Uploads stream to the API, which enforces its own limits
+   (`CCMS_MAX_UPLOAD_BYTES` and the others). 1 GB covers every default.
+5. **Allow long answers.** A PDF can take up to `CCMS_PDF_TIMEOUT_MS` (default 60 s).
+
+Then, in `deploy/.env`:
+
+```sh
+CCMS_PUBLIC_URL=https://docs.example.com/
+CCMS_EDITOR_HOSTS=docs.example.com
+CCMS_TRUST_PROXY=2
+```
+
+`CCMS_PUBLIC_URL` is the base of every stable address, QR code and link in an email.
+`CCMS_EDITOR_HOSTS` makes the editor answer any other `Host` with 421.
+
+### Caddy
+
+Certificates come from Let's Encrypt automatically:
+
+```text
+docs.example.com {
+	reverse_proxy 127.0.0.1:8080 {
+		transport http {
+			read_timeout 5m
+		}
+	}
+	request_body {
+		max_size 1GB
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
+```
+
+### nginx
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name docs.example.com;
+    ssl_certificate     /etc/letsencrypt/live/docs.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/docs.example.com/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 1g;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+## The client's address: `CCMS_TRUST_PROXY`
+
+The API keys its rate limits and the count of failed sign-ins by the client's address. It believes
+no proxy about that address unless `CCMS_TRUST_PROXY` says so. `deploy/compose.yaml` sets it to
+`1`: the editor's nginx, one hop.
+
+- **`1`** (the compose default) is right when readers reach the editor's port directly.
+- **`2`** with your own proxy in front of the editor, as above. The editor's port must then be
+  reachable only through your proxy, or a client could name any address. Left at `1` behind your
+  proxy, every reader counts as your proxy: one budget for all.
+- A hop count must match **every** path to the API. Don't give the API a host of its own with `2`:
+  that path has one hop fewer, and a client on it could name any address. API clients use
+  `https://docs.example.com/api/...` instead; without `CCMS_EDITOR_API_TOKEN` the editor passes
+  their `Authorization` header on.
+- Keep the API's own port on `127.0.0.1` (`OPENFOLIA_API_BIND`, the default whatever
+  `OPENFOLIA_BIND` says). If you publish it wider, set `CCMS_TRUST_PROXY=none`, and raise or turn
+  off `CCMS_DELIVERY_PER_MINUTE`, since every reader through the editor then shares one budget.
+
+Instead of a hop count, `CCMS_TRUST_PROXY` also takes the proxies' addresses or subnets; the
+[settings reference](/reference/settings) has the format.
+
+## Stable addresses for readers
+
+The editor serves `/d/`, each manual's stable address with its PDF and QR codes
+([Stable addresses](/guide/releases/stable-addresses)), from the API, without any credentials:
+readers get only what `delivery.access` in `openfolia.yaml` allows without signing in. Clients with a
+token use `/api/d/`.
+
+| Setting                        | What it does                                                                                                                                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_DELIVERY_MAX_ACCESS`     | The most any project's `delivery.access` may open: `public` (default, no cap), `signed-in` or `off`. A project asking for more is served at the cap, and its manuals' checks say `delivery-access-capped`. |
+| `CCMS_DELIVERY_PER_MINUTE`     | Pages, PDFs and QR codes one client may ask for a minute (default 60, `0` no limit); then 429 with `Retry-After`. Raise it where many readers share one address.                                           |
+| `CCMS_DELIVERY_IGNORED_QUERY`  | Query parameters `/d/` ignores, so shared links with tracking parameters still open (default `utm_*`). Any other is refused (400).                                                                         |
+| `CCMS_DELIVERY_SHARED_MAX_AGE` | How long a shared cache may keep a public page's image, in seconds (default 300).                                                                                                                          |
+| `CCMS_BUILD_ID`                | The same value on every server of one build, a new one with each build, so their page ETags agree.                                                                                                         |
+
+Set `CCMS_DELIVERY_MAX_ACCESS=signed-in` where no project may be readable without signing in, so a
+single reviewed change to `openfolia.yaml` cannot publish one.
+
+**Caches in front** (a proxy, a CDN): pages, PDFs, QR codes and symbols under `/d/` are `no-cache`
+with an ETag, so every cache asks again and gets a cheap 304, and a new release or a withdrawal
+reaches readers at once. Images are cached longer: a reader's browser keeps one a day, a shared
+cache a public one for `CCMS_DELIVERY_SHARED_MAX_AGE`. So a withdrawn release's images can stay in a
+shared cache that long. A signed-in reader's answers are `private`.
+
+The settings in the table go into `deploy/api.env`. If you run a modified version, also set
+`CCMS_SOURCE_URL`: see [Licence and source](/guide/self-hosting/licence).

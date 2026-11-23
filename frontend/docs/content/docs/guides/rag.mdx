@@ -1,0 +1,33 @@
+---
+title: 'Integrating with a RAG pipeline'
+description: 'Keep a retrieval index in step with the released content, through the Delivery API.'
+---
+
+A retrieval (RAG) pipeline needs the released content in pieces, and to know what changed. The
+[Delivery API](/api/delivery) gives it both, with the token of a service account that may only
+read released content.
+
+## The pieces: chunks
+
+`GET /chunks` answers the released content as ready-made retrieval chunks: one per module and
+language (and one per FAQ entry), as Markdown, with the metadata to filter on (audience, facets,
+keywords, the manuals that include it) and a content hash, so the pipeline embeds a chunk again only
+when its hash is new. Read every page at the commit the first one names (`X-Ccms-Commit`); if `main`
+moves on meanwhile, a later page answers 404 `not-found`, since a reader of released content may
+read a commit only while `main` or a tag points at it: start again (see [Retrieval
+chunks](/guide/integrations/chunks)).
+
+## What changed: the change feed
+
+`GET /changes` is the change feed: the first call answers a snapshot of everything the reader
+may read, with a cursor; later calls with `page[cursor]` answer only what was released,
+withdrawn or deprecated since, with `chunk.upserted` and `chunk.removed` events, so the pipeline
+adds, replaces and removes chunks by their IDs. Webhooks can wake the loop up; the feed says what
+to do, so a missed delivery loses nothing. A cursor that can no longer be read is
+400 `cursor-expired` (start again without a cursor), and one standing on content that is gone is
+410 `cursor-gone` (resync). See the [error codes](/reference/errors).
+
+## What it never sees
+
+The token's role holds `content.read` only, in the scope the pipeline may index: drafts, and
+anything outside that scope, never reach it.

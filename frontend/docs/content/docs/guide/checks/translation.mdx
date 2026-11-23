@@ -1,0 +1,45 @@
+---
+title: 'Missing and outdated translations'
+description: 'What the translation checks report, and how to bring the translations up to date.'
+articleId: 'guide.checks.translation'
+---
+
+A manual is made in every target language of the project. Where a translation is missing or behind
+its source, the checks warn. These are warnings: they never stop a release, but readers then see
+the source language, or an older text.
+
+## Missing translation
+
+**Missing translation**: a module has no translation into a target language, for example **No
+German translation: the manual shows the source language.** The manual uses the source-language
+module in its place.
+
+To fix it, have the module translated: export it for translation and import the result. See
+[Export for translation](/guide/translations/export).
+
+## Outdated translation
+
+**Outdated translation**: the source module changed since this translation was made, so some blocks
+need translating again. A translation made outside the editor, with no record of its source, counts
+every block.
+
+At a manual, the same check names texts of the manual itself:
+
+- **Cover image texts changed since the German translation was made: 1 to translate again.**
+- **Texts of the page design … changed since the German translation was made: 2 to translate
+  again.**
+
+A delta export picks up exactly what changed. See
+[Outdated translations](/guide/translations/outdated).
+
+## Missing output labels
+
+**Missing output labels**: the fixed texts a manual prints have no version in the manual's
+language, so English is used. An administrator adds them under
+**Admin** › **Project settings** › **Output labels**.
+
+## Page design texts
+
+A page design's own texts, such as a footer, are checked per language too: **Page design text not
+translated**, **Page design text left out** and **Page design translation differs**. See
+[Layout and page design warnings](/guide/checks/layout-warnings).

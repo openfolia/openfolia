@@ -1,0 +1,16 @@
+---
+title: 'Reference'
+description: 'Catalogues generated from the source code.'
+---
+
+These pages are generated from the repository on every build, so they cannot drift from the
+code of the release they belong to:
+
+| Page                                               | Generated from                                                            |
+| -------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Error codes](/reference/errors)                   | `backend/api/error-codes.yaml`, checked against every code the API raises |
+| [Permissions](/reference/permissions)              | the API's permission list and each route's required permission            |
+| [Settings](/reference/settings)                    | `.env.example` and its comments                                           |
+| [Project configuration](/reference/project-config) | the content model's schema of `openfolia.yaml`                            |
+| [Import format](/reference/import-format)          | `import-format.schema.json`                                               |
+| [MCP tools](/reference/mcp-tools)                  | the MCP server's tool definitions                                         |

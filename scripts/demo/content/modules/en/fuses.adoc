@@ -1,0 +1,23 @@
+= Fuses
+:schema-version: 1
+:module-type: reference
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: fuse
+
+[#img-box]
+image::demo-image:fuse-box["Fuse box with numbered fuse positions",width=60%]
+<.> [callout#f-puller,x=0.12,y=0.2,label-x=0.05,label-y=0.06] Fuse puller
+<.> [callout#f-spare,x=0.88,y=0.78,label-x=0.95,label-y=0.94] Spare fuses
+
+[#table,cols="1,2,1",options=header]
+.Fuses
+|===
+|[[fu-h-no]]No. |[[fu-h-what]]Protects |[[fu-h-amp]]Rating
+|[[fu-1]]1 |[[fu-1-what]]Wipers and washer pump |[[fu-1-amp]]20 A
+|[[fu-2]]2 |[[fu-2-what]]Centre display |[[fu-2-amp]]10 A
+|[[fu-3]]3 |[[fu-3-what]]12 V socket and USB ports |[[fu-3-amp]]15 A
+|[[fu-4]]4 |[[fu-4-what]]Heated seats |[[fu-4-amp]]25 A
+|[[fu-5]]5 |[[fu-5-what]]Interior lights |[[fu-5-amp]]5 A
+|===

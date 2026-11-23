@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" width="1000" height="440">
+  <rect width="1000" height="440" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="412" rx="440" ry="14" fill="#d9dde3"/>
+  <path d="M70 330 L78 262 Q84 236 120 228 L300 206 Q350 150 420 116 Q450 104 500 104 L700 106 Q760 108 820 160 L900 214 Q926 232 930 262 L934 330 Z" fill="#5b7fa6" stroke="#2f3a45" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M326 206 Q370 156 430 128 L560 124 L560 206 Z" fill="#cfe0ef" stroke="#2f3a45" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M580 124 L700 126 Q745 130 790 172 L812 206 L580 206 Z" fill="#cfe0ef" stroke="#2f3a45" stroke-width="5" stroke-linejoin="round"/>
+  <line x1="570" y1="122" x2="570" y2="320" stroke="#2f3a45" stroke-width="4"/>
+  <line x1="330" y1="210" x2="330" y2="318" stroke="#2f3a45" stroke-width="4"/>
+  <line x1="810" y1="210" x2="822" y2="300" stroke="#2f3a45" stroke-width="4"/>
+  <rect x="520" y="232" width="34" height="9" rx="4" fill="#2f3a45"/>
+  <rect x="756" y="232" width="34" height="9" rx="4" fill="#2f3a45"/>
+  <path d="M318 196 L350 186 L360 214 L326 218 Z" fill="#2f3a45"/>
+  <rect x="836" y="236" width="38" height="28" rx="6" fill="#4a6a8e" stroke="#2f3a45" stroke-width="4"/>
+  <path d="M82 258 L128 252 L126 274 L80 278 Z" fill="#f6f1d0" stroke="#2f3a45" stroke-width="4"/>
+  <path d="M906 238 L928 244 L930 276 L910 274 Z" fill="#d9534f" stroke="#2f3a45" stroke-width="4"/>
+  <rect x="170" y="196" width="60" height="10" rx="4" fill="#2f3a45"/>
+  <path d="M300 334 H660" stroke="#2f3a45" stroke-width="10" stroke-linecap="round"/>
+  <path d="M352 332 l8 14 l8 -14" fill="#f2b632" stroke="#2f3a45" stroke-width="3"/>
+  <g>
+    <circle cx="220" cy="346" r="64" fill="#2f3a45"/>
+    <circle cx="220" cy="346" r="34" fill="#c8ced6"/>
+    <circle cx="220" cy="346" r="8" fill="#2f3a45"/>
+    <circle cx="780" cy="346" r="64" fill="#2f3a45"/>
+    <circle cx="780" cy="346" r="34" fill="#c8ced6"/>
+    <circle cx="780" cy="346" r="8" fill="#2f3a45"/>
+  </g>
+</svg>

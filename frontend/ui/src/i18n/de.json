@@ -1,0 +1,515 @@
+{
+  "account": {
+    "labelCollapsed": "Konto: {name}"
+  },
+  "badges": {
+    "status": {
+      "draft": "Entwurf",
+      "inReview": "In Prüfung",
+      "approved": "Freigegeben",
+      "released": "Veröffentlicht",
+      "deprecated": "Veraltet"
+    },
+    "translation": {
+      "upToDate": "Aktuell",
+      "outdated": "Veraltet",
+      "atAgency": "Bei der Agentur",
+      "notTranslated": "Nicht übersetzt",
+      "translated": "Übersetzt"
+    }
+  },
+  "blocks": {
+    "reference": {
+      "module": "Ganzes Modul",
+      "block": "Block",
+      "link": "Link",
+      "open": "Öffnen",
+      "shared": "Gemeinsames Modul"
+    },
+    "safety": {
+      "hazard": "Gefahr",
+      "consequence": "Folgen",
+      "measure": "Maßnahme",
+      "noArtwork": "Keine Grafik",
+      "symbolWithoutArtwork": "{label}: keine Grafik vorhanden"
+    },
+    "variant": {
+      "label": "Variantenblock",
+      "shownFor": "Angezeigt für",
+      "everyVariant": "Gilt für alle Varianten",
+      "add": "Variante hinzufügen"
+    },
+    "image": {
+      "alt": "Alternativtext: {alt}",
+      "noAlt": "Kein Alternativtext: erforderlich",
+      "missing": "Bild nicht gefunden oder für Sie nicht sichtbar",
+      "failed": "Das Bild konnte nicht geladen werden",
+      "empty": "Kein Bild gewählt",
+      "retry": "Erneut versuchen"
+    },
+    "callouts": {
+      "group": "Positionsnummern",
+      "handle": "{part, select, anchor {Positionsnummer {number}, Ankerpunkt} label {Positionsnummer {number}, Beschriftung} other {Positionsnummer {number}}}{hidden, select, yes {, in dieser Variante ausgeblendet} other {}}"
+    },
+    "attachment": {
+      "unnamed": "Datei ohne Namen",
+      "missing": "Datei nicht gefunden oder für Sie nicht sichtbar",
+      "empty": "Keine Datei gewählt"
+    },
+    "passthrough": {
+      "show": "Quelltext anzeigen",
+      "hide": "Quelltext ausblenden"
+    }
+  },
+  "breadcrumb": {
+    "label": "Navigationspfad",
+    "more": "Weitere Ebenen"
+  },
+  "command": {
+    "instructions": "Mit den Pfeiltasten navigieren, mit der Eingabetaste auswählen, mit Escape die Auswahl aufheben.",
+    "empty": "Keine Ergebnisse gefunden.",
+    "results": "{count, plural, =0 {Keine Ergebnisse für „{term}“} one {# Ergebnis für „{term}“} other {# Ergebnisse für „{term}“}}",
+    "search": "Befehle durchsuchen",
+    "placeholder": "Befehl eingeben oder suchen …"
+  },
+  "dialog": {
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "continue": "Weiter",
+    "ok": "OK"
+  },
+  "diff": {
+    "inserted": "Eingefügt",
+    "deleted": "Gelöscht",
+    "comments": "{count, plural, one {Kommentar} other {Kommentare}}"
+  },
+  "language": {
+    "label": "Sprache"
+  },
+  "listFrame": {
+    "label": "Liste",
+    "loading": "{label} wird geladen",
+    "pagination": "Seitennavigation",
+    "pageOf": "Seite {page, number} von {last, number} ({total, number} insgesamt)",
+    "rowsPerPage": "Zeilen pro Seite",
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+  "moduleTree": {
+    "label": "Aufbau des Handbuchs",
+    "moved": "{title}: {number}, Ebene {level} der Gliederung"
+  },
+  "select": {
+    "placeholder": "Option auswählen …",
+    "search": "Suchen …",
+    "noResults": "Keine Ergebnisse"
+  },
+  "sidebar": {
+    "label": "Seitenleiste",
+    "close": "Seitenleiste schließen",
+    "toggle": "Seitenleiste ein- oder ausblenden"
+  },
+  "states": {
+    "loading": "Wird geladen",
+    "empty": {
+      "title": "Noch nichts vorhanden"
+    },
+    "error": {
+      "unauthorized": "Kein Zugriff",
+      "notFound": "Nicht gefunden",
+      "invalid": "Die Anfrage war ungültig",
+      "unavailable": "Der Dienst ist ausgelastet oder nicht erreichbar",
+      "network": "Keine Verbindung",
+      "unknown": "Etwas ist schiefgelaufen",
+      "retry": "Erneut versuchen"
+    },
+    "noAccess": {
+      "title": "Kein Zugriff",
+      "message": "Bitten Sie eine Administratorin oder einen Administrator um die nötige Berechtigung."
+    },
+    "save": {
+      "saved": "Gespeichert",
+      "saving": "Wird gespeichert …",
+      "draft": "Entwurf",
+      "notSaved": "Nicht gespeichert"
+    }
+  },
+  "switch": {
+    "label": "Schalter umschalten"
+  },
+  "theme": {
+    "label": "Darstellung",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  },
+  "toast": {
+    "region": "Benachrichtigungen",
+    "dismiss": "Schließen",
+    "undo": "Rückgängig",
+    "kind": {
+      "success": "Erledigt",
+      "info": "Hinweis",
+      "warning": "Warnung",
+      "error": "Fehler"
+    }
+  },
+  "showcase": {
+    "title": "Komponentenübersicht",
+    "logo": "Logo",
+    "button": {
+      "heading": "Schaltfläche",
+      "type": {
+        "default": "Standard",
+        "secondary": "Sekundär",
+        "outline": "Kontur",
+        "ghost": "Dezent",
+        "destructive": "Destruktiv",
+        "link": "Link"
+      },
+      "size": {
+        "xs": "Sehr klein",
+        "sm": "Klein",
+        "default": "Standard",
+        "lg": "Groß"
+      }
+    },
+    "states": {
+      "heading": "Leer, Laden, Fehler und kein Zugriff",
+      "emptyCard": "LEER · Ordner ohne Module",
+      "emptyTitle": "Noch keine Module in diesem Ordner",
+      "emptyDescription": "Legen Sie das erste an oder verschieben Sie Module aus einem anderen Ordner hierher.",
+      "newModule": "Neues Modul",
+      "loadingCard": "LADEN · Platzhalterzeilen, kein Spinner für Listen",
+      "errorCard": "FEHLER · Anfrage fehlgeschlagen",
+      "errorHeading": "Die Module konnten nicht geladen werden",
+      "errorMessage": "Der Inhaltsdienst hat nicht geantwortet. Ihre Entwürfe sind sicher.",
+      "noAccessCard": "KEIN ZUGRIFF · außerhalb des Rollenbereichs",
+      "noAccessHeading": "Sie können dieses Modul nicht öffnen",
+      "noAccessMessage": "Es gehört zu einer Produktlinie oder Zielgruppe, die Ihre Rollen nicht abdecken. Bitten Sie eine Administratorin oder einen Administrator, Ihren Zugriff zu erweitern.",
+      "seeRoles": "Meine Rollen ansehen",
+      "saveCard": "SPEICHERSTATUS · Kopfzeile des Editors",
+      "justNow": "gerade eben",
+      "finishBlock": "Block fertigstellen zum Speichern",
+      "offline": "offline. Änderungen bleiben in diesem Browser erhalten.",
+      "cycle": "Durchschalten",
+      "toastCard": "TOAST · nach einer Aktion",
+      "reviewRequested": "{count, plural, one {Prüfung bei # Person angefragt} other {Prüfung bei # Personen angefragt}}",
+      "exportReady": "{count, plural, one {Export bereit · # Sprache} other {Export bereit · # Sprachen}}",
+      "download": "Herunterladen",
+      "successUndo": "Erfolg mit Rückgängig",
+      "deleted": "Eintrag gelöscht",
+      "restored": "Wiederhergestellt.",
+      "renamed": "Der Entwurf wurde umbenannt.",
+      "cannotUndo": "Das lässt sich später nicht rückgängig machen.",
+      "couldNotSave": "Speichern fehlgeschlagen. Prüfen Sie Ihre Verbindung.",
+      "listFrame": "Der Listenrahmen",
+      "listFrameState": "Zustand des Listenrahmens",
+      "frame": {
+        "rows": "Zeilen",
+        "many": "{count, number} Zeilen",
+        "loading": "Laden",
+        "empty": "Leer",
+        "error": "Fehler",
+        "noAccess": "Kein Zugriff"
+      },
+      "exampleList": "Beispielliste",
+      "noEntries": "Noch keine Einträge",
+      "noEntriesHint": "Einträge, die Sie hinzufügen, erscheinen hier.",
+      "addEntry": "Eintrag hinzufügen",
+      "busy": "Der Dienst ist ausgelastet. Versuchen Sie es gleich noch einmal.",
+      "row": "Zeile {n}",
+      "rowDetail": "Ein Detail zu Zeile {n}"
+    },
+    "components": {
+      "badges": "Badges",
+      "blocks": "Dokumentblöcke",
+      "signal": {
+        "danger": "Gefahr",
+        "warning": "Warnung",
+        "caution": "Vorsicht",
+        "notice": "Hinweis"
+      },
+      "hazard": "Beispieltext für die Gefahr.",
+      "consequence": "Beispielfolge, wenn die Gefahr missachtet wird.",
+      "measure": "Beispielmaßnahme, die die Gefahr vermeidet.",
+      "hazardOnly": "Nur eine Gefahr ist angegeben.",
+      "symbol": "Allgemeines Warnzeichen",
+      "variantContent": "Inhalt, der nur für die gewählten Varianten gilt. Auswahl {count, plural, one {# Mal} other {# Mal}} geöffnet.",
+      "noCondition": "Keine Bedingung, schreibgeschützt.",
+      "calloutPicture": "Eine graue Fläche mit drei Positionsnummern",
+      "sharedModule": "Beispiel für ein gemeinsames Modul",
+      "otherBlock": "Block eines anderen Moduls",
+      "longTitle": "Ein Modul mit langem Titel und einem-sehr-langen-ununterbrochenen-Wort-das-umbrechen-muss-statt-die-Seite-oder-die-Karte-zu-verbreitern",
+      "diff": "Änderungsmarkierungen",
+      "diffBefore": "Ziehen Sie die",
+      "diffOld": "alte",
+      "diffNew": "neue",
+      "diffMiddle": "Verschraubung an und prüfen Sie den",
+      "diffAnchor": "Drehmomentwert",
+      "diffAfter": "vor der Verwendung.",
+      "tree": {
+        "heading": "Modulbaum",
+        "hint": "Ziehen Sie am Griff oder nutzen Sie die Tastatur: Pfeiltasten wechseln die Zeile, Tab und Umschalt+Tab ändern die Ebene, Alt+Nach-oben und Alt+Nach-unten verschieben eine Zeile.",
+        "intro": "Einleitung",
+        "safety": "Sicherheit",
+        "general": "Allgemeine Hinweise",
+        "symbols": "Symbole",
+        "use": "Bedienung",
+        "start": "Inbetriebnahme",
+        "stop": "Außerbetriebnahme",
+        "care": "Wartung"
+      },
+      "admonition": {
+        "note": "Hinweis",
+        "tip": "Tipp",
+        "important": "Wichtig",
+        "text": "Ein Hinweis, der nicht die Sicherheit betrifft."
+      },
+      "faq": {
+        "label": "FAQ-Eintrag",
+        "question": "Kann ich über Nacht laden?",
+        "answer": "Ja: Das Ladegerät stoppt, wenn der Akku voll ist."
+      },
+      "procedure": {
+        "label": "Handlungsanweisung",
+        "one": "Abdeckung öffnen.",
+        "two": "Dichtung prüfen."
+      },
+      "code": {
+        "label": "Code"
+      },
+      "passthrough": {
+        "label": "Nicht konvertierter Inhalt"
+      },
+      "pageBreak": "Seitenumbruch (PDF)",
+      "sortable": {
+        "heading": "Sortierbare Liste",
+        "hint": "Ziehen Sie eine Zeile am Griff, oder fokussieren Sie den Griff und drücken Sie Alt+Pfeil hoch oder Alt+Pfeil runter."
+      },
+      "tips": {
+        "heading": "Tipps und Rundgang",
+        "title": "Ein Beispieltipp",
+        "body": "Ein oder zwei Sätze über das Element, auf das er zeigt.",
+        "stepTitle": "Ein Schritt des Rundgangs",
+        "stepBody": "Jeder Schritt zeigt auf einen Teil der Ansicht."
+      }
+    },
+    "base": {
+      "disabled": "Deaktiviert",
+      "invalid": "Ungültig",
+      "none": "keine",
+      "side": {
+        "top": "oben",
+        "bottom": "unten",
+        "left": "links",
+        "right": "rechts"
+      },
+      "size": {
+        "small": "klein",
+        "medium": "mittel",
+        "large": "groß"
+      },
+      "kind": {
+        "concept": "Konzept",
+        "procedure": "Anleitung",
+        "reference": "Referenz",
+        "faq": "FAQ"
+      },
+      "table": {
+        "heading": "Tabelle",
+        "hint": "Eine breite Tabelle scrollt in ihrem eigenen Rahmen. Standard, kompakt und großzügig, gestreift und mit Rahmen, eine ausgewählte Zeile und die leere Tabelle.",
+        "region": "Tabelle: {name}",
+        "selectAll": "Alle auswählen",
+        "select": "{name} auswählen",
+        "name": "Name",
+        "type": "Typ",
+        "status": "Status",
+        "changed": "Geändert",
+        "total": "Gesamt",
+        "empty": "Leere Tabelle",
+        "noRows": "Keine Zeilen vorhanden.",
+        "compact": "Kompakt, gestreift",
+        "comfortable": "Großzügig, mit Rahmen",
+        "item1": "Beispieleintrag eins",
+        "item2": "Beispieleintrag zwei",
+        "item3": "Beispieleintrag drei"
+      },
+      "input": {
+        "heading": "Eingabefeld und Textbereich",
+        "default": "Standard",
+        "placeholder": "Platzhaltertext",
+        "withValue": "Mit Wert",
+        "typed": "Ein eingegebener Wert",
+        "focus": "Fokus (erzwungene Darstellung)",
+        "focused": "Fokussiert",
+        "notEditable": "Nicht bearbeitbar",
+        "notAnAddress": "keine Adresse",
+        "validAddress": "Geben Sie eine gültige Adresse ein.",
+        "readOnly": "Schreibgeschützt",
+        "readOnlyValue": "Schreibgeschützter Wert",
+        "textarea": "Textbereich",
+        "longer": "Ein längerer Text",
+        "textareaDisabled": "Textbereich, deaktiviert",
+        "textareaInvalid": "Textbereich, ungültig",
+        "tooShort": "Zu kurz",
+        "group": "Eingabegruppe",
+        "address": "Adresse",
+        "clear": "Leeren"
+      },
+      "select": {
+        "heading": "Auswahlliste",
+        "searchable": "Durchsuchbar, mit langer Liste",
+        "pickCity": "Stadt wählen",
+        "hint": "Tastatur: Eingabe, Leertaste oder Nach-unten öffnet, Pfeile, Pos1 und Ende bewegen, Buchstaben springen, Eingabe wählt, Escape schließt.",
+        "placeholder": "Platzhalter",
+        "pickSize": "Größe wählen",
+        "required": "Pflichtfeld",
+        "groups": "Gruppen, ein deaktivierter Eintrag",
+        "groupsLabel": "Gruppen",
+        "pickKind": "Art wählen",
+        "kinds": "Arten",
+        "other": "Sonstige",
+        "faqDisabled": "FAQ (deaktiviert)",
+        "multiple": "Mehrfachauswahl",
+        "pickSome": "Mehrere wählen",
+        "popper": "Popper-Position, lange Beschriftung",
+        "longLabel": "Lange Beschriftung",
+        "long": "Eine lange Beschriftung mit-einem-ununterbrochenen-Teil-der-die-Seite-nicht-verbreitern-darf",
+        "short": "Kurz"
+      },
+      "choices": {
+        "heading": "Kontrollkästchen, Optionsgruppe und Schalter",
+        "checkbox": "Kontrollkästchen",
+        "uncheckedOrChecked": "Aus- oder angewählt",
+        "checked": "Angewählt",
+        "disabledChecked": "Deaktiviert, angewählt",
+        "radio": "Optionsgruppe",
+        "sampleChoice": "Beispielauswahl",
+        "first": "Erste",
+        "second": "Zweite",
+        "invalidChoice": "Ungültige Auswahl",
+        "disabledGroup": "Deaktivierte Gruppe",
+        "groupDisabled": "Gruppe deaktiviert",
+        "switch": "Schalter",
+        "offOrOn": "Aus oder an",
+        "on": "An",
+        "disabledOn": "Deaktiviert, an"
+      },
+      "dialogs": {
+        "heading": "Dialog, Warndialog und Seitenpanel",
+        "hint": "Sie halten den Fokus, schließen mit Escape und geben den Fokus an die Schaltfläche zurück, die sie geöffnet hat. Der Warndialog schließt nicht bei einem Klick daneben.",
+        "openDialog": "Dialog öffnen",
+        "openAlert": "Warndialog öffnen",
+        "openSheet": "Seitenpanel öffnen ({side})",
+        "openPalette": "Befehlspalette öffnen",
+        "newItem": "Neuer Eintrag",
+        "fillIn": "Füllen Sie die Angaben aus. Alle Felder sind Pflichtfelder.",
+        "title": "Titel",
+        "aTitle": "Ein Titel",
+        "kind": "Art",
+        "fromCopy": "Mit einer Kopie beginnen",
+        "create": "Anlegen",
+        "deleteTitle": "Diesen Eintrag löschen?",
+        "deleteText": "Das lässt sich nicht rückgängig machen. Alles, was ihn verwendet, behält eine Lücke.",
+        "sheetFrom": "Seitenpanel von {side}",
+        "sheetText": "Ein Panel für das, was neben die Seite gehört.",
+        "sheetContent": "Beispielinhalt im Seitenpanel.",
+        "note": "Notiz",
+        "aNote": "Eine Notiz",
+        "done": "Fertig"
+      },
+      "command": {
+        "palette": "Befehlspalette",
+        "searchFor": "Nach einem Befehl suchen.",
+        "goTo": "Gehe zu",
+        "content": "Inhalte",
+        "manuals": "Handbücher",
+        "review": "Prüfung",
+        "notAvailable": "Nicht verfügbar",
+        "heading": "Befehle",
+        "hint": "Tippen filtert, Pfeile bewegen, Eingabe wählt, Escape leert. Zuletzt gewählt: {last}.",
+        "search": "Suchen",
+        "suggestions": "Vorschläge",
+        "settings": "Einstellungen",
+        "profile": "Profil",
+        "locked": "Gesperrte Option",
+        "escape": "Esc",
+        "contentHint": "Module und Ordner"
+      },
+      "popover": {
+        "heading": "Popover",
+        "button": "Popover {side}",
+        "title": "Abmessungen",
+        "text": "Legen Sie die Größe des Eintrags fest.",
+        "width": "Breite"
+      },
+      "tooltip": {
+        "heading": "Tooltip",
+        "hint": "Erscheint beim Darüberfahren und beim Tastaturfokus. Ein vorerst gesperrtes Bedienelement bleibt fokussierbar und nennt den Grund.",
+        "on": "Tooltip {side}",
+        "blockedReason": "Gesperrt, solange Prüfungen fehlschlagen.",
+        "blocked": "Gesperrt, mit Begründung"
+      },
+      "menu": {
+        "heading": "Aufklappmenü",
+        "hint": "Eingabe, Leertaste oder Nach-unten öffnet, Pfeile, Pos1, Ende und Buchstaben bewegen, Nach-rechts öffnet ein Untermenü, Escape schließt und gibt den Fokus zurück.",
+        "open": "Menü öffnen",
+        "disabled": "Deaktiviertes Menü",
+        "state": "Zuletzt: {last}; Notizen {notes, select, true {an} other {aus}}; sortiert nach {sort, select, date {Datum} other {Name}}",
+        "actions": "Aktionen",
+        "openItem": "Öffnen",
+        "rename": "Umbenennen",
+        "showNotes": "Notizen anzeigen",
+        "sortName": "Nach Name sortieren",
+        "sortDate": "Nach Datum sortieren",
+        "more": "Mehr",
+        "delete": "Löschen",
+        "export": "Exportieren",
+        "share": "Teilen"
+      },
+      "segmented": {
+        "heading": "Segmentierte Auswahl",
+        "inline": "Im Text",
+        "sideBySide": "Nebeneinander",
+        "rendered": "Gerendert"
+      },
+      "meter": {
+        "heading": "Anteilsbalken",
+        "value": "{share} %"
+      },
+      "avatar": {
+        "heading": "Avatar",
+        "sample": "Alex Brandt"
+      },
+      "codeEditor": {
+        "heading": "Code-Editor",
+        "label": "manual.typ, Typst",
+        "hint": "Tab rückt ein. Escape und dann Tab verlässt den Editor."
+      }
+    }
+  },
+  "dropdown": {
+    "openMenu": "Menü öffnen"
+  },
+  "sortableList": {
+    "move": "{label} verschieben",
+    "moved": "{label}: Position {position} von {total}"
+  },
+  "pageHelp": {
+    "label": "Hilfe: {title} (öffnet in einem neuen Tab)",
+    "tooltip": "Hilfe: {title}"
+  },
+  "tip": {
+    "learnMore": "Mehr erfahren",
+    "learnMoreLabel": "Mehr erfahren: {title} (öffnet in einem neuen Tab)",
+    "gotIt": "Verstanden",
+    "turnOff": "Tipps ausschalten",
+    "step": "{index} von {total}",
+    "skip": "Überspringen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "done": "Fertig"
+  }
+}

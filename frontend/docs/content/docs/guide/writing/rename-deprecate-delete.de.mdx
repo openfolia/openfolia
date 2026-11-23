@@ -1,0 +1,58 @@
+---
+title: 'Die ID ändern, ein Modul als veraltet kennzeichnen oder löschen'
+description: 'Einem Modul eine neue ID geben und alle Verweise mitändern, es als veraltet kennzeichnen oder es mit Rückgängig löschen.'
+articleId: 'guide.writing.rename-deprecate-delete'
+---
+
+Ein Modul, das so nicht bleiben soll, kann eine neue ID bekommen, als veraltet gekennzeichnet oder
+gelöscht werden. Jedes davon ist eine Änderung in Ihrer Überarbeitung im Entwurf, die wie jede
+andere geprüft wird. Siehe [Eine Überarbeitung anlegen](/de/guide/change-sets/start-a-revision).
+
+![Das Menü Weitere Aktionen eines Moduls: Im Audit-Log anzeigen, Als veraltet kennzeichnen… und Löschen …](/images/guide/de/module-actions.webp)
+
+## Die ID eines Moduls ändern
+
+Die ID nennt das Modul in Handbüchern und anderen Modulen. Eine Änderung schreibt sie alle mit um.
+
+1. Öffnen Sie das Modul und wählen Sie **Details** in der Seitenleiste.
+2. Wählen Sie **ID ändern** neben der ID des Moduls.
+3. Geben Sie die **Neue ID** ein: Kleinbuchstaben, Ziffern und einzelne Bindestriche, etwa
+   `akku-laden`.
+4. Prüfen Sie, was sich ändert: Die Zeile unter dem Feld nennt die Sprachen des Moduls, die es
+   verschiebt, und die Dateien, die es nennen und die umgeschrieben werden, etwa Handbücher.
+5. Wählen Sie **ID ändern**.
+
+![ID ändern in den Details: die neue ID und die beiden Handbücher, die umgeschrieben werden](/images/guide/de/module-change-id.webp)
+
+Die Meldung bietet **Rückgängig** an. Die ID lässt sich nicht ändern, solange jemand das Modul oder
+ein Modul oder Handbuch, das es nennt, in einer anderen Überarbeitung bearbeitet.
+
+## Ein Modul als veraltet kennzeichnen
+
+Ein veraltetes Modul bleibt lesbar und bleibt in den Handbüchern, die es enthalten; diese werden
+gewarnt. Es gilt, sobald die Überarbeitung zusammengeführt ist.
+
+1. Öffnen Sie das Modul in seiner Ausgangssprache.
+2. Wählen Sie oben rechts **Weitere Aktionen** (**…**), dann **Als veraltet kennzeichnen…**.
+3. Geben Sie einen **Grund** ein: eine Zeile, angezeigt überall, wo das Modul als veraltet
+   erscheint.
+4. Wählen Sie bei Bedarf unter **Ersetzt durch (optional)** das Modul, das es ersetzt.
+5. Wählen Sie **Als veraltet kennzeichnen**.
+
+Das Modul zeigt nun **Veraltet** mit Grund und Ersatz. Schalten Sie unter **Inhalte** **Veraltete
+anzeigen** ein, um veraltete Module aufzulisten. Um es zurückzunehmen, wählen Sie **Weitere
+Aktionen**, dann **Kennzeichnung als veraltet aufheben**.
+
+## Ein Modul löschen
+
+1. Öffnen Sie das Modul und wählen Sie **Weitere Aktionen**, dann **Löschen …**. Oder wählen Sie
+   unter **Inhalte** **…** am Ende der Zeile des Moduls, dann **Löschen …**.
+2. Wählen Sie unter **Was gelöscht wird** **Nur die Fassung auf …** für eine Sprache, oder **Das
+   ganze Modul, in allen Sprachen**.
+3. Lesen Sie **Wo es verwendet wird**: die Handbücher und Module, die es noch verwenden. Es kann
+   trotzdem gelöscht werden; die Prüfungen melden diese Verwendungen dann, bis sie behoben sind.
+4. Wählen Sie **Modul löschen**, oder **Fassung auf … löschen** für eine Sprache.
+
+Die Meldung bietet **Rückgängig** an, solange die Überarbeitung ein Entwurf ist. Veröffentlichte
+Inhalte behalten das Modul, bis die Überarbeitung zusammengeführt ist. Ein gelöschtes Modul behält
+seinen Verlauf: siehe [Der Verlauf eines Moduls](/de/guide/writing/history).

@@ -1,0 +1,55 @@
+---
+title: 'Lizenz und Quellcode'
+description: 'Die AGPL-Lizenz, den Quellcode mit CCMS_SOURCE_URL anbieten und was GET /about antwortet.'
+articleId: 'guide.self-hosting.licence'
+---
+
+OpenFolia steht unter der GNU Affero General Public License, nur Version 3 (`AGPL-3.0-only`, die
+Datei `LICENSE` im Repository). Das gilt für alles: jede Funktion und jedes veröffentlichte Image
+(`openfolia`).
+
+## Den Quellcode anbieten
+
+Abschnitt 13 der AGPL verlangt, dass eine **veränderte** Version, die als Netzwerkdienst läuft,
+ihren Nutzern ihren Quellcode anbietet. Setzen Sie `CCMS_SOURCE_URL` auf die Adresse, unter der sich
+der Quellcode der laufenden Version herunterladen lässt, etwa das Repository Ihres Forks:
+
+```sh
+# deploy/.env
+CCMS_SOURCE_URL=https://git.example.com/docs/openfolia
+```
+
+Eine `http://`- oder `https://`-URL ohne Anmeldedaten. Der Editor verlinkt sie dann im Kontomenü und
+auf der Anmeldeseite. Ist sie nicht gesetzt, zeigt der Editor nur die Lizenz, und **Verwaltung**,
+**System** bittet den Admin, sie zu setzen. Setzen Sie sie immer, wenn Sie eine veränderte Version
+betreiben; für eine unveränderte ist das Repository des Projekts ebenfalls ein guter Wert.
+
+## `GET /about`
+
+Jeder Client kann die API ohne Token nach der Lizenz und den Links fragen:
+
+```sh
+curl -s https://docs.example.com/api/about
+```
+
+```json
+{
+  "data": {
+    "type": "About",
+    "id": "about",
+    "attributes": {
+      "license": "AGPL-3.0-only",
+      "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
+      "sourceUrl": "https://git.example.com/docs/openfolia",
+      "docsUrl": "https://help.example.com/"
+    }
+  }
+}
+```
+
+- `sourceUrl` ist `CCMS_SOURCE_URL` oder `null`, wenn es nicht gesetzt ist.
+- `docsUrl` ist die Adresse der Benutzeranleitung für die Hilfe-Links des Editors (`CCMS_DOCS_URL`)
+  oder `null`, wenn eine Offline-Instanz sie mit `CCMS_DOCS_URL=off` abgeschaltet hat.
+
+Die Route steht in der [API-Referenz](/de/api), beide Einstellungen in der
+[Referenz der Einstellungen](/de/reference/settings).

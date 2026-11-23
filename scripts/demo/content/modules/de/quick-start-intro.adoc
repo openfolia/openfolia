@@ -1,0 +1,12 @@
+= Bevor Sie losfahren
+:schema-version: 1
+:module-type: concept
+:lang: de
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Diese Kurzanleitung zeigt, was Sie mit Ihrem {model-name} zuerst brauchen: Starten, die Uhr stellen, Tanken oder Laden und was bei einer Reifenpanne zu tun ist.
+
+[#full]
+Alles Weitere und alle Sicherheitshinweise finden Sie in der Betriebsanleitung.

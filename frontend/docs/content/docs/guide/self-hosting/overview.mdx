@@ -1,0 +1,59 @@
+---
+title: 'What runs'
+description: 'The containers of a deployment, the volumes that hold its data, and how the images are locked down.'
+articleId: 'guide.self-hosting.overview'
+---
+
+A deployment is one Compose file, `deploy/compose.yaml`: Postgres, the API, its workers, the
+editor and the backups, each in a container of its own. The `compose.yaml` at the repository root
+is for development only; never deploy with it.
+
+## The services
+
+| Service    | Image                       | What it does                                                                                    |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `postgres` | `postgres:18.7-alpine`      | Operational state: users, roles, locks, comments, workflow, the audit log, a rebuildable index. |
+| `api`      | `<OPENFOLIA_IMAGES>/api`    | The JSON:API, with Git, the PDF renderer, the fonts and the database migrations.                |
+| `worker`   | `<OPENFOLIA_IMAGES>/api`    | The background work: release files, imports, webhooks, notifications, sweeps. Scales out.       |
+| `editor`   | `<OPENFOLIA_IMAGES>/editor` | The editor behind nginx, which also passes `/api` and the stable addresses `/d/` to the API.    |
+| `backup`   | `<OPENFOLIA_IMAGES>/backup` | Scheduled, encrypted and verified backups.                                                      |
+| `mcp`      | `<OPENFOLIA_IMAGES>/mcp`    | Optional (`--profile mcp`): the MCP server for AI assistants over released content.             |
+
+A `restore` service (`--profile restore`) restores a backup onto a stopped stack; see
+[Backups](/guide/self-hosting/backups). The API and the worker run the same image with another
+`CCMS_ROLE`; see [Workers](/guide/self-hosting/workers).
+
+Only the editor (port 8080), the API (port 3000) and, with its profile, the MCP server (port 3200)
+are published, on `127.0.0.1` by default. Postgres and the workers are never published. Put a
+reverse proxy with TLS in front: see [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
+
+## The volumes
+
+Four volumes hold what persists:
+
+- `postgres`: the database.
+- `data`, mounted at `/data` in the API and the workers:
+  - `/data/content.git`: the content repository, the source of truth for content
+    ([Content repository](/guide/self-hosting/content-repository));
+  - `/data/blobs`: images, attachments and archived release PDFs, with the default file-system
+    blob store ([Blob store](/guide/self-hosting/blob-store));
+  - `/data/ccms-secret.key`: the instance secret key, made on the API's first start
+    ([Instance secret key](/guide/self-hosting/secret-key)).
+- `backups`, mounted at `/backups` in the backup service: the backups.
+- `backup-staging`: a backup run's unencrypted parts while it lasts, emptied whenever the backup
+  service starts. Never copy it off the host.
+
+## How the images are locked down
+
+- Each of the OpenFolia images (the API and worker, the editor, the backup, the MCP server) runs
+  as an unprivileged user (`node`, uid 1000, or `nginx`, uid 101). The `postgres` service runs the
+  stock Postgres image, without the restrictions below.
+- The file system is read-only. Only `/tmp` (a tmpfs) and the data volume can be written, and in
+  the backup service also `/backups` and `/staging`.
+- No Linux capabilities, and no way to gain privileges (`no-new-privileges`).
+- The API, the editor and the MCP server have a health check: the API's is `GET /health/ready`
+  (the database and the blob store answer), the editor's `GET /healthz`.
+- Base images are pinned by version and digest. No secret is part of an image: every setting
+  comes in when the container starts.
+
+Next: the [quick start](/guide/self-hosting/quick-start).

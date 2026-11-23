@@ -1,0 +1,30 @@
+= Your vehicle at a glance
+:schema-version: 1
+:module-type: concept
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: overview
+
+[#intro]
+The {model-name} is a five-seat compact car with tyres of size {tyre-size}.
+
+[#img-overview]
+image::demo-image:vehicle-overview["Side view of the vehicle with its main parts marked",width=90%]
+<.> [callout#v-bonnet,x=0.2,y=0.42,label-x=0.12,label-y=0.08] Bonnet release
+<.> [callout#v-mirror,x=0.34,y=0.46,label-x=0.34,label-y=0.08] Door mirror
+<.> [callout#v-flap,x=0.855,y=0.57,label-x=0.9,label-y=0.08] Filler flap or charging flap
+<.> [callout#v-jack,x=0.36,y=0.79,label-x=0.4,label-y=0.95] Jacking point
+<.> [callout#v-wheel,x=0.22,y=0.8,label-x=0.1,label-y=0.95] Front wheel
+
+[variant#estate,when="body in (estate)"]
+====
+[#estate-text]
+The estate has a longer roof with roof rails and a load space of 580 l behind the rear seats.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+The electric model has a 58 kWh battery under the floor and its charging socket behind the flap on the left rear wing.
+====

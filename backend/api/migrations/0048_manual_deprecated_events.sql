@@ -1,0 +1,6 @@
+ALTER TABLE "webhook_deliveries" DROP CONSTRAINT "webhook_deliveries_event";--> statement-breakpoint
+ALTER TABLE "webhooks" DROP CONSTRAINT "webhooks_events";--> statement-breakpoint
+DROP INDEX "outbox_change_feed";--> statement-breakpoint
+CREATE INDEX "outbox_change_feed" ON "outbox" USING btree ("tx_id","id") WHERE "outbox"."topic" in ('release.published', 'release.withdrawn', 'module.deprecated', 'manual.deprecated');--> statement-breakpoint
+ALTER TABLE "webhook_deliveries" ADD CONSTRAINT "webhook_deliveries_event" CHECK ("webhook_deliveries"."event" in ('manual.released', 'module.released', 'module.deprecated', 'manual.deprecated', 'release.withdrawn', 'translation.imported', 'ping'));--> statement-breakpoint
+ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_events" CHECK (cardinality("webhooks"."events") between 1 and 20 and "webhooks"."events" <@ array['manual.released', 'module.released', 'module.deprecated', 'manual.deprecated', 'release.withdrawn', 'translation.imported']::text[]);

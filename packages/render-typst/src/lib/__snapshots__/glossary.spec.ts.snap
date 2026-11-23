@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the glossary in the PDF > ends the manual with the glossary: alphabetical, each term with its definition (snapshot) 1`] = `
+"#heading(level: 1, numbering: none, "Glossary")
+
+#anchor("_term-charger")#glossary-entry(term: "charger")[#"The device that charges the "#strong[#"battery"]#"."]
+
+#anchor("_term-socket")#glossary-entry(term: "Charging socket")[#"Where the cable plugs in \\"safely\\" #here."]
+"
+`;

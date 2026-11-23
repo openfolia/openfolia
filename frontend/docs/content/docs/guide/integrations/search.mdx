@@ -1,0 +1,66 @@
+---
+title: 'Search API'
+description: 'Search modules, manuals and terms through the API: the query, the filters, the order, highlighting and the limits.'
+articleId: 'guide.integrations.search'
+---
+
+`GET /search` finds modules, manuals and terms among what the reader may see, at `?ref=` like
+every content read. It is part of the [Delivery API](/api/delivery) and needs `content.read`.
+
+## Search
+
+```sh
+curl -gs -H "Authorization: Bearer $TOKEN" \
+  "https://docs.example.com/api/search?filter[q]=battery&filter[lang]=en&page[size]=20"
+```
+
+- **`filter[q]`**: 1 to 200 characters; at most 8 words are used. Case and diacritics do not
+  matter (`ä` is `a`, `ß` is `ss`), and every word has to match.
+- **What it looks in:** a module's title, keywords, FAQ questions and text; a manual's title; a
+  term's preferred, allowed and forbidden variants and its definition.
+- **Filters**, all optional and all of them required to hold: `filter[lang]`,
+  `filter[resourceType]` (`Module`, `Manual` or `Term`), and for modules `filter[type]` (a module
+  type), `filter[audience]`, `filter[facet]=<facet>:<value>` and `filter[keyword]` (the last two
+  may repeat). With a module filter, `filter[q]` may be left out: then every module the filters
+  let through is a result, by title.
+- Paged like every list (`page[number]`, `page[size]`). Any other parameter is 400
+  `unsupported-parameter`.
+
+## Results
+
+Each result is a `SearchResult`: `attributes` hold `resourceType`, `resourceId`, `lang`, `title`
+and, when text matched, `blockId` (the block, step or FAQ entry it matched in); `relationships`
+point at the resource. `meta` holds:
+
+- `matchedOn`: `title`, `keyword`, `question`, `text`, `meaning`, or `filter` without a query;
+- `excerpt`: plain text, never markup;
+- `matches`: `{ start, end }` offsets into the excerpt, so you highlight by slicing the text and
+  never insert HTML.
+
+Results come in order of what matched: the title first, then keywords, questions and text. A
+result never includes content outside the reader's scope, and `meta.page.total` counts only what
+they may see.
+
+## Word forms, typos and meaning
+
+With the default Postgres search (`CCMS_SEARCH_ADAPTER=postgres`), nothing to set up:
+
+- **Word forms** in the module's language: `starting` finds `starts`.
+- **Typos** in titles and keywords.
+- **Meaning**, when the operator turned on semantic search: a reader's words find a module that
+  says the same in others. Without it, no text leaves the server. See
+  [Semantic search](/guide/self-hosting/semantic-search).
+
+`CCMS_SEARCH_ADAPTER=memory` matches words alone.
+
+## Limits
+
+| Answer                 | When                                                                                                    | Setting                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 429 `rate-limited`     | A reader asked for more searches a minute than allowed (every page counts), or ran more than 2 at once. | `CCMS_SEARCH_PER_MINUTE` (120)     |
+| 503 `database-timeout` | One search spent its time budget in the database.                                                       | `CCMS_SEARCH_TIMEOUT_MS` (5000 ms) |
+| 503 `search-busy`      | The server already runs as many searches as allowed, and none finished within 2 s.                      | `CCMS_SEARCH_CONCURRENCY` (4)      |
+
+Each carries `Retry-After`: wait that long and ask again. The limits hold per server, so behind
+several servers a reader gets as many times the rate. Never a partial page: a search answers in
+full or not at all.

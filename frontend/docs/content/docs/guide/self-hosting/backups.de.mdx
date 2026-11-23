@@ -1,0 +1,145 @@
+---
+title: 'Backups auf dem Server'
+description: 'Was der Backup-Dienst sichert und prüft, seine Einstellungen aus der Umgebung, das Wiederherstellen, S3-Ziele und der Platzbedarf.'
+articleId: 'guide.self-hosting.backups'
+---
+
+Der Dienst `backup` aus `deploy/compose.yaml` erstellt nach Zeitplan verschlüsselte, geprüfte
+Backups. Eine Person mit Verwaltungsrechten richtet ihn im Editor ein
+([Backups](/de/guide/admin/backups)): den Backup-Schlüssel, den Zeitplan, die Aufbewahrung und
+den Speicherort. Diese Seite beschreibt die Seite des Servers.
+
+## Was ein Backup enthält
+
+Das Inhaltsrepository hält fast alles, was Menschen anlegen; die Datenbank hält den Zustand des
+Betriebs. Siehe [Fast alles ist Inhalt](/de/guide/getting-started/content).
+
+| Was                                                              | Wo                                        |
+| ---------------------------------------------------------------- | ----------------------------------------- |
+| Inhalte: Module, Handbücher, Überarbeitungen, Veröffentlichungen | `/data/content.git` auf dem Volume `data` |
+| Benutzer, Rollen, Kommentare, Workflow, das Audit-Log, Jobs      | das Volume `postgres`                     |
+| Bilder, Anhänge, archivierte PDFs der Veröffentlichungen         | `/data/blobs` auf dem Volume `data`       |
+| Der [Instanzschlüssel](/de/guide/self-hosting/secret-key)        | `/data/ccms-secret.key`                   |
+
+Mit dem S3-Blob-Speicher (`CCMS_BLOB_DRIVER=s3`) bleiben die Blobs in ihrem Bucket und sind nicht
+Teil des Backups: Schalten Sie für diesen Bucket die Versionierung ein. Bewahren Sie auch
+`deploy/.env` sicher auf: Die Datei enthält das Postgres-Passwort. Den Modulindex und den
+Suchindex baut der Server aus den Inhalten neu auf; sie brauchen kein Backup.
+
+## Was ein Lauf tut
+
+1. Er sichert die Datenbank (`pg_dump`) aus einem einzigen Snapshot, mit der Zeilenzahl jeder
+   Tabelle und den Blobs, auf die sie verweist.
+2. Er bündelt das Inhalts-Repository (`git bundle create --all`).
+3. Er schreibt Dump, Bündel, Blobs und Instanzschlüssel in ein Archiv und verschlüsselt es dabei
+   mit [age](https://age-encryption.org) für den Backup-Schlüssel. Ohne Backup-Schlüssel wird
+   der Lauf verweigert. Unverschlüsselt wird nur im Volume `backup-staging` geschrieben, das bei
+   jedem Start des Dienstes geleert wird. Kopieren Sie dieses Volume nie vom Host.
+4. Er prüft das Backup (unten), legt es am Speicherort ab und löscht alte Backups nach der
+   Aufbewahrung.
+
+Ein Backup heißt `openfolia-backup-<UTC-Zeit>-<Lauf>.tar.age`. Es läuft immer nur ein Lauf
+gleichzeitig, auch über mehrere Backup-Dienste hinweg.
+
+```sh
+docker compose run --rm backup now    # sofort ein Backup
+docker compose run --rm backup list   # die Backups am geltenden Speicherort
+```
+
+## Einstellungen aus der Umgebung
+
+Jede Einstellung der Seite kann auch aus einer `CCMS_BACKUP_*`-Variablen in
+`deploy/backup.env` kommen (`CCMS_BACKUP_ENABLED`, `CCMS_BACKUP_SCHEDULE`,
+`CCMS_BACKUP_TIME_ZONE`, die Anzahlen `CCMS_BACKUP_RETENTION_*`, `CCMS_BACKUP_LOCATION` mit seinen
+`CCMS_BACKUP_S3_*`-Einstellungen, `CCMS_BACKUP_VERIFY`, `CCMS_BACKUP_VERIFY_BY_DECRYPTING`). Eine
+gesetzte Variable hat Vorrang: Die Seite zeigt das Feld nur lesbar und nennt die Variable. Eine
+nicht gesetzte Variable lässt den Wert der Seite gelten, den der Dienst bei jedem Durchgang ohne
+Neustart liest. `CCMS_BACKUP_KEY_FILE` nimmt den Backup-Schlüssel aus einer age-Schlüsseldatei
+(`age-keygen -o key.txt`) statt von der Seite. Diese Datei darf nur der Benutzer des Dienstes
+lesen können; bewahren Sie eine Kopie offline auf, nie am Speicherort der Backups oder im Volume
+`backups`. Die [Referenz der Einstellungen](/de/reference/settings) nennt jede mit ihrem Format.
+
+## Die Prüfung
+
+Mit **Nach jedem Lauf prüfen** (der Standard) zählt ein Backup erst, wenn es an sicherer Stelle
+wiederhergestellt wurde: der Dump in eine Wegwerf-Datenbank (danach immer gelöscht), die
+Zeilenzahlen verglichen, das Bündel geklont und mit `git fsck` geprüft und der SHA-256 jedes Blobs
+verglichen.
+
+- Der Datenbankbenutzer braucht `CREATEDB` (der Compose-Benutzer hat es), oder Sie setzen
+  `CCMS_BACKUP_VERIFY_DATABASE_URL` auf einen anderen Server. Dieser braucht etwa so viel freien
+  Speicher, wie die Datenbank belegt.
+- **Durch Entschlüsseln prüfen** (der Standard) entschlüsselt die fertige Datei. Dafür behält der
+  Server den privaten Teil des Backup-Schlüssels, versiegelt mit dem Instanzschlüssel: Wer die
+  Datenbank, den Instanzschlüssel und ein Backup hat, kann das Backup lesen. Ausgeschaltet behält
+  der Server keinen privaten Schlüssel; er prüft dann die Teile vor dem Verschlüsseln und die
+  Datei nur nach Kopf, Größe und SHA-256.
+
+## Ein Backup wiederherstellen
+
+Stellen Sie auf einem frischen Stack mit derselben `deploy/.env` wieder her. Die
+Wiederherstellung verweigert eine Instanz, die schon etwas enthält, außer mit `--force`, und sie
+verweigert, solange ein Backup läuft. Auf einem neuen Host stellen Sie vor dem ersten Start
+wieder her: Der erste Start legt den ersten Admin an, und die Instanz ist dann nicht mehr leer.
+
+1. Halten Sie einen laufenden Stack zuerst an: `docker compose stop api worker backup`.
+2. Starten Sie nur die Datenbank: `docker compose up -d --wait postgres`.
+3. Stellen Sie wieder her, mit dem Backup-Schlüssel auf der Standardeingabe:
+
+   ```sh
+   docker compose run --rm -T restore openfolia-backup-20261120T020000Z-72ad5ad9.tar.age --key-file - < key.txt
+   ```
+
+   Vom S3-Speicherort statt vom Backup-Volume ergänzen Sie `--s3` (dafür braucht es
+   `CCMS_BACKUP_LOCATION=s3` und seine Einstellungen in `backup.env`).
+
+4. Schließen Sie die Wiederherstellung ab, wie [Nach einer
+   Wiederherstellung](/de/guide/self-hosting/after-a-restore) beschreibt, und mit einer Senke für
+   das Audit-Log deren eigenen Schritt ([Audit-Log](/de/guide/self-hosting/audit-log)).
+5. Starten Sie den Stack: `docker compose up -d --wait`.
+
+Die Wiederherstellung prüft das Archiv, bevor sie etwas schreibt, stellt die Datenbank her, klont
+das Inhalts-Repository aus dem Bündel (ein vorhandenes wird als
+`content.git.before-restore-<Zeit>` beiseitegelegt) und kopiert die Blobs und den
+Instanzschlüssel.
+
+Stellen Sie nur Backups von Ihrem eigenen Speicherort wieder her: Wer den öffentlichen Teil des
+Backup-Schlüssels kennt, kann eine Datei erzeugen, die sich entschlüsseln lässt. Lassen Sie nur
+den Backup-Dienst an den Speicherort schreiben (Object Lock oder Versionierung bei S3).
+
+## Ein S3-Server im eigenen Netz
+
+Der Backup-Dienst verweigert einen S3-Endpunkt, der auf eine private oder Loopback-Adresse zeigt,
+und immer eine Link-Local- oder Cloud-Metadaten-Adresse. Für einen S3-Server neben dem Stack
+setzen Sie `CCMS_BACKUP_S3_ALLOW_PRIVATE=true` in `backup.env`; der Dienst `restore` liest das
+ebenfalls.
+
+## Platzbedarf
+
+Ein Backup ist etwa so groß wie der Dump plus das Inhalts-Repository plus die Blobs. Mit der
+Standard-Aufbewahrung (7 tägliche, 4 wöchentliche, 12 monatliche: höchstens 23 Backups) planen Sie
+am Speicherort das 25-Fache eines Backups ein. Während eines Laufs braucht das Staging-Volume
+etwa die doppelte Größe eines Backups. Halten Sie eine Kopie außerhalb des Hosts: einen
+S3-Speicherort oder eine Kopie des Volumes `backups`.
+
+## Eine Wiederherstellungsübung
+
+Stellen Sie einmal im Quartal das neueste Backup auf einer zweiten Maschine wieder her (oder mit
+einem anderen `COMPOSE_PROJECT_NAME`): Melden Sie sich an, öffnen Sie ein Handbuch, erzeugen Sie
+ein PDF und entfernen Sie den Stack danach. Damit die Übung nichts an Ihre Systeme sendet, lassen
+Sie dort `CCMS_AUDIT_SINK_URL` leer, lassen den Schritt „Nach einer Wiederherstellung“ aus und
+schalten die Webhooks ab (`UPDATE webhooks SET active = false`).
+
+## Von Hand
+
+Ohne den Backup-Dienst sichern Sie dieselben Teile bei laufendem Stack, den Dump zuerst:
+
+```sh
+umask 077
+docker compose exec -T postgres pg_dump -U openfolia -Fc openfolia > /srv/backups/openfolia/openfolia.dump
+docker compose exec -T api tar -C /data -cf - . > /srv/backups/openfolia/data.tar
+```
+
+`data.tar` enthält den Instanzschlüssel, der Dump die Benutzer, das Audit-Log und die versiegelten
+Geheimnisse: Verschlüsseln Sie beide, bevor sie den Host verlassen (etwa mit `age -r <recipient>`),
+und bewahren Sie sie getrennt auf.

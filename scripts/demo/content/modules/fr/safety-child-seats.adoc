@@ -1,0 +1,19 @@
+= Sièges enfant
+:schema-version: 1
+:module-type: safety
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: siège enfant
+
+[safety#unsecured,severity=warning,symbols=w001]
+.Enfants sans siège adapté
+====
+[#unsecured-text]
+La ceinture de sécurité seule ne protège pas un jeune enfant en cas d'accident.
+
+[#unsecured-measures]
+* [[unsecured-m1]]Utilisez un siège enfant adapté à la taille et au poids de l'enfant.
+* [[unsecured-m2]]Fixez le siège enfant aux [.term.child-seat-anchorage]##points d'ancrage## ou avec la ceinture de sécurité, comme l'indique sa notice.
+* [[unsecured-m3]]Ne laissez jamais d'enfants seuls dans le véhicule.
+====

@@ -1,0 +1,23 @@
+schemaVersion: 1
+title: { en: Quick start guide, de: Kurzanleitung, fr: Guide de démarrage rapide }
+audience: owner
+variants:
+  - { body: hatchback, drive: petrol, market: eu }
+  - { body: estate, drive: electric, market: eu }
+  - { body: hatchback, drive: electric, market: uk }
+attributes:
+  model-name:
+    - { value: Fenna Estate, when: body in (estate) }
+    - value: Fenna Hatchback
+  tyre-size:
+    - { value: 215/55 R17, when: body in (estate) }
+    - value: 205/55 R16
+entries:
+  - module: quick-start-intro
+  - module: safety-airbags
+  - module: starting-and-stopping
+  - module: setting-the-clock
+  - module: filling-up
+  - module: warning-lights
+  - module: safety-towing
+  - module: changing-a-wheel

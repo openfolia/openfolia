@@ -1,0 +1,15 @@
+= À propos de cette notice
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Cette notice décrit la {model-name} avec tous ses équipements. Certains équipements peuvent ne pas être montés sur votre véhicule.
+
+[#keep]
+Conservez cette notice dans le véhicule et remettez-la avec le véhicule en cas de vente.
+
+[#notices]
+Les consignes de sécurité sont signalées par un mot-clé : DANGER pour un danger qui tue ou blesse grièvement, AVERTISSEMENT pour un danger qui peut le faire, et ATTENTION pour des blessures légères.

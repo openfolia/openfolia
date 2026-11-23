@@ -1,0 +1,17 @@
+= Hochvoltsystem spannungsfrei schalten
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: technician
+:facet-product: fenna
+:keywords: Hochvolt, Freischalten
+
+[#intro]
+Schalten Sie das Hochvoltsystem vor allen Arbeiten an Hochvoltbauteilen spannungsfrei, und vor Arbeiten in ihrer Nähe mit Hitze oder Schneidwerkzeugen.
+
+[procedure#steps]
+.Hochvoltsystem freischalten
+. [[step-off]]Schalten Sie das Fahrzeug aus und legen Sie den Schlüssel mindestens 5 m entfernt ab.
+. [[step-12v]]Klemmen Sie den Minuspol der 12-V-Batterie ab.
+. [[step-plug]]Ziehen Sie den orangefarbenen Servicestecker unter der Rücksitzbank ab und bewahren Sie ihn verschlossen auf.
+. [[step-wait]]Warten Sie 5 Minuten und prüfen Sie dann mit einem zweipoligen Spannungsprüfer, dass das System spannungsfrei ist.

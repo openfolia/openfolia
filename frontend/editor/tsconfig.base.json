@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.angular.json",
+  "compilerOptions": {
+    "customConditions": ["@openfolia/source"],
+    "paths": {
+      "@openfolia/ui": ["../ui/src/index.ts"],
+      "@openfolia/ui/startup": ["../ui/src/startup.ts"],
+      "@openfolia/ui/*": ["../ui/src/lib/*/index.ts"]
+    }
+  }
+}

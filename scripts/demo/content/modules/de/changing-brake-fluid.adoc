@@ -1,0 +1,17 @@
+= Bremsflüssigkeit wechseln
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: technician
+:facet-product: fenna
+:keywords: Bremsen, Bremsflüssigkeit
+
+[#intro]
+Bremsflüssigkeit nimmt mit der Zeit Wasser auf, dadurch sinkt ihr Siedepunkt. Wechseln Sie sie alle zwei Jahre.
+
+[procedure#steps]
+.Bremsflüssigkeit wechseln
+. [[step-reservoir]]Saugen Sie die alte Bremsflüssigkeit aus dem Behälter unter der Motorhaube ab.
+. [[step-fill]]Füllen Sie neue Bremsflüssigkeit DOT 4 bis zur MAX-Markierung ein.
+. [[step-bleed]]Entlüften Sie die Radbremsen nacheinander, beginnend hinten rechts, bis die Flüssigkeit klar und ohne Blasen austritt.
+. [[step-check]]Füllen Sie bis zur MAX-Markierung auf und prüfen Sie den Pedalweg vor der Probefahrt.

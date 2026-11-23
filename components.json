@@ -1,0 +1,21 @@
+{
+  "$schema": "https://zardui.com/schema.json",
+  "style": "css",
+  "icons": "lucide",
+  "rtl": false,
+  "projectType": "nx-library",
+  "appConfigFile": "",
+  "packageManager": "pnpm",
+  "tailwind": {
+    "css": "frontend/ui/src/styles/ui.css",
+    "baseColor": "neutral"
+  },
+  "baseUrl": "frontend/ui/src/lib",
+  "aliases": {
+    "components": "@openfolia/ui",
+    "utils": "@openfolia/ui",
+    "core": "@openfolia/core",
+    "services": "@openfolia/services",
+    "blocks": "@openfolia/blocks"
+  }
+}

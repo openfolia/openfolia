@@ -1,0 +1,18 @@
+= Contrôler la pression des pneus
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: pneus, pression des pneus
+
+[#intro]
+Contrôlez la pression des pneus à froid, au plus tard toutes les deux semaines. Les bonnes valeurs figurent dans xref:tyre-pressures.adoc[] et sur l'étiquette apposée dans l'encadrement de la portière conducteur.
+
+[procedure#steps]
+.Contrôler la pression des pneus
+. [[step-cap]]Dévissez le bouchon de valve.
+. [[step-gauge]]Appliquez le manomètre sur la valve et lisez la pression.
+. [[step-adjust]]Ajoutez ou retirez de l'air jusqu'à obtenir la bonne pression.
+. [[step-close]]Revissez le bouchon de valve.
+. [[step-reset]]Après une modification, confirmez la nouvelle pression sur l'écran central sous [.ui]##Véhicule## › [.ui]##Pression des pneus##.

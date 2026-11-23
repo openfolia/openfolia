@@ -1,0 +1,44 @@
+---
+title: 'Gruppenzuordnungen'
+description: 'Den Mitgliedern einer Gruppe aus Ihrem Identitätsanbieter eine Rolle geben und wieder nehmen.'
+articleId: 'guide.admin.group-mappings'
+---
+
+Melden sich Personen über einen Identitätsanbieter an, teilt der Anbieter dem Editor mit, in
+welchen Gruppen sie sind. Eine Gruppenzuordnung gibt allen Mitgliedern einer Gruppe eine Rolle.
+Die Gruppen einer Person sind die, die der Anbieter bei ihrer letzten Anmeldung gesendet hat.
+
+## Eine Zuordnung hinzufügen
+
+1. Öffnen Sie **Verwaltung**, dann **Gruppenzuordnungen**.
+2. Wählen Sie **Zuordnung hinzufügen**.
+3. Tippen Sie unter **Gruppe** den Namen der Gruppe genau so, wie der Identitätsanbieter ihn
+   sendet. Groß- und Kleinschreibung zählen.
+4. Wählen Sie unter **Rolle** die Rolle.
+5. Wählen Sie **Zuordnung hinzufügen**.
+
+![Der Dialog Gruppenzuordnung hinzufügen mit einem Gruppennamen, die Rolle noch zu wählen](/images/guide/de/admin-group-mappings.webp)
+
+Mitglieder, die sich schon in der Gruppe angemeldet haben, erhalten die Rolle sofort, alle anderen
+bei ihrer nächsten Anmeldung. Dieselbe Gruppe mit derselben Rolle ein zweites Mal wird abgelehnt.
+
+Solange kein Identitätsanbieter für die Anmeldung eingerichtet ist, sagt die Seite das. Sie können
+schon Zuordnungen anlegen: Sie gelten, sobald sich Personen über einen anmelden.
+
+## Sehen, welche Gruppen eine Rolle geben
+
+Der Filter **Rolle** über der Liste zeigt die Zuordnungen einer Rolle. In **Rollen** öffnet
+**Gruppen anzeigen, die diese Rolle geben** die Liste auf diese Rolle gefiltert.
+
+Eine Rolle, die jemand über eine Gruppe hat, ist auf der Seite **Benutzer** und unter **Wer sie
+hat** auf der Seite **Rollen** mit dem Gruppensymbol markiert: **Über eine Anmeldegruppe**. Um sie
+zu ändern, ändern Sie die Zuordnung, nicht die Person.
+
+## Eine Zuordnung entfernen
+
+1. Wählen Sie in der Zeile der Zuordnung **Entfernen** und bestätigen Sie.
+2. Die Mitglieder der Gruppe verlieren die Rolle sofort, außer sie wurde ihnen direkt gegeben.
+
+Ein Entfernen, nach dem niemand mehr Rollen verwalten könnte, wird abgelehnt: **Diese Zuordnung
+bleibt**. Geben Sie zuerst jemandem direkt eine Rolle mit **admin.roles** und entfernen Sie dann
+die Zuordnung.

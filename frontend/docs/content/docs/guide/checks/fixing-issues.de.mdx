@@ -1,0 +1,95 @@
+---
+title: 'Beheben, was die Prüfungen finden'
+description: 'Was jede Prüfung bedeutet und wie Sie es beheben: Einstellungen, Varianten, Handbücher und abgeleitete Handbücher.'
+articleId: 'guide.checks.fixing-issues'
+---
+
+Jedes Problem unter **Prüfungen vor der Veröffentlichung** nennt seine Prüfung, etwa **Unbekannte
+Zielgruppe**, und sagt unter **Details**, was sie gefunden hat. Probleme der Stufe **Blockierend**
+verhindern eine Veröffentlichung; beheben Sie alle. **Warnungen** sind einen Blick wert. Diese
+Seite sagt, wie Sie jedes beheben. [Prüfungen ausführen](/de/guide/checks/run-checks) zeigt, wie
+Sie sie öffnen.
+
+Eigene Seiten haben: [Verweise, Bilder und Begriffe](/de/guide/checks/references),
+[Übersetzungen](/de/guide/checks/translation), [Barrierefreiheit des PDFs](/de/guide/checks/pdf-accessibility)
+und [das Seitenlayout](/de/guide/checks/layout-warnings).
+
+## Inhalte, die die Einstellungen nicht kennen
+
+Alle blockierend. Ein Modul, ein Block oder eine Bedingung nennt etwas, das die
+Projekteinstellungen nicht haben. Wählen Sie **Öffnen** oder **Zum Block** und wählen Sie einen
+Wert, den es gibt, oder bitten Sie eine Administratorin oder einen Administrator, ihn unter
+**Verwaltung** › **Projekteinstellungen** anzulegen.
+
+- **Unbekannter Modultyp**, **Unbekannte Zielgruppe**, **Unbekannte Sprache**: die Angaben des
+  Moduls. Ein Modul mit unbekannter Zielgruppe fehlt in jedem Handbuch.
+- **Unbekannte Facette**, **Unbekannter Facettenwert**: die Angaben des Moduls.
+- **Unbekanntes Sicherheitssymbol**: die **Symbole** eines Sicherheitshinweises.
+- **Unbekanntes Textattribut**, **Unbekanntes Variantenmerkmal**, **Unbekannter Variantenwert**:
+  ein Textattribut im Text oder die Bedingung eines Variantenblocks.
+- **Unbekannter Stil für Positionsnummern**: eine Positionsnummer auf einem Bild.
+- **Versionsvergleich auf einer Liste**, **Ungültige Version**: Eine Bedingung vergleicht Versionen
+  bei einem Merkmal, das keine Version ist, oder ein Wert ist keine Versionsnummer. Ändern Sie die
+  Bedingung.
+
+## Varianten und Textattribute
+
+- **Variantenmerkmal nicht gesetzt** (blockierend): Eine Variante des Handbuchs setzt ein
+  Merkmal nicht, das eine Bedingung prüft, daher fehlt der Inhalt darunter. Geben Sie der Variante
+  das Merkmal.
+- **Textattribut nicht gesetzt** (blockierend): Eine Variante hat keinen Wert für ein Textattribut,
+  das der Inhalt verwendet. Geben Sie dem Handbuch einen Wert dafür.
+- **Uneinheitliche Varianten** (Warnung): Die Varianten des Handbuchs setzen verschiedene
+  Merkmale. Lassen Sie jede Variante dieselben setzen.
+
+## Platzhalter und nicht lesbare Dateien
+
+- **Platzhalter in einem Modul** (blockierend): Ein Platzhalter gehört nur in einen Text der
+  Seitengestaltung. Nehmen Sie ihn aus dem Modul.
+- **Unbekannter Platzhalter** (blockierend): Ein Platzhalter nennt keinen bekannten Wert.
+  Korrigieren Sie ihn.
+- **Modul nicht lesbar**, **Handbuch nicht lesbar** (blockierend): Die Datei lässt sich nicht
+  lesen, meist nach einer Änderung außerhalb des Editors. Bitten Sie eine Administratorin oder einen
+  Administrator, sie zu reparieren oder zu entfernen.
+
+## Blöcke
+
+Alle Warnungen.
+
+- **Passthrough-Inhalt**: unverändert importiert und ungeprüft gedruckt. Wandeln Sie ihn in Blöcke
+  um.
+- **Leere Tabelle**: Jede Zelle ist leer. Füllen Sie sie aus oder entfernen Sie sie.
+- **Textbaustein zu groß**: Ein Textbaustein enthält eine Überschrift oder einen Modulverweis.
+  Halten Sie Textbausteine bei wenigen Textblöcken.
+
+## Handbücher
+
+- **Über der Zielgruppe des Handbuchs** (Warnung): Das Modul ist für eine engere Zielgruppe und
+  fehlt im Handbuch. Prüfen Sie, ob das so gewollt ist.
+- **Adresse vergeben** (blockierend): Die Adresse eines Handbuchs ist die ID eines anderen, daher
+  öffnet sie das falsche Handbuch. Ändern Sie den Slug oder die frühere Adresse in den
+  Auslieferungseinstellungen des Handbuchs.
+- **Zugriff auf Adressen begrenzt** (Warnung): Die Adressen sind weiter geöffnet, als dieser Server
+  erlaubt. Sie öffnen nur so weit, wie der Server erlaubt; das entscheidet die Administration.
+- **Titelbild fehlt** (Warnung): Wählen Sie das Bild in den Einstellungen des Handbuchs erneut.
+- **Titelbild ohne Text in der Ausgangssprache** (blockierend): Schreiben Sie den Alternativtext
+  des Titelbilds in der Ausgangssprache, in den Einstellungen des Handbuchs.
+- **Titelbild ohne Variante** (Warnung): Entfernen Sie das Titelbild einer Variante, die das
+  Handbuch nicht erstellt.
+
+## Abgeleitete Handbücher
+
+Ein abgeleitetes Handbuch, etwa ein Sicherheitsblatt, sammelt seine Inhalte nach einer Regel aus
+einem Quellhandbuch. Siehe [Ein Sicherheitsblatt erstellen](/de/guide/manuals/safety-leaflet).
+
+- **Quellhandbuch fehlt**, **Quelle ist abgeleitet** (blockierend): Nennen Sie ein bestehendes,
+  zusammengestelltes Handbuch als Quelle.
+- **Keine Modultypen zum Übernehmen** (blockierend): Nennen Sie die Typen in der Regel, oder bitten
+  Sie die Administration, die Sicherheitstypen bei den Modultypen zu markieren.
+- **Breitere Zielgruppe als die Quelle** (blockierend): Geben Sie dem abgeleiteten Handbuch die
+  Zielgruppe der Quelle oder eine engere.
+- **Sicherheitsmodul ausgelassen**, **Sicherheitshinweis ausgelassen** (Warnungen): Die Regel lässt
+  Sicherheitsinhalte der Quelle aus. Prüfen Sie, ob das so gewollt ist.
+- **Ausgeschlossenes Modul nicht in der Quelle** (Warnung): Entfernen Sie es aus der Regel.
+- **Nichts übernommen** (Warnung): Die Regel sammelt nichts; das Handbuch enthält nur seine eigenen
+  Module davor und danach. Erweitern Sie die Regel.

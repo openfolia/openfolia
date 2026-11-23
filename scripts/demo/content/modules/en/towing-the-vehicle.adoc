@@ -1,0 +1,22 @@
+= Towing the vehicle
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: towing
+
+[#intro]
+The towing eye is with the jack under the floor of the load space.
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Tow the electric model only with all four wheels off the ground, on a transporter. Towed on its wheels, the motor makes a voltage that can damage the vehicle.
+====
+
+[procedure#steps]
+.Fit the towing eye
+. [[step-cover]]Press the cover in the bumper at its mark until it comes out.
+. [[step-screw]]Screw the towing eye in anticlockwise, as far as it goes.
+. [[step-neutral]]Switch the vehicle on and select [.ui]##N##.

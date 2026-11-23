@@ -1,0 +1,36 @@
+---
+title: 'Anbindung an eine RAG-Pipeline'
+description: 'Einen Retrieval-Index über die Delivery API mit den freigegebenen Inhalten abgleichen.'
+---
+
+Eine Retrieval-Pipeline (RAG) braucht die freigegebenen Inhalte in Stücken und muss wissen, was
+sich geändert hat. Die [Delivery API](/de/api/delivery) liefert beides, mit dem Token eines
+Dienstkontos, das nur freigegebene Inhalte lesen darf.
+
+## Die Stücke: Chunks
+
+`GET /chunks` liefert die freigegebenen Inhalte als fertige Retrieval-Chunks: einen je Modul und
+Sprache (und einen je FAQ-Eintrag), als Markdown, mit den Metadaten zum Filtern (Zielgruppe,
+Facetten, Schlüsselwörter, die Handbücher, die ihn enthalten) und einem Inhalts-Hash, sodass die
+Pipeline einen Chunk nur neu einbettet, wenn sein Hash neu ist. Lesen Sie jede Seite beim Commit,
+den die erste nennt (`X-Ccms-Commit`); rückt `main` inzwischen weiter, antwortet eine spätere Seite
+404 `not-found`, da ein Leser freigegebener Inhalte einen Commit nur lesen darf, solange `main`
+oder ein Tag auf ihn zeigt: Beginnen Sie dann von vorn (siehe
+[Retrieval-Chunks](/de/guide/integrations/chunks)).
+
+## Was sich geändert hat: der Änderungs-Feed
+
+`GET /changes` ist der Änderungs-Feed: der erste Aufruf liefert einen Stand von allem, was die
+Lesenden lesen dürfen, mit einem Cursor; spätere Aufrufe mit `page[cursor]` liefern nur, was
+seitdem freigegeben, zurückgezogen oder als veraltet markiert wurde, mit den Ereignissen
+`chunk.upserted` und `chunk.removed`, sodass die Pipeline Chunks über ihre IDs hinzufügt, ersetzt
+und entfernt. Webhooks können die Schleife wecken; der Feed sagt, was zu tun ist, sodass eine
+verpasste Zustellung nichts verliert.
+Ein Cursor, der sich nicht mehr lesen lässt, ist 400 `cursor-expired` (ohne Cursor neu beginnen),
+einer auf Inhalten, die es nicht mehr gibt, 410 `cursor-gone` (neu abgleichen). Siehe die
+[Fehlercodes](/de/reference/errors).
+
+## Was sie nie sieht
+
+Die Rolle des Tokens hält nur `content.read`, im Bereich, den die Pipeline indexieren darf:
+Entwürfe und alles außerhalb dieses Bereichs erreichen sie nie.

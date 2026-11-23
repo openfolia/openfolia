@@ -1,0 +1,30 @@
+{
+  "title": "Schreiben",
+  "pages": [
+    "content-browser",
+    "new-module",
+    "edit-a-module",
+    "blocks",
+    "headings-and-tables",
+    "safety-notices-and-callouts",
+    "procedures",
+    "faq-entries",
+    "page-breaks-and-attributes",
+    "cross-references",
+    "images",
+    "image-callouts",
+    "attachments",
+    "right-to-left",
+    "arranging-blocks",
+    "reuse-modules",
+    "snippets",
+    "preview",
+    "locks-and-taking-over",
+    "terminology",
+    "history",
+    "rename-deprecate-delete",
+    "manage-revisions",
+    "suggest-changes",
+    "style-review"
+  ]
+}

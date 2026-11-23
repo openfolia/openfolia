@@ -1,0 +1,17 @@
+schemaVersion: 1
+status: approved
+domain: breakdown
+languages:
+  en:
+    preferred: wheel bolt
+    forbidden:
+      - term: wheel nut
+    definition: One of the five bolts that hold a wheel on the hub.
+  de:
+    preferred: Radschraube
+    forbidden:
+      - term: Radmutter
+    definition: Eine der fünf Schrauben, die ein Rad an der Nabe halten.
+  fr:
+    preferred: boulon de roue
+    definition: L'un des cinq boulons qui fixent une roue au moyeu.

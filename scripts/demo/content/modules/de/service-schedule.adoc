@@ -1,0 +1,32 @@
+= Wartungsplan
+:schema-version: 1
+:module-type: reference
+:lang: de
+:audience: technician
+:facet-product: fenna
+:keywords: Wartung, Inspektion
+
+[#intro]
+Warten Sie das Fahrzeug nach dem Intervall, das zuerst erreicht wird.
+
+[#table,cols="2,1",options=header]
+.Wartungsplan
+|===
+|[[ss-h-work]]Arbeit |[[ss-h-interval]]Intervall
+|[[ss-inspection]]Inspektion mit Auslesen des Fehlerspeichers |[[ss-inspection-i]]Jährlich oder alle 20.000 km
+|[[ss-brake]]Bremsflüssigkeit wechseln |[[ss-brake-i]]Alle 2 Jahre
+|[[ss-filter]]Innenraumfilter ersetzen |[[ss-filter-i]]Jährlich
+|[[ss-wipers]]Wischerblätter ersetzen |[[ss-wipers-i]]Jährlich
+|===
+
+[variant#petrol,when="drive in (petrol)"]
+====
+[#petrol-text]
+Benziner: Motoröl und Ölfilter jährlich oder alle 20.000 km wechseln, Zündkerzen alle 60.000 km.
+====
+
+[variant#electric,when="drive in (electric)"]
+====
+[#electric-text]
+Elektromodell: Hochvoltsystem und Kühlmittel der Batterie alle 2 Jahre prüfen.
+====

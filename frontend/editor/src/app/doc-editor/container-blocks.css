@@ -1,0 +1,132 @@
+/*
+ * The content of the documentation blocks' node views in the block editor (`blocks/`; the rest
+ * is `block-editor.component.css`, split for the component style budget): the space between their
+ * blocks, the safety notice's field names, the FAQ entry's answer, and the grip of a block in a
+ * variant block, a safety notice or an FAQ entry. Colours only through the theme's tokens.
+ */
+
+/*
+ * A container's blocks: space above each but the first. A block's grip anchor or a drag's slot
+ * before the first one is none of them, so nothing moves when either comes and goes.
+ */
+.doc-block-content > :where(*) {
+  margin: 0;
+}
+
+.doc-block-content > :where(:not(.doc-editor-grip-anchor) ~ *) {
+  margin-top: 0.5em;
+}
+
+/*
+ * The safety notice's content: the hazard, then the consequence and the measures. The hazard and
+ * the first block of each kind carry the field's name in a column of their own
+ * (`--safety-*-label`, set by the node view in the UI language); further blocks line up with
+ * them. One block after the hazard is the measure (the consequence is the one a notice may leave
+ * out); with more, the first is the consequence. The names are the editor's drawing, never the
+ * document. The fields are counted among the content's nodes only (`:nth-child(… of …)`): a
+ * block's grip anchor and a drag's slot are none, and a block lifted by its grip keeps its place
+ * while it is folded away, so no name moves while a block is dragged.
+ */
+.doc-block-content[data-content='safety']
+  > :not(.doc-editor-grip-anchor, .doc-editor-drag-slot) {
+  position: relative;
+  padding-inline-start: 7.25rem;
+}
+
+/* A drag's slot stands where the field's text does. */
+.doc-block-content[data-content='safety'] > .doc-editor-drag-slot {
+  margin-inline-start: 7.25rem;
+}
+
+.doc-block-content[data-content='safety']
+  > :not(.doc-editor-grip-anchor, .doc-editor-drag-slot)::after {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.15em;
+  width: 6.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+  pointer-events: none;
+  user-select: none;
+}
+
+.doc-block-content[data-content='safety'] > [data-node='hazard'] {
+  font-weight: 500;
+}
+
+.doc-block-content[data-content='safety'] > [data-node='hazard']::after {
+  content: var(--safety-hazard-label, '');
+}
+
+.doc-block-content[data-content='safety']
+  > :nth-child(2 of :not(.doc-editor-grip-anchor, .doc-editor-drag-slot)):not(
+    :nth-last-child(1 of :not(.doc-editor-grip-anchor, .doc-editor-drag-slot))
+  )::after {
+  content: var(--safety-consequence-label, '');
+}
+
+.doc-block-content[data-content='safety']
+  > :nth-child(
+    2 of :not(.doc-editor-grip-anchor, .doc-editor-drag-slot)
+  ):nth-last-child(
+    1 of :not(.doc-editor-grip-anchor, .doc-editor-drag-slot)
+  )::after,
+.doc-block-content[data-content='safety']
+  > :nth-child(
+    3 of :not(.doc-editor-grip-anchor, .doc-editor-drag-slot)
+  )::after {
+  content: var(--safety-measure-label, '');
+}
+
+.doc-block-content[data-content='safety']
+  > [data-node='hazard'].is-empty::before,
+[data-content='faq'] > [data-node='question'].is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+}
+
+/*
+ * An FAQ entry's content: the question as a heading-like line, then its answer, set in from the
+ * start under a quiet rule (padding between its blocks, so the rule runs unbroken). A block's grip
+ * anchor and a drag's slot are no part of the answer: the slot stands where a block's text does.
+ */
+[data-content='faq'] > [data-node='question'] {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+[data-content='faq']
+  > :not(:first-child, .doc-editor-grip-anchor, .doc-editor-drag-slot) {
+  margin-top: 0;
+  padding-block-start: 0.375rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid var(--border);
+}
+
+[data-content='faq'] > .doc-editor-drag-slot {
+  margin-inline-start: calc(0.75rem + 2px);
+}
+
+/*
+ * A block's grip in a container (`plugins/flow.ts`): in the editor's gutter, left of the frame,
+ * where the frame's own grip stands (past the frame's padding and border: a variant block's and
+ * an FAQ entry's 0.75rem). A safety notice clips what leaves its frame: there the grip stands in
+ * the names' column, right before the block's text.
+ */
+.doc-block-content:is([data-content='variant'], [data-content='faq'])
+  > .doc-editor-grip-anchor
+  > .doc-editor-grip {
+  inset-inline-start: calc(-1.75rem - 0.75rem - 1px);
+}
+
+.doc-block-content[data-content='safety']
+  > .doc-editor-grip-anchor
+  > .doc-editor-grip {
+  /* Over the block after it, which is `position: relative` for its field's name. */
+  z-index: 1;
+  inset-inline-start: 5.75rem;
+}

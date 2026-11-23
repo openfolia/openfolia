@@ -1,0 +1,70 @@
+---
+title: 'Die Dateien einer Veröffentlichung'
+description: 'Wie eine Veröffentlichung ihre PDF-Dateien im Hintergrund erzeugt, und was zu tun ist, wenn eine fehlschlägt.'
+articleId: 'guide.releases.outputs'
+---
+
+Eine Veröffentlichung erzeugt jedes Handbuch als PDF, in jeder seiner Varianten und jeder
+konfigurierten Sprache. Die Dateien entstehen im Hintergrund: Sie können die Seite schließen und
+später wiederkommen.
+
+## Den Dateien folgen
+
+Auf der Seite der Veröffentlichung sagt **Dateien**, wie weit sie sind, etwa **12 von 30 Dateien
+fertig**, mit einem Balken darunter. Jede Datei hat eine Zeile unter ihrem Handbuch, mit ihrem
+**Status**:
+
+- **Wartet:** wartet, bis sie an der Reihe ist.
+- **Wird erzeugt:** entsteht gerade.
+- **Fertig:** erledigt, mit ihrer **Größe** und **Herunterladen**.
+- **Fehlgeschlagen:** Sie ließ sich nicht erzeugen. Die Zeile sagt, warum.
+
+![Die Seite einer Veröffentlichung, alle Dateien fertig](/images/guide/de/release-page.webp)
+
+Die Seite folgt den Dateien von selbst; Neuladen ist nicht nötig. Solange sie offen ist, meldet
+eine Nachricht, wenn alle Dateien fertig sind oder wie viele fehlgeschlagen sind. In der Liste der
+Veröffentlichungen zeigt die Spalte **Dateien** dasselbe als Abzeichen: **Wird vorbereitet**,
+**12 von 30**, **Fertig** oder **2 fehlgeschlagen**.
+
+Ein Handbuch, das die Veröffentlichung nicht ändert, behält die Datei der vorigen
+Veröffentlichung. Nur was sich geändert hat, wird neu erzeugt: Ein Modul oder das Manifest eines
+Handbuchs (sein Titel, seine Varianten) ändert die Dateien dieses Handbuchs, in einer Sprache oder,
+bei der Ausgangssprache, in allen; die Konfiguration (mit ihren Beschriftungen), eine
+Seitengestaltung, ihre eigene Vorlage, ein Sicherheitssymbol oder ein Begriff ändert alle
+Dateien. Das Branding des Editors erreicht keine Datei.
+
+## Während die Dateien vorbereitet werden
+
+Gleich nach dem Erstellen zeigt die Seite **Dateien werden vorbereitet …**, während die
+Veröffentlichung ermittelt, welche Dateien sie braucht. Eine große Veröffentlichung wird in Teilen
+vorbereitet: Ihre Dateien erscheinen, sobald sie erzeugt werden.
+
+Die Veröffentlichungen eines Produkts werden in der Reihenfolge vorbereitet, in der sie erstellt
+wurden: Eine neue Veröffentlichung wartet nur auf die früheren Veröffentlichungen ihres eigenen
+Produkts, die noch vorzubereiten sind, und übernimmt dann deren Dateien überall dort, wo sich
+zwischen beiden nichts geändert hat. Veröffentlichungen anderer Produkte halten sie nicht auf. Sind
+sie vorbereitet, werden die Dateien neuerer Veröffentlichungen zuerst erzeugt. So sind die ersten
+Dateien einer neuen Veröffentlichung bald fertig, worauf die Dateien älterer Veröffentlichungen
+auch noch warten. Wartet eine Veröffentlichung, sagt sie das allen, die veröffentlichen dürfen,
+etwa **Wartet auf die Vorbereitung von 2 früheren Veröffentlichungen** oder **Wartet auf 8 Dateien
+neuerer Veröffentlichungen**.
+
+Eine Datei wird immer bei der ältesten Veröffentlichung erzeugt, die sie hat: Sie trägt deren
+Datum, nie ein späteres.
+
+## Wenn etwas fehlschlägt
+
+- Eine Datei ist fehlgeschlagen: Wählen Sie **Erneut versuchen** in ihrer Zeile, um sie neu zu
+  erzeugen.
+- **Die Dateien konnten nicht vorbereitet werden**: Wählen Sie **Dateien erneut planen** oben bei
+  **Dateien**.
+- **Zu viele Dateien für eine Veröffentlichung**: Die Veröffentlichung hätte mehr Dateien, als eine
+  Veröffentlichung haben darf, daher wurde keine vorbereitet. Bitten Sie die Administration, die
+  Grenze anzuheben, und wählen Sie dann **Dateien erneut planen**.
+
+Diese Schaltflächen sieht nur, wer veröffentlichen darf.
+
+## Welche Gestaltung die Dateien nutzen
+
+Über den Dateien jedes Handbuchs steht, mit welcher Seitengestaltung es gedruckt wurde, etwa
+**Gestaltung: Eingebaute Gestaltung**. Siehe [Seitengestaltungen](/de/guide/releases/page-designs).

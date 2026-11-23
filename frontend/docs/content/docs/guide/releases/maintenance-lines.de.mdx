@@ -1,0 +1,91 @@
+---
+title: 'Wartungslinien'
+description: 'Eine Korrektur für eine ältere Produktversion veröffentlichen, während die veröffentlichten Inhalte weitergehen.'
+articleId: 'guide.releases.maintenance-lines'
+---
+
+Eine Wartungslinie korrigiert eine ältere Produktversion. Sie beginnt bei der Veröffentlichung
+dieser Version und sammelt ihre eigenen Korrekturen, getrennt von den veröffentlichten Inhalten,
+die vielleicht schon eine neuere Version beschreiben. Veröffentlichungen aus der Linie sind neue
+Versionen des älteren Produkts, etwa 2.0.1 nach 2.0.
+
+## Eine Linie beginnen
+
+1. Wählen Sie **Veröffentlichungen** in der Seitenleiste, dann die Veröffentlichung der Version,
+   die Sie korrigieren, etwa **North 2.0**.
+2. Wählen Sie in ihrem Bereich unter **Wartung** die Option **Wartung beginnen**.
+
+Die Linie steht auf dem Reiter **Wartung** der Seite Veröffentlichungen: ihr Produkt, ihre
+Produktversion, die Veröffentlichung, bei der sie begann (ein Verweis darauf), ob sie **Offen**
+oder **Geschlossen** ist und wer sie wann begonnen hat. Eine Veröffentlichung hat höchstens eine
+Linie.
+
+![Der Reiter Wartung: eine Linie mit Produkt, Version, Ausgangsveröffentlichung und Zustand](/images/guide/de/maintenance-lines.webp)
+
+**Schließen** beendet eine Linie endgültig: Darauf beginnt keine neue Überarbeitung mehr, aber
+Überarbeitungen darauf lassen sich weiter zusammenführen, und Veröffentlichungen lassen sich weiter
+daraus erstellen. Das Schließen fragt vorher nach und lässt sich nicht rückgängig machen.
+
+Eine Linie beginnen und schließen darf, wer dieses Produkt veröffentlichen darf. Den Reiter
+**Wartung** sieht jede Person, die Entwürfe lesen darf.
+
+## Eine ältere Version korrigieren
+
+1. Öffnen Sie das Überarbeitungsmenü in der Kopfzeile und wählen Sie **Neue Überarbeitung**.
+2. Wählen Sie unter **Produktversion** die Linie, etwa **North 2.0**, statt **Aktuell (main)**.
+3. Geben Sie einen **Titel** ein und wählen Sie **Anlegen**.
+
+![Neue Überarbeitung mit der Auswahl Produktversion: Aktuell (main) oder eine Wartungslinie](/images/guide/de/revision-product-version.webp)
+
+Die Überarbeitung nennt die Version, die sie korrigiert, **North 2.0**, neben ihrem Titel: im
+Überarbeitungsmenü, im Moduleditor, in der Prüfung und in der Inhaltsübersicht. Alles, was Sie
+darin lesen und bearbeiten, sind die Inhalte dieser Version. Sie wird wie jede Überarbeitung
+geprüft und in die Linie zusammengeführt.
+
+Der Editor nennt eine Linie immer nach Produkt und Version, nie nach ihrem Zweig.
+
+## Aus einer Linie veröffentlichen
+
+Ist eine Linie offen, bietet **Neue Veröffentlichung** sie an:
+
+1. Wählen Sie **Veröffentlichungen** in der Seitenleiste, dann **Neue Veröffentlichung**.
+2. Wählen Sie unter **Erstellen aus** die Linie, etwa **Wartungslinie North 2.0**, statt **Dem
+   veröffentlichten Inhalt (main)**.
+3. Das **Produkt** ist das der Linie. Geben Sie die neue **Produktversion** ein, etwa `2.0.1`. Der
+   Dialog nennt den Commit: den neuesten Stand der Linie.
+4. Gehen Sie wie bei jeder Veröffentlichung durch **Prüfungen**, **Ausgaben** und **Hinweise** und
+   wählen Sie **Veröffentlichung erstellen**.
+
+![Der Dialog Veröffentlichung erstellen mit geöffnetem Erstellen aus: die veröffentlichten Inhalte und eine Wartungslinie](/images/guide/de/release-maintenance-line.webp)
+
+**Erstellen aus** erscheint nur, wenn eine Linie offen ist.
+
+## Was bei Veröffentlichungen einer Linie anders ist
+
+- Ihre **Änderungen** zählen ab der vorigen Veröffentlichung der Linie, oder ab der
+  Veröffentlichung, bei der die Linie begann.
+- Sie werden nie die neueste Veröffentlichung des Produkts: Die Adresse **Neueste
+  Veröffentlichung** öffnet weiter die neueste Veröffentlichung der aktuellen Inhalte. Die
+  Adresse genau dieser Veröffentlichung öffnet sie.
+
+## Eine Korrektur übernehmen
+
+Eine in eine Linie zusammengeführte Korrektur lässt sich in die aktuellen Inhalte übernehmen,
+damit auch die neuere Version sie bekommt. Das geschieht nie von selbst:
+
+1. Öffnen Sie die zusammengeführte Überarbeitung in **Prüfung**. Beim Zusammenführen bietet auch
+   die Meldung das an, jeder Person, die Inhalte bearbeiten darf.
+2. Wählen Sie **In die aktuelle Version übernehmen**.
+
+![Die Prüfung einer in eine Linie zusammengeführten Korrektur mit In die aktuelle Version übernehmen](/images/guide/de/carry-forward.webp)
+
+Das beginnt eine neue Überarbeitung als Entwurf, **Carry forward:** und der Titel der Korrektur,
+mit derselben Änderung auf den aktuellen Inhalten, und öffnet sie in der Prüfung. Sie wird wie jede
+andere geprüft.
+
+Haben die aktuellen Inhalte dieselbe Stelle anders geändert, bleibt diese Datei so, wie sie dort
+ist, und ein Dialog führt sie auf: jedes Modul mit den Blöcken, die die Korrektur geändert hat. Ein
+Block öffnet den Editor im neuen Entwurf genau an diesem Block, um die Korrektur von Hand
+einzutragen. **Später** behält die Liste, **Fertig** legt sie weg.
+
+Eine Überarbeitung wird einmal übernommen. Ein zweiter Versuch sagt das und öffnet diesen Entwurf.

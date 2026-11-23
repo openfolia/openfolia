@@ -1,0 +1,30 @@
+import { cva, type VariantProps } from 'class-variance-authority';
+
+export const dialogVariants = cva([
+  'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-1/2 gap-4',
+  'rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none',
+  'sm:max-w-sm',
+]);
+
+/** Classes of the mask behind a dialog, shared by the declarative form and the service. */
+export const DIALOG_BACKDROP_CLASSES = [
+  'bg-foreground/40',
+  'dark:bg-background/70',
+  'supports-backdrop-filter:backdrop-blur-xs',
+];
+
+export const dialogHeaderVariants = cva('flex flex-col gap-2');
+
+export const dialogTitleVariants = cva(
+  'text-base leading-none font-medium wrap-anywhere',
+);
+
+export const dialogDescriptionVariants = cva(
+  'text-sm text-muted-foreground wrap-anywhere *:[a]:underline *:[a]:underline-offset-[3px] *:[a]:hover:text-foreground',
+);
+
+export const dialogFooterVariants = cva(
+  '-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-transparent p-4 sm:flex-row sm:justify-end',
+);
+
+export type ZardDialogVariants = VariantProps<typeof dialogVariants>;

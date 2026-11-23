@@ -1,0 +1,117 @@
+---
+title: 'Worker'
+description: 'Die API und die Hintergrundarbeit in eigenen Prozessen: die Rollen, die Skalierung und eine API, die schnell antwortet.'
+articleId: 'guide.self-hosting.workers'
+---
+
+Die API und die Hintergrundarbeit laufen mit demselben Image, in eigenen Prozessen. Die
+Einstellung `CCMS_ROLE` legt fest, was ein Prozess tut.
+
+| Rolle    | Was sie tut                                                                                                                                                                                                                                                                              |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api`    | Bedient die API und stellt Aufträge nur in die Warteschlange. Führt keine Hintergrundschleife aus. Hält einen kleinen PDF-Pool (standardmäßig 2) für Leseanfragen: das PDF eines Handbuchs, Seitenbilder, Prüfungen. Ihr `/health/ready` hängt nie von einem Worker ab.                  |
+| `worker` | Arbeitet jeden Auftrag ab: Planung und Dateien von Veröffentlichungen, Importe, Webhook-Zustellungen, Benachrichtigungen. Führt die Bereinigungen und Neuzählungen aus. Bedient nur `GET /health` und `GET /health/ready`, mit den Zahlen der Warteschlange. Migriert die Datenbank nie. |
+| `all`    | Beides in einem Prozess. Der Standard außerhalb von `deploy/compose.yaml`.                                                                                                                                                                                                               |
+
+`deploy/compose.yaml` startet den Dienst `api` mit `CCMS_ROLE=api` und die Hintergrundarbeit im
+Dienst `worker`. Ein Worker wartet mit dem Start auf die Migrationen der API.
+
+## Mehr Worker betreiben
+
+```sh
+docker compose up -d --scale worker=3
+```
+
+Jeder Auftrag wird von genau einem Worker übernommen, und die Obergrenze für die Dateien einer
+Veröffentlichung (40 gleichzeitig in der Warteschlange) gilt über alle hinweg. Worker auf anderen
+Servern brauchen dasselbe Postgres und denselben Blob-Speicher: Nehmen Sie dann S3, denn
+`/data/blobs` auf einem Volume gehört zu einem Server
+([Blob-Speicher](/de/guide/self-hosting/blob-store)).
+
+**Verwaltung**, **System** zeigt die wartenden Aufträge und warnt, wenn Aufträge warten und seit
+5 Minuten kein Worker einen übernommen hat.
+
+Was sich mehrere Worker über die Datenbank teilen:
+
+- **Jeden Auftrag einmal.** Zwei Worker übernehmen nie denselben Auftrag.
+- **Die Obergrenzen einer Veröffentlichung.** Höchstens 40 ihrer Dateien stehen gleichzeitig in
+  der Warteschlange, und höchstens 8 werden vorgezogen, weil jemand sie angefordert hat, wie viele
+  Worker und API-Prozesse es auch gibt.
+- **Eine Planung je Produkt zur Zeit, in der Reihenfolge der Veröffentlichung.** Eine neue
+  Veröffentlichung übernimmt die unveränderten Dateien der Veröffentlichung davor. Die Worker planen
+  die Veröffentlichungen eines Produkts nacheinander, und zwar strikt in der Reihenfolge, in der sie
+  veröffentlicht wurden: Warten mehrere Veröffentlichungen eines Produkts, wird die älteste zuerst
+  geplant, welcher Worker auch an der Reihe ist. So findet jede die vorige geplant vor, und jede
+  unveränderte Datei wird nur einmal erzeugt. Eine neue Veröffentlichung wartet nur auf die früheren
+  Veröffentlichungen ihres eigenen Produkts, die noch zu planen sind. Veröffentlichungen
+  verschiedener Produkte werden nebeneinander geplant.
+
+Was jeder Prozess für sich hat: seinen PDF-Pool und dessen Warteschlange, wie viele Dateien von
+Veröffentlichungen er gleichzeitig erzeugt, und seine Ratenbegrenzungen. Zwei Worker erzeugen
+doppelt so viele Dateien gleichzeitig wie einer.
+
+## Vorschauen und PDFs, auf die jemand wartet
+
+Was ein Leser gerade anfordert, erzeugt die API in ihrem eigenen kleinen Pool: das PDF eines
+Handbuchs, Seitenbilder (die Vorschau im Editor), die Prüfungen. Sie stellt es nie in die
+Warteschlange der Aufträge:
+
+- Ein Leser wartet nie hinter Dateien von Veröffentlichungen. Die PDF-Prozesse eines Workers sind
+  mit solchen Dateien beschäftigt, und ein Rendern lässt sich nicht unterbrechen; eine Vorschau in
+  der Warteschlange müsste also warten, bis eines fertig ist.
+- Vorschauen funktionieren auch, wenn kein Worker läuft.
+- Eine noch nicht erzeugte Datei einer Veröffentlichung erzeugt die API nicht. Sie rückt an den
+  Anfang der Warteschlange, und die API antwortet `409 output-not-ready`, bis ein Worker sie
+  erzeugt hat.
+
+Der Pool der API hat standardmäßig bis zu 2 PDF-Prozesse. Für mehr setzen Sie `CCMS_PDF_WORKERS` in
+`deploy/api.env` und die eigene Zahl der Worker in `deploy/worker.env`.
+
+## Einstellungen nur für die Worker
+
+Beide Dienste lesen `deploy/api.env`. Einstellungen nur für die Worker gehören in
+`deploy/worker.env`, die darüber gelesen wird, zum Beispiel ihr PDF-Pool:
+
+```sh
+# deploy/worker.env
+CCMS_PDF_WORKERS=3
+CCMS_RENDER_CONCURRENCY=3
+```
+
+Ein `CCMS_PDF_WORKERS` in `api.env` bestimmt auch den eigenen Pool der API, setzen Sie es daher in
+`worker.env`. Die API ignoriert `CCMS_RENDER_CONCURRENCY`; ein Worker erzeugt die Dateien einer
+Veröffentlichung standardmäßig auf allen seinen PDF-Workern.
+
+## Die API schnell halten
+
+Auf einem gemeinsamen Server überlässt ein Worker der API die CPU:
+
+- **Nice-Wert.** Ein Worker und die PDF-Prozesse, die er startet, laufen mit Nice 10
+  (`CCMS_WORKER_NICE`, 0 bis 19). Der Wert wird nur erhöht.
+- **Eine CPU-Grenze.** Für eine feste Grenze setzen Sie `OPENFOLIA_WORKER_CPUS` in `deploy/.env`,
+  zum Beispiel `2` auf einem Server mit 8 CPUs. Der Standard `0` setzt keine Grenze; Docker
+  verweigert eine Grenze über der Zahl der CPUs des Servers. Setzen Sie `CCMS_PDF_WORKERS` in
+  `worker.env` auf dieselbe Zahl: Der Standard des Pools ist die Zahl der CPUs des Servers minus
+  eins, nicht die Grenze.
+
+Wie viel Speicher und CPU das braucht: [Dimensionierung](/de/guide/self-hosting/sizing).
+
+## Stattdessen ein Prozess
+
+Um alles im Container der API zu betreiben, setzen Sie `OPENFOLIA_API_ROLE=all` in `deploy/.env`
+und starten ohne Worker:
+
+```sh
+docker compose up -d --wait --scale worker=0
+```
+
+## Der Health-Server des Workers
+
+In `deploy/compose.yaml` bindet ein Worker seinen Health-Server an `127.0.0.1`, weil nur der
+Health-Check des eigenen Containers ihn braucht. Außerhalb dieser Datei setzen Sie für einen Worker
+ebenfalls `HOST=127.0.0.1`, außer ein Orchestrator prüft ihn von außen: Sein `/health` zeigt jedem,
+der ihn erreicht, die Zahlen der Warteschlange.
+
+Die Worker stellen Webhooks mit dem geheimen Instanzschlüssel zu; eine Rotation des Schlüssels
+hält daher auch sie an, nicht nur die API: siehe
+[Geheimer Instanzschlüssel](/de/guide/self-hosting/secret-key).

@@ -1,0 +1,47 @@
+---
+id: 1042
+title: Filling the tank
+labels: [tank, customer-facing, draft-notes]
+order: 1
+---
+Fill the tank up to the maximum pressure given in [Pressure limits]. Read the *whole* page _before_ you start.
+
+{toc}
+
+h1. Before you start
+
+{info:title=Good to know}
+The tank must be fully drained. See [the vendor site|https://example.com/hoses].
+{info}
+
+{warning:title=Crushing hazard}
+Keep your fingers clear of the hose reel while it turns.
+{warning}
+
+h2. Steps
+
+# Connect the hose to the tank inlet.
+#* Check the inlet is clean.
+# Open the valve slowly.
+# Fill the tank to {{3 bar}} on the gauge.
+
+!hose.png|alt=The hose connected to the tank inlet,width=50%!
+
+h2. Reference
+
+||Pressure||Hose||
+|up to 3 bar|any|
+|over 3 bar|-not allowed- without a pressure hose|
+|over 4 bar|
+
+{code:language=yaml|title=Settings}
+max-pressure: 4
+{code}
+
+{expand:title=Details}
+More text with {color:red}red words{color} and a [mention|~someone].
+{expand}
+
+----
+
+Download the [checklist|^checklist.pdf] before you start.

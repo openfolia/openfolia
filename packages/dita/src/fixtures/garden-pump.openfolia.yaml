@@ -1,0 +1,43 @@
+# The target configuration the garden pump fixture (garden-pump/) is imported into.
+languages:
+  source: en
+  targets: [de]
+moduleTypes:
+  - id: concept
+    label: Concept
+  - id: procedure
+    label: Procedure
+  - id: reference
+    label: Reference
+  - id: troubleshooting
+    label: Troubleshooting
+audiences:
+  - id: operator
+    label: Operator
+  - id: technician
+    label: Technician
+variantAttributes:
+  - id: model
+    label: Model
+    kind: enum
+    values:
+      - id: basic
+        label: Basic
+      - id: pro
+        label: Pro
+textAttributes:
+  - id: product-name
+    label: Product name
+safetySymbols:
+  - id: w017
+    label: Hot surface
+dita:
+  moduleTypes:
+    task: procedure
+  profiling:
+    product:
+      variantAttribute: model
+  textKeys:
+    prodname: product-name
+  hazardSymbols:
+    hot-surface.png: w017

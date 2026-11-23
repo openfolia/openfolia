@@ -1,0 +1,19 @@
+{
+  "title": "Benutzerhandbuch",
+  "pages": [
+    "getting-started",
+    "change-sets",
+    "writing",
+    "variants",
+    "manuals",
+    "checks",
+    "review",
+    "releases",
+    "translations",
+    "media",
+    "admin",
+    "self-hosting",
+    "integrations",
+    "reference"
+  ]
+}

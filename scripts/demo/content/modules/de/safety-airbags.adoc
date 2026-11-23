@@ -1,0 +1,29 @@
+= Airbags
+:schema-version: 1
+:module-type: safety
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Airbag, Beifahrersitz
+
+[safety#rear-facing,severity=danger,symbols=w001]
+.Beifahrerairbag und rückwärts gerichtete Kindersitze
+====
+[#rear-facing-text]
+Ein Airbag, der sich vor einem rückwärts gerichteten Kindersitz entfaltet, kann das Kind tödlich verletzen.
+
+[#rear-facing-measures]
+* [[rear-facing-m1]]Befestigen Sie niemals einen rückwärts gerichteten Kindersitz auf dem Beifahrersitz, solange der Beifahrerairbag eingeschaltet ist.
+* [[rear-facing-m2]]Schalten Sie den Airbag mit dem Schlüsselschalter im Handschuhfach aus. Die Anzeige [.ui]##PASSENGER AIRBAG OFF## muss leuchten.
+====
+
+[safety#position,severity=warning,symbols=w001]
+.Zu geringer Abstand zum Airbag
+====
+[#position-text]
+Ein sich entfaltender Airbag kann Personen verletzen, die zu nah davor sitzen oder sich an die Tür lehnen.
+
+[#position-measures]
+* [[position-m1]]Halten Sie mindestens 25 cm Abstand zwischen Brustkorb und Lenkrad.
+* [[position-m2]]Bringen Sie keine Gegenstände, Bezüge oder Aufkleber auf den Airbagabdeckungen an.
+====

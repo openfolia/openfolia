@@ -1,0 +1,30 @@
+= Changing a wheel
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: flat tyre, wheel, jack
+
+[#intro]
+The spare wheel, the jack and the wheel brace are under the floor of the load space.
+
+[#ref-secure]
+module::secure-vehicle[]
+
+[#ref-warn]
+module::warning-triangle[]
+
+[procedure#steps]
+.Change the wheel
+. [[step-loosen]]Loosen the [.term.wheel-bolt]##wheel bolts## by one turn while the wheel is still on the ground.
+. [[step-jack]]Place the jack under the [.term.jacking-point]##jacking point## nearest the wheel and raise the vehicle until the wheel is clear of the ground.
++
+[#img-jack]
+image::demo-image:wheel-change["Jack under the jacking point on the sill, wheel lifted clear of the ground",width=60%]
+. [[step-remove]]Remove the wheel bolts and take the wheel off.
+. [[step-fit]]Fit the spare wheel and screw in the wheel bolts by hand.
+. [[step-lower]]Lower the vehicle and tighten the wheel bolts crosswise.
+
+[#after]
+Check the pressure of the spare wheel as soon as you can, and have the damaged tyre repaired or replaced.

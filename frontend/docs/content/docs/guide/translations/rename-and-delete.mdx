@@ -1,0 +1,39 @@
+---
+title: 'Rename or delete a translated module'
+description: 'What happens to a module’s translations when you change its ID or delete it.'
+articleId: 'guide.translations.rename-and-delete'
+---
+
+A module's translations are matched to it by its ID. When you change the ID or delete the module,
+the translations and their records follow, so the translation status stays right.
+
+## Change the ID
+
+**Change ID** in the module's **Details** tab moves the module in every language at once. The
+dialog lists the languages and the files that name the module. See
+[Rename, deprecate or delete a module](/guide/writing/rename-deprecate-delete).
+
+For the translations this means:
+
+- Each language version moves to the new ID, with its record of the source it was translated from.
+- A translation stays as current as it was. A cross-reference to the module, rewritten in another
+  module, does not make that module's translations outdated either.
+- The module's row in **Translations** shows under the new ID.
+
+While some blocks of the module are at the agency, the ID cannot be changed. The editor says
+**Parts of this module are with a translation provider. Import or cancel the translation job
+first.** Import the file, or cancel the export in the **Jobs** tab, then change the ID.
+
+## Delete a language version or the module
+
+**Delete…** in the module's **More actions** menu asks **What to delete**:
+
+- **Only the German version** (or another language): the translation and its record go. The cell
+  in **Translations** shows **Not translated** again.
+- **The whole module, in every language**: every version and every record go. The row leaves the
+  translation status.
+
+A version started again later begins without a record. It counts as outdated in every block until
+a translation of it is imported.
+
+The delete happens in your revision. **Undo** brings it back while the revision is a draft.

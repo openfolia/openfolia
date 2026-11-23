@@ -1,0 +1,32 @@
+= Pressions des pneus
+:schema-version: 1
+:module-type: reference
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: pneus, pression des pneus
+
+[#intro]
+Pressions pour des pneus froids de dimension {tyre-size}, en bar. Elles s'appliquent aussi à la roue de secours.
+
+[variant#hatchback,when="body in (hatchback)"]
+====
+[#table-hatchback,cols="2,1,1",options=header]
+.Pressions des pneus, berline
+|===
+|[[hb-h-load]]Charge |[[hb-h-front]]Avant |[[hb-h-rear]]Arrière
+|[[hb-part]]Jusqu'à 3 personnes |[[hb-part-front]]2,3 bar |[[hb-part-rear]]2,2 bar
+|[[hb-full]]En pleine charge |[[hb-full-front]]2,5 bar |[[hb-full-rear]]2,8 bar
+|===
+====
+
+[variant#estate,when="body in (estate)"]
+====
+[#table-estate,cols="2,1,1",options=header]
+.Pressions des pneus, break
+|===
+|[[es-h-load]]Charge |[[es-h-front]]Avant |[[es-h-rear]]Arrière
+|[[es-part]]Jusqu'à 3 personnes |[[es-part-front]]2,4 bar |[[es-part-rear]]2,4 bar
+|[[es-full]]En pleine charge |[[es-full-front]]2,6 bar |[[es-full-rear]]2,9 bar
+|===
+====

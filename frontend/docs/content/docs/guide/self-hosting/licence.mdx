@@ -1,0 +1,55 @@
+---
+title: 'Licence and source'
+description: 'The AGPL licence, offering your users the source code with CCMS_SOURCE_URL, and what GET /about answers.'
+articleId: 'guide.self-hosting.licence'
+---
+
+OpenFolia is licensed under the GNU Affero General Public License, version 3 only
+(`AGPL-3.0-only`, the `LICENSE` file in the repository). That covers all of it: every feature
+and every published image (`openfolia`).
+
+## Offer the source
+
+Section 13 of the AGPL asks that a **modified** version run as a network service offer its users
+its source code. Set `CCMS_SOURCE_URL` to where the source of the version you run can be
+downloaded, for example your fork's repository:
+
+```sh
+# deploy/.env
+CCMS_SOURCE_URL=https://git.example.com/docs/openfolia
+```
+
+An `http://` or `https://` URL without credentials. The editor then links to it from the account
+menu and the sign-in page. Unset, the editor shows the licence only, and **Admin**, **System** asks
+the admin to set it. Set it whenever you run a modified version; for an unmodified one, the
+project's own repository is a good value too.
+
+## `GET /about`
+
+Any client can ask the API for the licence and the links, without a token:
+
+```sh
+curl -s https://docs.example.com/api/about
+```
+
+```json
+{
+  "data": {
+    "type": "About",
+    "id": "about",
+    "attributes": {
+      "license": "AGPL-3.0-only",
+      "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
+      "sourceUrl": "https://git.example.com/docs/openfolia",
+      "docsUrl": "https://help.example.com/"
+    }
+  }
+}
+```
+
+- `sourceUrl` is `CCMS_SOURCE_URL`, or `null` when it is not set.
+- `docsUrl` is where the user guide is, for the editor's help links (`CCMS_DOCS_URL`), or `null`
+  when an offline instance turned them off with `CCMS_DOCS_URL=off`.
+
+The route is in the [API reference](/api), and both settings in the
+[settings reference](/reference/settings).

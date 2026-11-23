@@ -1,0 +1,52 @@
+---
+title: 'Branding'
+description: 'Set the product name, the logos, the icons and the brand colours, or go back to the default branding.'
+articleId: 'guide.admin.branding'
+---
+
+Branding replaces the product's own name, logos and colours with yours, in the editor and on the
+sign-in page. Without it, the default branding shows. Changes apply at once; everyone else sees
+them on their next load. It needs a role with **admin.branding**.
+
+![The Branding page with the product name, the logos and icons, and the preview](/images/guide/en/admin-branding.webp)
+
+## Name the product
+
+1. Open **Admin**, then **Branding**.
+2. Under **Product name**, type the **Name**, then press <kbd>Enter</kbd> or leave the field.
+
+It shows in the browser tab, next to the logo and on the sign-in page. Leave it empty for the
+default name.
+
+## Upload logos and icons
+
+Under **Logos and icons**, choose **Upload** beside the image to set, and pick a PNG or WebP file
+of at most 1 MB and 4096 pixels a side. SVG is not taken: export it as PNG.
+
+- **Logo**: with the name, for light pages.
+- **Logo on dark pages**: without it, the light logo shows there too.
+- **Mark**: compact, for the collapsed sidebar.
+- **Favicon**: the browser tab's icon. Square, at least 32 × 32 pixels.
+- **App icon**: the icon a phone puts on its home screen. Square, at least 180 × 180 pixels.
+
+**Replace** and **Remove** change or drop one image. An animated image or an icon that is not
+square is refused, and what was saved stays. The uploaded images are listed in the media library:
+see [Branding uploads](/guide/media/branding-uploads).
+
+## Set the colours
+
+1. Under **Colours**, type the **Primary colour** as `#` and six hex digits, or pick it, then press
+   <kbd>Enter</kbd>.
+2. Set an **Accent** if you like: it tints the sidebar on light pages.
+
+Buttons, links and the focus ring take the primary colour; dark pages use a lighter shade of it.
+The **Contrast checks** show each pair of colours on light and dark pages. A colour that leaves too
+little contrast is not saved. Safety and status colours never change.
+
+**Use default** takes one colour back to the default. **Preview** shows the result on a light and
+a dark page.
+
+## Go back to the default branding
+
+Choose **Reset to default**, then **Reset**. The name, logos, icons and colours go back to the
+defaults, for everyone.

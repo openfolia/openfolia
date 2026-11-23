@@ -1,0 +1,2 @@
+ALTER TABLE "release_outputs" DROP CONSTRAINT "release_outputs_kind";--> statement-breakpoint
+ALTER TABLE "release_outputs" ADD CONSTRAINT "release_outputs_kind" CHECK ("release_outputs"."kind" in ('pdf', 'offline-package'));

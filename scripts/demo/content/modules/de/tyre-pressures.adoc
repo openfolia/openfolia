@@ -1,0 +1,32 @@
+= Reifendruck
+:schema-version: 1
+:module-type: reference
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Reifen, Reifendruck
+
+[#intro]
+Reifenfülldrücke für kalte Reifen der Größe {tyre-size}, in bar. Sie gelten auch für das Reserverad.
+
+[variant#hatchback,when="body in (hatchback)"]
+====
+[#table-hatchback,cols="2,1,1",options=header]
+.Reifendruck, Fließheck
+|===
+|[[hb-h-load]]Beladung |[[hb-h-front]]Vorn |[[hb-h-rear]]Hinten
+|[[hb-part]]Bis 3 Personen |[[hb-part-front]]2,3 bar |[[hb-part-rear]]2,2 bar
+|[[hb-full]]Voll beladen |[[hb-full-front]]2,5 bar |[[hb-full-rear]]2,8 bar
+|===
+====
+
+[variant#estate,when="body in (estate)"]
+====
+[#table-estate,cols="2,1,1",options=header]
+.Reifendruck, Kombi
+|===
+|[[es-h-load]]Beladung |[[es-h-front]]Vorn |[[es-h-rear]]Hinten
+|[[es-part]]Bis 3 Personen |[[es-part-front]]2,4 bar |[[es-part-rear]]2,4 bar
+|[[es-full]]Voll beladen |[[es-full-front]]2,6 bar |[[es-full-rear]]2,9 bar
+|===
+====

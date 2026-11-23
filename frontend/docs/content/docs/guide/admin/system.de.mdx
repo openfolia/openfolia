@@ -1,0 +1,55 @@
+---
+title: 'Die Seite System'
+description: 'Belegter Speicher, die Instanz, E-Mail, die Hintergrundarbeit und die Hinweise, wenn etwas Aufmerksamkeit braucht.'
+articleId: 'guide.admin.system'
+---
+
+**Verwaltung › System** zeigt den Zustand der Installation. Das meiste davon legt fest, wer den
+Server betreibt; die Seite zeigt, was festgelegt ist und was zu tun ist, wenn etwas Aufmerksamkeit
+braucht.
+
+![Die Seite System mit belegtem Speicher, der Instanz und dem Abschnitt E-Mail](/images/guide/de/admin-system.webp)
+
+## Speicher
+
+**Speicher** zeigt, wie viel die Installation belegt: **Medien (Bilder und Anhänge)** und
+**Archivierte PDFs (Veröffentlichungen)**, die zu einem Speicherlimit zählen, und die Git-Inhalte und die
+Datenbank, zur Information.
+
+Ist ein Limit festgelegt, warnt die Seite ab 80 % davon. Ist das Limit erreicht, werden neue
+Uploads abgelehnt. **Unbenutzte Dateien anzeigen** öffnet die Dateien, die niemand verwendet, zum
+Löschen. **Größte Dateien** listet die größten Uploads, jeder mit einem Link in die
+Medienbibliothek.
+
+## Instanz
+
+**Instanz** nennt die Lizenz und wo der Quellcode liegt. **Geheimer Schlüssel** sagt, wo der
+Schlüssel liegt, der gespeicherte Secrets wie die Secrets der Webhooks schützt. Sichern Sie diese
+Datei. **Backups** zeigt deren Status und verlinkt auf [Backups](/de/guide/admin/backups).
+
+## E-Mail
+
+**E-Mail** zeigt, ob der Server E-Mails sendet und über welchen Mailserver. Die Einstellungen
+stehen in der Umgebung des Servers, hier sind sie nur zu lesen.
+
+- **E-Mail ist ausgeschaltet: kein Mailserver festgelegt**: Bis einer festgelegt ist, werden
+  Anmeldelinks zum Kopieren angezeigt, statt per E-Mail gesendet.
+- **E-Mail ist ausgeschaltet: der geheime Schlüssel der Instanz fehlt**: Ein Mailserver ist
+  festgelegt, aber der Server hat keinen geheimen Schlüssel. **Wo der geheime Schlüssel festgelegt
+  ist** springt dorthin.
+
+Ist E-Mail eingeschaltet, sendet **Test-E-Mail senden** eine an Sie. Sie sollte innerhalb einer
+Minute ankommen; ein Fehler erscheint im [Audit-Log](/de/guide/admin/audit-log).
+
+## Hintergrundarbeit
+
+**Hintergrundarbeit** zeigt die Worker, die Dateien von Veröffentlichungen erstellen, Importe ausführen und
+Webhooks zustellen: wie viele laufen, wie viele Aufgaben warten und die längste Wartezeit.
+
+- **Aufgaben warten, und kein Worker übernimmt sie**: Bitten Sie die Person, die den Server
+  betreibt, zu prüfen, ob der Worker-Dienst läuft und die Datenbank erreicht.
+- **Zustellung nach einer Wiederherstellung angehalten**: Die Datenbank wurde von einem anderen
+  Server wiederhergestellt, und Benachrichtigungen, Webhooks und der Änderungs-Feed warten auf
+  einen weiteren Schritt. **Wiederherstellung abschließen** öffnet
+  [Nach einer Wiederherstellung](/de/guide/self-hosting/after-a-restore). Dabei geht nichts
+  verloren.

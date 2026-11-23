@@ -1,0 +1,12 @@
+= Avant de partir
+:schema-version: 1
+:module-type: concept
+:lang: fr
+:audience: owner
+:facet-product: fenna
+
+[#intro]
+Ce guide présente l'essentiel pour votre {model-name} : démarrer, régler l'heure, faire le plein ou recharger et que faire en cas de crevaison.
+
+[#full]
+La notice d'utilisation décrit tout le reste et contient toutes les consignes de sécurité.

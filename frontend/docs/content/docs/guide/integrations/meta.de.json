@@ -1,0 +1,19 @@
+{
+  "title": "Integrationen",
+  "pages": [
+    "delivery-api",
+    "authentication",
+    "json-api",
+    "change-feed",
+    "webhooks",
+    "search",
+    "chunks",
+    "release-outputs",
+    "html-preview",
+    "static-portal",
+    "import-format",
+    "dita-import",
+    "connectors",
+    "terminology-export"
+  ]
+}

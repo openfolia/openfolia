@@ -1,0 +1,45 @@
+---
+title: 'Barrierefreiheit des PDFs'
+description: 'Warum das PDF eines Handbuchs unter PDF/UA-1 abgelehnt wird und was „nicht geprüft“ bedeutet.'
+articleId: 'guide.checks.pdf-accessibility'
+---
+
+Das PDF jedes Handbuchs entsteht nach PDF/UA-1, dem Standard für barrierefreie PDFs: getaggt,
+damit ein Screenreader ihm folgen kann, mit einem Text zu jedem Bild. Ein PDF, das den Standard
+nicht erfüllen kann, wird nicht erstellt. Die Prüfungen eines Handbuchs versuchen jede Variante in
+jeder Sprache, so erfahren Sie es vor einer Veröffentlichung.
+
+## Die PDF-Prüfung ausführen
+
+Öffnen Sie das Handbuch unter **Handbücher**, wählen Sie ⋯ oben rechts und dann **Prüfungen
+ausführen**. Die Prüfungen einer Überarbeitung tun dasselbe für jedes Handbuch, das sie ändert.
+Jedes PDF zu erstellen dauert einen Moment; ein Handbuch mit vielen Varianten und Sprachen dauert
+länger.
+
+## PDF nicht barrierefrei
+
+**PDF nicht barrierefrei** (blockierend): Das PDF einer Variante in einer Sprache kann PDF/UA-1
+nicht erfüllen. Die Details sagen, warum, etwa **Das PDF erfüllt PDF/UA-1 nicht: missing alt
+text**: ein Bild ohne Text für Screenreader. Das Problem nennt die Varianten, in denen es gefunden
+wurde.
+
+Beheben Sie es dort, wohin die Details zeigen, oft beim Alternativtext eines Bildes in einer
+Sprache, und wählen Sie **Erneut prüfen**. Bis dahin wird das PDF des Handbuchs abgelehnt: **Das
+PDF kann nicht barrierefrei (PDF/UA-1) erstellt werden: Die Prüfungen des Handbuchs nennen den
+Grund.**
+
+## PDF nicht geprüft
+
+**PDF nicht geprüft** (Warnung): Das PDF ließ sich gar nicht erstellen, weil es zu lange gedauert
+hat oder die Vorlage einen Fehler hat. Seine Barrierefreiheit wurde daher nicht geprüft. Öffnen Sie
+das PDF des Handbuchs, um den Grund zu sehen, und prüfen Sie dann erneut.
+
+Ist der PDF-Dienst ausgelastet, übergehen die Prüfungen das PDF nicht stillschweigend. Sie sagen
+**Der PDF-Dienst ist ausgelastet. Versuchen Sie es gleich noch einmal.**
+
+## Wenn das Projekt einfache PDFs erstellt
+
+Eine Administratorin oder ein Administrator kann das Projekt auf einfache PDFs umstellen
+(`pdf.standard: none` in der Projektkonfiguration). Die PDFs werden dann nicht gegen PDF/UA-1
+geprüft. Ein Handbuch mit Seitengestaltung wird trotzdem einmal erstellt, um sein Layout zu
+prüfen; siehe [Layout- und Seitengestaltungswarnungen](/de/guide/checks/layout-warnings).

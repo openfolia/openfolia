@@ -1,0 +1,65 @@
+---
+title: 'Webhooks'
+description: 'Ein anderes System über Freigaben informieren: einen Abonnenten hinzufügen, seine Ereignisse wählen, ein Testereignis senden und seine Zustellungen lesen.'
+articleId: 'guide.admin.webhooks'
+---
+
+Ein Webhook-Abonnent ist eine URL, die informiert wird, wenn etwas geschieht, etwa wenn ein
+Handbuch freigegeben wird. Jeder Aufruf ist signiertes JSON, fehlgeschlagene Aufrufe werden
+wiederholt. Dafür braucht es eine Rolle mit **webhook.manage**.
+
+## Einen Abonnenten hinzufügen
+
+1. Öffnen Sie **Verwaltung**, dann **Webhooks**.
+2. Wählen Sie **Abonnenten hinzufügen**.
+3. Füllen Sie die **URL** aus: eine `https://`-Adresse, die mit einem 2xx-Status antwortet. Tragen
+   Sie unter **Name** einen Namen ein.
+4. Kreuzen Sie unter **Ereignisse** an, worüber er informiert wird, etwa ein freigegebenes
+   Handbuch oder eine zurückgezogene Freigabe.
+5. Wählen Sie unter **Zielgruppengrenze**, bis zu welcher Zielgruppe er von Inhalten erfährt, oder
+   **Keine Grenze (jede Zielgruppe, die sein Eigentümer lesen darf)**.
+6. Wählen Sie **Abonnent hinzufügen**.
+7. Kopieren Sie das **Signatur-Secret** und geben Sie es an den Empfänger weiter: Er prüft damit
+   die Signatur jedes Aufrufs. Sie sehen dieses Secret nicht noch einmal. Wählen Sie dann
+   **Fertig**.
+
+Ein Abonnent erfährt nur, was sein Eigentümer lesen darf: wer ihn angelegt oder zuletzt seine URL
+geändert hat.
+
+## Eigene Header
+
+Für einen Empfänger, der Anfragen auf eigene Weise prüft, fügen Sie im selben Dialog unter **Eigene
+Header** Header hinzu: **Header hinzufügen**, dann **Name** und **Wert**. Schalten Sie **Geheim**
+für einen Wert wie ein Token ein: Er wird verschlüsselt gespeichert und zeigt danach nur noch
+**Gesetzt**. **Ersetzen** ändert ihn.
+
+Ändert sich die URL, geben Sie jeden geheimen Wert erneut ein. Ein Secret wird nie an einen
+Empfänger gesendet, für den es nicht bestimmt war.
+
+## Testen und die Zustellungen lesen
+
+Wählen Sie einen Abonnenten, um neben der Liste seine letzten Zustellungen zu sehen.
+
+![Ein Abonnent und seine letzten Zustellungen, nach einem Testereignis, das der Empfänger nicht beantwortet hat](/images/guide/de/admin-webhooks.webp)
+
+1. Wählen Sie **Testereignis senden**. Ein Testereignis (ping) wird sofort gesendet, auch an einen
+   pausierten Abonnenten, und nie wiederholt.
+2. Das Ergebnis steht über der Liste: zugestellt mit dem Statuscode des Empfängers, oder
+   fehlgeschlagen und warum.
+3. Öffnen Sie eine Zustellung, um ihre Versuche und die Abschnitte **Gesendete Header** und
+   **Nutzdaten** zu sehen.
+
+Filtern Sie die Zustellungen nach Ergebnis (**Zugestellt**, **Fehlgeschlagen** und die anderen)
+und nach Ereignis.
+
+## Wiederholen, pausieren und einen Abonnenten reparieren
+
+- Eine fehlgeschlagene Zustellung wird automatisch mit Backoff wiederholt. **Wiederholen** in einer
+  fehlgeschlagenen Zustellung sendet sie sofort erneut.
+- Ein Abonnent, der immer wieder scheitert, wird abgeschaltet: **Fehlerhaft**. Reparieren Sie den
+  Empfänger und wählen Sie dann **Wieder aktivieren** auf seiner Karte oder in seinem Menü **⋯**.
+- Das Menü **⋯** enthält auch **Bearbeiten**, **Pausieren** und **Fortsetzen**, **Secret
+  erneuern** und **Löschen**.
+
+**Secret erneuern** erstellt ein neues Signatur-Secret, einmal angezeigt. Das alte wird noch einen
+Tag lang daneben gesendet, damit der Empfänger umstellen kann.

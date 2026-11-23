@@ -1,0 +1,113 @@
+---
+title: 'Anmeldung mit OpenID Connect'
+description: 'Personen mit Ihrem Identitätsanbieter am Editor anmelden lassen: der Client, die Einstellungen, der erste Admin, Gruppen und Sitzungen.'
+articleId: 'guide.self-hosting.oidc'
+---
+
+Personen können sich am Editor bei jedem OpenID-Connect-Anbieter anmelden, der ein
+Discovery-Dokument veröffentlicht (`<issuer>/.well-known/openid-configuration`), ob gehostet oder
+selbst betrieben. Nichts ist auf einen bestimmten Anbieter zugeschnitten. Die Anmeldung über einen
+Anbieter ist aus, bis `CCMS_OIDC_ISSUER` gesetzt ist.
+
+Die Beispiele verwenden einen selbst betriebenen Anbieter unter `https://id.example.com` neben dem
+Editor unter `https://docs.example.com`, beide hinter demselben
+[Reverse Proxy](/de/guide/self-hosting/reverse-proxy).
+
+## Den Client beim Anbieter registrieren
+
+In der Verwaltungskonsole des Anbieters:
+
+1. Legen Sie einen **Client** an (manche Anbieter nennen ihn Anwendung) für den Authorization Code
+   Flow mit PKCE (S256). Ein vertraulicher Client hat ein Secret, ein öffentlicher braucht keines.
+2. Setzen Sie seine **Redirect-URL** auf `https://docs.example.com/api/auth/oidc/callback`. Damit
+   die Abmeldung auch beim Anbieter gilt, setzen Sie die **Post-Logout-Redirect-URL** auf
+   `https://docs.example.com/sign-in`.
+3. Geben Sie ihm die Scopes `openid profile email`, mit `email` und `email_verified` im ID-Token
+   oder in der Userinfo-Antwort. Für Rollen aus Gruppen fügen Sie einen Claim mit den Gruppen der
+   Person hinzu.
+4. Stellen Sie sicher, dass niemand eine E-Mail-Adresse setzen kann, die der Anbieter dann als
+   bestätigt meldet.
+
+## Die API einrichten
+
+Setzen Sie in `deploy/api.env`:
+
+```sh
+CCMS_OIDC_ISSUER=https://id.example.com/realms/docs   # genau so, wie sein Discovery-Dokument ihn nennt
+CCMS_OIDC_CLIENT_ID=docs
+CCMS_OIDC_REDIRECT_URL=https://docs.example.com/api/auth/oidc/callback
+CCMS_OIDC_NAME=Firmenkonto                           # die Beschriftung der Anmeldeschaltfläche (optional)
+```
+
+- **Der Issuer** muss `https://` sein (einfaches `http://` nur auf einem Loopback-Host, für einen
+  lokalen Testanbieter). Der API-Container muss ihn unter derselben Adresse erreichen wie die
+  Browser der Personen, mit einem Zertifikat, dem er vertraut. Für ein Zertifikat Ihrer eigenen CA
+  binden Sie die CA-Datei ein und setzen `NODE_EXTRA_CA_CERTS` in `api.env` auf ihren Pfad.
+- **Die Redirect-URL** liegt auf dem Origin des Editors, denn das Sitzungs-Cookie gehört dem Editor.
+- **Die Scopes** stehen in `CCMS_OIDC_SCOPES` (Standard `openid profile email`; `openid` muss dabei
+  sein).
+- **Das Client-Secret** eines vertraulichen Clients kommt aus einer Datei: ein Compose-Secret, das
+  `CCMS_OIDC_CLIENT_SECRET_FILE` unter `environment` der Dienste `api` und `worker` in einer
+  `compose.override.yaml` nennt. Schreiben Sie es nicht in `api.env`. Compose liest die Ergänzung
+  nur, wenn weder `-f` noch `COMPOSE_FILE` angegeben ist: siehe [Eigene
+  Ergänzungen](/de/guide/self-hosting/quick-start#schritt-für-schritt).
+
+Der [geheime Schlüssel](/de/guide/self-hosting/secret-key) der Instanz muss vorhanden sein: Er
+versiegelt das Cookie, das eine laufende Anmeldung hält.
+
+## Der erste Admin
+
+Setzen Sie vor dem ersten Start `CCMS_FIRST_ADMIN_EMAIL` auf Ihre Adresse beim Anbieter
+([Schnellstart](/de/guide/self-hosting/quick-start)) und melden Sie sich dann mit der Schaltfläche
+des Anbieters an. Die API findet diesen Benutzer über die bestätigte E-Mail-Adresse und verknüpft
+ihn, weil er sich noch nie angemeldet hat. Soll nur der Anbieter angeboten werden, setzen Sie
+`CCMS_PASSWORD_SIGN_IN=off`.
+
+## Verknüpfen über die E-Mail-Adresse
+
+`CCMS_OIDC_LINK_BY_EMAIL` legt fest, ob eine erste Anmeldung zu einem bestehenden Benutzer gehört,
+dessen Adresse der Anbieter als bestätigt meldet (`email_verified`):
+
+| Wert                 | Eine erste Anmeldung gehört zu                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `pending` (Standard) | nur einem Benutzer, der sich noch nie über einen Anbieter angemeldet hat: von einem Admin angelegt, oder der erste. |
+| `any`                | jedem Benutzer ohne Identität bei diesem Issuer. Nur für einen Anbieter, der bestätigte Adressen garantiert.        |
+| `off`                | niemandem: Jede erste Anmeldung legt einen neuen Benutzer an.                                                       |
+
+Das Verknüpfen vertraut dem `email_verified` des Anbieters. Könnte jemand die Adresse einer anderen
+Person setzen und als bestätigt melden lassen, übernähme er deren Konto.
+
+**Wechsel zu einem anderen Anbieter** (ein neuer Issuer): Unter `pending` bekämen Personen, die sich
+schon angemeldet haben, bei ihrer ersten Anmeldung beim neuen Anbieter ein zweites Konto. Setzen Sie
+für den Wechsel `any`, wenn der neue Anbieter bestätigte Adressen garantiert, und stellen Sie es
+zurück, sobald sich alle angemeldet haben.
+
+## Rollen aus Gruppen
+
+Der Anbieter sendet die Gruppen einer Person in einem Claim, standardmäßig `groups`
+(`CCMS_OIDC_GROUPS_CLAIM`, ein Name oder ein Pfad mit Punkten wie `org.groups`). Eine
+Gruppenzuordnung gibt allen Mitgliedern einer Gruppe eine Rolle. Zuordnungen richten Sie im Editor
+ein ([Gruppenzuordnungen](/de/guide/admin/group-mappings)), über die API (`GET`, `POST` und
+`DELETE /group-mappings`, Berechtigung `admin.roles`) oder in `groupMappings` einer Seed-Datei
+(`db-seed`).
+
+Bei jeder Anmeldung gelten die Gruppen des Anbieters so, wie sie sind, auch wenn das dem letzten
+Admin seine Rolle nimmt. Geben Sie dem ersten Admin seine Rolle direkt, damit er sie behält.
+
+## Sitzungen
+
+Eine Sitzung endet nach 8 Stunden ohne Anfrage (`CCMS_SESSION_IDLE_MINUTES`, Standard 480) und
+spätestens 7 Tage nach der Anmeldung (`CCMS_SESSION_MAX_HOURS`, Standard 168). Eine geänderte
+Rolle, eine geänderte Gruppenzuordnung oder eine Deaktivierung gilt ab der nächsten Anfrage der
+Person.
+
+## Was nicht dazu passt
+
+- **Demo-Modus:** Mit `CCMS_AUTH_MODE=demo` startet die API nicht, wenn `CCMS_OIDC_ISSUER` gesetzt
+  ist.
+- **Das gemeinsame Token:** Lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer. Die API
+  lehnt das gemeinsame Token bei aktiver Anmeldung ab, denn damit könnte jeder, der den Editor
+  erreicht, alle Entwürfe ohne Anmeldung lesen. Maschinelle Clients verwenden
+  [Tokens von Service-Accounts](/de/guide/integrations/authentication).
+
+Alle Einstellungen stehen in der [Referenz der Einstellungen](/de/reference/settings).

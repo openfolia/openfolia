@@ -1,0 +1,1 @@
+ALTER TABLE "release_outputs" ADD COLUMN "qr_code" jsonb;
