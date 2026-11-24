@@ -35,12 +35,17 @@ export interface ChromeOptions {
   readonly abuseContact: string | undefined;
 }
 
+/** How the visitor's last sandbox ended: they ended it (`closed`), or it ran out (`expired`). */
+export type Ended = 'closed' | 'expired';
+
 export interface PageOptions extends ChromeOptions {
   readonly capacity: number;
   readonly free: number;
   readonly films: readonly Film[];
-  /** The visitor's last sandbox has ended (their cookie named one that is gone). */
-  readonly ended: boolean;
+  /** The visitor's last sandbox has ended: the "thanks" dialog opens over the page. */
+  readonly ended: Ended | undefined;
+  /** The dialog's "Book a demo" (#846); unset, it has none. */
+  readonly bookingUrl: string | undefined;
 }
 
 const ESCAPES: Record<string, string> = {
@@ -70,6 +75,10 @@ const ICONS = {
   trash:
     '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  calendar:
+    '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
 } as const;
 
 function icon(name: keyof typeof ICONS, cls = 'icon'): string {
@@ -236,7 +245,44 @@ export function renderPage(o: PageOptions): string {
     <p class="ref" data-reference hidden></p>
   </section>
 </div>
+${o.ended ? endedDialog(o, o.ended, t) : ''}
 ${bottom(o)}`;
+}
+
+/**
+ * The "thanks" dialog once a sandbox has ended (#846): opened over the start page by its script
+ * (`showModal`: focus moves to its heading, so it is read from the top and the first Tab reaches
+ * its first action; Escape closes it; the page behind is inert). "Book a demo" is a plain link to
+ * the operator's page; nothing of it is loaded here.
+ */
+function endedDialog(
+  o: PageOptions,
+  ended: Ended,
+  t: (
+    key: TextKey,
+    values?: Readonly<Record<string, string | number>>,
+  ) => string,
+): string {
+  const booking = o.bookingUrl
+    ? `<a class="btn" href="${escape(o.bookingUrl)}" data-ended-book>${icon('calendar')}<span>${t('ended.book')}</span></a>`
+    : '';
+  const again = `<button class="btn${booking ? ' secondary' : ''}" type="button" data-ended-again>${icon('play')}<span>${t('ended.again')}</span></button>`;
+  const portal = o.portalUrl
+    ? `<a class="ended-link" href="${escape(o.portalUrl)}">${icon('book')}<span>${t('ended.portal')}</span></a>`
+    : '';
+  return `<dialog class="ended" data-ended="${ended}" aria-labelledby="ended-title" aria-describedby="ended-text">
+  <div class="ended-body">
+    <span class="ended-badge ${ended}" aria-hidden="true">${icon(ended === 'closed' ? 'check' : 'clock')}</span>
+    <h2 id="ended-title" tabindex="-1" autofocus>${t('ended.title')}</h2>
+    <div id="ended-text" class="ended-text">
+      <p>${ended === 'closed' ? t('ended.closed') : t('ended.expired', { idle: o.idleMinutes, max: o.maxMinutes })}</p>
+      <p>${booking ? t('ended.booking') : t('ended.again.lede')}</p>
+    </div>
+    <div class="ended-actions${booking ? ' two' : ''}">${booking}${again}</div>
+    ${portal}
+    <button class="icon-btn ended-close" type="button" data-ended-close aria-label="${t('ended.close')}">${icon('x')}</button>
+  </div>
+</dialog>`;
 }
 
 function texts(lang: PageLang) {

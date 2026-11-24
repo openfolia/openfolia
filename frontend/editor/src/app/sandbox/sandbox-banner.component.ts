@@ -7,16 +7,21 @@ import {
   ElementRef,
   inject,
   input,
+  signal,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideArrowRight,
   lucideClock,
   lucideExternalLink,
   lucideFlaskConical,
+  lucideLogOut,
+  lucideTrash2,
 } from '@ng-icons/lucide';
 
-import { buttonVariants } from '@openfolia/ui/button';
+import { ZardAlertDialogImports } from '@openfolia/ui/alert-dialog';
+import { buttonVariants, ZardButtonComponent } from '@openfolia/ui/button';
 import { mergeClasses } from '@openfolia/ui/ui';
 
 import { SandboxSession } from './sandbox-session';
@@ -40,13 +45,25 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
  *
  * The time is not announced as it counts (a live region ticking every minute would talk over the
  * page); the session's end is, once.
+ *
+ * "End demo" (#846), when the API names an end address: the `ui` alert dialog asks first
+ * ("Everything in it is deleted"), then the session posts to the launcher and goes to its "thanks"
+ * page; a failure is said in the dialog, which stays open. Once the session has ended, the same
+ * place offers the way back to the start page, without asking.
  */
 @Component({
   selector: 'of-sandbox-banner',
-  imports: [NgIcon, TranslocoPipe],
+  imports: [NgIcon, TranslocoPipe, ZardButtonComponent, ZardAlertDialogImports],
   changeDetection: ChangeDetectionStrategy.OnPush,
   viewProviders: [
-    provideIcons({ lucideClock, lucideExternalLink, lucideFlaskConical }),
+    provideIcons({
+      lucideArrowRight,
+      lucideClock,
+      lucideExternalLink,
+      lucideFlaskConical,
+      lucideLogOut,
+      lucideTrash2,
+    }),
   ],
   host: { class: 'block empty:hidden' },
   template: `
@@ -116,6 +133,47 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
             }}
           </p>
         }
+        @if (session.info()?.endUrl) {
+          @if (minutes === 0) {
+            <button
+              type="button"
+              z-button
+              zSize="sm"
+              data-testid="sandbox-start-page"
+              [class]="actionClass"
+              (click)="leave()"
+            >
+              {{ 'editor.sandbox.banner.startPage' | transloco }}
+              <ng-icon
+                name="lucideArrowRight"
+                class="size-3.5 shrink-0"
+                size="14"
+                strokeWidth="1.75"
+                aria-hidden="true"
+              />
+            </button>
+          } @else {
+            <button
+              type="button"
+              z-button
+              zType="outline"
+              zSize="sm"
+              data-testid="sandbox-end"
+              aria-haspopup="dialog"
+              [class]="actionClass"
+              (click)="confirming.set(true)"
+            >
+              <ng-icon
+                name="lucideLogOut"
+                class="size-3.5 shrink-0"
+                size="14"
+                strokeWidth="1.75"
+                aria-hidden="true"
+              />
+              {{ 'editor.sandbox.banner.end' | transloco }}
+            </button>
+          }
+        }
         <!-- Always there, so a screen reader hears the end when it is filled in. -->
         <span
           role="status"
@@ -126,6 +184,63 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
           }}</span
         >
       </aside>
+      <z-alert-dialog
+        [zVisible]="confirming()"
+        (zVisibleChange)="confirming.set($event)"
+        (zAfterClose)="failed.set(false)"
+        data-testid="sandbox-end-dialog"
+      >
+        <z-alert-dialog-header>
+          <z-alert-dialog-media class="bg-destructive/10 text-destructive">
+            <ng-icon
+              name="lucideTrash2"
+              strokeWidth="1.75"
+              aria-hidden="true"
+            />
+          </z-alert-dialog-media>
+          <z-alert-dialog-title>{{
+            'editor.sandbox.end.title' | transloco
+          }}</z-alert-dialog-title>
+          <z-alert-dialog-description>{{
+            'editor.sandbox.end.description' | transloco
+          }}</z-alert-dialog-description>
+        </z-alert-dialog-header>
+        <!-- Always there, so the failure is heard when it is filled in; no room taken until then. Under
+             the description: past the media on wide screens, centred as the header on narrow ones. -->
+        <p
+          role="alert"
+          data-testid="sandbox-end-error"
+          class="text-destructive m-0 text-center text-sm text-balance empty:hidden sm:ps-14 sm:text-start"
+        >
+          {{ failed() ? ('editor.sandbox.end.failed' | transloco) : '' }}
+        </p>
+        <z-alert-dialog-footer>
+          <button
+            type="button"
+            z-button
+            zType="outline"
+            z-alert-dialog-close
+            [zDisabled]="ending()"
+          >
+            {{ 'editor.sandbox.end.cancel' | transloco }}
+          </button>
+          <button
+            type="button"
+            z-button
+            zType="destructive"
+            data-testid="sandbox-end-confirm"
+            [zLoading]="ending()"
+            (click)="end()"
+          >
+            {{
+              (ending()
+                ? 'editor.sandbox.end.ending'
+                : 'editor.sandbox.end.confirm'
+              ) | transloco
+            }}
+          </button>
+        </z-alert-dialog-footer>
+      </z-alert-dialog>
     }
   `,
 })
@@ -137,6 +252,35 @@ export class SandboxBannerComponent {
     buttonVariants({ zType: 'outline', zSize: 'sm' }),
     'text-xs gap-1.5 shadow-xs motion-reduce:transition-none max-sm:ms-6',
   );
+  /** "End demo" and "Back to the start page": the portal button's size, in the banner's text size. */
+  protected readonly actionClass =
+    'text-xs gap-1.5 shadow-xs motion-reduce:transition-none';
+  /** The confirmation is open. */
+  protected readonly confirming = signal(false);
+  /** The end request is under way: the dialog's buttons wait. */
+  protected readonly ending = signal(false);
+  /** The last end request failed: the dialog says so. */
+  protected readonly failed = signal(false);
+
+  /** Ends the sandbox once confirmed; on a failure the dialog says so and stays (or opens again). */
+  protected async end(): Promise<void> {
+    if (this.ending()) return;
+    this.ending.set(true);
+    this.failed.set(false);
+    try {
+      await this.session.end();
+    } catch {
+      this.failed.set(true);
+      this.confirming.set(true);
+      this.ending.set(false);
+    }
+  }
+
+  /** The session has ended: to the launcher's page, which thanks the visitor. */
+  protected leave(): void {
+    this.session.leave();
+  }
+
   /** Publish the height as `--of-sandbox-h` (the shell's banner; the sign-in pages have no lists). */
   readonly measure = input(false);
 

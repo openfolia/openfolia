@@ -110,6 +110,8 @@ export interface LauncherSettings extends SharedSettings {
   /** The operator's imprint and privacy policy, linked from the footer; unset, no link. */
   readonly imprintUrl: URL | undefined;
   readonly privacyUrl: URL | undefined;
+  /** Where the ended dialog's "Book a demo" goes (https, a fragment allowed); unset, no booking action. */
+  readonly bookingUrl: URL | undefined;
   /**
    * The key of the keyed hash (HMAC-SHA-256) the limits count an address by: the address itself
    * is never kept. Unset, a random key for each start of the launcher.
@@ -219,6 +221,28 @@ function proxies(env: Env, trustProxy: number): BlockList | undefined {
   return list;
 }
 
+/** `CCMS_LAUNCHER_BOOKING_URL`: https only, without credentials; a query or `#section` may stay. */
+function bookingUrl(env: Env): URL | undefined {
+  const raw = env['CCMS_LAUNCHER_BOOKING_URL']?.trim();
+  if (!raw) return undefined;
+  let parsed: URL | undefined;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    parsed = undefined;
+  }
+  if (
+    !parsed ||
+    parsed.protocol !== 'https:' ||
+    parsed.username ||
+    parsed.password
+  )
+    throw new SettingsError(
+      'CCMS_LAUNCHER_BOOKING_URL: an https:// address without credentials.',
+    );
+  return parsed;
+}
+
 function addressSecret(env: Env): Buffer {
   const value = secret(env, 'CCMS_LAUNCHER_ADDRESS_SECRET');
   if (value === undefined) return randomBytes(32);
@@ -254,6 +278,7 @@ export function launcherSettings(env: Env = process.env): LauncherSettings {
     homepageUrl: url(env, 'CCMS_LAUNCHER_HOMEPAGE_URL'),
     imprintUrl: url(env, 'CCMS_LAUNCHER_IMPRINT_URL'),
     privacyUrl: url(env, 'CCMS_LAUNCHER_PRIVACY_URL'),
+    bookingUrl: bookingUrl(env),
     addressSecret: addressSecret(env),
   };
 }

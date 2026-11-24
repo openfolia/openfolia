@@ -14,6 +14,7 @@ import {
 import { type DockerApi, DockerError, expect } from './docker.js';
 import type { Logger } from './log.js';
 import {
+  END_PATH,
   RuntimeFullError,
   SANDBOX_ID,
   SANDBOX_LANGS,
@@ -70,6 +71,8 @@ export class DockerRuntime implements SandboxRuntime {
       ...(s.portalUrl?.protocol === 'https:'
         ? { CCMS_SANDBOX_PORTAL_URL: s.portalUrl.href }
         : {}),
+      // The banner's "End demo" (#846): the launcher's own route, on the origin the editor shares.
+      CCMS_SANDBOX_END_URL: END_PATH,
       ...s.sandboxEnv,
     };
     const memory = bytes(s.memory);

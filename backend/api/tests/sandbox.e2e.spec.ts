@@ -90,6 +90,7 @@ beforeAll(async () => {
     CCMS_SANDBOX_MAX_MODULES: '1',
     CCMS_SANDBOX_RELEASES_PER_HOUR: '1',
     CCMS_SANDBOX_PORTAL_URL: 'https://manuals.example.org/',
+    CCMS_SANDBOX_END_URL: '/_demo/api/end',
   });
   t.actAs(EVERYTHING);
 });
@@ -146,6 +147,8 @@ describe('a public sandbox (#826)', () => {
       idleMinutes: 30,
       maxMinutes: 90,
       portalUrl: 'https://manuals.example.org/',
+      // Where the banner's "End demo" posts (#846).
+      endUrl: '/_demo/api/end',
     });
     expect(Date.parse(data.meta.endsAt)).toBeGreaterThan(Date.now());
     expect(Date.parse(data.meta.endsAt)).toBeLessThanOrEqual(

@@ -769,6 +769,163 @@ h1 .soft {
   text-underline-offset: 3px;
 }
 
+/* Ended (#846): the "thanks" dialog, modal over the start page. It fades and rises in, and back
+   out (where the browser animates a dialog's top layer; elsewhere it simply appears). The page
+   behind keeps its scroll position and its width (the gutter is stable). */
+html:has(.ended[open]) {
+  overflow: hidden;
+}
+.ended {
+  width: min(480px, 100% - 32px);
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 24px 56px -16px oklch(0 0 0 / 0.28);
+  overflow: auto;
+  overscroll-behavior: contain;
+  opacity: 0;
+  translate: 0 10px;
+  scale: 0.98;
+  transition:
+    opacity 0.2s ease,
+    translate 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+    scale 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
+}
+.ended[open] {
+  opacity: 1;
+  translate: 0;
+  scale: 1;
+}
+@starting-style {
+  .ended[open] {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.98;
+  }
+}
+.ended::backdrop {
+  background: oklch(from var(--foreground) l c h / 0);
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition:
+    background-color 0.24s ease,
+    backdrop-filter 0.24s ease,
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
+}
+.ended[open]::backdrop {
+  background: oklch(from var(--foreground) l c h / 0.28);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+@starting-style {
+  .ended[open]::backdrop {
+    background: oklch(from var(--foreground) l c h / 0);
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+  }
+}
+.dark .ended {
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.05),
+    0 28px 64px -12px oklch(0 0 0 / 0.7);
+}
+.dark .ended[open]::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+.ended-body {
+  position: relative;
+  padding: 28px 28px 24px;
+}
+.ended-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  margin-bottom: 18px;
+  background: var(--success-muted);
+  color: var(--success);
+}
+.ended-badge.expired {
+  background: var(--info-muted);
+  color: var(--info);
+}
+.ended h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  padding-right: 32px;
+}
+.ended h2:focus {
+  outline: none;
+}
+.ended-text {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+.ended-text p:first-child {
+  color: var(--foreground);
+}
+.ended-actions {
+  margin-top: 24px;
+  display: grid;
+  gap: 10px;
+}
+.ended-actions.two {
+  grid-template-columns: 1fr 1fr;
+}
+.ended-actions:not(.two) {
+  justify-items: start;
+}
+.ended-actions .btn {
+  text-decoration: none;
+  height: 44px;
+  font-size: 15px;
+  padding: 0 16px;
+  gap: 8px;
+  white-space: nowrap;
+}
+.ended-link {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.ended-link:hover span {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+.ended-link .icon {
+  font-size: 15px;
+}
+.ended-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
 /* The footer closes the column: right after the content, as wide as it, in every state. */
 .foot {
   width: min(680px, 100% - 48px);
@@ -869,11 +1026,29 @@ h1 .soft {
     width: calc(100% - 32px);
     padding: 16px 0 32px;
   }
+  .ended-body {
+    padding: 24px 20px 20px;
+  }
+  .ended h2 {
+    font-size: 22px;
+  }
+}
+@media (max-width: 480px) {
+  .ended-actions.two {
+    grid-template-columns: 1fr;
+  }
+  .ended-actions:not(.two) {
+    justify-items: stretch;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .bar {
     background: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .ended[open]::backdrop {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

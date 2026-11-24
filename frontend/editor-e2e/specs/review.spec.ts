@@ -223,6 +223,49 @@ test.describe('review @area:review @api:change-sets @api:comments', () => {
   });
 });
 
+// A revision whose saves cancel out (#854): nothing differs from main, so the review has no
+// view switch and no legend, only the empty state.
+test.describe('review without changes @area:review @api:change-sets', () => {
+  test('a revision that adds a configuration entry and removes it again shows the empty state alone (#854)', async ({
+    page,
+    api,
+  }) => {
+    const admin = await api(USERS.admin);
+    const title = unique('Cancelled out');
+    const changeSet = await admin.createChangeSet(title);
+    const typeId = moduleId('e2e-cancel');
+    // Another flow's revision may hold the configuration's lock a few seconds: try again.
+    await expect(async () => {
+      await admin.editConfig(changeSet.id, (config) => ({
+        ...config,
+        moduleTypes: [
+          ...config.moduleTypes,
+          { id: typeId, label: 'Cancelled', safety: false },
+        ],
+      }));
+    }).toPass({ timeout: 30_000 });
+    await admin.editConfig(changeSet.id, (config) => ({
+      ...config,
+      moduleTypes: config.moduleTypes.filter(
+        (t: { id: string }) => t.id !== typeId,
+      ),
+    }));
+
+    await signIn(page, USERS.admin);
+    await page.goto(`/review?cs=${changeSet.id}`);
+    const section = page.locator('section', {
+      has: page.getByRole('heading', { level: 2, name: title }),
+    });
+    await expect(section.locator('[data-state="empty"]')).toContainText(
+      'Nothing differs from main',
+    );
+    await expect(section.getByText('0 changed items')).toBeVisible();
+    await expect(section.getByRole('radio', { name: 'Inline' })).toHaveCount(0);
+    await expect(section.getByLabel('What the marks mean')).toHaveCount(0);
+    await expect(section.getByLabel('Previous change')).toHaveCount(0);
+  });
+});
+
 // The review screen's layout (#563): the change list scrolls inside its own frame, the page
 // never scrolls into empty space below it, and the pagination stays in reach.
 test.describe('review layout @area:review @api:change-sets @narrow', () => {

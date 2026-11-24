@@ -60,8 +60,12 @@ place, every file is searched for the token and its secret, and the build fails 
   screens; the column scrolls past a dozen products), the manual set in Literata at a book's
   measure, the rest in Geist, colours only from `@openfolia/theme`'s tokens. On the manual page
   the contents mark the section in view, and a switch per variant attribute opens the same
-  manual in another variant. Pages change with the browser's View Transitions (the head, the
-  thumb index and the contents stay; the page cross-fades); none of the motion plays under
+  manual in another variant (`src/lib/variant-switch.ts`). When that exact combination is not
+  published, the option leads to the published variant that keeps the most values and says what
+  else changes ("only as Electric"); the page it opens names the change in a notice it reads
+  from the link's query and drops from the address (#844). Pages change with the browser's View
+  Transitions (the head, the thumb index and the contents stay; the page cross-fades, both
+  pages at once, so it never dips through a blank page); none of the motion plays under
   reduced motion. Literata is bundled (`src/fonts/`, SIL Open Font License), never loaded from
   a font service. A print stylesheet prints the manual alone.
 - **Branding** (`CCMS_PORTAL_BRANDING`, on by default): the build reads the API's public
@@ -93,6 +97,12 @@ place, every file is searched for the token and its secret, and the build fails 
   variant attribute filters, built per language. Results group a manual's variants and show its
   matching sections (every heading carries an ID, `@openfolia/render-html`), a few per page; the
   passages are built as text and `mark` nodes, never as markup.
+- **Typeahead** (#845, `src/scripts/typeahead.ts`): the running head's and the start page's
+  search fields (any `form[data-typeahead]`) show up to six passages from two characters on,
+  and a last row leading to the search page, as an ARIA combobox with a list popup. It shares
+  the index loading and the excerpt building with the search page (`src/scripts/pagefind.ts`).
+  Without script, or when the index cannot load, the fields submit to the search page. The
+  hidden filter and meta values of a manual page are read by Pagefind but not indexed as text.
 
 ## Hosting
 

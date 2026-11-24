@@ -1,12 +1,16 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   computed,
   DestroyRef,
+  DOCUMENT,
   inject,
   Injectable,
   InjectionToken,
   signal,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+
+import { LanguageService } from '@openfolia/ui/i18n';
 
 import { ApiClient, toApiError, type Schema } from '../api';
 
@@ -23,6 +27,8 @@ export interface SandboxInfo {
   readonly used: Resource['meta']['used'];
   /** The shared reader portal's address (https), when the operator set one (#837). */
   readonly portalUrl: string | null;
+  /** Where "End demo" posts (#846): the launcher's route; null when the operator set none. */
+  readonly endUrl: string | null;
   readonly startedAt: Date;
   /**
    * When the session ends, in the browser's clock: the server's `endsAt` (the last request plus
@@ -50,6 +56,18 @@ export const SANDBOX_CLOCK = new InjectionToken<() => number>('SANDBOX_CLOCK', {
   factory: () => () => Date.now(),
 });
 
+/** Goes to another page, leaving the editor (a test sets its own). */
+export const SANDBOX_NAVIGATE = new InjectionToken<(url: string) => void>(
+  'SANDBOX_NAVIGATE',
+  {
+    providedIn: 'root',
+    factory: () => {
+      const location = inject(DOCUMENT).location;
+      return (url) => location.assign(url);
+    },
+  },
+);
+
 /**
  * The resource, its times in the browser's clock: `skew` is how far the server's clock is ahead
  * (its `Date` header against the browser's at the answer; 0 without one), so a device whose clock
@@ -61,6 +79,7 @@ const toInfo = (resource: Resource, skew: number): SandboxInfo => ({
   maxMinutes: resource.attributes.maxMinutes,
   used: resource.meta.used,
   portalUrl: resource.attributes.portalUrl ?? null,
+  endUrl: resource.attributes.endUrl ?? null,
   startedAt: new Date(Date.parse(resource.meta.startedAt) - skew),
   endsAt: new Date(Date.parse(resource.meta.endsAt) - skew),
 });
@@ -84,11 +103,17 @@ const skewOf = (date: string | null, now: number): number => {
 @Injectable({ providedIn: 'root' })
 export class SandboxSession {
   private readonly api = inject(ApiClient);
+  private readonly http = inject(HttpClient);
   private readonly clock = inject(SANDBOX_CLOCK);
+  private readonly navigate = inject(SANDBOX_NAVIGATE);
+  private readonly language = inject(LanguageService);
+  private readonly document = inject(DOCUMENT);
 
   private readonly state = signal<SandboxStatus>('checking');
   private readonly value = signal<SandboxInfo | null>(null);
   private readonly now = signal(this.clock());
+  /** The launcher answered that this browser's sandbox is gone (404): it has ended, whatever the clock says. */
+  private readonly gone = signal(false);
   private refresh: ReturnType<typeof setInterval> | null = null;
   private tick: ReturnType<typeof setInterval> | null = null;
 
@@ -100,6 +125,7 @@ export class SandboxSession {
   readonly minutesLeft = computed(() => {
     const info = this.value();
     if (!this.on() || info === null) return null;
+    if (this.gone()) return 0;
     const left = info.endsAt.getTime() - this.now();
     return left <= 0 ? 0 : Math.ceil(left / 60_000);
   });
@@ -129,10 +155,17 @@ export class SandboxSession {
       const skew = skewOf(response.headers.get('Date'), now);
       this.value.set(toInfo(document.data, Math.abs(skew) < 5_000 ? 0 : skew));
       this.state.set('on');
+      // Answered after all: a 404 between was a moment (a restart), or another tab's new sandbox.
+      this.gone.set(false);
       this.now.set(this.clock());
       this.tick ??= setInterval(() => this.now.set(this.clock()), TICK_MS);
     } catch (error) {
       const failure = toApiError(error);
+      // Once on, a 404 is the launcher's: the sandbox has gone (removed on its time, or a restart).
+      if (this.state() === 'on' && failure.status === 404) {
+        this.gone.set(true);
+        return;
+      }
       // An answer that is not the sandbox (404 on a normal instance) settles it.
       if (failure.kind !== 'network' && failure.kind !== 'unavailable') {
         if (this.state() !== 'on') {
@@ -141,6 +174,58 @@ export class SandboxSession {
         }
       }
     }
+  }
+
+  /**
+   * Ends the sandbox (#846): posts the editor's language to `endUrl` (the launcher's route, which
+   * removes this browser's sandbox and clears its cookie) and goes to the page its answer names,
+   * the launcher's "thanks" dialog. Rejects when it could not; then nothing has changed here. Only
+   * a `next` on the end address's own origin is followed; any other goes to that origin's start
+   * page, and none (404: this browser has no sandbox any more) to its "it expired" dialog.
+   */
+  async end(): Promise<void> {
+    const endpoint = this.endpoint();
+    let answer: { next?: unknown };
+    try {
+      answer = await firstValueFrom(
+        this.http.post<{ next?: unknown }>(endpoint.href, {
+          lang: this.language.locale(),
+        }),
+      );
+    } catch (error) {
+      if (!(error instanceof HttpErrorResponse && error.status === 404)) {
+        throw error;
+      }
+      return this.leave();
+    }
+    let target = new URL('/', endpoint);
+    if (typeof answer.next === 'string') {
+      const next = new URL(answer.next, endpoint);
+      if (next.origin === endpoint.origin) target = next;
+    }
+    this.stop();
+    this.navigate(target.href);
+  }
+
+  /**
+   * The session has run out: to the launcher's start page and its "it expired" dialog. Ends
+   * nothing: the launcher has removed it already, and should this browser have a running sandbox
+   * after all (one started in another tab), that address opens it instead.
+   */
+  leave(): void {
+    const target = new URL('/', this.endpoint());
+    target.search = new URLSearchParams({
+      ended: 'expired',
+      lang: this.language.locale(),
+    }).toString();
+    this.stop();
+    this.navigate(target.href);
+  }
+
+  private endpoint(): URL {
+    const endUrl = this.value()?.endUrl;
+    if (!endUrl) throw new Error('This sandbox has no end address.');
+    return new URL(endUrl, this.document.baseURI);
   }
 
   private stop(): void {

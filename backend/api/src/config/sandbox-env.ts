@@ -94,6 +94,29 @@ export const SandboxEnv = z.object({
       .transform((value) => new URL(value).href)
       .optional(),
   ),
+  /**
+   * Where the editor's banner ends the sandbox ("End demo", #846): a path on the editor's own
+   * origin (`/_demo/api/end`, the launcher's route) or an https:// URL without credentials. The
+   * editor posts to it and follows the answer's `next`. Unset: no "End demo".
+   */
+  CCMS_SANDBOX_END_URL: field(
+    z
+      .string()
+      .trim()
+      .refine((value) => {
+        if (value.startsWith('/')) return /^\/(?![/\\])[^\s\\]*$/.test(value);
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, 'must be a path on the editor’s origin (/…) or an https:// URL without credentials')
+      .transform((value) =>
+        value.startsWith('/') ? value : new URL(value).href,
+      )
+      .optional(),
+  ),
 });
 export type SandboxSettings = z.infer<typeof SandboxEnv>;
 
@@ -235,6 +258,11 @@ export function sandboxLimitsOf(env: SandboxSettings): SandboxLimits {
 /** The reader portal's address the banner links, from the settings; none when unset. */
 export function sandboxPortalUrlOf(env: SandboxSettings): string | undefined {
   return env.CCMS_SANDBOX_PORTAL_URL;
+}
+
+/** Where the banner ends the sandbox, from the settings; none when unset. */
+export function sandboxEndUrlOf(env: SandboxSettings): string | undefined {
+  return env.CCMS_SANDBOX_END_URL;
 }
 
 /** The sandbox's lifetime, from the settings. */

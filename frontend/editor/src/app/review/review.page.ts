@@ -413,12 +413,14 @@ const isFilter = (value: unknown): value is ReviewFilter =>
                   <of-checks-summary [changeSetId]="cs.id" [compact]="true" />
                 </div>
               </div>
-              <of-segmented
-                [label]="'editor.review.view.label' | transloco"
-                [options]="viewOptions()"
-                [value]="shownView()"
-                (valueChange)="chooseView($event)"
-              />
+              @if (!noChanges()) {
+                <of-segmented
+                  [label]="'editor.review.view.label' | transloco"
+                  [options]="viewOptions()"
+                  [value]="shownView()"
+                  (valueChange)="chooseView($event)"
+                />
+              }
             </div>
             <of-change-set-base-rewritten
               [changeSetId]="cs.id"
@@ -502,83 +504,87 @@ const isFilter = (value: unknown): value is ReviewFilter =>
                 </nav>
               }
             }
-            <div
-              class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
-            >
-              <p
-                class="text-muted-foreground m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
-                [attr.aria-label]="'editor.review.legend.label' | transloco"
+            @if (!noChanges()) {
+              <div
+                class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
               >
-                <span
-                  ><span class="text-success font-mono" aria-hidden="true"
-                    >+ </span
-                  >{{ 'editor.review.legend.added' | transloco }}</span
+                <p
+                  class="text-muted-foreground m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+                  [attr.aria-label]="'editor.review.legend.label' | transloco"
                 >
-                <span
-                  ><span class="text-destructive font-mono" aria-hidden="true"
-                    >− </span
-                  >{{ 'editor.review.legend.removed' | transloco }}</span
-                >
-                <span
-                  ><span class="text-info font-mono" aria-hidden="true">~ </span
-                  >{{ 'editor.review.legend.changed' | transloco }}</span
-                >
-                <span
-                  ><span class="text-info font-mono" aria-hidden="true">↕ </span
-                  >{{ 'editor.review.legend.moved' | transloco }}</span
-                >
-                <span
-                  ><ins of-diff-inserted>{{
-                    'editor.review.legend.inserted' | transloco
-                  }}</ins></span
-                >
-                <span
-                  ><del of-diff-deleted>{{
-                    'editor.review.legend.deleted' | transloco
-                  }}</del></span
-                >
-              </p>
-              <div class="flex items-center gap-1.5 text-xs">
-                <button
-                  type="button"
-                  class="border-border hover:bg-muted focus-visible:ring-ring inline-flex size-7 items-center justify-center rounded-md border outline-none focus-visible:ring-2 disabled:opacity-50"
-                  [disabled]="hunkCount() === 0"
-                  [attr.aria-label]="'editor.review.nav.previous' | transloco"
-                  (click)="step(-1)"
-                >
-                  <ng-icon name="lucideArrowUp" aria-hidden="true" />
-                </button>
-                <span
-                  class="min-w-24 text-center tabular-nums"
-                  aria-live="polite"
-                  >{{ position() }}</span
-                >
-                <button
-                  type="button"
-                  class="border-border hover:bg-muted focus-visible:ring-ring inline-flex size-7 items-center justify-center rounded-md border outline-none focus-visible:ring-2 disabled:opacity-50"
-                  [disabled]="hunkCount() === 0"
-                  [attr.aria-label]="'editor.review.nav.next' | transloco"
-                  (click)="step(1)"
-                >
-                  <ng-icon name="lucideArrowDown" aria-hidden="true" />
-                </button>
-                <span
-                  class="text-muted-foreground hidden items-center gap-1 sm:flex"
-                >
-                  <kbd of-kbd>{{ keys.next }}</kbd><kbd of-kbd>{{
-                    keys.previous
-                  }}</kbd>
-                  @if (canComment()) {
-                    <kbd
-                      of-kbd
-                      [attr.title]="'editor.review.nav.comment' | transloco"
-                      >{{ keys.comment }}</kbd><span class="sr-only">{{
-                      'editor.review.nav.comment' | transloco
-                    }}</span>
-                  }
-                </span>
+                  <span
+                    ><span class="text-success font-mono" aria-hidden="true"
+                      >+ </span
+                    >{{ 'editor.review.legend.added' | transloco }}</span
+                  >
+                  <span
+                    ><span class="text-destructive font-mono" aria-hidden="true"
+                      >− </span
+                    >{{ 'editor.review.legend.removed' | transloco }}</span
+                  >
+                  <span
+                    ><span class="text-info font-mono" aria-hidden="true"
+                      >~ </span
+                    >{{ 'editor.review.legend.changed' | transloco }}</span
+                  >
+                  <span
+                    ><span class="text-info font-mono" aria-hidden="true"
+                      >↕ </span
+                    >{{ 'editor.review.legend.moved' | transloco }}</span
+                  >
+                  <span
+                    ><ins of-diff-inserted>{{
+                      'editor.review.legend.inserted' | transloco
+                    }}</ins></span
+                  >
+                  <span
+                    ><del of-diff-deleted>{{
+                      'editor.review.legend.deleted' | transloco
+                    }}</del></span
+                  >
+                </p>
+                <div class="flex items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    class="border-border hover:bg-muted focus-visible:ring-ring inline-flex size-7 items-center justify-center rounded-md border outline-none focus-visible:ring-2 disabled:opacity-50"
+                    [disabled]="hunkCount() === 0"
+                    [attr.aria-label]="'editor.review.nav.previous' | transloco"
+                    (click)="step(-1)"
+                  >
+                    <ng-icon name="lucideArrowUp" aria-hidden="true" />
+                  </button>
+                  <span
+                    class="min-w-24 text-center tabular-nums"
+                    aria-live="polite"
+                    >{{ position() }}</span
+                  >
+                  <button
+                    type="button"
+                    class="border-border hover:bg-muted focus-visible:ring-ring inline-flex size-7 items-center justify-center rounded-md border outline-none focus-visible:ring-2 disabled:opacity-50"
+                    [disabled]="hunkCount() === 0"
+                    [attr.aria-label]="'editor.review.nav.next' | transloco"
+                    (click)="step(1)"
+                  >
+                    <ng-icon name="lucideArrowDown" aria-hidden="true" />
+                  </button>
+                  <span
+                    class="text-muted-foreground hidden items-center gap-1 sm:flex"
+                  >
+                    <kbd of-kbd>{{ keys.next }}</kbd><kbd of-kbd>{{
+                      keys.previous
+                    }}</kbd>
+                    @if (canComment()) {
+                      <kbd
+                        of-kbd
+                        [attr.title]="'editor.review.nav.comment' | transloco"
+                        >{{ keys.comment }}</kbd><span class="sr-only">{{
+                        'editor.review.nav.comment' | transloco
+                      }}</span>
+                    }
+                  </span>
+                </div>
               </div>
-            </div>
+            }
           </header>
           <of-list-frame
             #changesFrame
@@ -591,7 +597,9 @@ const isFilter = (value: unknown): value is ReviewFilter =>
             [error]="changesError()"
             [offset]="changesOffset()"
             [skeletonRows]="4"
-            [emptyTitle]="'editor.review.diff.emptyTitle' | transloco"
+            [emptyTitle]="
+              'editor.review.diff.emptyTitle' | transloco: emptyParams()
+            "
             [emptyDescription]="'editor.review.diff.emptyHint' | transloco"
             (pageChange)="chooseChangesPage($event)"
             (retry)="reloadChanges()"
@@ -826,6 +834,19 @@ export class ReviewPage {
   });
   /** The change set the changes shown are of. */
   private readonly changesFor = signal('');
+  /**
+   * Its changes are read and there are none (nothing saved, or saves that cancel out): the view
+   * switch, legend and navigation have nothing to act on. Unknown (loading, failed) is not empty,
+   * so the header does not change while it loads.
+   */
+  protected readonly noChanges = computed(
+    () =>
+      this.changesDoc()?.meta.page.total === 0 &&
+      this.changesFor() === this.selected()?.id,
+  );
+  protected readonly emptyParams = computed(() => ({
+    ref: this.lines.label(this.selected()?.attributes.baseRef ?? 'main'),
+  }));
 
   /** The diff view (`?diff=side-by-side|rendered`, inline when left out). */
   protected readonly view = computed((): DiffView => {

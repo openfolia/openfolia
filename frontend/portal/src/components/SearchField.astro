@@ -1,5 +1,5 @@
 ---
-import { textsFor } from '../lib/i18n.ts';
+import { textsFor, typeaheadConfig } from '../lib/i18n.ts';
 import { href, snapshot } from '../lib/site.ts';
 
 interface Props {
@@ -9,7 +9,10 @@ interface Props {
   bare?: boolean;
 }
 
-/** The large search field (#784): the start page's, the 404's and the search page's. */
+/**
+ * The large search field (#784): the start page's, the 404's and the search page's. Outside the
+ * search page it carries the typeahead (#845, `src/scripts/typeahead.ts`).
+ */
 const { id, size = 'large', bare = false } = Astro.props;
 const t = textsFor(snapshot().lang);
 ---
@@ -26,7 +29,7 @@ const t = textsFor(snapshot().lang);
       </button>
     </div>
   ) : (
-    <form class:list={['bigsearch', `bigsearch--${size}`]} action={href('search/')} method="get" role="search">
+    <form class:list={['bigsearch', `bigsearch--${size}`]} action={href('search/')} method="get" role="search" data-typeahead={JSON.stringify(typeaheadConfig(t, snapshot().lang, href()))}>
       <label class="visually-hidden" for={id}>{t.searchLabel}</label>
       <svg class="bigsearch__icon" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
       <input id={id} name="q" type="search" placeholder={t.searchPlaceholder} data-placeholder-short={t.searchShort} autocomplete="off" enterkeyhint="search" />

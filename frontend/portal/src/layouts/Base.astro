@@ -4,7 +4,7 @@ import markLight from '@openfolia/theme/brand/openfolia-mark-color-light.svg?url
 import markDark from '@openfolia/theme/brand/openfolia-mark-color-dark.svg?url';
 import portalCss from '../styles/portal.css?url';
 import { PAGE_CSP } from '../lib/csp.ts';
-import { languageName, textsFor } from '../lib/i18n.ts';
+import { languageName, textsFor, typeaheadConfig } from '../lib/i18n.ts';
 import { href, languageRoot, siteBrand, snapshot } from '../lib/site.ts';
 
 interface Props {
@@ -81,7 +81,7 @@ const currentProduct = products.find((p) => p.id === product);
       }
       {
         compactSearch && (
-          <form class="minisearch" action={href('search/')} method="get" role="search">
+          <form class="minisearch" action={href('search/')} method="get" role="search" data-typeahead={JSON.stringify(typeaheadConfig(t, s.lang, href()))}>
             <label class="visually-hidden" for="head-q">{t.searchLabel}</label>
             <svg class="minisearch__icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
             <input id="head-q" name="q" type="search" placeholder={t.searchShort} autocomplete="off" enterkeyhint="search" />
@@ -149,7 +149,9 @@ const currentProduct = products.find((p) => p.id === product);
     </main>
     <script>
       import { startChrome } from '../scripts/chrome.ts';
+      import { startTypeahead } from '../scripts/typeahead.ts';
       startChrome(document);
+      startTypeahead(document);
     </script>
   </body>
 </html>

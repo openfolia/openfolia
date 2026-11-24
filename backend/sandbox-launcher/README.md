@@ -14,20 +14,24 @@ The settings (`CCMS_LAUNCHER_*`) are in `.env.example`, "The sandbox launcher".
 
 ## The launcher
 
-| Path                   | What                                                                                           |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| `/` (no sandbox)       | The start page (`src/page.ts`, `page/`): ready, starting, all taken (the films), error; EN, DE |
-| `/_demo/data`          | What this demo stores (EN, DE): for the operator's privacy policy to link to                   |
-| `/_demo/api/status`    | `{ capacity, free, session }`: the page's live line, and whether this browser has a sandbox    |
-| `/_demo/api/challenge` | POST, same origin: a proof-of-work challenge (`src/pow.ts`)                                    |
-| `/_demo/api/start`     | POST, same origin: `{ challenge, nonce, lang }`; 201 and the cookie, or a refusal with a code  |
-| `/_demo/healthz`       | The container's health check                                                                   |
-| `/_demo/…`             | The page's files: CSS, scripts, the theme's fonts and logos, the films                         |
-| anything else          | With the cookie: the visitor's sandbox. Without: the start page (303 to `/`) or 404            |
+| Path                      | What                                                                                           |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `/` (no sandbox)          | The start page (`src/page.ts`, `page/`): ready, starting, all taken (the films), error; EN, DE |
+| `/?ended=closed\|expired` | The start page with the "thanks" dialog over it (#846); a gone sandbox's cookie opens it too   |
+| `/_demo/data`             | What this demo stores (EN, DE): for the operator's privacy policy to link to                   |
+| `/_demo/api/status`       | `{ capacity, free, session }`: the page's live line, and whether this browser has a sandbox    |
+| `/_demo/api/challenge`    | POST, same origin: a proof-of-work challenge (`src/pow.ts`)                                    |
+| `/_demo/api/start`        | POST, same origin: `{ challenge, nonce, lang }`; 201 and the cookie, or a refusal with a code  |
+| `/_demo/api/end`          | POST, same origin: `{ lang? }`; ends the cookie's sandbox, clears the cookie, `next`           |
+| `/_demo/healthz`          | The container's health check                                                                   |
+| `/_demo/…`                | The page's files: CSS, scripts, the theme's fonts and logos, the films                         |
+| anything else             | With the cookie: the visitor's sandbox. Without: the start page (303 to `/`) or 404            |
 
 Refusals: `full` (503), `one-at-a-time` and `daily-limit` (429, with `retryAt`), `rate-limited`
 (429, `Retry-After`), `proof-of-work` (403), `cross-origin-request` (403), `untrusted-peer` (403),
-`invalid-request-target` (400), `start-failed` (502, with a reference that is in the log).
+`invalid-request` and `invalid-request-target` (400), `no-sandbox` (404: no cookie, or a request
+the start page does not answer), `start-failed` (502, with a reference that is in the log). These
+are the launcher's own: `backend/api/error-codes.yaml` lists the API's, which a sandbox answers.
 
 - **Starting.** The browser fetches a challenge (HMAC-signed, bound to the address's keyed hash,
   two minutes, single use), finds a nonce whose SHA-256 has `CCMS_LAUNCHER_POW_BITS` leading zero
@@ -37,6 +41,19 @@ Refusals: `full` (503), `one-at-a-time` and `daily-limit` (429, with `retryAt`),
 Path=/`, `Max-Age` the maximum lifetime. The launcher keeps only its SHA-256. The start page
   checks `/_demo/api/status` and opens the sandbox if this browser has one (a link from elsewhere
   sends no Strict cookie on the first request).
+- **Ending.** The editor's banner offers "End demo" (#846): the agent gives each sandbox
+  `CCMS_SANDBOX_END_URL=/_demo/api/end`, which `GET /api/sandbox` returns as `endUrl`. The route
+  takes the same origin and fetch-metadata checks as a start and the same rate limit, ends only the
+  sandbox the cookie names (removed through the agent before it answers; the body names no
+  sandbox), clears the cookie and answers `{ status: 'ended', next }`: `/?ended=closed` (or
+  `expired` when the cookie named one that had gone already, or the editor says its session ran
+  out), with the editor's language. Without a cookie it is refused (404 `no-sandbox`).
+- **The "thanks" dialog.** Once a sandbox has ended (`?ended=`, or a cookie whose sandbox is gone)
+  the start page opens a modal dialog over itself: thanks, why it ended, "Book a demo" (only with
+  `CCMS_LAUNCHER_BOOKING_URL`, a plain link), "Start a new sandbox" (the usual start and its
+  limits) and the published manuals (with `CCMS_LAUNCHER_PORTAL_URL`). A gone sandbox's cookie is
+  kept on the editor's background requests (404 `no-sandbox` without clearing it), so the next page
+  the visitor opens is that dialog; the page clears it.
 - **Routing.** A request with a valid cookie goes to that sandbox and nowhere else: only an
   origin-form target (`/path?query`) is accepted, put on the sandbox's own origin (400 otherwise),
   hop-by-hop headers, X-Forwarded-*, Forwarded, X-Real-IP and the launcher's own cookie are
@@ -46,8 +63,9 @@ Path=/`, `Max-Age` the maximum lifetime. The launcher keeps only its SHA-256. Th
 - **Limits** (`src/sandboxes.ts`, `src/rate.ts`): `CCMS_LAUNCHER_MAX_SANDBOXES` at once, starts
   under way counted; per address (an IPv6 address by its /56) `CCMS_LAUNCHER_PER_ADDRESS` at once
   and `CCMS_LAUNCHER_PER_ADDRESS_DAILY` in 24 hours (a failed start does not count); a sandbox
-  ends `CCMS_LAUNCHER_IDLE_MINUTES` after its last request (the editor's polling of
-  `/api/sandbox` and the health checks do not count) and `CCMS_LAUNCHER_MAX_MINUTES` after its
+  ends `CCMS_LAUNCHER_IDLE_MINUTES` after its last request (what an open tab asks on its
+  own does not count: `/api/sandbox`, `/api/me/notifications/unread-count` and the health checks,
+  the same list as the API's) and `CCMS_LAUNCHER_MAX_MINUTES` after its
   start; token buckets per address for the launcher's pages, per address and per sandbox for a
   sandbox's requests, and a slower one for challenges and starts.
 - **Clean-up.** Every 15 seconds: sandboxes past their time, the daily counts older than 24 h,
@@ -95,6 +113,7 @@ removes only containers and networks labelled with its `CCMS_LAUNCHER_INSTANCE`.
 | A sandbox reaches another, the agent or the internet   | Internal networks without a route out; the agent only on the control network; the launcher the only other member of a sandbox's network                        |
 | A sandbox poses as a visitor (forged X-Forwarded-For)  | The launcher listens on its edge address only, and reads X-Forwarded-For only from the configured proxy; any other peer is refused                             |
 | A page elsewhere starts a sandbox for a visitor (CSRF) | The API is same-origin only (Origin and Sec-Fetch-Site), the cookie is SameSite=Strict                                                                         |
+| A page elsewhere, or another visitor, ends a sandbox   | The end route is same-origin only like a start; it ends the cookie's own sandbox and takes no ID, so no request can name another's                             |
 | Bulk starts exhaust the host                           | The cap, per-address limits, the proof of work, rate limits, and each sandbox's memory, CPU, process, tmpfs and log limits                                     |
 | The launcher is compromised                            | It has no container runtime access: the agent starts only the configured image with fixed limits, removes only its instance's sandboxes                        |
 | The page is framed, or injected script runs            | CSP without inline script, `frame-ancestors 'none'`, everything escaped on the server                                                                          |
@@ -105,11 +124,13 @@ removes only containers and networks labelled with its `CCMS_LAUNCHER_INSTANCE`.
 
 - `pnpm nx test sandbox-launcher`: the limits, the cookie binding and the clean-up on a fake
   runtime (`tests/sandboxes.spec.ts`); the launcher over HTTP (`tests/server.spec.ts`: routing,
-  refusals, headers, the request target, caching, the trusted proxy, the stored data); the agent
+  refusals, headers, the request target, caching, the trusted proxy, the stored data, the end
+  route and its refusals, the ended dialog); the agent
   against a recorded Docker API (`tests/agent.spec.ts`); the pieces (`tests/pieces.spec.ts`).
 - `pnpm nx run sandbox-launcher:e2e`: the start page in a browser (Playwright): two visitors in two
   browsers, neither reaching the other; each state; the layout (the sticky header, the footer
   right after the content, the start button above the fold at 1280 × 800); the theme; what the
   demo stores. With `SHOTS=<folder>` each state is saved in light and dark at 360, 768, 1280 and
   1920 px; `FILMS=<folder>` uses the real films.
-- `deploy/launcher-test.sh`: the launcher and the agent on a real container runtime.
+- `deploy/launcher-test.sh`: the launcher and the agent on a real container runtime, a sandbox
+  ended through the end route included.

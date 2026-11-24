@@ -5,6 +5,13 @@ import { request } from 'node:http';
 export type SandboxLang = 'en' | 'de';
 export const SANDBOX_LANGS: readonly SandboxLang[] = ['en', 'de'];
 
+/**
+ * The launcher's route that ends the visitor's own sandbox (#846): the agent gives each sandbox
+ * this path as `CCMS_SANDBOX_END_URL`, so the editor's banner offers "End demo". A path on the
+ * public origin the editor shares with the launcher.
+ */
+export const END_PATH = '/_demo/api/end';
+
 /** A sandbox's ID, as the agent makes it: 16 lowercase hex digits. */
 export const SANDBOX_ID = /^[0-9a-f]{16}$/;
 

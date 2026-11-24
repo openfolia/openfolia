@@ -101,6 +101,34 @@ describe('the public sandbox’s settings (#826)', () => {
     }
   });
 
+  it('takes a same-origin path or an https address to end the sandbox at, and refuses any other (#846)', () => {
+    expect(validateEnv(sandbox).CCMS_SANDBOX_END_URL).toBeUndefined();
+    expect(
+      validateEnv({ ...sandbox, CCMS_SANDBOX_END_URL: ' /_demo/api/end ' })
+        .CCMS_SANDBOX_END_URL,
+    ).toBe('/_demo/api/end');
+    expect(
+      validateEnv({
+        ...sandbox,
+        CCMS_SANDBOX_END_URL: 'https://demo.example.org/_demo/api/end',
+      }).CCMS_SANDBOX_END_URL,
+    ).toBe('https://demo.example.org/_demo/api/end');
+    for (const value of [
+      '//evil.example/end',
+      '/\\evil.example/end',
+      '/a b',
+      'http://demo.example.org/_demo/api/end',
+      'javascript:alert(1)',
+      'end',
+      'https://user:pass@demo.example.org/end',
+    ]) {
+      expect(
+        problems({ ...sandbox, CCMS_SANDBOX_END_URL: value }),
+        value,
+      ).toMatch(/→ at CCMS_SANDBOX_END_URL/);
+    }
+  });
+
   it('is off by default, and takes only on or off', () => {
     expect(validateEnv(base).CCMS_PUBLIC_SANDBOX).toBe('off');
     expect(problems({ ...sandbox, CCMS_PUBLIC_SANDBOX: 'yes' })).toMatch(

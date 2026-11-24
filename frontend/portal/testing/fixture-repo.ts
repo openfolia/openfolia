@@ -65,6 +65,12 @@ variantAttributes:
     values:
       - { id: small, label: Small }
       - { id: large, label: Large }
+  - id: power
+    label: { en: Power supply, de: Stromversorgung }
+    kind: enum
+    values:
+      - { id: battery, label: { en: Battery, de: Akku } }
+      - { id: mains, label: { en: Mains adapter, de: Netzteil } }
 textAttributes:
   - { id: product-name, label: Product name }
 safetySymbols:
@@ -263,14 +269,19 @@ const MODULES: Module[] = [
   }),
 ];
 
-/** The public manual lists modules of every audience: only the public ones may reach a public build. */
+/**
+ * The public manual lists modules of every audience: only the public ones may reach a public build.
+ * It is published in three of the four Model × Power supply combinations (no small one on mains),
+ * so its variant switch has options that change the other attribute too (#844).
+ */
 const OPERATING = `schemaVersion: 1
 title: Operating manual
 audience: public
 glossary: true
 variants:
-  - model: small
-  - model: large
+  - { model: small, power: battery }
+  - { model: large, power: battery }
+  - { model: large, power: mains }
 attributes:
   product-name:
     - value: Model A

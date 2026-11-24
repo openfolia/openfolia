@@ -9,6 +9,6 @@ export const site = (audience: 'public' | 'internal', path = '') => {
 /** A manual page of the public fixture site. */
 export const OPERATING = (
   lang: string,
-  variant = 'model=large',
+  variant = 'model=large,power=battery',
   product = 'alpha',
 ) => `${lang}/${product}/operating/${variant}/`;

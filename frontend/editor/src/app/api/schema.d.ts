@@ -4285,6 +4285,8 @@ export interface components {
                  * @description The shared read-only reader portal (an https:// address, `CCMS_SANDBOX_PORTAL_URL`), which the banner links. Absent when not set. A link only: the API never calls it.
                  */
                 portalUrl?: string;
+                /** @description Where the banner ends the sandbox ("End demo"): a path on the editor’s origin or an https:// address (`CCMS_SANDBOX_END_URL`). The editor posts `{ lang }` to it and goes to the answer’s `next`. Absent when not set: no "End demo". The API never calls it. */
+                endUrl?: string;
             };
             meta: {
                 /** @description What is used of the counted caps. */

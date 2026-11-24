@@ -35,16 +35,15 @@ we will agree a date with you, by default within 90 days of the report.
 
 ## Supported versions
 
-There is no release yet. Until the first release, only the latest commit on `main` gets security
-fixes.
+Security fixes go into the latest release, as a new patch release, and into `main`. Older
+releases get them only when this section says so. While OpenFolia is at 0.0.x, upgrade to the
+latest release to get a fix: the [changelog](https://docs.openfolia.com/changelog) lists them.
 
-Once releases exist, security fixes go into the latest release (and `main`); older releases get
-them only when this section says so.
-
-| Version            | Security fixes |
-| ------------------ | -------------- |
-| `main` (latest)    | yes            |
-| any earlier commit | no             |
+| Version                                                                          | Security fixes |
+| -------------------------------------------------------------------------------- | -------------- |
+| the latest release ([releases](https://github.com/openfolia/openfolia/releases)) | yes            |
+| `main`                                                                           | yes            |
+| any earlier release or commit                                                    | no             |
 
 ## Scope
 

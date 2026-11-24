@@ -13,6 +13,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { Env } from '../config/env.js';
 import {
   SandboxEnv,
+  sandboxEndUrlOf,
   sandboxLifetimeOf,
   sandboxLimitsOf,
   sandboxPortalUrlOf,
@@ -38,6 +39,7 @@ export function sandboxFrom(config: ConfigService<Env, true>): Sandbox {
     limits: sandboxLimitsOf(settings),
     lifetime: sandboxLifetimeOf(settings),
     portalUrl: sandboxPortalUrlOf(settings),
+    endUrl: sandboxEndUrlOf(settings),
   });
 }
 

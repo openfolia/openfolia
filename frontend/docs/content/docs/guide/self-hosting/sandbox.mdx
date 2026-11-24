@@ -28,6 +28,11 @@ their browser to it.
 - **The banner can link the reader portal:** with `CCMS_SANDBOX_PORTAL_URL` (an https address,
   never called by the API) it shows "See the reader portal", opening it in a new tab. The launcher
   sets it on each sandbox from `CCMS_LAUNCHER_PORTAL_URL` when that is an https address.
+- **The banner can end the sandbox:** with `CCMS_SANDBOX_END_URL` (a path on the editor's own
+  origin, or an https address) it shows "End demo". After a confirmation the editor posts to that
+  address and goes to the page the answer names. The launcher sets it on each sandbox to its own
+  route, `/_demo/api/end`. Once the session has ended, the banner offers the way back to the
+  start page instead.
 
 `GET /sandbox` names the limits, what was used and `meta.endsAt`. A normal instance answers it
 with 404.
@@ -109,6 +114,21 @@ policy can link to it:
 
 The header's logo and the footer link your homepage, imprint and privacy policy when you set
 `CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` and `CCMS_LAUNCHER_PRIVACY_URL`.
+
+### When a sandbox ends
+
+A visitor can end their sandbox from the editor's banner ("End demo"), or it ends on its own
+(idle, its maximum time, a restart). Either way their next page is the start page with a dialog
+over it that thanks them and says why the sandbox ended. It offers:
+
+- **Book a demo**, when you set `CCMS_LAUNCHER_BOOKING_URL` (an https address; a `#section` such
+  as your homepage's booking form is kept). It is a plain link: no form, script or frame of your
+  booking page is loaded on the demo. Without the setting the dialog has no booking action.
+- **Start a new sandbox**, with the usual limits.
+- **See the published manuals**, when `CCMS_LAUNCHER_PORTAL_URL` is set.
+
+The end route, `POST /_demo/api/end`, takes requests from the demo's own pages only (like a
+start) and ends only the sandbox the visitor's cookie names.
 
 ## How many fit on a host
 

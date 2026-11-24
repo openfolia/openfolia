@@ -16,10 +16,15 @@ import { join } from 'node:path';
 import { addressKey, clientAddress } from './address.js';
 import { type Asset, FILM_FILE, FILM_TYPES, findFilms } from './assets.js';
 import type { Logger } from './log.js';
-import { type ChromeOptions, renderDataPage, renderPage } from './page.js';
+import {
+  type ChromeOptions,
+  type Ended,
+  renderDataPage,
+  renderPage,
+} from './page.js';
 import { ProofOfWork } from './pow.js';
 import { RateLimiter } from './rate.js';
-import { SANDBOX_LANGS, type SandboxLang } from './runtime.js';
+import { END_PATH, SANDBOX_LANGS, type SandboxLang } from './runtime.js';
 import type { Sandboxes, Session } from './sandboxes.js';
 import type { LauncherSettings } from './settings.js';
 import { PAGE_LANGS, type PageLang } from './texts.js';
@@ -31,7 +36,10 @@ const MAX_BODY = 16 * 1024 * 1024;
 /** The largest body the launcher's own API reads. */
 const MAX_API_BODY = 2048;
 /** Requests that are not a visitor's activity: the editor's own sandbox status and health. */
-const QUIET = /^\/(?:api\/sandbox(?:[/?]|$)|api\/health(?:[/?]|$)|healthz$)/;
+// What an open tab asks on its own does not keep a sandbox: the same list as the API's own idle
+// clock (backend/api/src/sandbox/sandbox.module.ts), so the two agree on when it ends.
+const QUIET =
+  /^\/(?:api\/(?:sandbox|health|me\/notifications\/unread-count)(?:[/?]|$)|healthz$)/;
 const HOP_BY_HOP = new Set([
   'connection',
   'keep-alive',
@@ -132,22 +140,52 @@ export function createLauncherServer(deps: LauncherDeps): Server {
     return 'en';
   }
 
+  /**
+   * The start page. `?ended=closed|expired`, where the end route sends the visitor, opens the
+   * "thanks" dialog; so does a cookie that names a sandbox that has gone (idle, its maximum, a
+   * restart: `expired`), which clears the cookie.
+   */
   function startPage(
     req: IncomingMessage,
     res: ServerResponse,
     url: URL,
-    ended: boolean,
+    expired: boolean,
   ) {
     const lang = pageLang(req, url);
     const { capacity, free } = sandboxes.status();
+    const asked = url.searchParams.get('ended');
+    const ended: Ended | undefined =
+      asked === 'closed' || asked === 'expired'
+        ? asked
+        : expired
+          ? 'expired'
+          : undefined;
     const html = renderPage({
       ...chrome(lang),
       capacity,
       free,
       films: films[lang],
       ended,
+      bookingUrl: settings.bookingUrl?.href,
     });
-    sendPage(req, res, lang, html, ended ? { 'set-cookie': clearCookie } : {});
+    sendPage(
+      req,
+      res,
+      lang,
+      html,
+      expired ? { 'set-cookie': clearCookie } : {},
+    );
+  }
+
+  /** Where the end route sends the visitor: the start page with the "thanks" dialog. */
+  function endedPage(ended: Ended, lang: unknown): string {
+    const query = new URLSearchParams({ ended });
+    if (
+      typeof lang === 'string' &&
+      (PAGE_LANGS as readonly string[]).includes(lang)
+    )
+      query.set('lang', lang);
+    return `/?${query}`;
   }
 
   function chrome(lang: PageLang): ChromeOptions {
@@ -223,6 +261,7 @@ export function createLauncherServer(deps: LauncherDeps): Server {
     res: ServerResponse,
     path: string,
     addr: string,
+    token: string | undefined,
     session: Session | undefined,
   ) {
     if (
@@ -256,6 +295,21 @@ export function createLauncherServer(deps: LauncherDeps): Server {
       );
     }
     if (path === '/_demo/api/challenge') return json(res, 200, pow.issue(addr));
+    if (path === END_PATH) {
+      // The visitor ends their own sandbox (#846): the one their cookie names, and no other. The
+      // body only picks the page's language; nothing in it names a sandbox.
+      const body = await readJson(req);
+      if (!body) return json(res, 400, { code: 'invalid-request' });
+      if (!token) return json(res, 404, { code: 'no-sandbox' });
+      const ran = await sandboxes.close(token);
+      const ended: Ended = ran ? 'closed' : 'expired';
+      return json(
+        res,
+        200,
+        { status: 'ended', next: endedPage(ended, body['lang']) },
+        { 'set-cookie': clearCookie },
+      );
+    }
     if (path === '/_demo/api/start') {
       const body = await readJson(req);
       if (!body) return json(res, 400, { code: 'invalid-request' });
@@ -490,7 +544,7 @@ export function createLauncherServer(deps: LauncherDeps): Server {
               { 'retry-after': String(wait) },
             );
           if (path.startsWith('/_demo/api/'))
-            return api(req, res, path, addr, session);
+            return api(req, res, path, addr, token, session);
           if (req.method !== 'GET' && req.method !== 'HEAD')
             return json(res, 405, { code: 'method-not-allowed' });
           // What this demo stores: linkable from the operator's privacy policy, with or without a sandbox.
@@ -538,12 +592,17 @@ export function createLauncherServer(deps: LauncherDeps): Server {
           (req.method === 'GET' || req.method === 'HEAD') &&
           (path === '/' || navigation)
         ) {
-          // Any address of a sandbox opened without its cookie: the start page, at `/`.
+          // Any address of a sandbox opened without its cookie: the start page, at `/`; with a
+          // cookie whose sandbox has gone, in its ended state.
           if (path !== '/') {
             const lang = url.searchParams.get('lang');
+            const query = new URLSearchParams(
+              token ? { ended: 'expired' } : {},
+            );
+            if (lang === 'de' || lang === 'en') query.set('lang', lang);
             res.writeHead(303, {
               ...ownHeaders(),
-              location: lang === 'de' || lang === 'en' ? `/?lang=${lang}` : '/',
+              location: query.size ? `/?${query}` : '/',
               'cache-control': 'no-store',
               ...(token ? { 'set-cookie': clearCookie } : {}),
             });
@@ -551,12 +610,9 @@ export function createLauncherServer(deps: LauncherDeps): Server {
           }
           return startPage(req, res, url, token !== undefined);
         }
-        return json(
-          res,
-          404,
-          { code: 'no-sandbox' },
-          token ? { 'set-cookie': clearCookie } : {},
-        );
+        // The cookie stays: the editor's polls must not clear it before the visitor's next page,
+        // which shows the ended state (and clears it). It names nothing any more.
+        return json(res, 404, { code: 'no-sandbox' });
       };
       handled().catch((error: unknown) => {
         log.error('request-failed', {

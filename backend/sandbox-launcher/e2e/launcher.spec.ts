@@ -19,11 +19,16 @@ const SHOT_SIZES = [
   [1920, 1080],
 ] as const;
 
-async function shoot(page: Page, name: string) {
+/** `fullPage: false` for a modal: the top layer covers the viewport, not the whole page. */
+async function shoot(page: Page, name: string, fullPage = true) {
   if (!SHOTS) return;
   await page.evaluate(() => document.fonts.ready);
   // The page's own policy refuses an injected style: its reduced-motion rules stop the motion.
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // A dialog that just opened may still be fading in.
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== 'running'),
+  );
   for (const theme of ['light', 'dark'] as const) {
     await page.evaluate(
       (dark) => document.documentElement.classList.toggle('dark', dark),
@@ -33,7 +38,7 @@ async function shoot(page: Page, name: string) {
       await page.setViewportSize({ width, height });
       await page.screenshot({
         path: join(SHOTS, `${name}-${theme}-${width}.png`),
-        fullPage: true,
+        fullPage,
       });
     }
   }
@@ -305,5 +310,165 @@ test.describe('the states', () => {
     await page.getByRole('link', { name: 'Zurück zur Startseite' }).click();
     await expect(page).toHaveURL(`${launcher.url}/?lang=de`);
     await page.close();
+  });
+});
+
+test.describe('the ended dialog (#846)', () => {
+  let launcher: TestLauncher;
+  test.beforeAll(async () => {
+    launcher = await startLauncher({
+      CCMS_LAUNCHER_MAX_SANDBOXES: '3',
+      CCMS_LAUNCHER_PORTAL_URL: 'https://manuals.example.org/',
+      CCMS_LAUNCHER_HOMEPAGE_URL: 'https://www.example.org/',
+      CCMS_LAUNCHER_BOOKING_URL: 'https://www.example.org/#demo',
+    });
+  });
+  test.afterAll(async () => launcher.close());
+
+  /** Starts a sandbox from the start page and waits for it (the fake sandbox's page). */
+  async function startOne(page: Page, lang: 'en' | 'de' = 'en') {
+    await page.goto(`${launcher.url}/?lang=${lang}`);
+    await page
+      .getByRole('button', {
+        name: lang === 'en' ? 'Start the demo' : 'Demo starten',
+      })
+      .click();
+    await expect(page.locator('body')).toContainText(/^sandbox [0-9a-f]{16}/);
+  }
+
+  /** What the editor's "End demo" does once confirmed: the end route, then its `next`. */
+  async function endFromTheEditor(page: Page, lang: 'en' | 'de' = 'en') {
+    const next = await page.evaluate(async (lang) => {
+      const res = await fetch('/_demo/api/end', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lang }),
+      });
+      return ((await res.json()) as { next: string }).next;
+    }, lang);
+    await page.goto(`${launcher.url}${next}`);
+  }
+
+  test('ending thanks the visitor and offers a demo; Escape closes it, the page stays put', async ({
+    browser,
+  }) => {
+    const page = await browser.newPage({ colorScheme: 'light' });
+    await startOne(page);
+    const [started] = launcher.runtime.started.slice(-1);
+    await endFromTheEditor(page);
+    expect(launcher.runtime.removed).toContain(started!.id);
+
+    const dialog = page.getByRole('dialog', {
+      name: 'Thanks for trying OpenFolia.',
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(
+      'Your sandbox has ended, and everything in it was deleted.',
+    );
+    const book = dialog.getByRole('link', { name: 'Book a demo' });
+    await expect(book).toHaveAttribute('href', 'https://www.example.org/#demo');
+    // The focus on its heading: read from the top; the first Tab is "Book a demo".
+    await expect(
+      dialog.getByRole('heading', { name: 'Thanks for trying OpenFolia.' }),
+    ).toBeFocused();
+    await expect(
+      dialog.getByRole('link', { name: 'See the published manuals' }),
+    ).toHaveAttribute('href', 'https://manuals.example.org/');
+    await expect(
+      dialog.getByRole('button', { name: 'Start a new sandbox' }),
+    ).toBeVisible();
+    // Shown once: the address loses its `ended`, so a reload is the plain start page.
+    await expect(page).toHaveURL(`${launcher.url}/?lang=en`);
+    // The cookie is gone with the sandbox.
+    expect(await page.context().cookies()).toEqual([]);
+    // The page behind is inert, and keeps its place.
+    await shoot(page, 'ended', false);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const before = await page.locator('main .col').boundingBox();
+    await page.keyboard.press('Tab');
+    await expect(book).toBeFocused();
+    // Tab reaches each of its controls in turn (the page behind is inert), the close button last.
+    for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
+    await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole('heading', { level: 1, name: /Try OpenFolia/ }),
+    ).toBeFocused();
+    await expect(page.locator('.notice-line')).toContainText('has ended');
+    const after = await page.locator('main .col').boundingBox();
+    expect(after).toEqual(before);
+    await page.reload();
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+    await page.close();
+  });
+
+  test('an expired sandbox leads to it too, with why; "Start a new sandbox" starts one', async ({
+    browser,
+  }) => {
+    const page = await browser.newPage({ colorScheme: 'dark' });
+    await startOne(page, 'de');
+    // It runs out (idle, its maximum, a restart): the launcher drops it.
+    const token = (await page.context().cookies())[0]!.value;
+    await launcher.sandboxes.drop(launcher.sandboxes.find(token)!, 'expired');
+    // The editor's poll keeps the cookie; the visitor's next page is the dialog.
+    expect(
+      (await page.request.get(`${launcher.url}/api/sandbox`)).status(),
+    ).toBe(404);
+    await page.goto(`${launcher.url}/content?lang=de`);
+    const dialog = page.getByRole('dialog', {
+      name: 'Danke, dass Sie OpenFolia ausprobiert haben.',
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Ihre Sandbox ist abgelaufen');
+    await expect(dialog).toContainText('nach 30 Minuten ohne Aktivität');
+    await expect(
+      dialog.getByRole('link', { name: 'Demo buchen' }),
+    ).toBeVisible();
+    await shoot(page, 'ended-expired', false);
+    const count = launcher.runtime.started.length;
+    await dialog.getByRole('button', { name: 'Neue Sandbox starten' }).click();
+    await expect(page.locator('body')).toContainText(
+      /^sandbox [0-9a-f]{16} \(de\)/,
+    );
+    expect(launcher.runtime.started).toHaveLength(count + 1);
+    await page.close();
+  });
+});
+
+test.describe('the ended dialog without a booking address (#846)', () => {
+  let launcher: TestLauncher;
+  test.beforeAll(async () => {
+    launcher = await startLauncher();
+  });
+  test.afterAll(async () => launcher.close());
+
+  test('offers a new sandbox instead, and nothing to book', async ({
+    page,
+  }) => {
+    await page.goto(`${launcher.url}/?ended=closed`);
+    const dialog = page.getByRole('dialog', {
+      name: 'Thanks for trying OpenFolia.',
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Book a demo' })).toHaveCount(
+      0,
+    );
+    await page.keyboard.press('Tab');
+    await expect(
+      dialog.getByRole('button', { name: 'Start a new sandbox' }),
+    ).toBeFocused();
+    await expect(dialog).toContainText(
+      'You can start a new sandbox at any time.',
+    );
+    await shoot(page, 'ended-no-booking', false);
+    // The close button, and a click on the dimmed page, close it as Escape does.
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+    await page.goto(`${launcher.url}/?ended=closed`);
+    await expect(dialog).toBeVisible();
+    await page.mouse.click(5, 400);
+    await expect(dialog).toBeHidden();
   });
 });

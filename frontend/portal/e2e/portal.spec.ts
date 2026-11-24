@@ -58,7 +58,8 @@ test('the start page leads with search and lists each product’s manuals', asyn
   await expect(page.locator('link[href$="brand.css"]')).toHaveCount(0);
   await expect(page.locator('.brand__logo')).toHaveCount(0);
 
-  const field = page.getByRole('searchbox', { name: 'Search all manuals' });
+  // With the typeahead the field is a combobox; Enter with no row chosen searches.
+  const field = page.getByRole('combobox', { name: 'Search all manuals' });
   await field.fill(PUBLIC_WORD);
   await field.press('Enter');
   await expect(page).toHaveURL(new RegExp(`/en/search/\\?q=${PUBLIC_WORD}$`));
@@ -105,11 +106,15 @@ test('the manual list filters by product and variant, scrolling inside its own f
   await openDisclosure(page.locator('[data-filters-panel]'));
   const rows = page.locator('.row:visible');
   await expect(rows).toHaveCount(2);
-  await expect(page.getByRole('status')).toHaveText('2 manuals');
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(
+    '2 manuals',
+  );
 
   await page.getByRole('combobox', { name: 'Product' }).selectOption('beta');
   await expect(rows).toHaveCount(1);
-  await expect(page.getByRole('status')).toHaveText('1 manual');
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(
+    '1 manual',
+  );
   await expect(rows.first()).toContainText('Beta');
 
   await page.getByRole('combobox', { name: 'Product' }).selectOption('');
@@ -120,7 +125,7 @@ test('the manual list filters by product and variant, scrolling inside its own f
   ).toHaveCount(2);
   await expect(
     page.locator('.row__variants li[data-values]:visible').first(),
-  ).toHaveText('Small');
+  ).toHaveText('Small · Battery');
 
   await page.getByLabel('Title contains').fill('nothing like it');
   await expect(rows).toHaveCount(0);
@@ -140,7 +145,9 @@ test('a product link on the start page opens the list on that product', async ({
   page,
 }) => {
   await page.goto(site('public', 'en/manuals/?product=beta'));
-  await expect(page.getByRole('status')).toHaveText('1 manual');
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(
+    '1 manual',
+  );
   await openDisclosure(page.locator('[data-filters-panel]'));
   await expect(page.getByRole('combobox', { name: 'Product' })).toHaveValue(
     'beta',
@@ -170,7 +177,7 @@ test('a manual shows its public modules, its variants and its contents', async (
     'true',
   );
   await variants.getByRole('link', { name: 'Small' }).click();
-  await expect(page).toHaveURL(/model=small\/$/);
+  await expect(page).toHaveURL(/model=small,power=battery\/$/);
   await expect(variants.getByRole('link', { name: 'Small' })).toHaveAttribute(
     'aria-current',
     'true',
@@ -189,6 +196,95 @@ test('a manual shows its public modules, its variants and its contents', async (
   await expect(
     contents.getByRole('link', { name: 'Glossary' }),
   ).toHaveAttribute('aria-current', 'location');
+});
+
+test('the variant switch says when a combination is not published, before and after the click', async ({
+  page,
+}) => {
+  // Small is published on battery only: Mains adapter leads to the large one.
+  await page.goto(site('public', OPERATING('en', 'model=small,power=battery')));
+  const variants = page.getByRole('navigation', { name: 'Variants' });
+  const mains = variants.getByRole('link', {
+    name: 'Mains adapter only as Large',
+  });
+  await expect(mains).toBeVisible();
+  // An option that keeps the other values has no hint.
+  await expect(
+    variants.getByRole('link', { name: 'Large', exact: true }),
+  ).toBeVisible();
+  const notice = page.locator('[data-switch-notice]');
+  await expect(notice).toBeHidden();
+
+  await mains.click();
+  // The address is the variant's own: a reload or a shared link shows no notice.
+  await expect(page).toHaveURL(/model=large,power=mains\/$/);
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveText(
+    'Mains adapter is published as Large only, so Model changed to Large.',
+  );
+  await expect(page.locator('[data-switch-status]')).toHaveText(
+    'Mains adapter is published as Large only, so Model changed to Large.',
+  );
+  // Over the page, not pushing it down: the manual starts where it always does.
+  await expect(notice).toHaveCSS('position', 'absolute');
+  await page.getByRole('button', { name: 'Dismiss notice' }).click();
+  await expect(notice).toBeHidden();
+  await expect(page.locator('[data-switch-status]')).toHaveText('');
+  await expect(
+    variants.getByRole('link', { name: 'Mains adapter' }),
+  ).toBeFocused();
+
+  // A switch that keeps the other values shows no notice.
+  await variants.getByRole('link', { name: 'Battery', exact: true }).click();
+  await expect(page).toHaveURL(/model=large,power=battery\/$/);
+  await expect(page.locator('.variants a[aria-current="true"]')).toHaveText([
+    'Large',
+    'Battery',
+  ]);
+  await expect(notice).toBeHidden();
+});
+
+test('the switch notice is in German on the German site, and a query naming no attribute shows none', async ({
+  page,
+}) => {
+  await page.goto(
+    site('public', `${OPERATING('de', 'model=small,power=battery')}`),
+  );
+  await page
+    .getByRole('navigation', { name: 'Varianten' })
+    .getByRole('link', { name: 'Netzteil nur als Large' })
+    .click();
+  await expect(page.locator('[data-switch-notice]')).toHaveText(
+    'Netzteil ist nur als Large veröffentlicht, daher wurde Model auf Large umgestellt.',
+  );
+  // Escape closes it from inside.
+  await page.getByRole('button', { name: 'Hinweis schließen' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-switch-notice]')).toBeHidden();
+  await page.goto(
+    site(
+      'public',
+      `${OPERATING('de', 'model=large,power=mains')}?switched=power&changed=nothing`,
+    ),
+  );
+  await expect(page).toHaveURL(/model=large,power=mains\/$/);
+  await expect(page.locator('[data-switch-notice]')).toBeHidden();
+});
+
+test('an excerpt around a glossary term reads as the page does (#852)', async ({
+  page,
+}) => {
+  await page.goto(site('public', 'en/search/'));
+  await page
+    .getByRole('searchbox', { name: 'Search all manuals' })
+    .fill('battery');
+  const result = page.locator('.result').first();
+  await expect(result).toBeVisible();
+  // The term's definition is a tooltip, not text of the passage around it (the glossary's own
+  // passage holds it), and the words keep their spaces.
+  const excerpt = result.locator('.result__excerpt', { hasText: 'Keep the' });
+  await expect(excerpt.first()).toContainText('Keep the battery charged.');
+  await expect(excerpt.first()).not.toContainText('rechargeable');
 });
 
 test('search finds public text and nothing above the audience', async ({
@@ -231,6 +327,94 @@ test('the internal site finds internal text', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Nothing matches');
 });
 
+test('the start page’s typeahead: the arrow keys pick a passage, Enter opens it', async ({
+  page,
+}) => {
+  await page.goto(site('public', 'en/'));
+  const field = page.getByRole('combobox', { name: 'Search all manuals' });
+  await field.pressSequentially('charg', { delay: 20 });
+  const list = page.getByRole('listbox', { name: 'Suggestions' });
+  await expect(list).toBeVisible();
+  await expect(field).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'matches' }),
+  ).toHaveText(/^\d+ matches\. Choose one with the arrow keys\.$/);
+  const options = list.getByRole('option');
+  await expect(options.last()).toHaveText(/All results for “charg”/);
+  await expect(options.first().locator('mark').first()).toBeVisible();
+  // Never wider than the screen: the popover stays inside the viewport.
+  const box = (await list.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+  await field.press('ArrowDown');
+  await field.press('ArrowDown');
+  const second = options.nth(1);
+  await expect(second).toHaveAttribute('aria-selected', 'true');
+  await expect(field).toHaveAttribute(
+    'aria-activedescendant',
+    (await second.getAttribute('id'))!,
+  );
+  const target = (await second.getAttribute('href'))!;
+  expect(target).toMatch(/#/);
+  await field.press('Enter');
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return url.pathname + url.hash;
+    })
+    .toBe(target);
+  await expect(page.locator('[data-pagefind-body]')).toBeVisible();
+});
+
+test('the typeahead closes on Escape, clears on a second, and says when nothing matches', async ({
+  page,
+}) => {
+  await page.goto(site('public', 'de/'));
+  const field = page.getByRole('combobox', {
+    name: 'Alle Anleitungen durchsuchen',
+  });
+  await field.fill('xylophonquarz');
+  const popover = page.locator('.typeahead');
+  await expect(popover).toContainText('Keine Stelle passt zu „xylophonquarz“.');
+  const all = page.getByRole('option', {
+    name: 'Alle Treffer für „xylophonquarz“',
+  });
+  await expect(all).toHaveAttribute('href', /\/de\/search\/\?q=xylophonquarz$/);
+  await field.press('Escape');
+  await expect(popover).toBeHidden();
+  await expect(field).toHaveValue('xylophonquarz');
+  await field.press('Escape');
+  await expect(field).toHaveValue('');
+  // A click elsewhere closes it too.
+  await field.fill('laden');
+  await expect(popover).toBeVisible();
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(popover).toBeHidden();
+});
+
+test('the running head’s typeahead finds a passage from a manual page', async ({
+  page,
+}, info) => {
+  test.skip(
+    info.project.name.startsWith('phone'),
+    'the running head has no search field on narrow screens',
+  );
+  await page.goto(site('public', OPERATING('en')));
+  const field = page.getByRole('combobox', { name: 'Search all manuals' });
+  await field.fill('contacts');
+  const list = page.getByRole('listbox', { name: 'Suggestions' });
+  await expect(list.getByRole('option').first()).toContainText('Charging');
+  await field.press('ArrowUp');
+  await expect(list.getByRole('option').last()).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await field.press('Enter');
+  await expect(page).toHaveURL(/\/en\/search\/\?q=contacts$/);
+  await expect(page.locator('.result').first()).toBeVisible();
+});
+
 test('a page that does not exist offers search and the way back', async ({
   page,
 }) => {
@@ -239,7 +423,7 @@ test('a page that does not exist offers search and the way back', async ({
     page.getByRole('heading', { level: 1, name: 'Page not found' }),
   ).toBeVisible();
   await expect(
-    page.getByRole('searchbox', { name: 'Search all manuals' }),
+    page.getByRole('combobox', { name: 'Search all manuals' }),
   ).toBeVisible();
   await page.getByRole('link', { name: /Back to the manuals/ }).click();
   await expect(page).toHaveURL(/\/en\/manuals\/$/);

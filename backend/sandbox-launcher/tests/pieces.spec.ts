@@ -175,7 +175,27 @@ describe('the settings', () => {
       maxMinutes: 90,
       abuseContact: undefined,
       portalUrl: undefined,
+      bookingUrl: undefined,
     });
+  });
+
+  it('takes an https booking address, its #section kept, and refuses any other (#846)', () => {
+    expect(
+      launcherSettings({
+        ...base,
+        CCMS_LAUNCHER_BOOKING_URL: ' https://www.example.org/#demo ',
+      }).bookingUrl?.href,
+    ).toBe('https://www.example.org/#demo');
+    for (const value of [
+      'http://www.example.org/#demo',
+      'javascript:alert(1)',
+      'www.example.org',
+      'https://user:pass@www.example.org/',
+    ])
+      expect(
+        () => launcherSettings({ ...base, CCMS_LAUNCHER_BOOKING_URL: value }),
+        value,
+      ).toThrow(/CCMS_LAUNCHER_BOOKING_URL/);
   });
 
   it('refuses what would not hold, naming the setting', () => {

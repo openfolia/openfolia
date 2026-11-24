@@ -5,7 +5,11 @@ import {
   test,
   USERS,
 } from '../src/fixtures.ts';
-import { SANDBOX_MINUTES, SANDBOX_PORTAL_URL } from '../stack/stack.ts';
+import {
+  SANDBOX_END_URL,
+  SANDBOX_MINUTES,
+  SANDBOX_PORTAL_URL,
+} from '../stack/stack.ts';
 
 /**
  * The public sandbox (#826) in the browser: the editor in front of an API with
@@ -72,6 +76,78 @@ test.describe('the public sandbox @area:shell @area:media @area:admin @api:sandb
     await expect(link).toHaveCSS('border-top-width', '1px');
     // Next to the time left, on one banner: neither is pushed out.
     await expect(banner.getByTestId('sandbox-time-left')).toBeVisible();
+  });
+
+  test('ends the sandbox from the banner, after asking, and goes where the launcher says (#846)', async ({
+    page,
+  }) => {
+    // The launcher's route is not in this stack: the flow answers it, as the launcher does.
+    const posted: unknown[] = [];
+    await page.route(`**${SANDBOX_END_URL}`, async (route) => {
+      expect(route.request().method()).toBe('POST');
+      posted.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'ended',
+          next: '/sign-in?ended=closed&lang=en',
+        }),
+      });
+    });
+    await signIn(page, USERS.author);
+    await page.goto('/content');
+    const banner = page.getByRole('complementary', { name: 'Sandbox' });
+    const end = banner.getByRole('button', { name: 'End demo' });
+    await expect(end).toBeVisible();
+    await expect(end).toHaveAttribute('aria-haspopup', 'dialog');
+    await expectNoSideways(page);
+
+    // It asks first; Escape keeps everything and gives the focus back.
+    await end.click();
+    const dialog = page.getByRole('alertdialog', { name: 'End your sandbox?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Everything in it is deleted');
+    await expect(dialog.locator(':focus')).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(end).toBeFocused();
+    expect(posted).toEqual([]);
+
+    await end.click();
+    await dialog.getByRole('button', { name: 'End and delete' }).click();
+    await page.waitForURL(/\/sign-in\?ended=closed&lang=en$/);
+    expect(posted).toEqual([{ lang: 'en' }]);
+  });
+
+  test.describe('ending fails', () => {
+    test.use({ consoleAllow: [/status of 502.*\/_demo\/api\/end/] });
+
+    test('says so in the dialog when the sandbox could not be ended, and stays (#846)', async ({
+      page,
+    }) => {
+      await page.route(`**${SANDBOX_END_URL}`, (route) =>
+        route.fulfill({
+          status: 502,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 'sandbox-unreachable' }),
+        }),
+      );
+      await page.goto('/sign-in');
+      const banner = page.getByRole('complementary', { name: 'Sandbox' });
+      await banner.getByRole('button', { name: 'End demo' }).click();
+      const dialog = page.getByRole('alertdialog', {
+        name: 'End your sandbox?',
+      });
+      await dialog.getByRole('button', { name: 'End and delete' }).click();
+      await expect(dialog.getByRole('alert')).toHaveText(
+        'The sandbox could not be ended. Check your connection and try again.',
+      );
+      await expect(dialog).toBeVisible();
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await dialog.getByRole('button', { name: 'Keep working' }).click();
+      await expect(dialog).toHaveCount(0);
+    });
   });
 
   test('leaves out uploads and imports, and says why', async ({ page }) => {

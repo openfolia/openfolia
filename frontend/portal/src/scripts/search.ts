@@ -1,34 +1,23 @@
 import { countText } from '../lib/i18n.ts';
+import {
+  el,
+  excerptNodes,
+  loadPagefind,
+  type Pagefind,
+  passagesOf,
+  type ResultData,
+  sameSite,
+  type SubResult,
+} from './pagefind.ts';
 
 /**
- * Search over this build's own Pagefind index (`pagefind/`, written next to the pages by the
- * build): the index holds only this build's pages, so it finds nothing above its audience.
- * Results are grouped by manual (its variants side by side), each with the passages that
- * matched, a page of groups at a time: they scroll in their own frame, the pager below it. The
- * old results stay until the new ones are there, so nothing jumps while the reader types. The
- * query and the filters are kept in the address (`?q=`), so a search can be linked.
- *
- * Pagefind's excerpts are HTML holding text and `<mark>` only; they are rebuilt here as text
- * nodes and `mark` elements, never inserted as HTML.
+ * Search over this build's own Pagefind index (`pagefind.ts`, shared with the search fields'
+ * typeahead). Results are grouped by manual (its variants side by side), each with the
+ * passages that matched, a page of groups at a time: they scroll in their own frame, the pager
+ * below it. The old results stay until the new ones are there, so nothing jumps while the
+ * reader types. The query and the filters are kept in the address (`?q=`), so a search can be
+ * linked.
  */
-interface SubResult {
-  readonly title: string;
-  readonly url: string;
-  readonly excerpt: string;
-}
-interface ResultData {
-  readonly url: string;
-  readonly meta: Record<string, string | undefined>;
-  readonly excerpt: string;
-  readonly sub_results?: SubResult[];
-}
-interface Pagefind {
-  options(options: Record<string, unknown>): Promise<void>;
-  search(
-    query: string,
-    options: { filters: Record<string, string> },
-  ): Promise<{ results: { data(): Promise<ResultData> }[] } | null>;
-}
 interface Group {
   readonly title: string;
   readonly product: string;
@@ -43,41 +32,6 @@ const MAX_RESULTS = 60;
 const VARIANTS = 4;
 /** Passages a group shows. */
 const PASSAGES = 3;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className?: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text;
-  return element;
-}
-
-/** Only a path of this site: Pagefind's URLs are its own, but nothing else becomes a link. */
-function sameSite(url: string): string {
-  const parsed = new URL(url, location.href);
-  return parsed.origin === location.origin
-    ? parsed.pathname + parsed.hash
-    : '#';
-}
-
-/** An excerpt as text and `mark` elements. */
-export function excerptNodes(html: string): Node[] {
-  const doc = new DOMParser().parseFromString(
-    `<body>${html}</body>`,
-    'text/html',
-  );
-  const out: Node[] = [];
-  for (const node of doc.body.childNodes)
-    out.push(
-      node.nodeName === 'MARK'
-        ? el('mark', undefined, node.textContent ?? '')
-        : document.createTextNode(node.textContent ?? ''),
-    );
-  return out;
-}
 
 export async function startSearch(doc: Document): Promise<void> {
   const root = doc.querySelector<HTMLElement>('[data-search-root]');
@@ -118,10 +72,7 @@ export async function startSearch(doc: Document): Promise<void> {
 
   let pagefind: Pagefind;
   try {
-    pagefind = (await import(
-      /* @vite-ignore */ `${base}pagefind/pagefind.js`
-    )) as Pagefind;
-    await pagefind.options({ baseUrl: base });
+    pagefind = await loadPagefind(base);
   } catch {
     status.textContent = t.failed;
     return;
@@ -141,15 +92,7 @@ export async function startSearch(doc: Document): Promise<void> {
       title.href = sameSite(group.pages[0]!.url);
       const passages = new Map<string, SubResult>();
       for (const data of group.pages)
-        for (const sub of data.sub_results?.length
-          ? data.sub_results
-          : [
-              {
-                title: data.meta['title'] ?? '',
-                url: data.url,
-                excerpt: data.excerpt,
-              },
-            ])
+        for (const sub of passagesOf(data))
           if (!passages.has(sub.title)) passages.set(sub.title, sub);
       head.append(
         title,

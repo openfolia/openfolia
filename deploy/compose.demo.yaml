@@ -66,6 +66,9 @@ services:
       CCMS_LAUNCHER_AGENT_TOKEN_FILE: /run/secrets/launcher_agent_token
       CCMS_LAUNCHER_ADDRESS_SECRET_FILE: /run/secrets/launcher_address_secret
     secrets: [launcher_agent_token, launcher_address_secret]
+    # "Book a demo" in the dialog once a visitor's sandbox has ended (#846): set
+    # CCMS_LAUNCHER_BOOKING_URL in demo.env (https, e.g. the homepage's booking section). The
+    # launcher's alone: the agent gives each sandbox the launcher's end route, /_demo/api/end.
     # The films shown when all sandboxes are taken: mount their folder and set
     # CCMS_LAUNCHER_FILMS_DIR=/films in demo.env, e.g.
     # volumes: ['./films:/films:ro']

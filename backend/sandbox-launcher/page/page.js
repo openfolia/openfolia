@@ -267,5 +267,34 @@ $('[data-again]').addEventListener('click', () => void start());
 $('[data-show-films]')?.addEventListener('click', () => setState('films'));
 $('[data-start]').disabled = false;
 
+/* Ended (#846): the "thanks" dialog over the page, modal (focus inside, Escape closes it). Shown
+ * once: the address loses its `ended`, so a reload is the plain start page. Closed, the focus goes
+ * to the page's heading; "Start a new sandbox" closes it and starts one. */
+const ended = $('dialog[data-ended]');
+if (ended && typeof ended.showModal === 'function') {
+  let startAfter = false;
+  const url = new URL(location.href);
+  if (url.searchParams.has('ended')) {
+    url.searchParams.delete('ended');
+    history.replaceState(history.state, '', url);
+  }
+  ended.addEventListener('close', () => {
+    if (startAfter) return void start();
+    const heading = $(`.s-${root.dataset.state} h1`) ?? $('main');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+  });
+  // A click on the dimmed page around it closes it, as Escape does.
+  ended.addEventListener('click', (event) => {
+    if (event.target === ended) ended.close();
+  });
+  $('[data-ended-close]').addEventListener('click', () => ended.close());
+  $('[data-ended-again]').addEventListener('click', () => {
+    startAfter = true;
+    ended.close();
+  });
+  ended.showModal();
+}
+
 if (root.dataset.state === 'full') scheduleRetry();
 void refresh();

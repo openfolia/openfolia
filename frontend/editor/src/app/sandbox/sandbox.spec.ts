@@ -13,6 +13,7 @@ import { apiErrorText } from '../i18n';
 import { SandboxBannerComponent } from './sandbox-banner.component';
 import {
   SANDBOX_CLOCK,
+  SANDBOX_NAVIGATE,
   SANDBOX_REFRESH_MS,
   SandboxSession,
 } from './sandbox-session';
@@ -23,7 +24,7 @@ const MINUTE = 60_000;
 /** Lets the session's promise chain finish. */
 const settled = () => new Promise((resolve) => setTimeout(resolve));
 
-const sandbox = (endsAt: number, portalUrl?: string) => ({
+const sandbox = (endsAt: number, portalUrl?: string, endUrl?: string) => ({
   data: {
     type: 'Sandbox',
     id: 'current',
@@ -41,6 +42,7 @@ const sandbox = (endsAt: number, portalUrl?: string) => ({
       idleMinutes: 30,
       maxMinutes: 90,
       ...(portalUrl === undefined ? {} : { portalUrl }),
+      ...(endUrl === undefined ? {} : { endUrl }),
     },
     meta: {
       used: {
@@ -63,9 +65,11 @@ const notFound = {
 describe('the public sandbox (#826)', () => {
   let http: HttpTestingController;
   const clock = { now: START };
+  const went: string[] = [];
 
   beforeEach(() => {
     clock.now = START;
+    went.length = 0;
     // Only the intervals are faked: the HTTP answers and promises run as always.
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     TestBed.configureTestingModule({
@@ -74,6 +78,10 @@ describe('the public sandbox (#826)', () => {
         provideApi(),
         provideHttpClientTesting(),
         { provide: SANDBOX_CLOCK, useValue: () => clock.now },
+        {
+          provide: SANDBOX_NAVIGATE,
+          useValue: (url: string) => went.push(url),
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -135,6 +143,10 @@ describe('the public sandbox (#826)', () => {
         provideApi(),
         provideHttpClientTesting(),
         { provide: SANDBOX_CLOCK, useValue: () => clock.now },
+        {
+          provide: SANDBOX_NAVIGATE,
+          useValue: (url: string) => went.push(url),
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -146,6 +158,130 @@ describe('the public sandbox (#826)', () => {
     expect(link?.target).toBe('_blank');
     expect(link?.rel).toBe('noopener noreferrer');
     expect(link?.textContent).toContain('See the reader portal');
+  });
+
+  describe('"End demo" (#846)', () => {
+    const END = '/_demo/api/end';
+    /** The request to the end address, resolved against the page's. */
+    const toEnd = (r: { url: string }) => new URL(r.url).pathname === END;
+    const overlay = () =>
+      document.querySelector<HTMLElement>('.cdk-overlay-container');
+    afterEach(() => {
+      overlay()?.replaceChildren();
+    });
+
+    it('is offered only when the API names an end address', async () => {
+      await start(sandbox(START + 23 * MINUTE));
+      expect(
+        banner().el.querySelector('[data-testid="sandbox-end"]'),
+      ).toBeNull();
+    });
+
+    it('posts the language to the end address, then goes to the page its answer names', async () => {
+      const session = await start(sandbox(START + 23 * MINUTE, undefined, END));
+      const view = banner();
+      const button = view.el.querySelector<HTMLButtonElement>(
+        '[data-testid="sandbox-end"]',
+      );
+      expect(button?.textContent).toContain('End demo');
+      expect(button?.getAttribute('aria-haspopup')).toBe('dialog');
+      const ended = session.end();
+      const request = http.expectOne(toEnd);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ lang: 'en' });
+      request.flush({ status: 'ended', next: '/?ended=closed&lang=en' });
+      await ended;
+      expect(went).toHaveLength(1);
+      expect(new URL(went[0]!).pathname + new URL(went[0]!).search).toBe(
+        '/?ended=closed&lang=en',
+      );
+    });
+
+    it('follows no next on another origin, and goes to the "it expired" dialog when there is nothing left to end', async () => {
+      const session = await start(sandbox(START + 23 * MINUTE, undefined, END));
+      let ended = session.end();
+      http.expectOne(toEnd).flush({ next: 'https://evil.example/' });
+      await ended;
+      expect(new URL(went[0]!).host).not.toBe('evil.example');
+      expect(new URL(went[0]!).pathname).toBe('/');
+      ended = session.end();
+      const gone = http.expectOne(toEnd);
+      gone.flush(
+        { code: 'no-sandbox' },
+        { status: 404, statusText: 'Not Found' },
+      );
+      await ended;
+      expect(new URL(went[1]!).pathname).toBe('/');
+      expect(new URL(went[1]!).search).toBe('?ended=expired&lang=en');
+    });
+
+    it('asks first; a failure is said in the dialog, which stays open', async () => {
+      await start(sandbox(START + 23 * MINUTE, undefined, END));
+      const view = banner();
+      view.el
+        .querySelector<HTMLButtonElement>('[data-testid="sandbox-end"]')!
+        .click();
+      view.fixture.detectChanges();
+      await view.fixture.whenStable();
+      const dialog = overlay()?.querySelector('[role="alertdialog"]');
+      expect(dialog?.textContent).toContain('End your sandbox?');
+      expect(dialog?.textContent).toContain('Everything in it is deleted');
+      http.expectNone(toEnd);
+      dialog!
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="sandbox-end-confirm"]',
+        )!
+        .click();
+      http
+        .expectOne(toEnd)
+        .flush(
+          { code: 'start-failed' },
+          { status: 502, statusText: 'Bad Gateway' },
+        );
+      await settled();
+      view.fixture.detectChanges();
+      expect(
+        overlay()?.querySelector('[data-testid="sandbox-end-error"]')
+          ?.textContent,
+      ).toContain('could not be ended');
+      expect(overlay()?.querySelector('[role="alertdialog"]')).not.toBeNull();
+      expect(went).toEqual([]);
+    });
+
+    it('once the session has ended, offers the way back to the start page, without asking and ending nothing', async () => {
+      await start(sandbox(START + MINUTE, undefined, END));
+      clock.now = START + 2 * MINUTE;
+      vi.advanceTimersByTime(5_000);
+      const view = banner();
+      expect(view.el.querySelector('[data-testid="sandbox-end"]')).toBeNull();
+      view.el
+        .querySelector<HTMLButtonElement>('[data-testid="sandbox-start-page"]')!
+        .click();
+      http.expectNone(toEnd);
+      expect(new URL(went[0]!).search).toBe('?ended=expired&lang=en');
+    });
+
+    it('takes a 404 once on as the sandbox gone: the session has ended', async () => {
+      const session = await start(sandbox(START + 60 * MINUTE, undefined, END));
+      expect(session.minutesLeft()).toBe(60);
+      vi.advanceTimersByTime(SANDBOX_REFRESH_MS);
+      http
+        .expectOne('/api/sandbox')
+        .flush(
+          { code: 'no-sandbox' },
+          { status: 404, statusText: 'Not Found' },
+        );
+      await settled();
+      expect(session.on()).toBe(true);
+      expect(session.minutesLeft()).toBe(0);
+      // Answered again (another tab's new sandbox): it runs after all.
+      vi.advanceTimersByTime(SANDBOX_REFRESH_MS);
+      http
+        .expectOne('/api/sandbox')
+        .flush(sandbox(START + 90 * MINUTE, undefined, END));
+      await settled();
+      expect(session.minutesLeft()).toBeGreaterThan(0);
+    });
   });
 
   it('shows the banner with the time left, counting down and read again every minute', async () => {

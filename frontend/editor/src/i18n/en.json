@@ -3351,8 +3351,8 @@
     "diff": {
       "label": "Changes",
       "loading": "Loading the changes",
-      "emptyTitle": "Nothing changed",
-      "emptyHint": "This revision changes no module or manual you can see.",
+      "emptyTitle": "Nothing differs from {ref}",
+      "emptyHint": "Either nothing is saved in this revision yet, or what was saved cancels out.",
       "comparedWith": "compared with {ref}",
       "manual": "Manual",
       "config": "Configuration",
@@ -6267,7 +6267,17 @@
       "timeLeft": "{minutes} min left",
       "ended": "The session has ended",
       "portal": "See the reader portal",
-      "portalNewTab": "(opens in a new tab)"
+      "portalNewTab": "(opens in a new tab)",
+      "end": "End demo",
+      "startPage": "Back to the start page"
+    },
+    "end": {
+      "title": "End your sandbox?",
+      "description": "Everything in it is deleted: your changes, comments and PDFs. This cannot be undone.",
+      "cancel": "Keep working",
+      "confirm": "End and delete",
+      "ending": "Ending…",
+      "failed": "The sandbox could not be ended. Check your connection and try again."
     },
     "uploadsOff": "Uploads are off in this sandbox.",
     "uploadsOffPickImage": "Uploads are off in this sandbox: pick an image from the media library.",

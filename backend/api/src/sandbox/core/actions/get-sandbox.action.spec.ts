@@ -30,7 +30,7 @@ describe('GetSandboxAction (#826)', () => {
     });
   });
 
-  it('tells the reader portal’s address only when one is set (#837)', async () => {
+  it('tells the reader portal’s address and the end address only when set (#837, #846)', async () => {
     const options = {
       limits: {
         moduleBytes: 100,
@@ -53,6 +53,11 @@ describe('GetSandboxAction (#826)', () => {
       Sandbox.on({ ...options, portalUrl }),
     ).handle({ actor: reader });
     expect(withUrl.portalUrl).toBe(portalUrl);
+    expect(without).not.toHaveProperty('endUrl');
+    const withEnd = await new GetSandboxAction(
+      Sandbox.on({ ...options, endUrl: '/_demo/api/end' }),
+    ).handle({ actor: reader });
+    expect(withEnd.endUrl).toBe('/_demo/api/end');
   });
 
   it('is 404 not-configured when the instance is no sandbox', async () => {

@@ -34,6 +34,8 @@ export const E2E_DIR = join(ROOT, '.local', 'editor-e2e');
 export const SANDBOX_MINUTES = 1440;
 /** The reader portal the sandbox's banner links (#837): a link only, never called. */
 export const SANDBOX_PORTAL_URL = 'https://manuals.example.org/';
+/** Where the banner's "End demo" posts (#846): the launcher's route, answered by the flow itself. */
+export const SANDBOX_END_URL = '/_demo/api/end';
 const API_DIST = join(ROOT, 'backend/api/dist');
 const MOCK_OIDC = join(ROOT, 'backend/api/scripts/mock-oidc.ts');
 const EDITOR_DIST = join(ROOT, 'frontend/editor/dist/browser');
@@ -403,6 +405,7 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
         CCMS_SANDBOX_IDLE_MINUTES: String(SANDBOX_MINUTES),
         CCMS_SANDBOX_MAX_MINUTES: String(SANDBOX_MINUTES),
         CCMS_SANDBOX_PORTAL_URL: SANDBOX_PORTAL_URL,
+        CCMS_SANDBOX_END_URL: SANDBOX_END_URL,
       });
       started.catch(() => undefined);
       apis.push(started);

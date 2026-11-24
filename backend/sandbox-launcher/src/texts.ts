@@ -44,6 +44,17 @@ const en = {
     'Your last sandbox has ended and was deleted. You can start a new one.',
   'start.noScript':
     'The demo needs JavaScript: your browser does a short calculation before a sandbox starts.',
+  'ended.title': 'Thanks for trying OpenFolia.',
+  'ended.closed': 'Your sandbox has ended, and everything in it was deleted.',
+  'ended.expired':
+    'Your sandbox has ended, and everything in it was deleted: a sandbox ends after {idle} minutes without activity, or after {max} minutes at the latest.',
+  'ended.booking':
+    'Want to see OpenFolia with your own content and questions? Book a demo: a guided walk-through, at a time that suits you.',
+  'ended.again.lede': 'You can start a new sandbox at any time.',
+  'ended.book': 'Book a demo',
+  'ended.again': 'Start a new sandbox',
+  'ended.portal': 'See the published manuals',
+  'ended.close': 'Close',
   'starting.title': 'Starting your sandbox',
   'starting.lede':
     "A fresh copy of the demo, just for you. You'll be in the editor as Mira Sand, the author, in a moment.",
@@ -145,7 +156,8 @@ const de: Record<TextKey, string> = {
   'people.reviewer.role': 'Prüfer',
   'people.reviewer.does': 'Kommentiert Änderungen und gibt sie frei.',
   'people.admin.role': 'Administratorin',
-  'people.admin.does': 'Führt Freigegebenes zusammen und erstellt Veröffentlichungen.',
+  'people.admin.does':
+    'Führt Freigegebenes zusammen und erstellt Veröffentlichungen.',
   'people.note': 'Sie wechseln jederzeit zwischen ihnen, über das Kontomenü.',
   'private.title': 'Ihre eigene Sandbox: nur Sie sehen sie.',
   'private.text':
@@ -160,9 +172,20 @@ const de: Record<TextKey, string> = {
   'start.contentLang': 'Inhalte auf',
   'start.fine': 'Eine Sandbox zur Zeit, {daily} am Tag pro Adresse.',
   'start.ended':
-    'Ihre letzte Sandbox ist abgelaufen und wurde gelöscht. Sie können eine neue starten.',
+    'Ihre letzte Sandbox ist beendet und wurde gelöscht. Sie können eine neue starten.',
   'start.noScript':
     'Die Demo braucht JavaScript: Ihr Browser macht eine kurze Rechnung, bevor eine Sandbox startet.',
+  'ended.title': 'Danke, dass Sie OpenFolia ausprobiert haben.',
+  'ended.closed': 'Ihre Sandbox ist beendet, und alles darin wurde gelöscht.',
+  'ended.expired':
+    'Ihre Sandbox ist abgelaufen, und alles darin wurde gelöscht: Eine Sandbox endet nach {idle} Minuten ohne Aktivität, spätestens nach {max} Minuten.',
+  'ended.booking':
+    'Möchten Sie OpenFolia mit Ihren eigenen Inhalten und Fragen sehen? Buchen Sie eine Demo: eine geführte Vorstellung, zu einem Termin, der Ihnen passt.',
+  'ended.again.lede': 'Sie können jederzeit eine neue Sandbox starten.',
+  'ended.book': 'Demo buchen',
+  'ended.again': 'Neue Sandbox starten',
+  'ended.portal': 'Veröffentlichte Anleitungen ansehen',
+  'ended.close': 'Schließen',
   'starting.title': 'Ihre Sandbox startet',
   'starting.lede':
     'Eine frische Kopie der Demo, nur für Sie. Gleich sind Sie im Editor, als Mira Sand, die Autorin.',

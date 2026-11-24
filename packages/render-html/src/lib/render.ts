@@ -722,7 +722,7 @@ class Renderer {
     const { term, tip } = open;
     if (tip === undefined || !term.definition) return `${close}</span>`;
     const lang = term.lang === this.contentLang ? '' : this.langAttr(term.lang);
-    return `${close}<span class="of-term__definition" role="tooltip"${this.idAttr(tip)}${lang}>${this.inline(term.definition, true, false)}</span></span>`;
+    return `${close}<span class="of-term__definition" role="tooltip" data-pagefind-ignore${this.idAttr(tip)}${lang}>${this.inline(term.definition, true, false)}</span></span>`;
   }
 
   private inlineNode(node: Inline): string {

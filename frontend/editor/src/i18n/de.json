@@ -3351,8 +3351,8 @@
     "diff": {
       "label": "Änderungen",
       "loading": "Änderungen werden geladen",
-      "emptyTitle": "Nichts geändert",
-      "emptyHint": "Diese Überarbeitung ändert kein Modul und keine Anleitung, die Sie sehen können.",
+      "emptyTitle": "Kein Unterschied zu {ref}",
+      "emptyHint": "Entweder ist in dieser Überarbeitung noch nichts gespeichert, oder das Gespeicherte hebt sich auf.",
       "comparedWith": "verglichen mit {ref}",
       "manual": "Anleitung",
       "config": "Konfiguration",
@@ -6267,7 +6267,17 @@
       "timeLeft": "Noch {minutes} Min.",
       "ended": "Die Sitzung ist abgelaufen",
       "portal": "Zum Leserportal",
-      "portalNewTab": "(öffnet in einem neuen Tab)"
+      "portalNewTab": "(öffnet in einem neuen Tab)",
+      "end": "Demo beenden",
+      "startPage": "Zur Startseite"
+    },
+    "end": {
+      "title": "Sandbox beenden?",
+      "description": "Alles darin wird gelöscht: Ihre Änderungen, Kommentare und PDFs. Das lässt sich nicht rückgängig machen.",
+      "cancel": "Weiterarbeiten",
+      "confirm": "Beenden und löschen",
+      "ending": "Wird beendet …",
+      "failed": "Die Sandbox ließ sich nicht beenden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
     },
     "uploadsOff": "In dieser Sandbox sind Uploads ausgeschaltet.",
     "uploadsOffPickImage": "In dieser Sandbox sind Uploads ausgeschaltet: Wählen Sie ein Bild aus der Medienbibliothek.",

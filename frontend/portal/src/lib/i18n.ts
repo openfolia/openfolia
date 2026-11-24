@@ -64,6 +64,25 @@ export interface Texts {
   /** The button that unfolds a row's other variants: `{n}`. */
   readonly moreVariants: string;
   readonly filtersShort: string;
+  /** A variant switch option that changes other attributes too: `{values}`. */
+  readonly onlyAs: string;
+  /**
+   * The notice after such a switch: `{value}` was picked, it is published only as `{values}`,
+   * so `{changes}` (each a `change`) changed. `one` or `other` by the number of changes.
+   */
+  readonly switchNotice: { readonly one: string; readonly other: string };
+  /** One change in the notice: `{attribute}`, `{value}`. */
+  readonly switchChange: string;
+  readonly dismissNotice: string;
+  /** The typeahead under a search field (#845): its list's name. */
+  readonly suggestions: string;
+  /** Read out when the suggestions arrive: `{n}`. */
+  readonly suggestionCount: { readonly one: string; readonly other: string };
+  /** No passage matches `{q}`. */
+  readonly noSuggestion: string;
+  /** The last row: the search page for `{q}`. */
+  readonly allResults: string;
+  readonly searching: string;
 }
 
 const en: Texts = {
@@ -126,6 +145,21 @@ const en: Texts = {
   searchInstead: 'Search the manuals',
   moreVariants: '+{n} more',
   filtersShort: 'Filters',
+  onlyAs: 'only as {values}',
+  switchNotice: {
+    one: '{value} is published as {values} only, so {changes}.',
+    other: '{value} is published as {values} only, so {changes}.',
+  },
+  switchChange: '{attribute} changed to {value}',
+  dismissNotice: 'Dismiss notice',
+  suggestions: 'Suggestions',
+  suggestionCount: {
+    one: '1 match. Choose it with the arrow keys.',
+    other: '{n} matches. Choose one with the arrow keys.',
+  },
+  noSuggestion: 'No passage matches “{q}”.',
+  allResults: 'All results for “{q}”',
+  searching: 'Searching…',
 };
 
 const de: Texts = {
@@ -192,6 +226,22 @@ const de: Texts = {
   searchInstead: 'Die Anleitungen durchsuchen',
   moreVariants: '+{n} weitere',
   filtersShort: 'Filter',
+  onlyAs: 'nur als {values}',
+  switchNotice: {
+    one: '{value} ist nur als {values} veröffentlicht, daher wurde {changes} umgestellt.',
+    other:
+      '{value} ist nur als {values} veröffentlicht, daher wurden {changes} umgestellt.',
+  },
+  switchChange: '{attribute} auf {value}',
+  dismissNotice: 'Hinweis schließen',
+  suggestions: 'Vorschläge',
+  suggestionCount: {
+    one: '1 Treffer. Wählen Sie ihn mit den Pfeiltasten aus.',
+    other: '{n} Treffer. Wählen Sie einen mit den Pfeiltasten aus.',
+  },
+  noSuggestion: 'Keine Stelle passt zu „{q}“.',
+  allResults: 'Alle Treffer für „{q}“',
+  searching: 'Suche läuft …',
 };
 
 /** A count in the build's language, from its `{ one, other }` templates. */
@@ -211,6 +261,88 @@ export const TEXTS: Readonly<Record<'en' | 'de', Texts>> = { en, de };
 /** The texts for a build's language: German for `de` and its regional tags, else English. */
 export function textsFor(lang: string): Texts {
   return lang.toLowerCase().split('-')[0] === 'de' ? de : en;
+}
+
+/** What the typeahead on a search field reads from its form (`data-typeahead`). */
+export interface TypeaheadConfig {
+  readonly lang: string;
+  /** The language's site, where its Pagefind index is. */
+  readonly base: string;
+  /** The Pagefind meta keys of a page's product and variant. */
+  readonly productKey: string;
+  readonly variantKey: string;
+  readonly label: string;
+  readonly count: { readonly one: string; readonly other: string };
+  readonly none: string;
+  readonly all: string;
+  readonly searching: string;
+}
+
+export function typeaheadConfig(
+  t: Texts,
+  lang: string,
+  base: string,
+): TypeaheadConfig {
+  return {
+    lang,
+    base,
+    productKey: t.product,
+    variantKey: t.variant,
+    label: t.suggestions,
+    count: t.suggestionCount,
+    none: t.noSuggestion,
+    all: t.allResults,
+    searching: t.searching,
+  };
+}
+
+/** Labels joined in the build's language: "A, B and C". */
+const joined = (labels: readonly string[], lang: string) =>
+  new Intl.ListFormat(lang, { type: 'conjunction' }).format(labels);
+
+/** A variant switch option's hint: "only as Electric and UK". */
+export function onlyAsText(
+  t: Texts,
+  lang: string,
+  values: readonly string[],
+): string {
+  return t.onlyAs.replace('{values}', () => joined(values, lang));
+}
+
+/**
+ * The notice after a switch that changed other attributes: "Estate is published as Electric
+ * only, so Drive changed to Electric." `value` is the label of the value picked, `changes` the
+ * other attributes' labels and the values they changed to.
+ */
+export function switchNoticeText(
+  t: Texts,
+  lang: string,
+  value: string,
+  changes: readonly { readonly attribute: string; readonly value: string }[],
+): string {
+  const template =
+    changes.length === 1 ? t.switchNotice.one : t.switchNotice.other;
+  // One pass, so a label that holds a placeholder is never filled in again.
+  const parts: Record<string, string> = {
+    value,
+    values: joined(
+      changes.map((c) => c.value),
+      lang,
+    ),
+    changes: joined(
+      changes.map((c) =>
+        t.switchChange.replace(
+          /\{(attribute|value)\}/g,
+          (_, key: 'attribute' | 'value') => c[key],
+        ),
+      ),
+      lang,
+    ),
+  };
+  return template.replace(
+    /\{(value|values|changes)\}/g,
+    (_, key: string) => parts[key] ?? '',
+  );
 }
 
 /** A file size in the build's language (`1.2 MB`). */

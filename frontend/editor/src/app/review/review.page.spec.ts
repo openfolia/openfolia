@@ -635,6 +635,34 @@ describe('ReviewPage', () => {
     t.http.match(() => true).forEach((r) => r.flush(paged([])));
   });
 
+  it('shows no view switch and no legend when the revision changes nothing against main (#854)', async () => {
+    const t = await render();
+    t.http.expectOne('/api/config').flush({
+      data: { attributes: { moduleTypes: [] } },
+    });
+    t.http.expectOne(isList).flush(paged([changeSet()]));
+    await t.settle();
+    t.http.expectOne(`/api/change-sets/${ID}`).flush({ data: changeSet() });
+    await t.settle();
+    t.http.expectOne(`/api/change-sets/${ID}/review`).flush({
+      data: changeSet(),
+      meta: { review: review() },
+    });
+    t.http
+      .expectOne((r) => r.url === `/api/change-sets/${ID}/changes`)
+      .flush({
+        ...paged([]),
+        meta: { ...paged([]).meta, base: BASE, head: HEAD },
+      });
+    await t.settle();
+    expect(t.el.querySelector('section [data-state="empty"]')).not.toBeNull();
+    expect(t.el.querySelector('section of-segmented')).toBeNull();
+    expect(
+      t.el.querySelector('section [aria-label="What the marks mean"]'),
+    ).toBeNull();
+    t.http.match(() => true).forEach((r) => r.flush(paged([])));
+  });
+
   it('gives the empty list the whole width when there is nothing to choose', async () => {
     const t = await render();
     t.http.expectOne('/api/config').flush({

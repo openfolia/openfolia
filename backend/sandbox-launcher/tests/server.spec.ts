@@ -281,6 +281,200 @@ describe('the launcher', () => {
     expect(await page.text()).toContain('has ended');
   });
 
+  describe('the end route (#846)', () => {
+    const same = {
+      'content-type': 'application/json',
+      origin: ORIGIN,
+      'sec-fetch-site': 'same-origin',
+    };
+    const end = (
+      cookie: string | undefined,
+      body: unknown = { lang: 'de' },
+      headers: Record<string, string> = same,
+    ) =>
+      call(l, '/_demo/api/end', {
+        method: 'POST',
+        headers,
+        ...(cookie ? { cookie } : {}),
+        body: JSON.stringify(body),
+      });
+
+    it("ends the visitor's own sandbox, through the runtime, clears the cookie and says where to go", async () => {
+      l = await launcher();
+      const a = await startSandbox(l);
+      const id = l.runtime.started[0]!.id;
+      const res = await end(a.cookie);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        status: 'ended',
+        next: '/?ended=closed&lang=de',
+      });
+      expect(res.headers.get('set-cookie')).toMatch(
+        /^__Host-openfolia-demo=; .*Max-Age=0$/,
+      );
+      expect(res.headers.get('cache-control')).toBe('no-store');
+      expect(l.runtime.removed).toEqual([id]);
+      expect(l.sandboxes.status().free).toBe(2);
+      // The same cookie reaches nothing any more: the start page, in its ended state.
+      const page = await call(l, '/?ended=closed', { cookie: a.cookie });
+      const html = await page.text();
+      expect(html).toContain('data-ended="closed"');
+      expect(html).toContain('Thanks for trying OpenFolia.');
+    });
+
+    it('refuses a request from another site, or without the fetch metadata of this one', async () => {
+      l = await launcher();
+      const a = await startSandbox(l);
+      for (const headers of [
+        {
+          ...same,
+          origin: 'https://evil.example',
+          'sec-fetch-site': 'cross-site',
+        },
+        { ...same, 'sec-fetch-site': 'same-site' },
+        { 'content-type': 'application/json' },
+      ]) {
+        const res = await end(a.cookie, {}, headers);
+        expect(res.status).toBe(403);
+        expect(await res.json()).toEqual({ code: 'cross-origin-request' });
+        expect(res.headers.get('set-cookie')).toBeNull();
+      }
+      expect(l.runtime.removed).toEqual([]);
+      const get = await call(l, '/_demo/api/end', { cookie: a.cookie });
+      expect(get.status).toBe(405);
+      expect(l.runtime.removed).toEqual([]);
+    });
+
+    it('refuses a request without the cookie, or without a JSON body, and ends nothing', async () => {
+      l = await launcher();
+      const a = await startSandbox(l);
+      const none = await end(undefined);
+      expect(none.status).toBe(404);
+      expect(await none.json()).toEqual({ code: 'no-sandbox' });
+      const forged = await end(`${COOKIE}=short`);
+      expect(forged.status).toBe(404);
+      const form = await call(l, '/_demo/api/end', {
+        method: 'POST',
+        headers: { ...same, 'content-type': 'text/plain' },
+        cookie: a.cookie,
+        body: 'x',
+      });
+      expect(form.status).toBe(400);
+      expect(l.runtime.removed).toEqual([]);
+    });
+
+    it("never ends another visitor's sandbox, whatever the body names", async () => {
+      l = await launcher();
+      const a = await startSandbox(l, '203.0.113.1');
+      const b = await startSandbox(l, '198.51.100.2');
+      const [idA, idB] = l.runtime.started.map((s) => s.id);
+      // A cookie of a sandbox that is no one's: nothing is removed.
+      const stranger = await end(`${COOKIE}=${'B'.repeat(43)}`, {
+        lang: 'de',
+        id: idB,
+        sandbox: idB,
+      });
+      expect(stranger.status).toBe(200);
+      expect(await stranger.json()).toMatchObject({
+        next: '/?ended=expired&lang=de',
+      });
+      expect(l.runtime.removed).toEqual([]);
+      // A's cookie with B's ID in the body: A's ends, B's runs on.
+      const res = await end(a.cookie, { id: idB, sandbox: idB });
+      expect(res.status).toBe(200);
+      expect(l.runtime.removed).toEqual([idA]);
+      expect(await (await call(l, '/', { cookie: b.cookie })).text()).toContain(
+        `sandbox ${idB}`,
+      );
+    });
+
+    it('ends a sandbox only once, whatever the body says: a second call says it has expired', async () => {
+      l = await launcher();
+      const a = await startSandbox(l);
+      const first = await end(a.cookie, { lang: 'de', reason: 'expired' });
+      // The body names no outcome: a running sandbox ends as ended.
+      expect(await first.json()).toMatchObject({
+        next: '/?ended=closed&lang=de',
+      });
+      const again = await end(a.cookie, { lang: 'xx' });
+      expect(again.status).toBe(200);
+      expect(await again.json()).toEqual({
+        status: 'ended',
+        next: '/?ended=expired',
+      });
+      expect(l.runtime.removed).toHaveLength(1);
+    });
+  });
+
+  it('counts what a person does as activity, and not what an open tab asks on its own', async () => {
+    l = await launcher();
+    const a = await startSandbox(l);
+    const touch = vi.spyOn(l.sandboxes, 'touch');
+    for (const path of [
+      '/api/sandbox',
+      '/api/health',
+      '/api/me/notifications/unread-count',
+    ])
+      await call(l, path, { cookie: a.cookie });
+    expect(touch).not.toHaveBeenCalled();
+    await call(l, '/api/modules', { cookie: a.cookie });
+    expect(touch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a gone sandbox’s cookie on the editor’s polls, so the next page shows the ended dialog', async () => {
+    l = await launcher();
+    const a = await startSandbox(l);
+    await l.sandboxes.drop(
+      l.sandboxes.find(/=(.+)$/.exec(a.cookie)![1])!,
+      'test',
+    );
+    const poll = await call(l, '/api/sandbox', { cookie: a.cookie });
+    expect(poll.status).toBe(404);
+    expect(poll.headers.get('set-cookie')).toBeNull();
+    const deep = await call(l, '/modules/en/x?lang=de', {
+      cookie: a.cookie,
+      headers: { accept: 'text/html' },
+    });
+    expect(deep.status).toBe(303);
+    expect(deep.headers.get('location')).toBe('/?ended=expired&lang=de');
+    expect(deep.headers.get('set-cookie')).toContain('Max-Age=0');
+    const page = await call(l, '/', { cookie: a.cookie });
+    expect(await page.text()).toContain('data-ended="expired"');
+  });
+
+  it('opens the ended dialog only when asked, with "Book a demo" only when it is set', async () => {
+    l = await launcher();
+    const plain = await (await call(l, '/')).text();
+    expect(plain).not.toContain('<dialog');
+    const ended = await (await call(l, '/?ended=closed')).text();
+    expect(ended).toContain('data-ended="closed"');
+    expect(ended).not.toContain('Book a demo');
+    expect(ended).not.toContain('See the published manuals');
+    expect(ended).toContain('You can start a new sandbox at any time.');
+    expect(await (await call(l, '/?ended=<x>')).text()).not.toContain(
+      '<dialog',
+    );
+    l.server.close();
+    l.server.closeAllConnections();
+    l = await launcher({
+      CCMS_LAUNCHER_BOOKING_URL: 'https://www.example.org/#demo',
+      CCMS_LAUNCHER_PORTAL_URL: 'https://manuals.example.org/',
+    });
+    const de = await (await call(l, '/?ended=expired&lang=de')).text();
+    expect(de).toContain(
+      '<a class="btn" href="https://www.example.org/#demo" data-ended-book>',
+    );
+    expect(de).toContain('Demo buchen');
+    expect(de).toContain('nach 30 Minuten ohne Aktivität');
+    expect(de).toContain('href="https://manuals.example.org/"');
+    // Nothing of the booking page is loaded here: the policy still allows this origin only.
+    const res = await call(l, '/?ended=closed');
+    expect(res.headers.get('content-security-policy')).toContain(
+      "default-src 'none'",
+    );
+    expect(await res.text()).not.toMatch(/<(iframe|script[^>]+example\.org)/);
+  });
+
   it('reads only its own cookie, of the right shape, and passes the others on', () => {
     const token = 'A'.repeat(43);
     expect(readCookie(`a=1; ${COOKIE}=${token}; b=2`)).toBe(token);

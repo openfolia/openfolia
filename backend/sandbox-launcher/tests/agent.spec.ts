@@ -151,6 +151,8 @@ describe('the agent', () => {
         'CCMS_SANDBOX_IDLE_MINUTES=30',
         'CCMS_SANDBOX_MAX_MINUTES=90',
         'CCMS_SANDBOX_PORTAL_URL=https://manuals.demo.example.org/',
+        // The banner's "End demo" posts to the launcher's own route (#846).
+        'CCMS_SANDBOX_END_URL=/_demo/api/end',
       ]),
     );
     expect(container.HostConfig).toMatchObject({

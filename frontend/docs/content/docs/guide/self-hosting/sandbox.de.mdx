@@ -31,6 +31,11 @@ Sandbox:
   die die API nie aufruft) zeigt es „Zum Leserportal“ und öffnet es in einem neuen Tab. Der Launcher
   setzt die Einstellung für jede Sandbox aus `CCMS_LAUNCHER_PORTAL_URL`, wenn diese eine
   https-Adresse ist.
+- **Das Banner kann die Sandbox beenden:** Mit `CCMS_SANDBOX_END_URL` (ein Pfad auf dem Ursprung
+  des Editors oder eine https-Adresse) zeigt es „Demo beenden“. Nach einer Rückfrage sendet der
+  Editor eine Anfrage an diese Adresse und öffnet die Seite, die die Antwort nennt. Der Launcher
+  setzt die Einstellung für jede Sandbox auf seine eigene Route, `/_demo/api/end`. Ist die Sitzung
+  abgelaufen, bietet das Banner stattdessen den Weg zurück zur Startseite.
 
 `GET /sandbox` nennt die Grenzen, den Verbrauch und `meta.endsAt`. Eine normale Instanz
 antwortet darauf mit 404.
@@ -117,6 +122,24 @@ Datenschutzerklärung darauf verweisen kann:
 
 Logo und Fußzeile verlinken Ihre Startseite, Ihr Impressum und Ihre Datenschutzerklärung, wenn Sie
 `CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` und `CCMS_LAUNCHER_PRIVACY_URL` setzen.
+
+### Wenn eine Sandbox endet
+
+Besucherinnen und Besucher können ihre Sandbox im Banner des Editors beenden („Demo beenden“),
+oder sie endet von selbst (ohne Aktivität, nach der Höchstdauer, bei einem Neustart). In beiden
+Fällen ist ihre nächste Seite die Startseite mit einem Dialog darüber, der ihnen dankt und sagt,
+warum die Sandbox geendet hat. Er bietet:
+
+- **Demo buchen**, wenn Sie `CCMS_LAUNCHER_BOOKING_URL` setzen (eine https-Adresse; ein
+  `#Abschnitt` wie das Buchungsformular Ihrer Startseite bleibt erhalten). Es ist ein einfacher
+  Link: Von Ihrer Buchungsseite wird auf der Demo kein Formular, kein Skript und kein Frame
+  geladen. Ohne die Einstellung hat der Dialog keine Buchungsaktion.
+- **Neue Sandbox starten**, mit den üblichen Grenzen.
+- **Veröffentlichte Anleitungen ansehen**, wenn `CCMS_LAUNCHER_PORTAL_URL` gesetzt ist.
+
+Die Route zum Beenden, `POST /_demo/api/end`, nimmt wie ein Start nur Anfragen von den eigenen
+Seiten der Demo an und beendet nur die Sandbox, die das Cookie der Besucherin oder des Besuchers
+nennt.
 
 ## Wie viele auf einen Server passen
 

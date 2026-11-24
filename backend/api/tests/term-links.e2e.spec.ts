@@ -102,7 +102,7 @@ describe('term links through the API (#245)', () => {
     expect(res.status).toBe(200);
     const html = res.text;
     expect(html).toMatch(
-      /<span class="of-term"><a class="of-term__link" href="#of-_term-battery" aria-describedby="of-_term-tip-\d+">battery<\/a><span class="of-term__definition" role="tooltip" id="of-_term-tip-\d+">The rechargeable energy store that powers the vehicle\.<\/span><\/span>/,
+      /<span class="of-term"><a class="of-term__link" href="#of-_term-battery" aria-describedby="of-_term-tip-\d+">battery<\/a><span class="of-term__definition" role="tooltip" data-pagefind-ignore id="of-_term-tip-\d+">The rechargeable energy store that powers the vehicle\.<\/span><\/span>/,
     );
     const glossary = html.slice(html.indexOf('class="of-glossary"'));
     expect(glossary).toContain('<h2');

@@ -91,6 +91,23 @@ export class Sandboxes {
       if (s === session) await this.end(hash, s, reason);
   }
 
+  /**
+   * The visitor ends their sandbox (#846): only the one their cookie names, removed through the
+   * runtime before this returns. True when it was still running; false when the cookie names none
+   * (it had ended already, or never was), so nothing is removed.
+   */
+  async close(token: string): Promise<boolean> {
+    const hash = tokenHash(token);
+    const session = this.sessions.get(hash);
+    if (!session) return false;
+    if (this.endsAt(session) <= this.now()) {
+      await this.end(hash, session, 'expired');
+      return false;
+    }
+    await this.end(hash, session, 'ended');
+    return true;
+  }
+
   /** A request reached the sandbox: its idle end moves on. */
   touch(session: Session): void {
     session.lastActive = this.now();

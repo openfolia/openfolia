@@ -11,6 +11,8 @@
 #   capabilities, a capped log;
 # - neither sandbox reaches the other, nor the launcher's listener, nor the agent, nor the outside;
 # - a third start is refused when the cap is reached (CCMS_LAUNCHER_MAX_SANDBOXES=2);
+# - a visitor ends their sandbox through the end route the sandbox's GET /api/sandbox names
+#   (#846): its container and network go, the other visitor's stay;
 # - on the launcher's stop every sandbox and its network are gone, and a sandbox left behind is
 #   removed at the launcher's next start.
 #
@@ -172,6 +174,20 @@ third=$(docker run --rm --network "container:$launcher" --entrypoint node "$laun
   const r = await fetch(base + '/_demo/api/start', { method: 'POST', headers: h, body: JSON.stringify({ challenge: c.challenge, nonce: '0', lang: 'en' }) });
   console.log(r.status, (await r.json()).code);")
 [ "$third" = "503 full" ] || fail "a third start answered: $third"
+
+step "a visitor ends their sandbox from the banner's route: theirs goes, the other stays (#846)"
+cookie_a=$(sed -E 's/.*"a":"([^"]+)".*/\1/' "$work/cookies")
+ended=$(docker run --rm --network "container:$launcher" -e COOKIE="$cookie_a" --entrypoint node "$launcher_image" --input-type=module -e "
+  const base = 'http://localhost:8080';
+  const cookie = process.env.COOKIE;
+  const sandbox = await (await fetch(base + '/api/sandbox', { headers: { cookie, origin: base, accept: 'application/vnd.api+json', 'x-ccms-user': 'demo-author' } })).json();
+  const h = { 'content-type': 'application/json', origin: base, 'sec-fetch-site': 'same-origin', cookie };
+  const r = await fetch(base + '/_demo/api/end', { method: 'POST', headers: h, body: JSON.stringify({ lang: 'en' }) });
+  const after = await fetch(base + '/api/sandbox', { headers: { cookie, accept: 'application/vnd.api+json' } });
+  console.log(sandbox.data.attributes.endUrl, r.status, (await r.json()).next, after.status);")
+[ "$ended" = "/_demo/api/end 200 /?ended=closed&lang=en 404" ] || fail "ending a sandbox answered: $ended"
+[ "$(docker ps -aq --filter "label=org.openfolia.sandbox.instance=$instance" | wc -l | tr -d ' ')" = 1 ] || fail "not exactly one sandbox left after the end"
+[ "$(docker network ls -q --filter "label=org.openfolia.sandbox.instance=$instance" | wc -l | tr -d ' ')" = 1 ] || fail "not exactly one sandbox network left after the end"
 
 step "the launcher stops: every sandbox goes"
 docker stop -t 30 "$launcher" >/dev/null
