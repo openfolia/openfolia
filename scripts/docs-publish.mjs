@@ -6,7 +6,8 @@
 //
 // 1. Checks the arguments, the settings and the working tree (scripts/docs-publish-plan.mjs):
 //    the development docs need DOCS_SITE_URL and DOCS_API_BASE_URL; a release's docs also
-//    DOCS_RELEASE_DIGESTS; a push needs a clean working tree.
+//    DOCS_RELEASE_DIGESTS; a push needs a clean working tree, and a release's push HEAD at the
+//    release's tag or after it with only the changelog differing.
 // 2. Builds the site (`nx run docs:build`) with the DOCS_* settings of the environment, and
 //    DOCS_RELEASE from --release.
 // 3. Builds the image (deploy/docker/docs/Dockerfile) with `docker buildx build`, tagged
@@ -62,6 +63,35 @@ export function publish({
       .map((tag) => tag.trim())
       .filter(Boolean),
   };
+  // A release's push from a commit after its tag: how that commit relates to the tag.
+  if (args.release && args.push && !git.tags.includes(args.release)) {
+    try {
+      readOutput(
+        'git',
+        ['merge-base', '--is-ancestor', `refs/tags/${args.release}`, 'HEAD'],
+        { cwd },
+      );
+      git.tagIsAncestor = true;
+      git.changedSinceTag = readOutput(
+        'git',
+        [
+          'diff',
+          '--name-only',
+          '--no-renames',
+          `refs/tags/${args.release}`,
+          'HEAD',
+          '--',
+        ],
+        { cwd },
+      )
+        .split('\n')
+        .map((file) => file.trim())
+        .filter(Boolean);
+    } catch {
+      // No such tag here, or HEAD does not descend from it: the plan refuses.
+      git.tagIsAncestor = false;
+    }
+  }
   const plan = planPublish({ args, env, git });
   // Docker and buildx before the site's build, which takes minutes.
   readOutput('docker', ['buildx', 'version'], { cwd });

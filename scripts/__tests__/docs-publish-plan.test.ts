@@ -130,7 +130,7 @@ describe('docs:publish settings', () => {
 
   it("pushes a release's docs only from its tag, and only with an https site", () => {
     expect(() => plan(['--release', 'v1.2.3', '--push'], release)).toThrow(
-      /check out v1.2.3 first/,
+      /check out v1.2.3 \(git checkout v1.2.3\)/,
     );
     expect(() =>
       plan(['--release', 'v1.2.3', '--push'], release, {
@@ -152,6 +152,36 @@ describe('docs:publish settings', () => {
         DOCS_SITE_URL: 'http://docs.example.org',
       }),
     ).toThrow(/https:\/\/ URL for a release's docs/);
+  });
+
+  describe("a release's push from a commit after its tag", () => {
+    const after = (changedSinceTag: string[], tagIsAncestor = true) => ({
+      ...clean,
+      tags: [],
+      tagIsAncestor,
+      changedSinceTag,
+    });
+    const push = (git: Parameters<typeof plan>[2]) =>
+      plan(['--release', 'v1.2.3', '--push'], release, git);
+
+    it('takes a commit that differs only in the changelog', () => {
+      expect(
+        push(after(['CHANGELOG.md', 'changelog/v1.2.3.json'])).tags,
+      ).toEqual(['latest', 'v1.2.3', 'sha-0123456']);
+      expect(push(after([])).labels).toMatchObject({
+        'org.opencontainers.image.revision': SHA,
+      });
+    });
+
+    it('refuses any other file, naming it', () => {
+      expect(() =>
+        push(after(['CHANGELOG.md', 'backend/api/src/x.ts'])),
+      ).toThrow(/more than the changelog.*backend\/api\/src\/x\.ts/);
+    });
+
+    it('refuses a HEAD that does not descend from the tag', () => {
+      expect(() => push(after([], false))).toThrow(/does not descend from it/);
+    });
   });
 
   it('refuses a missing commit', () => {
@@ -305,6 +335,61 @@ describe('docs:publish steps', () => {
     expect(lines.join('\n')).toContain(
       `ghcr.io/openfolia/openfolia-docs@sha256:${'c'.repeat(64)}`,
     );
+  });
+
+  it('gathers the tag relation for a release pushed from a later commit', () => {
+    const calls: string[][] = [];
+    const read = vi.fn((command: string, args: string[]) => {
+      if (command === 'git') calls.push(args);
+      if (args[0] === 'rev-parse') return `${SHA}\n`;
+      if (args[0] === 'status') return '';
+      if (args[0] === 'tag') return '';
+      if (args[0] === 'diff') return 'CHANGELOG.md\nchangelog/v1.2.3.json\n';
+      return '';
+    });
+    const run = vi.fn();
+    publish({
+      argv: ['--release', 'v1.2.3', '--push'],
+      env: release,
+      cwd: '/repo',
+      read,
+      run,
+      log: () => {},
+      readMetadata: () => ({}),
+    });
+    expect(calls).toContainEqual([
+      'merge-base',
+      '--is-ancestor',
+      'refs/tags/v1.2.3',
+      'HEAD',
+    ]);
+    // Renames list both paths, so a moved source file cannot pass as a changelog file.
+    expect(calls).toContainEqual([
+      'diff',
+      '--name-only',
+      '--no-renames',
+      'refs/tags/v1.2.3',
+      'HEAD',
+      '--',
+    ]);
+    expect(run).toHaveBeenCalledTimes(2);
+    // Not a descendant: git exits non-zero, nothing is built.
+    const refuse = vi.fn((command: string, args: string[]) => {
+      if (args[0] === 'merge-base') throw new Error('exit 1');
+      return read(command, args);
+    });
+    run.mockClear();
+    expect(() =>
+      publish({
+        argv: ['--release', 'v1.2.3', '--push'],
+        env: release,
+        cwd: '/repo',
+        read: refuse,
+        run,
+        log: () => {},
+      }),
+    ).toThrow(/does not descend/);
+    expect(run).not.toHaveBeenCalled();
   });
 
   it('builds the development docs without DOCS_RELEASE in their environment', () => {

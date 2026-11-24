@@ -1079,7 +1079,7 @@ DOCS_SITE_URL=https://docs.example.com \
 DOCS_API_BASE_URL=https://api.example.com \
 pnpm docs:publish --push
 
-# A release's docs, from the release's tag (CONTRIBUTING.md, "Releases"):
+# A release's docs, from the commit that adds the release's changelog (CONTRIBUTING.md, "Releases"):
 DOCS_SITE_URL=https://docs.example.com \
 DOCS_API_BASE_URL=https://api.example.com \
 DOCS_RELEASE_DIGESTS="$(cat images.lock)" \
@@ -1094,7 +1094,10 @@ pnpm docs:publish --release vX.Y.Z --push
   `DOCS_RELEASE_SIGNATURES` when the release is signed. The command sets `DOCS_RELEASE` from
   `--release` itself; a release's settings without `--release` are refused, so development docs
   never carry half a release. `--push` refuses a working tree with changes, so the published
-  image is a commit, and with `--release` a commit the release's tag is on. Settings in
+  image is a commit, and with `--release` the release's tag or a later commit that differs from
+  it only in `CHANGELOG.md` and `changelog/`: the release workflow writes the release's changelog
+  after the tag, so the docs show their own release only when built from the commit that adds it
+  (the merged changelog pull request). Any other difference is refused, naming the files. Settings in
   git-ignored dotenv files are not read: only the environment the checks see.
 - **Builds the site** (`pnpm nx run docs:build`) with those settings, then **the image** with
   `docker buildx build`.

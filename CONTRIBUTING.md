@@ -205,7 +205,7 @@ by its digest, as `node scripts/release-digests.mjs` reads them from the registr
 override `compose.digests.yaml` it makes from them, which pins each service's image by tag and
 digest; and `SHA256SUMS` over the three. The script checks each digest against the one the build
 job pushed, and the run's summary shows `images.lock`: compare it with the release's file before
-building the docs. Build the release's docs from the same tag with
+building the docs. Build the release's docs (from the tag, or the commit that adds its changelog; "Publishing the docs") with
 `DOCS_RELEASE=vX.Y.Z` and `DOCS_RELEASE_DIGESTS="$(cat images.lock)"` (the release's file;
 `.env.example`, "Docs site"): their `/agents` then pins that release's images by their digests and
 names the same SHA-256 of `compose.yaml` and of `compose.digests.yaml`. Without the workflow, a
@@ -215,16 +215,20 @@ the images are pushed (it only reads the registry) and attaches the same files.
 
 **Publishing the docs.** The docs site is an image of its own, built and pushed from a
 maintainer's machine with one command (`deploy/README.md`, "The docs site"). For a release, from
-a checkout of its tag, once `images.lock` is in hand (and `signatures.sha256`, when signed):
+a checkout of the commit that adds the release's changelog (the merged changelog pull request),
+once `images.lock` is in hand (and `signatures.sha256`, when signed). The release workflow writes
+`CHANGELOG.md` and `changelog/vX.Y.Z.json` after the tag, so the tag's own docs would lack the
+release they are for; the command takes that commit when the tag is its ancestor and only the
+changelog files differ, and refuses anything else, naming the files:
 
 ```sh
-git checkout vX.Y.Z
+git checkout <the changelog commit>   # or vX.Y.Z itself
 DOCS_SITE_URL=https://docs.example.com DOCS_API_BASE_URL=https://api.example.com \
 DOCS_RELEASE_DIGESTS="$(cat images.lock)" \
 pnpm docs:publish --release vX.Y.Z --push
 ```
 
-It tags the image `vX.Y.Z`, `latest` and `sha-<commit>`, prints its digest, and the docs' host
+It tags the image `vX.Y.Z`, `latest` and `sha-<commit>` (the commit built), prints its digest, and the docs' host
 redeploys `latest`. Between releases, `pnpm docs:publish --push` without `--release` publishes
 the development docs (their install guide for coding agents pins no release and says so).
 

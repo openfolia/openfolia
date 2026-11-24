@@ -135,9 +135,10 @@ export function imageRepository(env) {
 
 /**
  * The plan: the site's build environment, the image's tags, labels and platforms, and the
- * `docker buildx build` arguments. `git` is `{ sha, dirty, tags }` of the working tree
- * (`tags`: the tags on HEAD). Every refusal
- * throws before anything is built.
+ * `docker buildx build` arguments. `git` is `{ sha, dirty, tags, tagIsAncestor, changedSinceTag }`
+ * of the working tree (`tags`: the tags on HEAD; the last two, for a release's push from an
+ * untagged HEAD: whether the release's tag is an ancestor of HEAD, and the files that differ
+ * between them). Every refusal throws before anything is built.
  */
 export function planPublish({ args, env, git }) {
   if (!COMMIT.test(git.sha ?? '')) fail(`no commit to publish ("${git.sha}")`);
@@ -160,11 +161,21 @@ export function planPublish({ args, env, git }) {
       fail(
         `DOCS_RELEASE_DIGESTS must be set for a release's docs: the text of the release's images.lock (CONTRIBUTING.md, "Releases"), DOCS_RELEASE_DIGESTS="$(cat images.lock)"`,
       );
-    // A release's docs are its tag's: pushed as vX.Y.Z and latest, they must be built from it.
-    if (args.push && !(git.tags ?? []).includes(args.release))
-      fail(
-        `the release's docs are built from its tag: check out ${args.release} first (git checkout ${args.release}); HEAD is not tagged ${args.release}`,
+    // A release's docs are its tag's: pushed as vX.Y.Z and latest, they must be built from it, or
+    // from a later commit that differs only in the changelog the release workflow adds after it.
+    if (args.push && !(git.tags ?? []).includes(args.release)) {
+      if (!git.tagIsAncestor)
+        fail(
+          `the release's docs are built from its tag or from a commit after it: check out ${args.release} (git checkout ${args.release}) or the commit that adds its changelog; HEAD is not tagged ${args.release} and does not descend from it`,
+        );
+      const other = (git.changedSinceTag ?? []).filter(
+        (file) => file !== 'CHANGELOG.md' && !file.startsWith('changelog/'),
       );
+      if (other.length > 0)
+        fail(
+          `HEAD is not tagged ${args.release} and differs from it in more than the changelog (CHANGELOG.md, changelog/): ${other.join(', ')}; check out ${args.release} or the commit that adds its changelog`,
+        );
+    }
   }
   const why =
     args.release === null
