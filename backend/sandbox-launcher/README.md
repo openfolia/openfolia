@@ -108,7 +108,8 @@ removes only containers and networks labelled with its `CCMS_LAUNCHER_INSTANCE`.
   refusals, headers, the request target, caching, the trusted proxy, the stored data); the agent
   against a recorded Docker API (`tests/agent.spec.ts`); the pieces (`tests/pieces.spec.ts`).
 - `pnpm nx run sandbox-launcher:e2e`: the start page in a browser (Playwright): two visitors in two
-  browsers, neither reaching the other; each state; the theme; what the demo stores. With
-  `SHOTS=<folder>` each state is saved in light and dark and at 360 px; `FILMS=<folder>` uses the
-  real films.
+  browsers, neither reaching the other; each state; the layout (the sticky header, the footer
+  right after the content, the start button above the fold at 1280 × 800); the theme; what the
+  demo stores. With `SHOTS=<folder>` each state is saved in light and dark at 360, 768, 1280 and
+  1920 px; `FILMS=<folder>` uses the real films.
 - `deploy/launcher-test.sh`: the launcher and the agent on a real container runtime.

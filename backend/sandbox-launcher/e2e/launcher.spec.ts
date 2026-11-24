@@ -1,6 +1,6 @@
 // The start page in a browser: two visitors in two browsers get a sandbox each and neither
-// reaches the other; the page's states (ready, starting, full, error). With SHOTS set, each state
-// is also saved in light and dark and at 360 px (the PR's screenshots).
+// reaches the other; the page's states (ready, starting, full, error) and its layout. With SHOTS
+// set, each state is also saved in light and dark at four sizes (the PR's screenshots).
 import { expect, type Page, test } from '@playwright/test';
 import { join } from 'node:path';
 import { filmsDir, startLauncher, type TestLauncher } from './launcher.js';
@@ -11,6 +11,13 @@ const POSTER = Buffer.from(
   'base64',
 );
 const SHOTS = process.env['SHOTS'];
+/** A phone, a tablet, a laptop, a desktop. */
+const SHOT_SIZES = [
+  [360, 780],
+  [768, 1024],
+  [1280, 800],
+  [1920, 1080],
+] as const;
 
 async function shoot(page: Page, name: string) {
   if (!SHOTS) return;
@@ -22,16 +29,13 @@ async function shoot(page: Page, name: string) {
       (dark) => document.documentElement.classList.toggle('dark', dark),
       theme === 'dark',
     );
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.screenshot({
-      path: join(SHOTS, `${name}-${theme}.png`),
-      fullPage: true,
-    });
-    await page.setViewportSize({ width: 360, height: 780 });
-    await page.screenshot({
-      path: join(SHOTS, `${name}-${theme}-360.png`),
-      fullPage: true,
-    });
+    for (const [width, height] of SHOT_SIZES) {
+      await page.setViewportSize({ width, height });
+      await page.screenshot({
+        path: join(SHOTS, `${name}-${theme}-${width}.png`),
+        fullPage: true,
+      });
+    }
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => document.documentElement.classList.remove('dark'));
@@ -194,6 +198,55 @@ test.describe('the states', () => {
     await shoot(page, 'error');
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.locator('body')).toContainText(/^sandbox /);
+    await page.close();
+  });
+
+  test('the header stays, the footer follows the content, the button is above the fold', async ({
+    browser,
+  }) => {
+    await launcher.sandboxes.removeAll();
+    const page = await browser.newPage({
+      viewport: { width: 1280, height: 800 },
+    });
+    const box = async (selector: string) =>
+      (await page.locator(selector).first().boundingBox())!;
+    /** The space between the end of the column and the footer's top. */
+    const gap = async () =>
+      (await box('footer.foot')).y -
+      ((await box('main .col')).y + (await box('main .col')).height);
+
+    // The start button in the first viewport at a common laptop size, in both languages.
+    for (const [lang, name] of [
+      ['en', 'Start the demo'],
+      ['de', 'Demo starten'],
+    ] as const) {
+      await page.goto(`${launcher.url}/?lang=${lang}`);
+      const button = await page.getByRole('button', { name }).boundingBox();
+      expect(button!.y).toBeGreaterThan((await box('header.bar')).height);
+      expect(button!.y + button!.height).toBeLessThanOrEqual(800);
+    }
+
+    // The header stays at the top while the page scrolls; its hairline shows once scrolled.
+    await page.goto(launcher.url);
+    const ready = await gap();
+    await expect(page.locator('html')).not.toHaveAttribute('data-scrolled');
+    await page.mouse.wheel(0, 2000);
+    await expect(page.locator('html')).toHaveAttribute('data-scrolled');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(100);
+    expect((await box('header.bar')).y).toBe(0);
+    await expect(
+      page.getByRole('button', { name: 'Dark theme' }),
+    ).toBeInViewport();
+
+    // A short state on a tall screen: the footer right after the content, with the same gap.
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.evaluate(() => scrollTo(0, 0));
+    launcher.runtime.failNext = 'error';
+    await page.getByRole('button', { name: 'Start the demo' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-state', 'error');
+    expect(await gap()).toBeCloseTo(ready, 0);
+    const footer = await box('footer.foot');
+    expect(footer.y + footer.height).toBeLessThan(1080 - 200);
     await page.close();
   });
 

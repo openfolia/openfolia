@@ -66,6 +66,10 @@ test.describe('the public sandbox @area:shell @area:media @area:admin @api:sandb
     await link.focus();
     await expect(link).toBeFocused();
     await expectNoSideways(page);
+    // A button-styled link (#843): a tap-sized box with a border, not bare text.
+    const box = await link.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(28);
+    await expect(link).toHaveCSS('border-top-width', '1px');
     // Next to the time left, on one banner: neither is pushed out.
     await expect(banner.getByTestId('sandbox-time-left')).toBeVisible();
   });

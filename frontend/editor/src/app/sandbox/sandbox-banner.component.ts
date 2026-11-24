@@ -16,6 +16,9 @@ import {
   lucideFlaskConical,
 } from '@ng-icons/lucide';
 
+import { buttonVariants } from '@openfolia/ui/button';
+import { mergeClasses } from '@openfolia/ui/ui';
+
 import { SandboxSession } from './sandbox-session';
 
 /** From this many minutes left the time is set apart (heavier, its clock in the warning colour). */
@@ -68,7 +71,7 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
         @if (session.info()?.portalUrl; as portalUrl) {
           <a
             data-testid="sandbox-portal-link"
-            class="text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-sm font-medium whitespace-nowrap underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 max-sm:ms-6"
+            [class]="portalClass"
             [href]="portalUrl"
             target="_blank"
             rel="noopener noreferrer"
@@ -129,6 +132,11 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
 export class SandboxBannerComponent {
   protected readonly session = inject(SandboxSession);
   protected readonly soon = SOON_MINUTES;
+  /** The `ui` outline button, small: it stands out from the banner's tint in both themes. */
+  protected readonly portalClass = mergeClasses(
+    buttonVariants({ zType: 'outline', zSize: 'sm' }),
+    'text-xs gap-1.5 shadow-xs motion-reduce:transition-none max-sm:ms-6',
+  );
   /** Publish the height as `--of-sandbox-h` (the shell's banner; the sign-in pages have no lists). */
   readonly measure = input(false);
 

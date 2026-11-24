@@ -1,6 +1,7 @@
 // Before the page paints: the visitor's theme (their choice on this page, else their system's), so
 // a dark visitor never sees a light flash. Then, on every launcher page, the toggle: the choice is
-// kept on this device; without one, the system's follows.
+// kept on this device; without one, the system's follows. And the sticky bar's hairline: shown
+// once the page has scrolled under it (`data-scrolled` on <html>).
 {
   let chosen = null;
   try {
@@ -20,6 +21,13 @@ function storedTheme() {
   } catch {
     return null;
   }
+}
+
+{
+  const root = document.documentElement;
+  const edge = () => root.toggleAttribute('data-scrolled', scrollY > 0);
+  addEventListener('scroll', edge, { passive: true });
+  document.addEventListener('DOMContentLoaded', edge);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
