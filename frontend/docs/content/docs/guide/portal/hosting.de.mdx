@@ -1,0 +1,121 @@
+---
+title: 'Das Portal bereitstellen'
+description: 'Das erstellte Portal mit den nötigen Headern ausliefern, unter einem Basispfad, mit der 404-Seite jeder Sprache, und eine eigene Anmeldung vor ein nicht öffentliches Portal setzen.'
+articleId: 'guide.portal.hosting'
+---
+
+Das erstellte Portal besteht aus einfachen Dateien: Liefern Sie den Ausgabeordner mit einem
+beliebigen Webserver für statische Dateien aus, unter einem eigenen Hostnamen oder unter einem
+Basispfad. Ein schneller Vorschau-Server wie in [Erstellen und Vorschau](/de/guide/portal/build)
+genügt zum Ansehen, sendet aber die folgenden Header nicht. Setzen Sie sie deshalb auf dem Host,
+den Ihre Leser nutzen.
+
+## Anmeldung
+
+Das Portal hat keine Anmeldung. **Ein nicht öffentliches Portal braucht eine Anmeldung davor**,
+die Ihres Proxys oder Ihres Hosters. Ein Build dient einer Zielgruppe: Schützen Sie den Host eines
+eingeschränkten Portals mit der Anmeldung der Personen, die diese Zielgruppe lesen dürfen.
+
+## Header
+
+Jede Seite trägt ihre Content Security Policy als Meta-Tag, aber ein Meta-Tag kann nicht alles
+ausdrücken. Der Host muss deshalb diese Header bei jeder Antwort senden:
+
+- `Content-Security-Policy`, genau so:
+
+  ```text
+  default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  ```
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security: max-age=31536000`, über HTTPS
+
+Senden Sie bei Anhängen, die als `.bin` geschrieben sind (`<lang>/assets/*.bin`), zusätzlich
+`Content-Type: application/octet-stream` und `Content-Disposition: attachment`: Nicht jeder Server
+kennt die Endung.
+
+## Basispfad und 404-Seiten
+
+Standardmäßig liefern Sie das Portal an der Wurzel seines Hosts aus. Soll es unter einem Pfad wie
+`/manuals/` liegen, erstellen Sie es mit `CCMS_PORTAL_BASE_PATH=/manuals/` (siehe
+[Erstellen und Vorschau](/de/guide/portal/build)) und liefern den Ausgabeordner unter diesem Pfad
+aus.
+
+Ein fehlender Pfad antwortet mit der `<lang>/404.html` seiner Sprache, die eine Suche anbietet. Die
+folgenden Beispiele tun das für `en` und `de`.
+
+## nginx
+
+nginx (ein `add_header` in einer `location` ersetzt die des Servers, deshalb wiederholt die
+`.bin`-`location` sie; `always` gibt auch Fehlerseiten die Header):
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name manuals.example.com;
+    ssl_certificate     /etc/letsencrypt/live/manuals.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/manuals.example.com/privkey.pem;
+    root /srv/portal;
+
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location ~ /assets/[^/]+\.bin$ {
+        types { }
+        default_type application/octet-stream;
+        add_header Content-Disposition "attachment" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+    }
+    error_page 404 /en/404.html;
+    location /en/ { error_page 404 /en/404.html; try_files $uri $uri/ =404; }
+    location /de/ { error_page 404 /de/404.html; try_files $uri $uri/ =404; }
+}
+```
+
+## Caddy
+
+Caddy (die Header als Snippet, für die Dateien und die Fehlerseiten gleichermaßen):
+
+```text
+(portal-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
+	}
+}
+
+manuals.example.com {
+	root * /srv/portal
+	import portal-headers
+	@bin path_regexp /assets/[^/]+\.bin$
+	header @bin {
+		Content-Type "application/octet-stream"
+		Content-Disposition "attachment"
+	}
+	file_server
+	handle_errors {
+		import portal-headers
+		@en404 expression `{err.status_code} == 404 && {path}.startsWith("/en/")`
+		@de404 expression `{err.status_code} == 404 && {path}.startsWith("/de/")`
+		rewrite @en404 /en/404.html
+		rewrite @de404 /de/404.html
+		file_server
+	}
+}
+```
+
+Tragen Sie Ihre eigenen Sprachen anstelle von `en` und `de` ein. Bei einem Hoster, der eine
+Header-Datei oder Einstellungen statt einer Serverkonfiguration nimmt, setzen Sie dieselben Header
+dort: die vier für jeden Pfad und die zwei für `.bin`-Dateien.

@@ -1,0 +1,35 @@
+---
+title: 'Branding des Portals'
+description: 'Name, Logos, Favicon und Farben, die das Portal aus Ihren Branding-Einstellungen übernimmt, die Kontrastregel und wann Sie neu erstellen.'
+articleId: 'guide.portal.branding'
+---
+
+Das Portal sieht aus wie Ihre Organisation, nicht wie OpenFolia. Beim Erstellen liest es das
+Branding, das ein Admin unter [Branding](/de/guide/admin/branding) festgelegt hat, und setzt es auf
+jede Seite, in beiden Sprachen.
+
+## Was es übernimmt
+
+- **Den Namen**, im Browsertab und im Kopf der Seite.
+- **Die Logos**: das helle auf hellen Seiten und das für dunkle Seiten auf dunklen Seiten. Ohne
+  dunkles Logo erscheint dort auch das helle.
+- **Das Favicon**.
+- **Die Farben**: die Primärfarbe für Links, Schaltflächen und den Fokusring, auf dunklen Seiten in
+  einem helleren Ton, und die Akzentfarbe.
+
+## Die Kontrastregel
+
+Eine Farbe gilt nur, wenn jede Kontrastprüfung besteht, auf hellen wie auf dunklen Seiten. Eine
+Farbe, die nicht besteht, wird weggelassen, und die Seite behält ihren Standard, damit Leser immer
+lesbaren Text haben. Sicherheits- und Statusfarben ändern sich nie mit einer Marke: Eine Warnung
+bleibt eine Warnung.
+
+## Nach einer Änderung neu erstellen
+
+Das Portal ist statisch und behält das Branding, mit dem es erstellt wurde. Erstellen Sie das
+Portal nach einer Änderung des Brandings neu und stellen Sie die neuen Dateien bereit. Ihre Leser
+sehen die Änderung, sobald sie bereitgestellt ist.
+
+Möchten Sie mit dem Standard-Aussehen von OpenFolia erstellen, setzen Sie `CCMS_PORTAL_BRANDING=off`
+(siehe [Erstellen und Vorschau](/de/guide/portal/build)). Das Portal hat dieses Aussehen auch, wenn
+kein Branding gesetzt ist.

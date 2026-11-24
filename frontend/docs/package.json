@@ -163,6 +163,7 @@
           "commands": [
             "next build",
             "node scripts/markdown-pages.mjs",
+            "node scripts/redirect-pages.mjs",
             "node scripts/check-stable-paths.mjs"
           ],
           "parallel": false

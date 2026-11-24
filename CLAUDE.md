@@ -1,6 +1,6 @@
 # OpenFolia
 
-A headless documentation platform: modular content (AsciiDoc) in Git, assembled into manuals per
+A documentation platform: modular content (AsciiDoc) in Git, assembled into manuals per
 variant and language, served by a JSON:API and rendered to PDF with Typst. Later: drafts on
 branches, review and approval workflow, roles, an editor.
 

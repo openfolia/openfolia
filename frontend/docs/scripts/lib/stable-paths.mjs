@@ -3,6 +3,7 @@
 // path that moves keeps working through a redirect page; it never just disappears.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { REDIRECTS, redirectAddress } from './redirects.mjs';
 
 /** Pages: each in English (`/x`) and German (`/de/x`). */
 export const STABLE_PAGES = [
@@ -54,6 +55,24 @@ export function checkStablePaths(outDir) {
       if (!readFileSync(file, 'utf8').includes(`<html lang="${lang}"`))
         problems.push(
           `${address}: the page is not in ${lang === 'en' ? 'English' : 'German'}`,
+        );
+    }
+  // A page that moved keeps its old address: a redirect page that names the new one (#820).
+  for (const [from, to] of Object.entries(REDIRECTS))
+    for (const lang of ['en', 'de']) {
+      const file = pageFile(outDir, redirectAddress(from, lang));
+      const target = `${redirectAddress(to, lang)}/`;
+      if (!existsSync(file))
+        problems.push(
+          `${redirectAddress(from, lang)}: no redirect (${file} is missing)`,
+        );
+      else if (!readFileSync(file, 'utf8').includes(`url=${target}"`))
+        problems.push(
+          `${redirectAddress(from, lang)}: does not redirect to ${target}`,
+        );
+      else if (!existsSync(pageFile(outDir, redirectAddress(to, lang))))
+        problems.push(
+          `${redirectAddress(from, lang)}: redirects to ${target}, which is no page`,
         );
     }
   for (const path of STABLE_FILES) {

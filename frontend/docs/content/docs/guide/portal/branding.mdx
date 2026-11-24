@@ -1,0 +1,31 @@
+---
+title: 'Portal branding'
+description: 'The name, logos, favicon and colours the portal takes from your branding settings, the contrast rule, and when to rebuild.'
+articleId: 'guide.portal.branding'
+---
+
+The portal looks like your organisation, not like OpenFolia. At build time it reads the branding an
+admin set in [Branding](/guide/admin/branding) and puts it on every page, in both languages.
+
+## What it takes
+
+- **The name**, in the browser tab and the page head.
+- **The logos**, the light one on light pages and the one for dark pages on dark pages. Without a
+  dark logo, the light one shows there too.
+- **The favicon**.
+- **The colours**: the primary colour for links, buttons and the focus ring, with a lighter shade
+  of it on dark pages, and the accent.
+
+## The contrast rule
+
+A colour applies only when every contrast check passes, on light and on dark pages. A colour
+that does not is left out and the page keeps its default, so readers always get text they can read.
+The safety and status colours never change with a brand: a warning stays a warning.
+
+## Rebuild after a change
+
+The portal is static, so it keeps the branding it was built with. After you change the branding,
+build the portal again and publish the new files. Readers see the change when it is hosted.
+
+To build with OpenFolia's default look instead, set `CCMS_PORTAL_BRANDING=off` (see
+[Build and preview](/guide/portal/build)). A portal also has that look when no branding is set.

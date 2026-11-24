@@ -27,17 +27,19 @@
 
 ## What it is
 
-OpenFolia is a headless documentation platform. Content is written once as small modules in Git,
-then assembled into manuals for each product variant and language. Authors work in a web editor
-on drafts that go through review before they are released. Every release is served by a JSON:API
-and rendered to PDF and HTML, so the same content reaches print, a portal and other systems.
+OpenFolia is a documentation platform: an editor, review and releases, and a reader portal.
+Content is written once as small modules in Git, then assembled into manuals for each product
+variant and language. Authors work in a web editor on drafts that go through review
+before they are released. Every release becomes accessible PDF and HTML, a portal for readers and
+a JSON:API for other systems, so the same content reaches print, the web and your own applications.
 
 - **Modules and variants:** reuse one module across many manuals, and let variant attributes
   decide what each manual includes.
 - **Review and releases:** drafts in change sets, review and approval, and immutable,
   reproducible releases tagged in Git.
-- **Outputs:** accessible PDF through Typst, HTML, a JSON:API, and an MCP server for AI
-  assistants over the released content.
+- **Outputs:** accessible PDF through Typst, HTML, a static reader portal (one per audience and
+  language, with search and your organisation's branding), a JSON:API, and an MCP server for AI
+  assistants over the released content. The API is one output among them.
 - **Translations:** a manual per language, with XLIFF exports of what changed for a translation
   provider.
 - **Self-hosted:** Postgres, S3-compatible or local file storage, and a Git repository you own.
@@ -76,6 +78,23 @@ repository's configuration is `openfolia.yaml`; one that still has `ccms.yaml` i
 release, with a deprecation warning (`openfolia.yaml` wins when both exist). The command names
 `ccms-mcp`, `ccms-tracker-connector` and `ccms-wiki-markup` still start the `openfolia-*` ones for
 one release.
+
+## Run the portal
+
+The portal is a static site of the released manuals for one audience, built from the API with a
+read-only service token and served by any web server. With the local API running:
+
+```sh
+CCMS_PORTAL_API_URL=http://127.0.0.1:3100 \
+CCMS_PORTAL_TOKEN=<a service token with only content.read> \
+CCMS_PORTAL_AUDIENCE=public \
+pnpm nx run portal:site                  # builds into frontend/portal/dist
+npx serve frontend/portal/dist -l 4330   # then open http://localhost:4330
+```
+
+Use your own API's address (`PORT`, default 3100). The settings, branding and hosting are in the
+[portal guide](https://docs.openfolia.com/guide/portal); the project's own README is
+[`frontend/portal/README.md`](frontend/portal/README.md).
 
 ## Documentation
 

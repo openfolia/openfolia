@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
@@ -7,6 +13,11 @@ import {
   STABLE_FILES,
   STABLE_PAGES,
 } from '../scripts/lib/stable-paths.mjs';
+import {
+  REDIRECTS,
+  redirectPage,
+  writeRedirectPages,
+} from '../scripts/lib/redirects.mjs';
 
 describe('the stable addresses', () => {
   let out: string;
@@ -26,6 +37,12 @@ describe('the stable addresses', () => {
         pageFile(out, path === '/' ? '/de' : `/de${path}`),
         '<html lang="de">',
       );
+    }
+    writeRedirectPages(out);
+    // The page a redirect leads to.
+    for (const to of Object.values(REDIRECTS)) {
+      put(pageFile(out, to), '<html lang="en">');
+      put(pageFile(out, `/de${to}`), '<html lang="de">');
     }
     for (const path of STABLE_FILES)
       put(
@@ -92,6 +109,41 @@ describe('the stable addresses', () => {
     );
     expect(checkStablePaths(out)).toEqual([
       '/guide-index.json: guide.gone (en) names /guide/gone, which is no page',
+    ]);
+  });
+
+  it('keep an address that moved as a redirect page to the new one, in both languages', () => {
+    expect(REDIRECTS['/guide/integrations/static-portal']).toBe(
+      '/guide/portal',
+    );
+    site();
+    const en = readFileSync(
+      pageFile(out, '/guide/integrations/static-portal'),
+      'utf8',
+    );
+    expect(en).toContain('<html lang="en">');
+    expect(en).toContain(
+      'http-equiv="refresh" content="0; url=/guide/portal/"',
+    );
+    expect(en).toContain('<a href="/guide/portal/">');
+    const de = readFileSync(
+      pageFile(out, '/de/guide/integrations/static-portal'),
+      'utf8',
+    );
+    expect(de).toContain('<html lang="de">');
+    expect(de).toContain('url=/de/guide/portal/"');
+    expect(redirectPage('de', '/guide/portal')).toContain('umgezogen');
+  });
+
+  it('fail for a moved address without its redirect, or one that leads nowhere', () => {
+    site();
+    rmSync(pageFile(out, '/guide/integrations/static-portal'));
+    rmSync(pageFile(out, '/de/guide/portal'));
+    expect(checkStablePaths(out)).toEqual([
+      expect.stringMatching(
+        /^\/guide\/integrations\/static-portal: no redirect/,
+      ),
+      '/de/guide/integrations/static-portal: redirects to /de/guide/portal/, which is no page',
     ]);
   });
 });

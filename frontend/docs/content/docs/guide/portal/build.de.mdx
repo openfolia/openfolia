@@ -1,0 +1,70 @@
+---
+title: 'Erstellen und Vorschau'
+description: 'Ein schreibgeschütztes Token anlegen, das Portal aus der API erstellen und auf dem eigenen Rechner ansehen, bevor es online geht.'
+articleId: 'guide.portal.build'
+---
+
+Sie erstellen ein Portal aus der API mit dem Token eines Service-Accounts. Der Build liest die
+veröffentlichten Inhalte einmal und schreibt einen Ordner mit einfachen Dateien. Führen Sie ihn
+nach jeder Veröffentlichung erneut aus.
+
+## Ein Token vorbereiten
+
+1. Wählen Sie die Zielgruppe, für die das Portal ist, eine Zielgruppenstufe aus `openfolia.yaml` (in
+   den Beispielinhalten `public`). Ein Build dient einer Zielgruppe.
+2. Legen Sie einen Service-Account an, dessen Rollen nur `content.read` enthalten, jede mit einer
+   Zielgruppengrenze von höchstens dieser Stufe (siehe
+   [Service-Accounts und Tokens](/de/guide/admin/service-accounts)), und kopieren Sie sein Token.
+
+Der Build weist ein Token zurück, das keinem Service-Account gehört, mehr als `content.read`
+enthält oder über die Zielgruppe hinaus lesen darf. Er prüft jedes Handbuch und Modul beim Lesen
+erneut, sodass nichts oberhalb der Zielgruppe in die Dateien gelangt.
+
+## Erstellen
+
+Aus einem Checkout des Repositorys:
+
+```sh
+CCMS_PORTAL_API_URL=https://docs.example.com/api \
+CCMS_PORTAL_TOKEN="$PORTAL_TOKEN" \
+CCMS_PORTAL_AUDIENCE=public \
+pnpm nx run portal:site
+```
+
+| Einstellung             | Was                                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `CCMS_PORTAL_API_URL`   | Die Adresse der API, `https://` (einfaches `http` nur zu diesem Rechner). Erforderlich.                    |
+| `CCMS_PORTAL_TOKEN`     | Das Token des Service-Accounts. Nur im Header `Authorization` gesendet. Erforderlich.                      |
+| `CCMS_PORTAL_AUDIENCE`  | Die Zielgruppe. Erforderlich.                                                                              |
+| `CCMS_PORTAL_LANGUAGES` | Die Sprachen, durch Kommas getrennt (Standard: jede konfigurierte Sprache).                                |
+| `CCMS_PORTAL_RELEASES`  | IDs von Veröffentlichungen, durch Kommas getrennt (Standard: die neueste nicht zurückgezogene je Produkt). |
+| `CCMS_PORTAL_OUT_DIR`   | Wohin die Websites geschrieben werden (Standard: `frontend/portal/dist`).                                  |
+| `CCMS_PORTAL_BASE_PATH` | Der Pfad, unter dem die Websites liegen, mit `/` am Anfang und Ende (Standard: `/`).                       |
+| `CCMS_PORTAL_BRANDING`  | `on` (Standard) oder `off`: das Branding Ihrer Organisation oder das Standard-Aussehen von OpenFolia.      |
+
+Die Ausgabe enthält einen Ordner je Sprache (`en/`, `de/`) und eine `index.html`, die Leser zur
+ersten schickt. Sie ersetzt den Ausgabeordner erst, wenn jede Sprache erstellt ist. Vorher
+durchsucht der Build jede Datei nach dem Token und bricht bei einem Treffer ab, und er bricht ab,
+wenn die Bytes eines Bildes oder Anhangs nicht zu ihrem Hash passen.
+
+## Lokal ansehen
+
+Liefern Sie den Ausgabeordner mit einem beliebigen Server für statische Dateien aus. Dieser braucht
+nur Node:
+
+```sh
+npx serve frontend/portal/dist -l 4330
+```
+
+Öffnen Sie dann [http://localhost:4330](http://localhost:4330). Die Startseite leitet Sie zur
+ersten Sprache weiter, und Sie können blättern, filtern, suchen und Varianten umschalten wie Ihre
+Leser. Beenden Sie den Server mit <kbd>Strg</kbd>+<kbd>C</kbd>. Ist der Port belegt, wählt `serve` einen
+anderen und gibt dessen Adresse aus: Öffnen Sie dann diese.
+
+Haben Sie mit `CCMS_PORTAL_OUT_DIR` in einen anderen Ordner erstellt, liefern Sie stattdessen
+diesen aus. Sehen Sie sich einen Build mit dem Standard-Basispfad `/` an: Ein Portal, das für einen
+anderen Basispfad erstellt wurde, erwartet, unter ihm ausgeliefert zu werden.
+
+Ein Vorschau-Server dient zum Ansehen, nicht zum Bereitstellen. Er sendet die Header nicht, die das
+Portal produktiv braucht, die Seite kann also etwas anders aussehen als die echte. Diese Header
+stehen unter [Das Portal bereitstellen](/de/guide/portal/hosting).

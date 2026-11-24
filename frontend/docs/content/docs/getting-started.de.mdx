@@ -47,6 +47,25 @@ curl -s -H "Authorization: Bearer <token>" http://127.0.0.1:3000/manuals
 Die [Delivery API](/de/api/delivery) beschreibt die Routen, die ein Portal oder eine Integration
 liest.
 
+## Ein Leseportal
+
+Aus denselben Inhalten lässt sich ein Portal erstellen: eine statische Website, die Ihre Leser
+durchsuchen und lesen, neben dem Editor, den PDF-Dateien und der API. Legen Sie bei laufender API
+das Token eines Service-Accounts nur mit `content.read` an (siehe
+[Erstellen und Vorschau](/de/guide/portal/build)). Erstellen Sie das Portal in einem Checkout des
+Repositorys und sehen Sie es sich an:
+
+```sh
+CCMS_PORTAL_API_URL=http://127.0.0.1:3000 \
+CCMS_PORTAL_TOKEN="<token>" \
+CCMS_PORTAL_AUDIENCE=public \
+pnpm nx run portal:site
+npx serve frontend/portal/dist -l 4330   # dann http://localhost:4330 öffnen
+```
+
+Das [Portal-Handbuch](/de/guide/portal) erklärt die Einstellungen, das Branding und die
+Bereitstellung.
+
 ## Aus dem Quellcode
 
 ```sh
@@ -62,5 +81,7 @@ pnpm nx run api:serve-local   # die API auf diesen Beispielinhalten
   und Administratorin.
 - [Konfiguration](/de/configuration): die Einstellungen und die Projektkonfiguration.
 - [Benutzerhandbuch](/de/guide): Schreiben, Prüfen und Freigeben im Editor.
+- [Das Portal](/de/guide/portal): Lesern eine Website zum Durchsuchen und Lesen der veröffentlichten
+  Handbücher geben.
 - [Fast alles ist Inhalt](/de/guide/getting-started/content): was im Inhaltsrepository liegt, was
   in der Datenbank, und was zu sichern ist.

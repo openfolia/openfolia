@@ -1,0 +1,59 @@
+---
+title: 'Das Portal'
+description: 'Ein Leseportal für Ihre veröffentlichten Handbücher: eine statische Website je Zielgruppe und Sprache mit Filtern, Suche und PDF-Download.'
+articleId: 'guide.portal'
+---
+
+Im Portal finden Ihre Leser die veröffentlichten Handbücher. Es ist eine statische Website, die aus
+einer Veröffentlichung erstellt wird, im Branding Ihrer Organisation. Ist sie erstellt, braucht sie
+weder den Editor noch die API: Jeder Webserver, der Dateien ausliefert, kann sie bereitstellen.
+
+Autoren und Prüfer arbeiten nicht im Portal. Sie geben eine Veröffentlichung heraus, und das Portal
+zeigt, was diese Veröffentlichung enthält. Ein Portal zu erstellen ist Aufgabe der Person, die Ihre
+Installation betreibt.
+
+## Was Leser sehen
+
+- **Die Startseite** beginnt mit einem Suchfeld und listet die Handbücher jedes Produkts.
+- **Alle Handbücher** listet jedes Handbuch, mit Filtern für das Produkt, jedes Variantenmerkmal
+  und den Titel.
+- **Ein Handbuch** ist zum Lesen gesetzt. Das Inhaltsverzeichnis neben dem Text markiert den
+  Abschnitt im Blick. Ein Umschalter je Variantenmerkmal (Karosserie, Markt und so weiter) öffnet
+  dasselbe Handbuch in einer anderen Variante. Ein Link lädt das PDF der Veröffentlichung für diese
+  Variante und Sprache, wenn es eines gibt.
+- **Die Suche** läuft im Browser und findet Abschnitte ebenso wie Handbücher, gefiltert nach
+  Produkt und Variante.
+- **Sprachen und Aussehen**: eine Website je Sprache, standardmäßig Deutsch und Englisch, hell und
+  dunkel, mit Ihrem Namen, Ihren Logos und Ihren Farben. Siehe [Branding](/de/guide/portal/branding).
+
+## Ein Portal je Zielgruppe
+
+Ein Portal dient einer Zielgruppe, einer Zielgruppenstufe aus den Projekteinstellungen wie `public`
+oder `internal`. Nichts oberhalb dieser Stufe gelangt je in seine Dateien. Möchten Sie zwei
+Zielgruppen bedienen, zum Beispiel Kunden und Ihr eigenes Servicepersonal, erstellen Sie zwei
+Portale und stellen jedes dort bereit, wo sich seine Leser anmelden.
+
+## Wann ein Portal sinnvoll ist
+
+Ein Portal ist sinnvoll, wenn Leser die Handbücher ohne Konto im Editor durchsuchen und lesen
+sollen und das PDF allein nicht genügt. Soll eine eigene App oder ein eigener Suchindex den Inhalt
+lesen, liefert ihn die [Delivery API](/de/guide/integrations/delivery-api) als Daten. Ein Portal
+wird aus derselben API erstellt, beide stimmen also immer überein.
+
+<Cards>
+  <Card
+    title="Erstellen und Vorschau"
+    href="/de/guide/portal/build"
+    description="Das Token, der Build, seine Einstellungen und eine lokale Vorschau."
+  />
+  <Card
+    title="Branding"
+    href="/de/guide/portal/branding"
+    description="Was das Portal aus Ihren Branding-Einstellungen übernimmt."
+  />
+  <Card
+    title="Das Portal bereitstellen"
+    href="/de/guide/portal/hosting"
+    description="Die Header, der Basispfad, 404-Seiten und die Anmeldung."
+  />
+</Cards>

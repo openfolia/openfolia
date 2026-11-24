@@ -1,0 +1,119 @@
+---
+title: 'Hosting the portal'
+description: 'Serve the built portal with the headers it needs, under a base path, with each language’s 404 page, and put your own sign-in in front of a portal that is not public.'
+articleId: 'guide.portal.hosting'
+---
+
+The built portal is plain files: serve the output folder with any static web server, on a host name
+of its own or under a base path. A quick preview server, as in [Build and preview](/guide/portal/build),
+is enough to look at it but does not send the headers below, so set them on the host that readers
+use.
+
+## Sign-in
+
+The portal has no sign-in. **A portal that is not public needs one in front of it**, your proxy's
+or your host's. One build serves one audience, so put a restricted portal's host behind the sign-in
+of the people allowed to read that audience.
+
+## Headers
+
+Each page carries its Content Security Policy as a meta tag, but a meta tag cannot carry
+everything. So the host must send these headers on every response:
+
+- `Content-Security-Policy`, exactly:
+
+  ```text
+  default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  ```
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security: max-age=31536000`, over HTTPS
+
+On attachments written as `.bin` (`<lang>/assets/*.bin`), also send
+`Content-Type: application/octet-stream` and `Content-Disposition: attachment`: not every server
+knows the extension.
+
+## Base path and 404 pages
+
+By default the portal is served from the root of its host. To serve it under a path such as
+`/manuals/`, build it with `CCMS_PORTAL_BASE_PATH=/manuals/` (see
+[Build and preview](/guide/portal/build)) and serve the output folder at that path.
+
+A missing path answers with its language's `<lang>/404.html`, which offers search. The examples
+below do this for `en` and `de`.
+
+## nginx
+
+nginx (an `add_header` in a `location` replaces the server's, so the `.bin` location repeats them;
+`always` gives error pages the headers too):
+
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name manuals.example.com;
+    ssl_certificate     /etc/letsencrypt/live/manuals.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/manuals.example.com/privkey.pem;
+    root /srv/portal;
+
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location ~ /assets/[^/]+\.bin$ {
+        types { }
+        default_type application/octet-stream;
+        add_header Content-Disposition "attachment" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+    }
+    error_page 404 /en/404.html;
+    location /en/ { error_page 404 /en/404.html; try_files $uri $uri/ =404; }
+    location /de/ { error_page 404 /de/404.html; try_files $uri $uri/ =404; }
+}
+```
+
+## Caddy
+
+Caddy (the headers as a snippet, for the files and the error pages alike):
+
+```text
+(portal-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
+	}
+}
+
+manuals.example.com {
+	root * /srv/portal
+	import portal-headers
+	@bin path_regexp /assets/[^/]+\.bin$
+	header @bin {
+		Content-Type "application/octet-stream"
+		Content-Disposition "attachment"
+	}
+	file_server
+	handle_errors {
+		import portal-headers
+		@en404 expression `{err.status_code} == 404 && {path}.startsWith("/en/")`
+		@de404 expression `{err.status_code} == 404 && {path}.startsWith("/de/")`
+		rewrite @en404 /en/404.html
+		rewrite @de404 /de/404.html
+		file_server
+	}
+}
+```
+
+List your own languages in place of `en` and `de`. On a host that takes a headers file or settings
+instead of a server configuration, set the same headers there: the four for every path, and the two
+for `.bin` files.

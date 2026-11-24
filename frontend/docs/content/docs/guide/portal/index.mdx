@@ -1,0 +1,57 @@
+---
+title: 'The portal'
+description: 'A reader portal for your released manuals: a static site per audience and language with filters, search and PDF downloads.'
+articleId: 'guide.portal'
+---
+
+The portal is where your readers find the released manuals. It is a static site, built from a
+release, in your organisation's branding. It needs no editor and no API once it is built: any web
+server that serves files can host it.
+
+Writers and reviewers do not work in the portal. They publish a release, and the portal shows what
+that release holds. Building one is a task for whoever runs your installation.
+
+## What readers see
+
+- **The start page** leads with a search field and lists each product's manuals.
+- **All manuals** lists every manual, with filters for the product, each variant attribute and the
+  title.
+- **A manual** is set for reading. Its contents beside the text mark the section in view. A switch
+  per variant attribute (body style, market, and so on) opens the same manual in another variant.
+  A link downloads the release's PDF of that variant and language, when the release has one.
+- **Search** runs in the browser and finds sections as well as manuals, filtered by product and
+  variant.
+- **Languages and looks**: one site per language, English and German by default, light and dark,
+  with your name, logos and colours. See [Branding](/guide/portal/branding).
+
+## One audience per portal
+
+A portal serves one audience, an audience level from the project settings such as `public` or
+`internal`. Nothing above that level is ever written into its files. To serve two audiences, for
+example customers and your own service staff, build two portals and host each where its readers
+sign in.
+
+## When to use a portal
+
+Use a portal when readers should browse and search the manuals without an account in the editor,
+and the PDF alone is not enough. If an app or a search index of your own should read the content,
+the [Delivery API](/guide/integrations/delivery-api) serves it as data. A portal is built from that
+same API, so the two always agree.
+
+<Cards>
+  <Card
+    title="Build and preview"
+    href="/guide/portal/build"
+    description="The token, the build, its settings and a local preview."
+  />
+  <Card
+    title="Branding"
+    href="/guide/portal/branding"
+    description="What the portal takes from your branding settings."
+  />
+  <Card
+    title="Hosting the portal"
+    href="/guide/portal/hosting"
+    description="The headers, the base path, 404 pages and sign-in."
+  />
+</Cards>

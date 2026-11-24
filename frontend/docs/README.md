@@ -141,7 +141,10 @@ The product's website, the README and the editor link to these, so `scripts/chec
   `/openapi/management.yaml` and `/openapi/management.json` (`app/openapi/`), the documents the
   reference is made from, their server `DOCS_API_BASE_URL`, for Postman and similar tools.
 
-A page that moves keeps its old address with a redirect. Pages that only hold an address for
+A page that moves keeps its old address with a redirect: add it to `REDIRECTS` in
+`scripts/lib/redirects.mjs` (#820), which `build` turns into a small page per language at the old
+address (`scripts/redirect-pages.mjs`: a meta refresh and a canonical link, since a static export
+has no server to answer 301) and the stable-address check holds to exist. Pages that only hold an address for
 another issue say so (`planned: <issue>` in their front matter shows a notice).
 
 ## Browser smoke test
