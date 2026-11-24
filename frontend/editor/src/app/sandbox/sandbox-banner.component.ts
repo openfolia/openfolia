@@ -10,7 +10,11 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideClock, lucideFlaskConical } from '@ng-icons/lucide';
+import {
+  lucideClock,
+  lucideExternalLink,
+  lucideFlaskConical,
+} from '@ng-icons/lucide';
 
 import { SandboxSession } from './sandbox-session';
 
@@ -38,7 +42,9 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
   selector: 'of-sandbox-banner',
   imports: [NgIcon, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ lucideClock, lucideFlaskConical })],
+  viewProviders: [
+    provideIcons({ lucideClock, lucideExternalLink, lucideFlaskConical }),
+  ],
   host: { class: 'block empty:hidden' },
   template: `
     @if (session.on()) {
@@ -59,6 +65,27 @@ export const SANDBOX_HEIGHT_VAR = '--of-sandbox-h';
             'editor.sandbox.banner.text' | transloco
           }}</span>
         </p>
+        @if (session.info()?.portalUrl; as portalUrl) {
+          <a
+            data-testid="sandbox-portal-link"
+            class="text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 rounded-sm font-medium whitespace-nowrap underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 max-sm:ms-6"
+            [href]="portalUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ 'editor.sandbox.banner.portal' | transloco }}
+            <span class="sr-only">{{
+              'editor.sandbox.banner.portalNewTab' | transloco
+            }}</span>
+            <ng-icon
+              name="lucideExternalLink"
+              class="size-3.5 shrink-0"
+              size="14"
+              strokeWidth="1.75"
+              aria-hidden="true"
+            />
+          </a>
+        }
         @let minutes = session.minutesLeft();
         @if (minutes !== null) {
           <p

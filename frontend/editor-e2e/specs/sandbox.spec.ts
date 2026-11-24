@@ -5,7 +5,7 @@ import {
   test,
   USERS,
 } from '../src/fixtures.ts';
-import { SANDBOX_MINUTES } from '../stack/stack.ts';
+import { SANDBOX_MINUTES, SANDBOX_PORTAL_URL } from '../stack/stack.ts';
 
 /**
  * The public sandbox (#826) in the browser: the editor in front of an API with
@@ -52,6 +52,22 @@ test.describe('the public sandbox @area:shell @area:media @area:admin @api:sandb
       heading.boundingBox(),
     ]);
     expect((b?.y ?? 0) + (b?.height ?? 0)).toBeLessThanOrEqual(h?.y ?? 0);
+  });
+
+  test('links the reader portal from the banner, in a new tab (#837)', async ({
+    page,
+  }) => {
+    await page.goto('/sign-in');
+    const banner = page.getByRole('complementary', { name: 'Sandbox' });
+    const link = banner.getByRole('link', { name: /See the reader portal/ });
+    await expect(link).toHaveAttribute('href', SANDBOX_PORTAL_URL);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    await link.focus();
+    await expect(link).toBeFocused();
+    await expectNoSideways(page);
+    // Next to the time left, on one banner: neither is pushed out.
+    await expect(banner.getByTestId('sandbox-time-left')).toBeVisible();
   });
 
   test('leaves out uploads and imports, and says why', async ({ page }) => {

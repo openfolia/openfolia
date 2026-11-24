@@ -36,6 +36,12 @@ export const SandboxResource = resourceObject('Sandbox', {
     maxMinutes: count(
       'It ends this many minutes after it started, however busy (`CCMS_SANDBOX_MAX_MINUTES`).',
     ),
+    portalUrl: z
+      .url()
+      .optional()
+      .describe(
+        'The shared read-only reader portal (an https:// address, `CCMS_SANDBOX_PORTAL_URL`), which the banner links. Absent when not set. A link only: the API never calls it.',
+      ),
   }),
   meta: z.object({
     used: z
@@ -73,6 +79,9 @@ export function toSandboxDocument(
         limits: { ...status.limits },
         idleMinutes: status.lifetime.idleMinutes,
         maxMinutes: status.lifetime.maxMinutes,
+        ...(status.portalUrl === undefined
+          ? {}
+          : { portalUrl: status.portalUrl }),
       },
       meta: {
         used: {

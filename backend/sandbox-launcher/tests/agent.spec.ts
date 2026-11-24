@@ -92,6 +92,25 @@ class RecordedDocker implements DockerApi {
 }
 
 describe('the agent', () => {
+  it('passes the portal address on only when it is https (#837)', () => {
+    const env = {
+      CCMS_LAUNCHER_PUBLIC_URL: 'https://demo.example.org',
+      CCMS_LAUNCHER_AGENT_TOKEN: 't'.repeat(40),
+      CCMS_LAUNCHER_SANDBOX_IMAGE: 'ghcr.io/example/openfolia/sandbox:v1.0.0',
+      CCMS_LAUNCHER_CONTAINER: 'demo-launcher',
+    };
+    const envOf = (portal: string) =>
+      new DockerRuntime(
+        new RecordedDocker(),
+        agentSettings({ ...env, CCMS_LAUNCHER_PORTAL_URL: portal }),
+        silentLogger,
+      ).containerSpec('x', 'en')['Env'] as string[];
+    expect(envOf('http://portal.local/').join('\n')).not.toContain(
+      'CCMS_SANDBOX_PORTAL_URL',
+    );
+    expect(envOf('').join('\n')).not.toContain('CCMS_SANDBOX_PORTAL_URL');
+  });
+
   it('starts a sandbox on an internal network of its own, with every limit, the launcher its only other member', async () => {
     const docker = new RecordedDocker();
     const runtime = new DockerRuntime(
@@ -131,6 +150,7 @@ describe('the agent', () => {
         'CCMS_EDITOR_HOSTS=demo.example.org',
         'CCMS_SANDBOX_IDLE_MINUTES=30',
         'CCMS_SANDBOX_MAX_MINUTES=90',
+        'CCMS_SANDBOX_PORTAL_URL=https://manuals.demo.example.org/',
       ]),
     );
     expect(container.HostConfig).toMatchObject({

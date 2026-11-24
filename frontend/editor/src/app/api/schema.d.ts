@@ -4280,6 +4280,11 @@ export interface components {
                 idleMinutes: number;
                 /** @description It ends this many minutes after it started, however busy (`CCMS_SANDBOX_MAX_MINUTES`). */
                 maxMinutes: number;
+                /**
+                 * Format: uri
+                 * @description The shared read-only reader portal (an https:// address, `CCMS_SANDBOX_PORTAL_URL`), which the banner links. Absent when not set. A link only: the API never calls it.
+                 */
+                portalUrl?: string;
             };
             meta: {
                 /** @description What is used of the counted caps. */

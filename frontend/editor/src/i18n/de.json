@@ -6265,7 +6265,9 @@
       "label": "Sandbox",
       "text": "Eine private Sandbox: Nur Sie sehen sie, und die Sandbox wird nach der Sitzung gelöscht.",
       "timeLeft": "Noch {minutes} Min.",
-      "ended": "Die Sitzung ist abgelaufen"
+      "ended": "Die Sitzung ist abgelaufen",
+      "portal": "Zum Leserportal",
+      "portalNewTab": "(öffnet in einem neuen Tab)"
     },
     "uploadsOff": "In dieser Sandbox sind Uploads ausgeschaltet.",
     "uploadsOffPickImage": "In dieser Sandbox sind Uploads ausgeschaltet: Wählen Sie ein Bild aus der Medienbibliothek.",

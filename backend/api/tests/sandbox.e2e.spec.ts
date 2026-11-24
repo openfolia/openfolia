@@ -89,6 +89,7 @@ beforeAll(async () => {
     CCMS_SANDBOX_MAX_MODULE_BYTES: '8000',
     CCMS_SANDBOX_MAX_MODULES: '1',
     CCMS_SANDBOX_RELEASES_PER_HOUR: '1',
+    CCMS_SANDBOX_PORTAL_URL: 'https://manuals.example.org/',
   });
   t.actAs(EVERYTHING);
 });
@@ -144,6 +145,7 @@ describe('a public sandbox (#826)', () => {
       },
       idleMinutes: 30,
       maxMinutes: 90,
+      portalUrl: 'https://manuals.example.org/',
     });
     expect(Date.parse(data.meta.endsAt)).toBeGreaterThan(Date.now());
     expect(Date.parse(data.meta.endsAt)).toBeLessThanOrEqual(

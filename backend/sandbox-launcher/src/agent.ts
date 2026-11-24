@@ -66,6 +66,10 @@ export class DockerRuntime implements SandboxRuntime {
       CCMS_EDITOR_HOSTS: s.publicUrl.hostname,
       CCMS_SANDBOX_IDLE_MINUTES: String(s.idleMinutes),
       CCMS_SANDBOX_MAX_MINUTES: String(s.maxMinutes),
+      // The banner's link (#837). The sandbox refuses a plain-http address, so only https goes on.
+      ...(s.portalUrl?.protocol === 'https:'
+        ? { CCMS_SANDBOX_PORTAL_URL: s.portalUrl.href }
+        : {}),
       ...s.sandboxEnv,
     };
     const memory = bytes(s.memory);

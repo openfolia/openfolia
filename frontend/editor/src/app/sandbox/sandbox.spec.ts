@@ -23,7 +23,7 @@ const MINUTE = 60_000;
 /** Lets the session's promise chain finish. */
 const settled = () => new Promise((resolve) => setTimeout(resolve));
 
-const sandbox = (endsAt: number) => ({
+const sandbox = (endsAt: number, portalUrl?: string) => ({
   data: {
     type: 'Sandbox',
     id: 'current',
@@ -40,6 +40,7 @@ const sandbox = (endsAt: number) => ({
       },
       idleMinutes: 30,
       maxMinutes: 90,
+      ...(portalUrl === undefined ? {} : { portalUrl }),
     },
     meta: {
       used: {
@@ -119,6 +120,32 @@ describe('the public sandbox (#826)', () => {
     );
     vi.advanceTimersByTime(SANDBOX_REFRESH_MS * 3);
     http.expectNone('/api/sandbox');
+  });
+
+  it('links the reader portal in a new tab when the API names one, and not otherwise (#837)', async () => {
+    await start(sandbox(START + 23 * MINUTE));
+    expect(
+      banner().el.querySelector('[data-testid="sandbox-portal-link"]'),
+    ).toBeNull();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZard(),
+        provideApi(),
+        provideHttpClientTesting(),
+        { provide: SANDBOX_CLOCK, useValue: () => clock.now },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    await start(sandbox(START + 23 * MINUTE, 'https://manuals.example.org/'));
+    const link = banner().el.querySelector<HTMLAnchorElement>(
+      '[data-testid="sandbox-portal-link"]',
+    );
+    expect(link?.getAttribute('href')).toBe('https://manuals.example.org/');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener noreferrer');
+    expect(link?.textContent).toContain('See the reader portal');
   });
 
   it('shows the banner with the time left, counting down and read again every minute', async () => {

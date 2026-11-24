@@ -30,6 +30,31 @@ describe('GetSandboxAction (#826)', () => {
     });
   });
 
+  it('tells the reader portal’s address only when one is set (#837)', async () => {
+    const options = {
+      limits: {
+        moduleBytes: 100,
+        commentLength: 10,
+        changeSets: 1,
+        modules: 1,
+        manuals: 1,
+        releasesPerHour: 1,
+        renderJobs: 1,
+        writeBytes: 1_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    };
+    const without = await new GetSandboxAction(Sandbox.on(options)).handle({
+      actor: reader,
+    });
+    expect(without).not.toHaveProperty('portalUrl');
+    const portalUrl = 'https://manuals.example.org/';
+    const withUrl = await new GetSandboxAction(
+      Sandbox.on({ ...options, portalUrl }),
+    ).handle({ actor: reader });
+    expect(withUrl.portalUrl).toBe(portalUrl);
+  });
+
   it('is 404 not-configured when the instance is no sandbox', async () => {
     await expect(
       new GetSandboxAction(Sandbox.OFF).handle({ actor: reader }),

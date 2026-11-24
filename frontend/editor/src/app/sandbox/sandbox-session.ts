@@ -21,6 +21,8 @@ export interface SandboxInfo {
   readonly idleMinutes: number;
   readonly maxMinutes: number;
   readonly used: Resource['meta']['used'];
+  /** The shared reader portal's address (https), when the operator set one (#837). */
+  readonly portalUrl: string | null;
   readonly startedAt: Date;
   /**
    * When the session ends, in the browser's clock: the server's `endsAt` (the last request plus
@@ -58,6 +60,7 @@ const toInfo = (resource: Resource, skew: number): SandboxInfo => ({
   idleMinutes: resource.attributes.idleMinutes,
   maxMinutes: resource.attributes.maxMinutes,
   used: resource.meta.used,
+  portalUrl: resource.attributes.portalUrl ?? null,
   startedAt: new Date(Date.parse(resource.meta.startedAt) - skew),
   endsAt: new Date(Date.parse(resource.meta.endsAt) - skew),
 });

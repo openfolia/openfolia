@@ -32,6 +32,8 @@ export const ROOT = join(import.meta.dirname, '..', '..', '..');
 export const E2E_DIR = join(ROOT, '.local', 'editor-e2e');
 /** The sandbox API's idle and longest session (6. below), in minutes: longer than any run. */
 export const SANDBOX_MINUTES = 1440;
+/** The reader portal the sandbox's banner links (#837): a link only, never called. */
+export const SANDBOX_PORTAL_URL = 'https://manuals.example.org/';
 const API_DIST = join(ROOT, 'backend/api/dist');
 const MOCK_OIDC = join(ROOT, 'backend/api/scripts/mock-oidc.ts');
 const EDITOR_DIST = join(ROOT, 'frontend/editor/dist/browser');
@@ -400,6 +402,7 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
         // A day, so a long suite never sees the session end (`SANDBOX_MINUTES`).
         CCMS_SANDBOX_IDLE_MINUTES: String(SANDBOX_MINUTES),
         CCMS_SANDBOX_MAX_MINUTES: String(SANDBOX_MINUTES),
+        CCMS_SANDBOX_PORTAL_URL: SANDBOX_PORTAL_URL,
       });
       started.catch(() => undefined);
       apis.push(started);

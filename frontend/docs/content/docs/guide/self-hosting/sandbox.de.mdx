@@ -27,6 +27,10 @@ Sandbox:
 - **Die Sitzung endet** nach `CCMS_SANDBOX_IDLE_MINUTES` ohne Anfrage (Standard 30), spätestens
   `CCMS_SANDBOX_MAX_MINUTES` nach dem Start (Standard 90). Der Editor zeigt ein Banner mit der
   verbleibenden Zeit.
+- **Das Banner kann das Leserportal verlinken:** Mit `CCMS_SANDBOX_PORTAL_URL` (eine https-Adresse,
+  die die API nie aufruft) zeigt es „Zum Leserportal“ und öffnet es in einem neuen Tab. Der Launcher
+  setzt die Einstellung für jede Sandbox aus `CCMS_LAUNCHER_PORTAL_URL`, wenn diese eine
+  https-Adresse ist.
 
 `GET /sandbox` nennt die Grenzen, den Verbrauch und `meta.endsAt`. Eine normale Instanz
 antwortet darauf mit 404.

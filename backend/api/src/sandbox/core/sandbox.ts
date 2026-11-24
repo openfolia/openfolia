@@ -102,6 +102,8 @@ export interface SandboxLifetime {
 export interface SandboxOptions {
   readonly limits: SandboxLimits;
   readonly lifetime: SandboxLifetime;
+  /** The shared reader portal's address (https), which the editor's banner links (#837). */
+  readonly portalUrl?: string;
   /** The time now, in ms (tests set it). */
   readonly now?: () => number;
 }
@@ -113,6 +115,8 @@ export interface SandboxStatus {
   /** The bytes written of `limits.writeBytes`. */
   readonly writtenBytes: number;
   readonly lifetime: SandboxLifetime;
+  /** The reader portal's address, when one is set. */
+  readonly portalUrl?: string;
   readonly startedAt: Date;
   /** The earlier of the idle end and the hard end. */
   readonly endsAt: Date;
@@ -133,6 +137,7 @@ export class Sandbox {
 
   readonly limits: SandboxLimits | undefined;
   readonly lifetime: SandboxLifetime | undefined;
+  private readonly portalUrl: string | undefined;
   private readonly now: () => number;
   private readonly startedAt: number;
   private lastActive: number;
@@ -157,6 +162,7 @@ export class Sandbox {
   ) {
     this.limits = options?.limits;
     this.lifetime = options?.lifetime;
+    this.portalUrl = options?.portalUrl;
     this.now = options?.now ?? Date.now;
     this.startedAt = this.now();
     this.lastActive = this.startedAt;
@@ -265,6 +271,7 @@ export class Sandbox {
       },
       writtenBytes: this.written,
       lifetime,
+      ...(this.portalUrl === undefined ? {} : { portalUrl: this.portalUrl }),
       startedAt: new Date(this.startedAt),
       endsAt: new Date(Math.min(idleEnd, hardEnd)),
     };

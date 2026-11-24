@@ -75,6 +75,25 @@ export const SandboxEnv = z.object({
     'CCMS_SANDBOX_MAX_WRITE_BYTES',
     4 * 1024 * 1024 * 1024,
   ),
+  /**
+   * The shared read-only portal's address, which the editor's banner links (#837): an https://
+   * URL without credentials. A link only: the API never calls it. Unset: no link.
+   */
+  CCMS_SANDBOX_PORTAL_URL: field(
+    z
+      .string()
+      .trim()
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, 'must be an https:// URL without credentials')
+      .transform((value) => new URL(value).href)
+      .optional(),
+  ),
 });
 export type SandboxSettings = z.infer<typeof SandboxEnv>;
 
@@ -211,6 +230,11 @@ export function sandboxLimitsOf(env: SandboxSettings): SandboxLimits {
     renderJobs: env.CCMS_SANDBOX_RENDER_JOBS,
     writeBytes: env.CCMS_SANDBOX_MAX_WRITE_BYTES,
   };
+}
+
+/** The reader portal's address the banner links, from the settings; none when unset. */
+export function sandboxPortalUrlOf(env: SandboxSettings): string | undefined {
+  return env.CCMS_SANDBOX_PORTAL_URL;
 }
 
 /** The sandbox's lifetime, from the settings. */

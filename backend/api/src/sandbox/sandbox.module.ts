@@ -15,6 +15,7 @@ import {
   SandboxEnv,
   sandboxLifetimeOf,
   sandboxLimitsOf,
+  sandboxPortalUrlOf,
   type SandboxSettings,
 } from '../config/sandbox-env.js';
 import { SandboxController } from './api/sandbox.controller.js';
@@ -36,6 +37,7 @@ export function sandboxFrom(config: ConfigService<Env, true>): Sandbox {
   return Sandbox.on({
     limits: sandboxLimitsOf(settings),
     lifetime: sandboxLifetimeOf(settings),
+    portalUrl: sandboxPortalUrlOf(settings),
   });
 }
 

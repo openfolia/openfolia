@@ -77,6 +77,30 @@ describe('the public sandbox’s settings (#826)', () => {
     });
   });
 
+  it('takes an https portal address for the banner, and refuses any other (#837)', () => {
+    expect(validateEnv(sandbox).CCMS_SANDBOX_PORTAL_URL).toBeUndefined();
+    expect(
+      validateEnv({ ...sandbox, CCMS_SANDBOX_PORTAL_URL: ' ' })
+        .CCMS_SANDBOX_PORTAL_URL,
+    ).toBeUndefined();
+    expect(
+      validateEnv({
+        ...sandbox,
+        CCMS_SANDBOX_PORTAL_URL: 'https://manuals.example.org',
+      }).CCMS_SANDBOX_PORTAL_URL,
+    ).toBe('https://manuals.example.org/');
+    for (const value of [
+      'http://manuals.example.org/',
+      'javascript:alert(1)',
+      'manuals.example.org',
+      'https://user:pass@manuals.example.org/',
+    ]) {
+      expect(problems({ ...sandbox, CCMS_SANDBOX_PORTAL_URL: value })).toMatch(
+        /must be an https:\/\/ URL without credentials\n\s*→ at CCMS_SANDBOX_PORTAL_URL/,
+      );
+    }
+  });
+
   it('is off by default, and takes only on or off', () => {
     expect(validateEnv(base).CCMS_PUBLIC_SANDBOX).toBe('off');
     expect(problems({ ...sandbox, CCMS_PUBLIC_SANDBOX: 'yes' })).toMatch(
