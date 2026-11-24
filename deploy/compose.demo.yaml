@@ -88,6 +88,8 @@ services:
         required: false
     environment:
       CCMS_LAUNCHER_PUBLIC_URL: https://${OPENFOLIA_DEMO_HOST}
+      # The agent starts the sandboxes, so it passes the portal's address on for their banner (#837).
+      CCMS_LAUNCHER_PORTAL_URL: https://${OPENFOLIA_DEMO_PORTAL_HOST}/
       CCMS_LAUNCHER_AGENT_HOST: 0.0.0.0
       CCMS_LAUNCHER_AGENT_PORT: '8081'
       CCMS_LAUNCHER_AGENT_TOKEN_FILE: /run/secrets/launcher_agent_token
