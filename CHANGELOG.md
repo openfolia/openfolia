@@ -7,7 +7,7 @@ as the release on GitHub (CONTRIBUTING.md, "Releases"); don't edit it by hand.
 <!-- release v0.0.1 2026-11-24 -->
 ## [v0.0.1](https://github.com/openfolia/openfolia/releases/tag/v0.0.1) (2026-11-24)
 
-The first release of OpenFolia, a headless documentation platform. You write content once, as small modules in a Git repository, and OpenFolia assembles it into manuals for each product variant and language. Writers work in a web editor, every change is reviewed before it is released, and the same content reaches print, a portal, other systems and AI assistants. This release is for trying OpenFolia and running it yourself. It covers:
+The first release of OpenFolia, a documentation platform. You write content once, as small modules in a Git repository, and OpenFolia assembles it into manuals for each product variant and language. Writers work in a web editor, every change is reviewed before it is released, and the same content reaches print, a portal, other systems and AI assistants. This release is for trying OpenFolia and running it yourself. It covers:
 
 - Writing: a web editor for modules with headings, lists, tables, procedures, safety notices with their symbols, images with numbered callouts, attachments and module references. Autosave, save points, history and a live preview per language and variant.
 - Writing: snippets for repeated text, a terminology list with forbidden and deprecated terms, and terminology and style checks as you type.
