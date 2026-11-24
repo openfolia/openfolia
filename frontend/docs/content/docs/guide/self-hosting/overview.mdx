@@ -51,8 +51,9 @@ Four volumes hold what persists:
 - The file system is read-only. Only `/tmp` (a tmpfs) and the data volume can be written, and in
   the backup service also `/backups` and `/staging`.
 - No Linux capabilities, and no way to gain privileges (`no-new-privileges`).
-- The API, the editor and the MCP server have a health check: the API's is `GET /health/ready`
-  (the database and the blob store answer), the editor's `GET /healthz`.
+- The API, the editor, the MCP server and the backup service have a health check: the API's is
+  `GET /health/ready` (the database and the blob store answer), the editor's `GET /healthz`, the
+  backup service's a heartbeat that reached the database within the last 45 seconds.
 - Base images are pinned by version and digest. No secret is part of an image: every setting
   comes in when the container starts.
 

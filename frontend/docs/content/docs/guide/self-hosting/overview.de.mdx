@@ -54,8 +54,9 @@ Vier Volumes halten, was bleibt:
 - Das Dateisystem ist schreibgeschützt. Schreiben lassen sich nur `/tmp` (ein tmpfs) und das
   Daten-Volume, im Backup-Dienst außerdem `/backups` und `/staging`.
 - Keine Linux-Capabilities und keine Möglichkeit, Rechte zu erlangen (`no-new-privileges`).
-- API, Editor und MCP-Server haben einen Health-Check: der der API ist `GET /health/ready`
-  (Datenbank und Blob-Speicher antworten), der des Editors `GET /healthz`.
+- API, Editor, MCP-Server und Backup-Dienst haben einen Health-Check: der der API ist
+  `GET /health/ready` (Datenbank und Blob-Speicher antworten), der des Editors `GET /healthz`, der
+  des Backup-Dienstes ein Herzschlag, der die Datenbank in den letzten 45 Sekunden erreicht hat.
 - Basis-Images sind über Version und Digest festgelegt. Kein Geheimnis steckt in einem Image:
   Jede Einstellung kommt beim Start des Containers hinzu.
 

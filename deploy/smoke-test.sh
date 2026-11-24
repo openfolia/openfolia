@@ -77,6 +77,27 @@ fail() {
 }
 # The status of a request; the body goes to $work/body.
 status() { curl -sg -o "$work/body" -w '%{http_code}' "$@"; }
+# `docker compose up -d --wait <args>`; when it fails, how each container stands and, for each that
+# is not healthy, what its last health check said (Compose's own line above says what it stopped at).
+# A leading `--profile <name>` goes before `up`.
+up() {
+  profile=
+  if [ "${1:-}" = --profile ]; then
+    profile="--profile $2"
+    shift 2
+  fi
+  # shellcheck disable=SC2086 # $profile is empty or two options
+  compose $profile up -d --wait "$@" && return 0
+  echo "--- the containers" >&2
+  compose $profile ps -a --format 'table {{.Service}}\t{{.State}}\t{{.Status}}' >&2 || true
+  for id in $(compose $profile ps -aq); do
+    check=$(docker inspect --format '{{.Name}}: {{.State.Status}}, health {{if .State.Health}}{{.State.Health.Status}}{{else}}none (the image: {{json .Config.Healthcheck}}){{end}}' "$id") || continue
+    case "$check" in *'health healthy'*) continue ;; esac
+    last=$(docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{printf "%q" .Output}}{{"\n"}}{{end}}{{end}}' "$id" | tail -n 1) || true
+    printf '%s\n' "${check#/}${last:+; its last health check said $last}" >&2
+  done
+  fail "docker compose up -d --wait $*"
+}
 
 if [ "${SMOKE_BUILD:-1}" = 1 ]; then
   step "build"
@@ -87,7 +108,8 @@ step "sample content onto the empty data volume"
 compose run --rm --no-deps api node docker/sample-content.mjs
 
 step "start (docker compose up --wait), with two workers"
-compose up -d --wait --wait-timeout 180 --scale worker=2
+echo "$(docker version --format 'Docker {{.Server.Version}}') on $(uname -m), Compose $(docker compose version --short)"
+up --wait-timeout 180 --scale worker=2
 compose ps --format 'table {{.Service}}\t{{.Status}}'
 
 step "the API's health"
@@ -138,7 +160,7 @@ if [ -n "${SMOKE_PDF_OUT:-}" ]; then cp "$work/body" "$SMOKE_PDF_OUT"; fi
 echo "GET /api$pdf_path through the editor -> $code, $(wc -c <"$work/body" | tr -d ' ') bytes"
 
 step "the editor finds a recreated API (a new address)"
-compose up -d --wait --no-deps --force-recreate api
+up --no-deps --force-recreate api
 code=$(status -H "$same" "$editor/api/me")
 [ "$code" = 200 ] || fail "after the API was recreated, /api/me through the editor answered $code"
 echo "GET /api/me through the editor after recreating the API -> $code"
@@ -148,7 +170,7 @@ compose exec -T api node dist/database/seed.main.js --example >/dev/null
 CCMS_MCP_API_TOKEN=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp --role reader | tail -n 1)
 CCMS_MCP_HTTP_TOKEN=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
 export CCMS_MCP_API_TOKEN CCMS_MCP_HTTP_TOKEN OPENFOLIA_MCP_PORT="$mcp_port"
-compose --profile mcp up -d --wait --no-deps mcp
+up --profile mcp --no-deps mcp
 code=$(status -X POST "$mcp/mcp")
 [ "$code" = 401 ] || fail "POST /mcp without the token answered $code"
 echo "POST /mcp without the token -> $code"
@@ -217,10 +239,14 @@ echo "$outputs files done; $twice attempted more than once (a retry or a second 
 [ "$alive" = 2 ] || fail "$alive workers alive, not 2"
 [ "$consumers" -ge 1 ] || fail "no worker took a job"
 [ "$others" = 0 ] || fail "the API consumed jobs (CCMS_ROLE=api consumes none)"
-file=$(sql "select id from release_outputs where release_id = '$release' and state = 'done' limit 1")
+# A PDF among them (a release also makes other kinds, an offline package for one).
+kinds=$(sql "select kind || ' ' || count(*) from release_outputs where release_id = '$release' group by kind order by kind" | tr '\n' ',' | sed 's/,$//; s/,/, /g')
+echo "the release's files by kind: $kinds"
+file=$(sql "select id from release_outputs where release_id = '$release' and state = 'done' and kind = 'pdf' limit 1")
+[ -n "$file" ] || fail "no PDF among the release's files ($kinds)"
 code=$(status -H "Authorization: Bearer $publisher" "$api/releases/$release/outputs/$file/file")
 [ "$code" = 200 ] || fail "a release file answered $code"
-head -c 5 "$work/body" | grep -q '%PDF-' || fail "the release file is no PDF"
+head -c 5 "$work/body" | grep -q '%PDF-' || fail "the release file $file (kind pdf) is no PDF: $(head -c 16 "$work/body" | od -An -c | head -n 1)"
 echo "GET /releases/$release/outputs/$file/file -> $code, $(wc -c <"$work/body" | tr -d ' ') bytes"
 
 step "a preview (the API's own small PDF pool)"
@@ -305,7 +331,7 @@ echo "the S3 secret is in no log"
 step "backups: restore onto a fresh stack, from the S3 location"
 compose rm -sfv api worker editor backup mcp postgres >/dev/null
 docker volume rm "${project}_postgres" "${project}_data" "${project}_backups" >/dev/null
-compose up -d --wait postgres s3
+up postgres s3
 printf '%s\n' "CCMS_BACKUP_LOCATION=s3" "CCMS_BACKUP_S3_ENDPOINT=http://s3:8333" "CCMS_BACKUP_S3_BUCKET=openfolia-backups" \
   "CCMS_BACKUP_S3_PREFIX=smoke/" "CCMS_BACKUP_S3_ACCESS_KEY_ID=$SMOKE_S3_ACCESS_KEY_ID" \
   "CCMS_BACKUP_S3_SECRET_ACCESS_KEY=$SMOKE_S3_SECRET_ACCESS_KEY" >"$work/backup.env"
@@ -316,7 +342,7 @@ if OPENFOLIA_BACKUP_ENV_FILE="$work/backup.env" compose run --rm -T restore "$ba
 fi
 grep -i 'not empty' "$work/refused" || fail "the refusal does not say why: $(cat "$work/refused")"
 rm -f "$work/backup.env"
-compose up -d --wait --wait-timeout 180
+up --wait-timeout 180
 code=$(status -H "Authorization: Bearer $token" "$api$pdf_path")
 [ "$code" = 200 ] && head -c 5 "$work/body" | grep -q '%PDF-' || fail "the restored instance's PDF answered $code"
 echo "GET $pdf_path on the restored instance -> $code, $(wc -c <"$work/body" | tr -d ' ') bytes"

@@ -53,6 +53,7 @@
           "{workspaceRoot}/deploy/compose.yaml",
           "{workspaceRoot}/scripts/release-digests.mjs",
           "{workspaceRoot}/scripts/images-plan.mjs",
+          "{workspaceRoot}/scripts/release-summary.mjs",
           "{workspaceRoot}/.env.example",
           "{workspaceRoot}/changelog/**/*",
           "{workspaceRoot}/backend/api/openapi/**/*",
@@ -208,6 +209,7 @@
           "{workspaceRoot}/frontend/editor/src/app/shortcuts/key-caps.ts",
           "{workspaceRoot}/frontend/editor/src/app/**/*.ts",
           "{workspaceRoot}/changelog/**/*",
+          "{workspaceRoot}/scripts/release-summary.mjs",
           "{workspaceRoot}/deploy/compose.yaml"
         ]
       },

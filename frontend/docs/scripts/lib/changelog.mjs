@@ -8,6 +8,13 @@
 // site's own text, a heading per version and a `<ChangelogRelease>` element naming the version;
 // the component (`components/changelog-release.tsx`) shows the release's strings as React text
 // nodes and builds every link itself, from the repository's address and the pull request's number.
+// A release's own summary (`summary: { en, de? }`, #812) is read the same way: the generator cuts
+// it into paragraphs, bullets, code and the links it finds itself (an https address, a path of the
+// repository; scripts/release-summary.mjs), and the component shows those as text nodes.
+import {
+  parseSummary,
+  summaryText,
+} from '../../../../scripts/release-summary.mjs';
 import { frontMatter, GENERATED_NOTE } from './markdown.mjs';
 
 const VERSION = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -114,6 +121,21 @@ export function checkRelease(value, name) {
           : fail(`groups[${i}] has no title`),
       )
     : fail('groups is no list');
+  // The release's summary, cut into blocks here: the page never reads it as Markdown.
+  let summary = null;
+  if (value.summary !== undefined && value.summary !== null) {
+    const { en, de } = value.summary;
+    if (typeof value.summary !== 'object' || Array.isArray(value.summary))
+      fail('summary is no object');
+    else if (!isString(en)) fail('summary.en is no string');
+    else if (de !== undefined && de !== null && !isString(de))
+      fail('summary.de is no string');
+    else
+      summary = {
+        en: parseSummary(en),
+        de: isString(de) && de.trim() !== '' ? parseSummary(de) : null,
+      };
+  }
   const upgrade = value.upgrade ?? {};
   const settings = upgrade.settings ?? {};
   const release = {
@@ -121,6 +143,7 @@ export function checkRelease(value, name) {
     date: value.date,
     repository,
     previous: value.previous,
+    summary: summary && summary.en.length > 0 ? summary : null,
     groups,
     upgrade: {
       breaking: items(upgrade.breaking, 'upgrade.breaking'),
@@ -176,7 +199,7 @@ const TEXT = {
     description:
       'Versionshinweise und Hinweise zur Aktualisierung für jede Version, die neueste zuerst.',
     intro:
-      'Was in jeder Version neu, verbessert und behoben ist, die Sicherheitskorrekturen und was beim Aktualisieren zu tun ist. Die Versionshinweise sind auf Englisch. Vor dem Aktualisieren eines Servers die Hinweise zur Aktualisierung aller Versionen seit der eigenen lesen, dann die [Schritte zur Aktualisierung](/de/self-hosting).',
+      'Was in jeder Version neu, verbessert und behoben ist, die Sicherheitskorrekturen und was beim Aktualisieren zu tun ist. Die Zusammenfassung einer Version steht hier auf Deutsch, wo es sie gibt; die Liste der Änderungen ist auf Englisch. Vor dem Aktualisieren eines Servers die Hinweise zur Aktualisierung aller Versionen seit der eigenen lesen, dann die [Schritte zur Aktualisierung](/de/self-hosting).',
     feed: 'Neue Versionen verfolgen mit dem',
     feedLink: 'Atom-Feed',
     none: 'Noch keine Version veröffentlicht. Bis zur ersten ist der neueste Commit auf `main` die aktuelle Version.',
@@ -222,6 +245,7 @@ const line = (item) =>
 /** A release's notes as plain text, for its feed entry. */
 export function releaseText(release) {
   const out = [];
+  if (release.summary) out.push(summaryText(release.summary.en), '');
   for (const group of release.groups)
     out.push(group.title, ...group.items.map((i) => `- ${line(i)}`), '');
   const { upgrade } = release;

@@ -46,6 +46,7 @@ import {
   S3BackupTarget,
 } from './repos/backup-targets.js';
 import { DrizzleBackupStore } from './repos/drizzle-backup-store.js';
+import { HEARTBEAT_MS, markAlive } from './repos/health-file.js';
 import {
   BackupEnvProblem,
   EnvBackupEnvironment,
@@ -59,9 +60,6 @@ import { clearStaging, openStagingRoot } from './repos/staging.js';
 
 const USAGE =
   'Usage: backup [run | now | list | restore <name> [--key-file <file>|-] [--s3] [--force]]';
-
-/** Heartbeats, independent of a long run. */
-const HEARTBEAT_MS = 15_000;
 
 class ConsoleBackupLog extends BackupLog {
   info(message: string): void {
@@ -311,6 +309,9 @@ async function main(args: readonly string[]): Promise<void> {
           },
           keyFingerprint: keyFingerprint ?? null,
         });
+        // For the image's health check: a heartbeat that reached the database.
+        if (env.CCMS_BACKUP_HEALTH_FILE)
+          await markAlive(env.CCMS_BACKUP_HEALTH_FILE, clock.now());
       } catch (error) {
         log.warn(
           `Heartbeat failed: ${error instanceof Error ? error.message : String(error)}`,

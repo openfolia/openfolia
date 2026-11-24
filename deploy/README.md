@@ -23,7 +23,8 @@ The other `compose.yaml`, at the repository root, is for development only (Postg
 Each OpenFolia image runs as an unprivileged user (`node`, uid 1000, or `nginx`, uid 101) on a read-only
 file system. It has no Linux capabilities and can't gain privileges (`no-new-privileges`). Only
 `/tmp` (a tmpfs) and the data volume can be written. Each image has a health check: the API's
-is `GET /health/ready` (the database and the blob store answer), the editor's is `GET /healthz`.
+is `GET /health/ready` (the database and the blob store answer), the editor's is `GET /healthz`,
+the backup service's is a heartbeat that reached the database within the last 45 seconds.
 Base images are pinned by version and digest.
 
 Three volumes hold everything that persists:

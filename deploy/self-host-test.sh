@@ -81,7 +81,7 @@ jsonapi='Content-Type: application/vnd.api+json'
 
 step "the one command: deploy/self-host.sh, on a new settings file"
 "$here/self-host.sh" --admin "$admin" --name "First Admin" --sample --yes --build </dev/null >"$work/first-run" 2>&1 ||
-  { cat "$work/first-run"; fail "self-host.sh failed"; }
+  { cat "$work/first-run"; fail "self-host.sh failed: $(grep -v '^ ' "$work/first-run" | tail -n 1)"; }
 cat "$work/first-run"
 grep -q '^POSTGRES_PASSWORD=[0-9a-f]\{48\}$' "$work/env" || fail "no random Postgres password in the settings file"
 [ "$(stat -c %a "$work/env" 2>/dev/null || stat -f %Lp "$work/env")" = 600 ] || fail "the settings file can be read by others"
@@ -173,7 +173,7 @@ echo "GET /api/manuals -> 200 (the sample content)"
 step "once only: run self-host.sh again on a recreated API"
 compose rm -sf api oidc >/dev/null
 "$here/self-host.sh" --yes --as-is </dev/null >"$work/second-run" 2>&1 ||
-  { cat "$work/second-run"; fail "the second run of self-host.sh failed"; }
+  { cat "$work/second-run"; fail "the second run of self-host.sh failed: $(grep -v '^ ' "$work/second-run" | tail -n 1)"; }
 cat "$work/second-run"
 grep -q 'Kept .* as it is' "$work/second-run" || fail "the second run did not keep the settings file"
 grep -q 'has a content repository: kept' "$work/second-run" || fail "the second run did not keep the content"

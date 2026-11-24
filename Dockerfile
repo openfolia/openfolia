@@ -150,8 +150,13 @@ USER node
 ENV CCMS_ROLE=backup \
     CCMS_BACKUP_DIR=/backups \
     CCMS_BACKUP_STAGING_DIR=/staging \
+    CCMS_BACKUP_HEALTH_FILE=/tmp/openfolia-backup-alive \
     PATH=/usr/lib/postgresql/18/bin:$PATH
-HEALTHCHECK NONE
+# Healthy while the loop's last heartbeat reached the database at most 45 s ago (#813). A check of
+# its own, never `HEALTHCHECK NONE`: Compose before 5.0.2 refuses to `up --wait` for a container
+# whose image turns the inherited check off ("has no healthcheck configured").
+HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["node", "dist/backups/backup-health.main.js"]
 # The server's entry point, which CCMS_ROLE=backup (config/role.ts, #527) turns into the backup
 # service; the arguments are its command: `docker compose run --rm backup now`.
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/openfolia-entrypoint", "node", "dist/main.js"]

@@ -3,10 +3,19 @@
 // notes (migrations, settings, pull requests that ask for one), the notes of the GitHub Release
 // and the entry in CHANGELOG.md. scripts/release.mjs wires it to the real tools.
 //
+// A release's own summary (`release-notes/<version>.md`, #812) comes first, read as text
+// (scripts/release-summary.mjs).
+//
 // What the notes never hold: who wrote a pull request (no author, no @-mention that would name or
 // notify someone) and a pull request's body, but for its "Upgrade notes" section and, for a
 // security fix, its severity and advisory ID, so a fix is listed without how to exploit it.
 import { parse } from 'yaml';
+
+import {
+  parseSummary,
+  summaryMarkdown,
+  summaryPaths,
+} from './release-summary.mjs';
 
 /** A release tag: `vX.Y.Z`, semantic versioning, no pre-release or build suffix. */
 export const VERSION = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -363,11 +372,37 @@ export function renderUpgradeNotes(upgrade) {
   return parts.join('\n');
 }
 
+/** Where a release's summary lives: `release-notes/<version>.md`, `.de.md` for German. */
+export const summaryFile = (version, lang = 'en') =>
+  `release-notes/${version}${lang === 'en' ? '' : `.${lang}`}.md`;
+
+/**
+ * A release's summary from its files' texts (null when missing), or null when it has none: an
+ * empty file counts as none. A German one needs the English one beside it.
+ */
+export function releaseSummary(version, en, de) {
+  const [english, german] = [en, de].map((t) =>
+    t == null
+      ? ''
+      : String(t)
+          .replace(/^\uFEFF/, '')
+          .trim(),
+  );
+  if (english === '' && german !== '')
+    throw new Error(
+      `${summaryFile(version, 'de')} has no English summary beside it: write ${summaryFile(version)} too`,
+    );
+  if (english === '') return null;
+  return { en: english, de: german === '' ? null : german };
+}
+
 /**
  * Everything a release's notes are made from.
  * @param {{ version: string, previous: string|null, repoUrl: string, config: object,
- *   prs: object[], migrations: string[], envBefore: string, envAfter: string }} input
- *   `prs`: the merged pull requests the release holds (number, title, labels, body).
+ *   prs: object[], migrations: string[], envBefore: string, envAfter: string,
+ *   summary?: { en: string, de: string|null } | null }} input
+ *   `prs`: the merged pull requests the release holds (number, title, labels, body);
+ *   `summary`: the release's own summary (`releaseSummary`).
  */
 export function planRelease(input) {
   const { config, repoUrl } = input;
@@ -392,6 +427,7 @@ export function planRelease(input) {
     group.items.push(security ? securityItem(pr) : noteItem(pr));
   }
   return {
+    summary: input.summary ?? null,
     groups: groups.filter((g) => g.lines.length > 0),
     upgrade: {
       previous: input.previous,
@@ -431,6 +467,15 @@ export function releaseData(plan, { version, date, repoUrl }) {
     date,
     repository: repoUrl,
     previous: upgrade.previous,
+    // The summary's text as written; the docs site reads it as text (scripts/release-summary.mjs).
+    ...(plan.summary
+      ? {
+          summary: {
+            en: plan.summary.en,
+            ...(plan.summary.de ? { de: plan.summary.de } : {}),
+          },
+        }
+      : {}),
     groups: plan.groups.map((g) => ({ title: g.title, items: g.items })),
     upgrade: {
       breaking: upgrade.breaking.map(noteItem),
@@ -444,12 +489,19 @@ export function releaseData(plan, { version, date, repoUrl }) {
   };
 }
 
-/** The notes of a GitHub Release: the groups, then the upgrade notes. */
+/**
+ * The notes of a GitHub Release: the release's summary (in English), the groups, then the upgrade
+ * notes. A release with a summary has notes even without a pull request.
+ */
 export function renderNotes(plan) {
+  const { version, repoUrl } = plan.upgrade;
+  const summary = plan.summary
+    ? [summaryMarkdown(parseSummary(plan.summary.en), { version, repoUrl })]
+    : [];
   const groups = plan.groups.map((g) => `### ${g.title}\n\n${list(g.lines)}`);
-  if (groups.length === 0)
+  if (groups.length === 0 && summary.length === 0)
     groups.push('No change a user or operator would notice.');
-  return `${[...groups, renderUpgradeNotes(plan.upgrade)].join('\n\n')}\n`;
+  return `${[...summary, ...groups, renderUpgradeNotes(plan.upgrade)].join('\n\n')}\n`;
 }
 
 export const CHANGELOG_HEADER = `# Changelog
@@ -615,6 +667,23 @@ export function runRelease(argv, { git, gitOk, github, files, log }) {
       ? git(['show', `${commit}:.env.example`])
       : '';
 
+  // The release's summary as its commit has it: committed before the tag.
+  const fileAt = (path) =>
+    gitOk(['cat-file', '-e', `${toCommit}:${path}`])
+      ? git(['show', `${toCommit}:${path}`])
+      : null;
+  const summary = releaseSummary(
+    version,
+    fileAt(summaryFile(version)),
+    fileAt(summaryFile(version, 'de')),
+  );
+  for (const [lang, text] of Object.entries(summary ?? {}))
+    for (const path of text ? summaryPaths(parseSummary(text)) : [])
+      if (!gitOk(['cat-file', '-e', `${toCommit}:${path}`]))
+        throw new Error(
+          `${summaryFile(version, lang)} links to ${path}, which ${version} does not hold (a word with a slash and a file extension is read as a path of the repository; in backticks it stays text)`,
+        );
+
   const { url: repoUrl } = github.repo();
   // The groups as the checkout running the step has them (the workflow runs it on main).
   const groups = files.read('.github/release.yml');
@@ -632,11 +701,12 @@ export function runRelease(argv, { git, gitOk, github, files, log }) {
     migrations,
     envBefore: previous ? envAt(fromCommit) : '',
     envAfter: envAt(toCommit),
+    summary,
   });
   const notes = renderNotes(plan);
   const date = git(['log', '-1', '--format=%cs', toCommit]).trim();
   log(
-    `${version} (${date}), from ${previous ?? 'the first commit'}: ${prs.length} pull request(s) merged, ${plan.groups.reduce((n, g) => n + g.lines.length, 0)} in the notes.`,
+    `${version} (${date}), from ${previous ?? 'the first commit'}: ${prs.length} pull request(s) merged, ${plan.groups.reduce((n, g) => n + g.lines.length, 0)} in the notes; ${summary ? `a summary (${summary.de ? 'English and German' : 'English'})` : `no summary (${summaryFile(version)})`}.`,
   );
 
   if (options.dryRun) log(`\n${notes}`);

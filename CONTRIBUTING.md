@@ -160,6 +160,7 @@ Before `v1.0.0`, a minor version may still break, and its notes say so under **B
 release workflow (`.github/workflows/release.yml`) then runs `node scripts/release.mjs vX.Y.Z`,
 which:
 
+- starts the notes with the release's own summary, when the tagged commit holds one (below);
 - groups the pull requests merged since the previous release tag as above;
 - adds **Upgrade notes**: the database migrations added since then (`backend/api/migrations/`),
   the settings added, changed or removed (`.env.example`), breaking changes and the pull
@@ -170,6 +171,27 @@ which:
   site's `/changelog` and its Atom feed (`/changelog.xml`) are built from `changelog/`, showing
   the pull requests' text as text only. **Don't edit `CHANGELOG.md` or `changelog/` by hand**:
   run the step again instead (re-running the workflow updates the Release and that pull request).
+
+**A summary for the release.** A release can open with a few paragraphs of its own, written by a
+maintainer: `release-notes/vX.Y.Z.md` in English and, optionally, `release-notes/vX.Y.Z.de.md` in
+German (only beside an English one). Commit them before tagging: the step reads them from the
+tagged commit. Without them, the notes are the pull requests and upgrade notes alone. The step
+puts the English summary first in the GitHub Release and in `CHANGELOG.md`, and both into
+`changelog/vX.Y.Z.json` (`summary: { en, de }`); the German `/changelog` shows the German one, or
+the English one marked as English. A release with a summary has notes even without a pull request,
+like the first one.
+
+- **Plain text only:** paragraphs separated by a blank line, and bullets starting with `- ` (a
+  bullet goes on over indented lines). No headings, HTML, MDX or Markdown links: `*`, `#`, `<`,
+  `[text](url)` and the like are shown as the characters they are. `code` between a pair of
+  backticks is shown as code.
+- **Links** are made by the step itself, from a bare `https://` address and from a relative path of
+  the repository (`deploy/README.md`, `deploy/README.md#upgrades`, `CONTRIBUTING.md`: two or more
+  segments with a file extension, or a capitalised `.md` file at the root), linked to that file at
+  the release's tag. Any other address (`http:`, `javascript:`, `mailto:`) stays text. The step
+  refuses a summary that links to a path the tagged commit doesn't hold.
+- Preview it, once committed, with `node scripts/release.mjs vX.Y.Z --dry-run --to HEAD`: the step
+  reads the commit, not the working tree, and the first lines of the notes are the summary.
 
 The workflow needs the repository setting **Allow GitHub Actions to create and approve pull
 requests** (Settings, Actions, General) to open that pull request. Merge a release's changelog

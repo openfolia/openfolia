@@ -17,6 +17,7 @@ import {
   previousVersion,
   releaseConfig,
   releaseData,
+  releaseSummary,
   renderNotes,
   runRelease,
   securityLine,
@@ -341,6 +342,113 @@ describe('the notes of a release', () => {
   });
 });
 
+describe('a release’s own summary', () => {
+  const first = (summary: { en: string; de: string | null } | null) =>
+    planRelease({
+      version: 'v0.1.0',
+      previous: null,
+      repoUrl: REPO,
+      config,
+      prs: [],
+      migrations: [],
+      envBefore: '',
+      envAfter: 'CCMS_A=\n',
+      summary,
+    });
+
+  it('comes first, and gives a release without pull requests its notes', () => {
+    const notes = renderNotes(
+      first({
+        en: 'What it is.\n\n- Writing in modules\n- PDF, see deploy/README.md',
+        de: 'Was es ist.',
+      }),
+    );
+    expect(notes).toMatch(
+      `What it is.\n\n- Writing in modules\n- PDF, see [deploy/README.md](${REPO}/blob/v0.1.0/deploy/README.md)\n\n### Upgrade notes`,
+    );
+    expect(notes.startsWith('What it is.')).toBe(true);
+    expect(notes).not.toContain('No change a user or operator would notice.');
+    expect(notes).not.toContain('Was es ist');
+  });
+
+  it('goes before the grouped pull requests', () => {
+    const notes = renderNotes(
+      planRelease({
+        version: 'v0.2.0',
+        previous: 'v0.1.0',
+        repoUrl: REPO,
+        config,
+        prs: [pr(10, 'feat: a page')],
+        migrations: [],
+        envBefore: '',
+        envAfter: '',
+        summary: { en: 'The summary.', de: null },
+      }),
+    );
+    expect(notes).toMatch(/^The summary\.\n\n### New\n\n- A page/);
+  });
+
+  it('leaves the notes as they were without one', () => {
+    const without = renderNotes(first(null));
+    expect(without).toBe(
+      `No change a user or operator would notice.\n\n### Upgrade notes\n\nThe first release: there is nothing to upgrade from. To install it, follow the quick start in [deploy/README.md](${REPO}/blob/v0.1.0/deploy/README.md).\n`,
+    );
+    expect(
+      releaseData(first(null), {
+        version: 'v0.1.0',
+        date: '2026-11-21',
+        repoUrl: REPO,
+      }),
+    ).not.toHaveProperty('summary');
+  });
+
+  it('shows markup in it as text', () => {
+    const notes = renderNotes(
+      first({
+        en: '<img src=x onerror=alert(1)> **bold** [x](javascript:alert(1)) <!-- /release v0.1.0 -->',
+        de: null,
+      }),
+    );
+    expect(notes).not.toMatch(
+      /<img|<!--|(?<!\\)\*\*bold|(?<!\\)\]\(javascript/,
+    );
+    expect(notes).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    // The changelog takes it: the text holds no release marker.
+    expect(
+      parseChangelog(
+        updateChangelog(
+          null,
+          { version: 'v0.1.0', date: '2026-11-21', notes },
+          REPO,
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('is read from its files: none when empty, German only beside English', () => {
+    expect(releaseSummary('v0.1.0', null, null)).toBeNull();
+    expect(releaseSummary('v0.1.0', ' \n', null)).toBeNull();
+    expect(releaseSummary('v0.1.0', '\uFEFFText\n', '')).toEqual({
+      en: 'Text',
+      de: null,
+    });
+    expect(() => releaseSummary('v0.1.0', null, 'Nur Deutsch')).toThrow(
+      /release-notes\/v0\.1\.0\.de\.md has no English summary/,
+    );
+  });
+
+  it('goes into the release’s data as written', () => {
+    const plan = first({ en: 'English *as is*', de: 'Deutsch' });
+    expect(
+      releaseData(plan, {
+        version: 'v0.1.0',
+        date: '2026-11-21',
+        repoUrl: REPO,
+      }).summary,
+    ).toEqual({ en: 'English *as is*', de: 'Deutsch' });
+  });
+});
+
 describe('the release as data, for the docs site', () => {
   it('holds every text from a pull request as a plain string, and no author', () => {
     const plan = planRelease({
@@ -517,7 +625,11 @@ describe('the command line', () => {
 
 describe('the release step', () => {
   /** A repository: tags, the commits between them, and the files at each. */
-  function world({ tags = ['v0.1.0'] as string[], release = false } = {}) {
+  function world({
+    tags = ['v0.1.0'] as string[],
+    release = false,
+    at = {} as Record<string, string>,
+  } = {}) {
     const calls: string[] = [];
     const written: Record<string, string> = {};
     const disk: Record<string, string | null> = {
@@ -527,6 +639,7 @@ describe('the release step', () => {
     const show: Record<string, string> = {
       'c1:.env.example': '# a\nCCMS_A=\n',
       'c2:.env.example': '# a\nCCMS_A=\n# b\nCCMS_B=\n',
+      ...at,
     };
     const git = (args: string[]) => {
       const key = args.join(' ');
@@ -649,6 +762,37 @@ describe('the release step', () => {
       'CHANGELOG.md',
       'changelog/v0.2.0.json',
     ]);
+  });
+
+  it('puts the summary its commit holds first, and into the data', () => {
+    const w = world({
+      tags: ['v0.1.0', 'v0.2.0'],
+      at: {
+        'c2:release-notes/v0.2.0.md': 'Two things, see deploy/README.md.\n',
+        'c2:release-notes/v0.2.0.de.md': 'Zwei Dinge.\n',
+        'c2:deploy/README.md': '# Deploy',
+      },
+    });
+    const notes = w.run(['v0.2.0']);
+    expect(notes).toMatch(
+      `Two things, see [deploy/README.md](${REPO}/blob/v0.2.0/deploy/README.md).\n\n### New`,
+    );
+    expect(notes.startsWith('Two things')).toBe(true);
+    expect(JSON.parse(w.written['changelog/v0.2.0.json']).summary).toEqual({
+      en: 'Two things, see deploy/README.md.',
+      de: 'Zwei Dinge.',
+    });
+    expect(w.log[0]).toContain('a summary (English and German)');
+  });
+
+  it('refuses a summary linking to a file the release does not hold', () => {
+    const w = world({
+      tags: ['v0.1.0', 'v0.2.0'],
+      at: { 'c2:release-notes/v0.2.0.md': 'See docs/gone.md.' },
+    });
+    expect(() => w.run(['v0.2.0'])).toThrow(
+      'release-notes/v0.2.0.md links to docs/gone.md, which v0.2.0 does not hold',
+    );
   });
 
   it('takes every pull request up to a first release', () => {

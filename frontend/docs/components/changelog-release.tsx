@@ -12,12 +12,27 @@ export type ReleaseItem = {
   note?: string;
 };
 
+/**
+ * A part of a line of a release's summary, as `scripts/release-summary.mjs` cut it: text, code, an
+ * https address, or a path of the repository.
+ */
+export type SummaryPart =
+  | { text: string }
+  | { code: string }
+  | { url: string; text: string }
+  | { path: string; anchor: string | null; text: string };
+
+/** A paragraph or a list of a release's summary. */
+export type SummaryBlock =
+  { paragraph: SummaryPart[] } | { list: SummaryPart[][] };
+
 /** A release's data as `scripts/generate.mjs` checked it (`checkRelease`). */
 export type Release = {
   version: string;
   date: string;
   repository: string;
   previous: string | null;
+  summary?: { en: SummaryBlock[]; de: SummaryBlock[] | null } | null;
   groups: { title: string; items: ReleaseItem[] }[];
   upgrade: {
     breaking: ReleaseItem[];
@@ -50,6 +65,7 @@ const TEXT = {
     removed: 'Removed:',
     fromPulls: 'From the pull requests:',
     nothingElse: 'Nothing else to do: no migration, no changed setting.',
+    summaryInEnglish: '',
   },
   de: {
     released: 'Veröffentlicht',
@@ -75,6 +91,8 @@ const TEXT = {
     fromPulls: 'Aus den Pull Requests:',
     nothingElse:
       'Sonst nichts zu tun: keine Migration, keine geänderte Einstellung.',
+    summaryInEnglish:
+      'Die Zusammenfassung dieser Version gibt es nur auf Englisch.',
   },
 } satisfies Record<Lang, Record<string, string>>;
 
@@ -161,6 +179,104 @@ function Items({
   );
 }
 
+/** The https address of a link, or null: nothing else ever becomes a link. */
+function https(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && !parsed.username && !parsed.password
+      ? parsed.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A line of a release's summary: text nodes, code, and the links built here. */
+function SummaryLine({
+  parts,
+  repository,
+  version,
+}: {
+  parts: SummaryPart[];
+  repository: string;
+  version: string;
+}) {
+  return (
+    <>
+      {parts.map((part, i) => {
+        if ('code' in part) return <code key={i}>{part.code}</code>;
+        if ('url' in part) {
+          const href = https(part.url);
+          return href ? (
+            <a key={i} className={`${linkClass} break-words`} href={href}>
+              {part.text}
+            </a>
+          ) : (
+            part.text
+          );
+        }
+        if (
+          'path' in part &&
+          /^(?:[A-Za-z0-9_][\w.-]*\/)*[A-Za-z0-9_][\w.-]*$/.test(part.path) &&
+          !part.path.includes('..')
+        ) {
+          const anchor =
+            part.anchor && /^#[\w-]+$/.test(part.anchor) ? part.anchor : '';
+          return (
+            <a
+              key={i}
+              className={`${linkClass} break-words`}
+              href={`${repository}/blob/${version}/${part.path}${anchor}`}
+            >
+              {part.text}
+            </a>
+          );
+        }
+        return part.text;
+      })}
+    </>
+  );
+}
+
+/** A release's summary, first in its notes. */
+function Summary({
+  blocks,
+  repository,
+  version,
+}: {
+  blocks: SummaryBlock[];
+  repository: string;
+  version: string;
+}) {
+  return (
+    <>
+      {blocks.map((block, i) =>
+        'paragraph' in block ? (
+          <p key={i}>
+            <SummaryLine
+              parts={block.paragraph}
+              repository={repository}
+              version={version}
+            />
+          </p>
+        ) : (
+          <ul key={i}>
+            {block.list.map((item, j) => (
+              <li key={j}>
+                <SummaryLine
+                  parts={item}
+                  repository={repository}
+                  version={version}
+                />
+              </li>
+            ))}
+          </ul>
+        ),
+      )}
+    </>
+  );
+}
+
 const codes = (names: string[]) =>
   names.map((name, i) => (
     <span key={name}>
@@ -188,6 +304,8 @@ export function ReleaseNotes({
   const [beforeSetting, afterSetting] = t.migrationsText.split('{setting}');
   const [beforeGuide, afterGuide] = (afterSetting ?? '').split('{guide}');
   const { added, changed, removed } = upgrade.settings;
+  const summary = release.summary ?? null;
+  const ownSummary = summary && (lang === 'en' ? summary.en : summary.de);
   const nothing =
     upgrade.breaking.length +
       upgrade.migrations.length +
@@ -204,7 +322,28 @@ export function ReleaseNotes({
           {t.onGithub}
         </a>
       </p>
-      {release.groups.length === 0 && <p>{t.nothingNoticed}</p>}
+      {summary &&
+        (ownSummary ? (
+          <div data-summary={lang} lang={lang}>
+            <Summary
+              blocks={ownSummary}
+              repository={repository}
+              version={version}
+            />
+          </div>
+        ) : (
+          <>
+            <p>{t.summaryInEnglish}</p>
+            <div data-summary="en" lang="en">
+              <Summary
+                blocks={summary.en}
+                repository={repository}
+                version={version}
+              />
+            </div>
+          </>
+        ))}
+      {release.groups.length === 0 && !summary && <p>{t.nothingNoticed}</p>}
       {release.groups.map((group) => (
         <section key={group.title}>
           <p>

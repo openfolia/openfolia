@@ -11,6 +11,14 @@ const absolute = text.refine(
 );
 
 /**
+ * The file the backup loop records each heartbeat that reached the database in, and the
+ * image's health check reads (#813, `backups/repos/health-file.ts`). Unset: none.
+ */
+export const BackupHealthEnv = z.object({
+  CCMS_BACKUP_HEALTH_FILE: field(absolute.optional()),
+});
+
+/**
  * What the backup process reads (#529, `CCMS_ROLE=backup`,
  * `backup.main.ts`): the database, the data it archives, the instance
  * secret key (to open the sealed S3 secret and backup key; never made
@@ -20,6 +28,7 @@ const absolute = text.refine(
  */
 export const BackupEnv = DatabaseEnv.pick({ CCMS_DATABASE_URL: true })
   .extend(SecretKeyEnv.shape)
+  .extend(BackupHealthEnv.shape)
   .extend({
     CCMS_CONTENT_DIR: field(text),
     CCMS_BLOB_DRIVER: field(z.enum(['s3', 'fs']).default('fs')),

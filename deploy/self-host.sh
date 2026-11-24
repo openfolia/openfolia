@@ -208,7 +208,17 @@ fi
 say "Starting (docker compose up -d --wait)"
 # This run's log only: an earlier start's link is used, expired or closed by now.
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-compose up -d --wait --wait-timeout "${OPENFOLIA_WAIT_TIMEOUT:-300}"
+if ! compose up -d --wait --wait-timeout "${OPENFOLIA_WAIT_TIMEOUT:-300}"; then
+  # How each container stands, and what the last health check of each unhealthy one said.
+  compose ps -a --format 'table {{.Service}}\t{{.State}}\t{{.Status}}' >&2 || true
+  for id in $(compose ps -aq); do
+    check=$(docker inspect --format '{{.Name}}: {{.State.Status}}, health {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$id") || continue
+    case "$check" in *'health healthy'*) continue ;; esac
+    last=$(docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{printf "%q" .Output}}{{"\n"}}{{end}}{{end}}' "$id" | tail -n 1) || true
+    printf '%s\n' "${check#/}${last:+; its last health check said $last}" >&2
+  done
+  fail "the stack did not start healthy (Docker Compose $version; the lines above say why). Its log: cd $here && docker compose logs <service>"
+fi
 compose ps --format 'table {{.Service}}\t{{.Status}}'
 
 editor=$(setting CCMS_PUBLIC_URL)

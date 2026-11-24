@@ -159,10 +159,10 @@ describe('the changelog page', () => {
     expect(page).not.toMatch(/Page. view|public address|Workers|Move/);
   });
 
-  it('writes the German page around the English notes', () => {
+  it('writes the German page around the notes, saying which are in English', () => {
     const page = renderChangelogPage(releases, 'de');
     expect(page).toMatch(/^---\ntitle: "Änderungsprotokoll"\n/);
-    expect(page).toContain('Die Versionshinweise sind auf Englisch.');
+    expect(page).toContain('die Liste der Änderungen ist auf Englisch.');
     expect(page).toContain('(/de/self-hosting)');
     expect(page).toContain('lang="de"');
   });
@@ -319,6 +319,97 @@ describe('pull request text on the page is text, by construction', () => {
       const expected = hostile.split('`').join('');
       expect(visible.replace(/`/g, '')).toContain(expected);
     });
+});
+
+describe('a release’s own summary', () => {
+  const withSummary = (summary: unknown) =>
+    checkRelease({ ...release('v0.2.0'), summary }, 'v0.2.0.json') as {
+      release?: Release;
+      problems?: string[];
+    };
+  const html = (data: Release, lang: 'en' | 'de') =>
+    renderToStaticMarkup(createElement(ReleaseNotes, { release: data, lang }));
+
+  it('fails the build when it is not a string', () => {
+    expect(withSummary({ en: 1 }).problems).toEqual([
+      'v0.2.0.json: summary.en is no string',
+    ]);
+    expect(withSummary({ en: 'x', de: ['y'] }).problems).toEqual([
+      'v0.2.0.json: summary.de is no string',
+    ]);
+    expect(withSummary('just text').problems).toEqual([
+      'v0.2.0.json: summary is no object',
+    ]);
+    expect(withSummary(undefined).release?.summary).toBeNull();
+    expect(withSummary({ en: '  ' }).release?.summary).toBeNull();
+  });
+
+  it('comes first, in the page’s language, with the links it builds itself', () => {
+    const data = withSummary({
+      en: 'What it is.\n\n- Run it: deploy/README.md\n- Read https://docs.example.org/guide',
+      de: 'Was es ist.\n\n- Betrieb: deploy/README.md',
+    }).release as Release;
+    const en = html(data, 'en');
+    expect(en.indexOf('What it is.')).toBeLessThan(en.indexOf('Security'));
+    expect(en).toContain(
+      `<li>Run it: <a class="text-fd-primary underline underline-offset-4 break-words" href="${REPO}/blob/v0.2.0/deploy/README.md">deploy/README.md</a></li>`,
+    );
+    expect(en).toContain('href="https://docs.example.org/guide"');
+    const de = html(data, 'de');
+    expect(de).toContain('<p>Was es ist.</p>');
+    expect(de).not.toContain('What it is.');
+  });
+
+  it('shows the English one in an English section on the German page when there is no German one', () => {
+    const data = withSummary({ en: 'What it is.' }).release as Release;
+    const de = html(data, 'de');
+    expect(de).toContain(
+      '<p>Die Zusammenfassung dieser Version gibt es nur auf Englisch.</p><div data-summary="en" lang="en"><p>What it is.</p></div>',
+    );
+  });
+
+  it('gives a release without pull requests its notes', () => {
+    const data = checkRelease(
+      {
+        ...release('v0.1.0'),
+        previous: null,
+        groups: [],
+        summary: { en: 'The first.' },
+      },
+      'v0.1.0.json',
+    ).release as Release;
+    const en = html(data, 'en');
+    expect(en).toContain('<p>The first.</p>');
+    expect(en).not.toContain('No change a user or operator would notice.');
+    expect(releaseText(data).startsWith('The first.\n')).toBe(true);
+  });
+
+  it('shows markup as text and links only https addresses and repository paths', () => {
+    const hostile = [
+      '<script>globalThis.pwned = 1</script> {globalThis.pwned = 2}',
+      '',
+      '- [x](javascript:alert(1)) javascript:alert(1) http://plain.example',
+      '- <img src=x onerror="globalThis.pwned = 3"> data:text/html,x',
+      '- ![i](https://evil.example/i.png) ../../etc/passwd.txt',
+    ].join('\n');
+    const data = withSummary({ en: hostile, de: hostile }).release as Release;
+    for (const lang of ['en', 'de'] as const) {
+      const out = html(data, lang);
+      expect(out).not.toMatch(/<script|<img|<[^>]*\son\w+=/i);
+      for (const [, href = ''] of out.matchAll(/(?:href|src)="([^"]*)"/g))
+        expect(
+          href.startsWith(`${REPO}/`) ||
+            href.startsWith('https://evil.example/'),
+          href,
+        ).toBe(true);
+      expect(out).toContain(
+        '[x](javascript:alert(1)) javascript:alert(1) http://plain.example',
+      );
+    }
+    // Nothing of it reaches the MDX the site compiles.
+    const page = renderChangelogPage([data], 'en');
+    expect(page).not.toMatch(/pwned|javascript/);
+  });
 });
 
 describe('the feed', () => {

@@ -40,6 +40,9 @@
           "default",
           "^production",
           "{workspaceRoot}/.github/release.yml",
+          "{workspaceRoot}/release-notes/**/*",
+          "{workspaceRoot}/deploy/**/*",
+          "{workspaceRoot}/CONTRIBUTING.md",
           "{workspaceRoot}/deploy/docker/docs/**/*",
           "{workspaceRoot}/LICENSE",
           "{workspaceRoot}/THIRD-PARTY-NOTICES.md"
