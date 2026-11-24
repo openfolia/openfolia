@@ -1,0 +1,79 @@
+# The portal image's web server (#819, Dockerfile target `portal`): the portal's output folder,
+# /app/portal/out/site, on port 8080, plain HTTP behind the operator's proxy, which terminates TLS.
+# The folder is replaced as a whole by each build that completes (frontend/portal/build/run.ts),
+# so this serves the last good build throughout. The headers are the ones deploy/README.md,
+# "The static portal", requires of any host (a test keeps the policy equal to HOST_CSP).
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+(portal-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Browsers heed it only over HTTPS: through the proxy in front, never on plain HTTP.
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}
+
+:8080 {
+	root * /app/portal/out/site
+	encode zstd gzip
+	import portal-headers
+
+	# The container's health check: healthy once a build (or the page that says nothing is
+	# released yet) is served.
+	handle /healthz {
+		header Cache-Control "no-store"
+		@served file /index.html
+		respond @served "ok" 200
+		respond "no build yet" 503
+	}
+
+	handle {
+		# Attachments the build could not type: always a download, never a page.
+		@bin path_regexp /assets/[^/]+\.bin$
+		header @bin {
+			Content-Type "application/octet-stream"
+			Content-Disposition "attachment"
+		}
+		# Files named by their content (Astro's bundles, the images and attachments by SHA-256).
+		@hashed path /*/_astro/* /*/assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		# The pages, the search index and the rest change with a build: revalidated by ETag.
+		@mutable not path /*/_astro/* /*/assets/*
+		header @mutable Cache-Control "no-cache"
+		file_server {
+			hide .*
+		}
+	}
+
+	# A path without a file: its language's 404 page (the first path segment), else the first
+	# language's (the build copies it to /404.html), with status 404.
+	handle_errors 404 {
+		import portal-headers
+		header Cache-Control "no-cache"
+		@language file /{path.0}/404.html
+		handle @language {
+			rewrite * /{path.0}/404.html
+			file_server
+		}
+		@first file /404.html
+		handle @first {
+			rewrite * /404.html
+			file_server
+		}
+		handle {
+			respond "404 Not Found" 404
+		}
+	}
+	handle_errors {
+		import portal-headers
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
+}

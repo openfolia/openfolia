@@ -28,7 +28,7 @@ const compose = readFileSync(
 );
 /** A release's images.lock (#739): every image by a digest of its own. */
 const lockOf = (images: string, tag: string) =>
-  ['api', 'backup', 'editor', 'embedder', 'mcp']
+  ['api', 'backup', 'editor', 'embedder', 'mcp', 'portal']
     .map(
       (image, i) =>
         `${images}/${image}:${tag}@sha256:${String(i + 1).repeat(64)}`,
@@ -100,6 +100,7 @@ describe('the agent guide (#423)', () => {
         ['editor', 'editor', '3'],
         ['backup', 'backup', '2'],
         ['mcp', 'mcp', '5'],
+        ['portal', 'portal', '6'],
       ])
         expect(commands).toContain(
           `\n${service} ghcr.io/openfolia/openfolia/${image}@sha256:${digit.repeat(64)} ghcr.io/openfolia/openfolia/${image}:v1.2.3@sha256:${digit.repeat(64)}\n`,
@@ -411,10 +412,11 @@ const signatureSums = [
   'editor',
   'embedder',
   'mcp',
+  'portal',
 ]
   .map(
     (file, i) =>
-      `${String.fromCharCode(97 + i).repeat(64)}  ${file === 'trusted_root' ? 'trusted_root.json' : `${file}.sigstore.json`}`,
+      `${'abcdef0'[i]!.repeat(64)}  ${file === 'trusted_root' ? 'trusted_root.json' : `${file}.sigstore.json`}`,
   )
   .join('\n');
 const signedRelease = {
@@ -447,6 +449,7 @@ describe('the agent guide, signatures (#745)', () => {
         ['editor.sigstore.json', 'd'],
         ['backup.sigstore.json', 'c'],
         ['mcp.sigstore.json', 'f'],
+        ['portal.sigstore.json', '0'],
       ]) {
         expect(block).toContain(
           `curl -fsSL -o ${file} '${releaseUrl}/${file}'`,
@@ -467,7 +470,7 @@ describe('the agent guide, signatures (#745)', () => {
       expect(block).toContain('--trusted-root "$dir/trusted_root.json"');
       // Against the digests the release pins: images.lock's.
       expect(block).toContain(
-        `\napi ${'1'.repeat(64)}\neditor ${'3'.repeat(64)}\nbackup ${'2'.repeat(64)}\nmcp ${'5'.repeat(64)}\nEOF\n`,
+        `\napi ${'1'.repeat(64)}\neditor ${'3'.repeat(64)}\nbackup ${'2'.repeat(64)}\nmcp ${'5'.repeat(64)}\nportal ${'6'.repeat(64)}\nEOF\n`,
       );
       // Before the first pull.
       expect(page.indexOf('verify-blob-attestation')).toBeLessThan(
@@ -614,6 +617,7 @@ describe('the release settings, signatures (#745)', () => {
         editor: 'd'.repeat(64),
         embedder: 'e'.repeat(64),
         mcp: 'f'.repeat(64),
+        portal: '0'.repeat(64),
       },
       identity:
         'https://github.com/openfolia/openfolia/.github/workflows/images.yml@refs/tags/v1.2.3',

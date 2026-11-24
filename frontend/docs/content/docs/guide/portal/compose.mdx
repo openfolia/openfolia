@@ -1,0 +1,94 @@
+---
+title: 'With Docker Compose'
+description: 'Run the portal beside a self-hosted OpenFolia: one container that builds it from the API, rebuilds it after each release and serves it with the right headers.'
+articleId: 'guide.portal.compose'
+---
+
+A self-hosted OpenFolia can run the portal for you. The `portal` service of the Compose stack
+builds the portal from the API, serves it, and builds it again after each release. You don't
+build or copy files by hand, and readers get the new release without a restart.
+
+## Set it up with one command
+
+`deploy/self-host.sh` asks whether to run the portal (yes by default), or takes `--portal`:
+
+```sh
+deploy/self-host.sh --portal
+```
+
+It:
+
+1. makes a role `portal-reader` that may only read released content, up to one audience. That is
+   the least restricted audience level of your `openfolia.yaml` (`public` in the sample content),
+   unless you name another with `--portal-audience <id>`;
+2. makes the service account `portal` with that role and a token for it, valid for 366 days. It
+   writes the token into the settings file `deploy/.env` (readable by you only) and never shows
+   it;
+3. starts the portal, and prints its address next to the editor's:
+   `http://127.0.0.1:8090/` by default.
+
+Before the first release is published, the portal shows a page that says so, and looks again
+every minute. Once a release is out, its manuals appear.
+
+Run the script again at any time: it keeps the token. `--no-portal` skips the question; a portal
+set up before keeps running (`COMPOSE_PROFILES=portal` in `deploy/.env`).
+
+## Or by hand
+
+Make a role with only `content.read` and a `maxAudience`, a service account holding it, and its
+token, in the editor (Admin, Service accounts) or as [Build and preview](/guide/portal/build)
+describes. Then add to `deploy/.env`:
+
+```sh
+COMPOSE_PROFILES=portal
+CCMS_PORTAL_AUDIENCE=public
+CCMS_PORTAL_TOKEN=<the token>
+```
+
+and start it:
+
+```sh
+cd deploy
+docker compose up -d --wait
+```
+
+The other settings of [Build and preview](/guide/portal/build) work here too: the languages, the
+releases, the base path and the branding. The port is `OPENFOLIA_PORTAL_PORT` (default `8090`),
+on `127.0.0.1` like the editor's.
+
+## When it builds again
+
+The portal reads the API's releases every five minutes (`CCMS_PORTAL_REFRESH_SECONDS`, default
+`300`). When a release was published or withdrawn since its last build, or its PDFs have
+finished rendering, it builds again. Readers keep the last good build while a new one runs, and
+if a build fails they still see it. The one exception is a withdrawn release: if the build
+without it fails, the portal shows the page that says nothing is released yet rather than the
+withdrawn manuals. The container's log says why a build failed; it tries again after a while,
+and at once after the next release. The portal checks the releases on its own and needs no
+webhook.
+
+The container is healthy once it serves a build, or the page that says nothing is released yet.
+It keeps the last build in a volume of its own, so after a restart it serves that build at once
+while it builds the next. If you have changed the audience, the languages or the base path, it
+shows that page instead until the new build is ready.
+
+## In front of it
+
+The portal answers plain HTTP. Put your reverse proxy with TLS in front of it, on a host name of
+its own, as for the editor ([Reverse proxy](/guide/self-hosting/reverse-proxy)). The container
+already sends the headers of [Hosting the portal](/guide/portal/hosting).
+
+The portal is public: anyone who reaches it reads every manual it shows. **A portal for an audience
+that is not public needs a sign-in in front of it**, your proxy's, as
+[Hosting the portal](/guide/portal/hosting) says.
+
+To serve it under a path such as `/manuals/`, set `CCMS_PORTAL_BASE_PATH=/manuals/` and have your
+proxy pass `/manuals/` on to the portal without the path.
+
+## The token
+
+The token is valid for 366 days. Before it runs out, make a new one: delete the
+`CCMS_PORTAL_TOKEN` line from `deploy/.env` and run `deploy/self-host.sh` again. It makes a new
+token for the same service account. Then revoke the old one in the editor (Admin, Service
+accounts, `portal`). Until then, a portal whose token has run out keeps serving its last build
+and logs that it cannot read the releases.

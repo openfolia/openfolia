@@ -7,11 +7,14 @@
 #   docker build --target mcp    -t openfolia/mcp:local .
 #   docker build --target backup -t openfolia/backup:local .
 #   docker build --target embedder -t openfolia/embedder:local .
+#   docker build --target portal -t openfolia/portal:local .
 #
 # Base images are pinned by version and digest; update both together.
 
 ARG NODE_IMAGE=node:24.22.3-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0
 ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.29.8-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+# The portal's web server (as deploy/docker/docs/Dockerfile's): only its binary is copied.
+ARG CADDY_IMAGE=caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
 
 # ---------------------------------------------------------------------------------------------
 # Dependencies and the build: the whole workspace, its dev dependencies included. Nothing of it
@@ -75,6 +78,31 @@ RUN node -e "const fs = require('node:fs'); const p = JSON.parse(fs.readFileSync
 
 FROM workspace AS build-editor
 RUN pnpm nx run editor:build:production --output-style=static
+
+# The portal (frontend/portal, #819): it is built from the API at run time, so the image holds its
+# build (Astro, Pagefind, sharp) with the packages it renders with. `pnpm deploy` copies it with its
+# production dependencies; then it keeps only what a build runs (no tests, fixtures or browser
+# tests). Astro writes .astro and its caches into the project: links into /tmp
+# (deploy/docker/portal/entrypoint.sh makes the folders), so the image runs on a read-only file
+# system. The output goes to out/ (a volume), inside the project: Astro builds there, and the
+# pages' modules it runs there find the project's packages.
+FROM workspace AS build-portal
+RUN pnpm nx run-many -t build -p content-model render-html --output-style=static
+RUN node -e "const fs = require('node:fs'); const p = JSON.parse(fs.readFileSync('package.json', 'utf8')); delete p.dependencies; fs.writeFileSync('package.json', JSON.stringify(p, null, 2))" \
+ && pnpm --filter=@openfolia/portal deploy --prod --legacy /out/portal \
+ && cd /out/portal \
+ && find . -mindepth 1 -maxdepth 1 ! -name package.json ! -name node_modules ! -name astro.config.mjs \
+      ! -name build ! -name scripts ! -name src ! -name public -exec rm -rf {} + \
+ && rm -f scripts/build-fixture.ts \
+ && mkdir out \
+ && ln -s /tmp/portal/astro .astro \
+ && ln -s /tmp/portal/astro-cache node_modules/.astro \
+ && ln -s /tmp/portal/vite-cache node_modules/.vite
+
+# Caddy's binary, without the file capability its image gives it (as deploy/docker/docs/Dockerfile
+# does): port 8080 needs none, and a file capability stops it where capabilities are dropped.
+FROM ${CADDY_IMAGE} AS caddy
+RUN setcap -r /usr/bin/caddy
 
 # A test OpenID Connect provider (backend/api/scripts/mock-oidc.ts: no passwords, plain http) for
 # the self-host test (deploy/self-host-test.sh, deploy/smoke-oidc.yaml). Never pushed, never part
@@ -195,6 +223,32 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=120s --retries=3 \
   CMD ["node", "-e", "fetch(`http://127.0.0.1:${process.env.CCMS_EMBEDDER_PORT}/health`).then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/main.js"]
+
+# ---------------------------------------------------------------------------------------------
+# The reader portal (frontend/portal, #819; deploy/README.md, "The static portal"): Caddy serves
+# /app/portal/out/site on port 8080, and beside it scripts/serve.ts builds the portal from the API at
+# start and again after each release (CCMS_PORTAL_REFRESH_SECONDS), replacing the folder only when
+# a build completes. /app/portal/out: a volume, so a restart serves the last build at once. Healthy
+# once a build (or the page saying nothing is released yet) is served; the first build may take
+# minutes, hence the long start period. tini signals its whole process group (-g): the server and
+# a build's processes stop with it.
+FROM node-runtime AS portal
+COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
+COPY --from=build-portal /out/portal /app/portal
+COPY deploy/docker/portal/Caddyfile /etc/caddy/Caddyfile
+COPY --chmod=0755 deploy/docker/portal/entrypoint.sh /usr/local/bin/openfolia-portal-entrypoint
+RUN chown node:node /app/portal/out
+USER node
+WORKDIR /app/portal
+ENV CCMS_PORTAL_OUT_DIR=/app/portal/out/site \
+    XDG_CONFIG_HOME=/tmp/caddy/config \
+    XDG_DATA_HOME=/tmp/caddy/data \
+    ASTRO_TELEMETRY_DISABLED=1
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=5s --start-period=900s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:8080/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/openfolia-portal-entrypoint"]
+CMD ["node", "scripts/serve.ts", "--", "caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 
 # ---------------------------------------------------------------------------------------------
 # The editor (frontend/editor): the static build behind nginx, which proxies /api to the API

@@ -53,7 +53,7 @@ sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasu
 mkdir -p "$work/served" "$work/tmp" "$work/install"
 i=0
 : >"$work/images.lock"
-for image in api backup editor embedder mcp; do
+for image in api backup editor embedder mcp portal; do
   i=$((i + 1))
   echo "$images/$image:$tag@sha256:$(printf "%064d" "$i")" >>"$work/images.lock"
 done
@@ -63,9 +63,9 @@ echo "the release's trust root" >"$work/served/trusted_root.json"
 bundle() {
   printf 'subject=%s\nidentity=%s\nissuer=%s\n' "$2" "${3:-$identity}" "${4:-$issuer}" >"$work/served/$1.sigstore.json"
 }
-for image in api backup editor embedder mcp; do bundle "$image" "$(digest_of "$image")"; done
+for image in api backup editor embedder mcp portal; do bundle "$image" "$(digest_of "$image")"; done
 sums() {
-  for file in trusted_root.json api.sigstore.json backup.sigstore.json editor.sigstore.json embedder.sigstore.json mcp.sigstore.json; do
+  for file in trusted_root.json api.sigstore.json backup.sigstore.json editor.sigstore.json embedder.sigstore.json mcp.sigstore.json portal.sigstore.json; do
     echo "$(sha "$work/served/$file")  $file"
   done
 }
@@ -172,11 +172,11 @@ expect "no cosign: the signatures are not checked" "the check without cosign did
 echo "--- signed, with cosign: every signature verified, offline, from the release's files only"
 check with-cosign
 expect "every signature verified" "good signatures fail the check"
-for image in api editor backup mcp; do expect "$image: signature verified" "$image not verified"; done
-[ "$(grep -c ': signature verified$' "$work/out")" = 4 ] || fail "not the four images compose.yaml runs"
-[ "$(wc -l <"$work/curl.log" | tr -d ' ')" = 5 ] || fail "not the trust root and four bundles: $(cat "$work/curl.log")"
+for image in api editor backup mcp portal; do expect "$image: signature verified" "$image not verified"; done
+[ "$(grep -c ': signature verified$' "$work/out")" = 5 ] || fail "not the five images compose.yaml runs"
+[ "$(wc -l <"$work/curl.log" | tr -d ' ')" = 6 ] || fail "not the trust root and five bundles: $(cat "$work/curl.log")"
 grep -Ev "^-fsSL -o ([a-z]+\.sigstore|trusted_root)\.json $release_url/([a-z]+\.sigstore|trusted_root)\.json$" "$work/curl.log" && fail "a download beyond the release's files"
-[ "$(wc -l <"$work/cosign.log" | tr -d ' ')" = 4 ] || fail "cosign not run once per image"
+[ "$(wc -l <"$work/cosign.log" | tr -d ' ')" = 5 ] || fail "cosign not run once per image"
 while read -r line; do
   case "$line" in
     "verify-blob-attestation --bundle "*" --trusted-root "*"/trusted_root.json --certificate-identity $identity --certificate-oidc-issuer $issuer --type $predicate --digest "*" --digestAlg sha256") ;;

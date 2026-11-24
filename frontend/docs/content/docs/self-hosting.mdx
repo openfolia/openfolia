@@ -9,14 +9,15 @@ is its outline, and the [operator guide](/guide/self-hosting) has a page for eac
 
 ## What runs
 
-| Service    | What it is                                                                           |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `postgres` | Operational state: users, roles, locks, comments, workflow, the audit log, an index. |
-| `api`      | The JSON:API, with Git, the PDF renderer, the fonts and the migrations.              |
-| `worker`   | Background work: release files, imports, webhooks, sweeps. Scales out.               |
-| `editor`   | The editor's static build behind nginx, which also proxies `/api` to the API.        |
-| `mcp`      | Optional: the MCP server for AI assistants over released content.                    |
-| `backup`   | Scheduled, encrypted, verified backups.                                              |
+| Service    | What it is                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `postgres` | Operational state: users, roles, locks, comments, workflow, the audit log, an index.       |
+| `api`      | The JSON:API, with Git, the PDF renderer, the fonts and the migrations.                    |
+| `worker`   | Background work: release files, imports, webhooks, sweeps. Scales out.                     |
+| `editor`   | The editor's static build behind nginx, which also proxies `/api` to the API.              |
+| `mcp`      | Optional: the MCP server for AI assistants over released content.                          |
+| `portal`   | Optional: the reader portal, rebuilt after each release ([Portal](/guide/portal/compose)). |
+| `backup`   | Scheduled, encrypted, verified backups.                                                    |
 
 Everything that persists is in three volumes: the database, the data volume (the content
 repository, the files and the instance secret key) and the backups.

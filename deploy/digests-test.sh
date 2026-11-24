@@ -32,7 +32,7 @@ registry_image=registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58
 base_image=$(sed -n 's/^ *image: \(postgres:[^ ]*@sha256:[0-9a-f]\{64\}\)$/\1/p' "$here/compose.yaml")
 repo="localhost:$port/digests-test/openfolia"
 tag=v9.9.9
-images="api backup editor embedder mcp"
+images="api backup editor embedder mcp portal"
 work=$(mktemp -d)
 own_registry=
 
@@ -126,7 +126,7 @@ install() {
   {
     echo "COMPOSE_PROJECT_NAME=$name-$1"
     if [ "$1" = pinned ]; then echo "COMPOSE_FILE=compose.yaml:compose.digests.yaml"; fi
-    echo "COMPOSE_PROFILES=mcp"
+    echo "COMPOSE_PROFILES=mcp,portal"
     echo "OPENFOLIA_IMAGES=$repo"
     echo "OPENFOLIA_VERSION=$tag"
   } >"$dir/.env"
@@ -186,12 +186,12 @@ mkdir -p "$work/real"
 cp "$here/compose.yaml" "$work/real/compose.yaml"
 cp "$work/release/compose.digests.yaml" "$work/real/compose.digests.yaml"
 (cd "$work/real" && COMPOSE_PROJECT_NAME="$name-real" COMPOSE_FILE=compose.yaml:compose.digests.yaml \
-  COMPOSE_PROFILES=mcp,restore OPENFOLIA_IMAGES="$repo" OPENFOLIA_VERSION="$tag" POSTGRES_PASSWORD=unused \
+  COMPOSE_PROFILES=mcp,portal,restore OPENFOLIA_IMAGES="$repo" OPENFOLIA_VERSION="$tag" POSTGRES_PASSWORD=unused \
   docker compose --env-file /dev/null config --images) | sort -u >"$work/real/images"
 grep -v '^postgres:' "$work/real/images" | while read -r ref; do
   grep -qxF "$ref" "$work/release/images.lock" || fail "compose.yaml runs $ref, which images.lock does not pin"
 done
-[ "$(grep -vc '^postgres:' "$work/real/images")" = 4 ] || fail "not the four images api, backup, editor and mcp: $(cat "$work/real/images")"
+[ "$(grep -vc '^postgres:' "$work/real/images")" = 5 ] || fail "not the five images api, backup, editor, mcp and portal: $(cat "$work/real/images")"
 
 echo "--- an installation as the guide makes it: the check passes"
 install pinned
@@ -199,7 +199,7 @@ start pinned
 check pinned >"$work/out"
 cat "$work/out"
 grep -qx "every image pinned" "$work/out" || fail "the pinned installation fails the check"
-[ "$(grep -c ': pinned$' "$work/out")" = 5 ] || fail "not every service checked (api, worker, editor, backup, mcp)"
+[ "$(grep -c ': pinned$' "$work/out")" = 6 ] || fail "not every service checked (api, worker, editor, backup, mcp, portal)"
 
 echo "--- an installation by tag alone, the tag not moved yet: the check fails all the same"
 install tagged
@@ -207,7 +207,7 @@ start tagged
 check tagged >"$work/out"
 cat "$work/out"
 grep -qx "an image is not pinned: stop" "$work/out" || fail "the check passed settings that follow the tag"
-[ "$(grep -c ': NOT pinned by the settings$' "$work/out")" = 5 ] || fail "not every unpinned service found"
+[ "$(grep -c ': NOT pinned by the settings$' "$work/out")" = 6 ] || fail "not every unpinned service found"
 (cd "$work/tagged" && docker compose down >/dev/null 2>&1)
 
 echo "--- the tag moved in the registry to other images"
@@ -228,4 +228,4 @@ start tagged
 check tagged >"$work/out"
 cat "$work/out"
 grep -qx "an image is not pinned: stop" "$work/out" || fail "the check passed images the release does not pin"
-[ "$(grep -c ': NOT the pinned image$' "$work/out")" = 5 ] || fail "not every moved image found"
+[ "$(grep -c ': NOT the pinned image$' "$work/out")" = 6 ] || fail "not every moved image found"

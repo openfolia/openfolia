@@ -21,18 +21,22 @@ It:
 2. builds the images from the checkout, or pulls them when `OPENFOLIA_IMAGES` is set;
 3. offers the sample content when there is no content repository yet (never forced);
 4. starts the stack and waits until every service is healthy;
-5. prints the editor's address and the first admin's one-time link.
+5. when you want the reader portal (asked, or `--portal`): makes its read-only service account and
+   token and starts it ([With Docker Compose](/guide/portal/compose));
+6. prints the editor's (and the portal's) address and the first admin's one-time link.
 
 Open the link, choose a password, and you are signed in as the admin.
 
-| Option                         | What it does                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| `--admin <email>`              | The first admin. Asked for when unset and there is a terminal.                       |
-| `--name <name>`                | Their name (default: the part of the address before `@`).                            |
-| `--sample`, `--no-sample`      | Put the sample content in without asking, or never.                                  |
-| `--yes`                        | Ask nothing: no sample unless `--sample`, no admin unless `--admin`.                 |
-| `--build`, `--pull`, `--as-is` | The images: built from the checkout, pulled from `OPENFOLIA_IMAGES`, or as they are. |
-| `--help`                       | List the options.                                                                    |
+| Option                         | What it does                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `--admin <email>`              | The first admin. Asked for when unset and there is a terminal.                                    |
+| `--name <name>`                | Their name (default: the part of the address before `@`).                                         |
+| `--sample`, `--no-sample`      | Put the sample content in without asking, or never.                                               |
+| `--portal`, `--no-portal`      | Run the reader portal without asking, or not.                                                     |
+| `--portal-audience <id>`       | The audience the portal shows (default: the least restricted one).                                |
+| `--yes`                        | Ask nothing: no sample unless `--sample`, no admin unless `--admin`, no portal unless `--portal`. |
+| `--build`, `--pull`, `--as-is` | The images: built from the checkout, pulled from `OPENFOLIA_IMAGES`, or as they are.              |
+| `--help`                       | List the options.                                                                                 |
 
 Run it again at any time, for example after an upgrade: it keeps the settings file, the volumes
 and the content, and makes no second admin.
@@ -56,7 +60,8 @@ and the content, and makes no second admin.
    ```
 
    This pulls the API (the worker runs the same image), the editor and the backup image. The MCP
-   server is pulled with them when you run it (`docker compose --profile mcp pull`).
+   server and the reader portal are pulled with them when you run them (`docker compose --profile mcp pull`,
+   `--profile portal`).
 
    Or build them from the checkout, and then name both files in every `docker compose` command
    (or set `COMPOSE_FILE=compose.yaml:compose.build.yaml` in the settings file):

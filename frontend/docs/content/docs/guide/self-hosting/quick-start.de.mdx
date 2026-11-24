@@ -22,18 +22,22 @@ Das Skript:
 2. baut die Images aus dem Checkout oder lädt sie, wenn `OPENFOLIA_IMAGES` gesetzt ist;
 3. bietet die Beispielinhalte an, wenn es noch kein Inhalts-Repository gibt (nie erzwungen);
 4. startet den Stack und wartet, bis jeder Dienst bereit ist;
-5. gibt die Adresse des Editors und den Einmal-Link des ersten Admins aus.
+5. wenn Sie das Leseportal möchten (gefragt, oder `--portal`): legt sein Dienstkonto, das nur lesen
+   darf, und dessen Token an und startet es ([Mit Docker Compose](/de/guide/portal/compose));
+6. gibt die Adresse des Editors (und die des Portals) und den Einmal-Link des ersten Admins aus.
 
 Öffnen Sie den Link, wählen Sie ein Passwort, und Sie sind als Admin angemeldet.
 
-| Option                         | Was sie tut                                                                            |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| `--admin <email>`              | Der erste Admin. Wird erfragt, wenn nicht gesetzt und ein Terminal da ist.             |
-| `--name <name>`                | Sein Name (Standard: der Teil der Adresse vor `@`).                                    |
-| `--sample`, `--no-sample`      | Die Beispielinhalte ohne Rückfrage einspielen oder nie.                                |
-| `--yes`                        | Nichts fragen: keine Beispielinhalte ohne `--sample`, kein Admin ohne `--admin`.       |
-| `--build`, `--pull`, `--as-is` | Die Images: aus dem Checkout gebaut, von `OPENFOLIA_IMAGES` geladen oder wie sie sind. |
-| `--help`                       | Die Optionen auflisten.                                                                |
+| Option                         | Was sie tut                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `--admin <email>`              | Der erste Admin. Wird erfragt, wenn nicht gesetzt und ein Terminal da ist.                                    |
+| `--name <name>`                | Sein Name (Standard: der Teil der Adresse vor `@`).                                                           |
+| `--sample`, `--no-sample`      | Die Beispielinhalte ohne Rückfrage einspielen oder nie.                                                       |
+| `--portal`, `--no-portal`      | Das Leseportal ohne Rückfrage betreiben, oder nicht.                                                          |
+| `--portal-audience <id>`       | Die Zielgruppe, die das Portal zeigt (Standard: die am wenigsten eingeschränkte).                             |
+| `--yes`                        | Nichts fragen: keine Beispielinhalte ohne `--sample`, kein Admin ohne `--admin`, kein Portal ohne `--portal`. |
+| `--build`, `--pull`, `--as-is` | Die Images: aus dem Checkout gebaut, von `OPENFOLIA_IMAGES` geladen oder wie sie sind.                        |
+| `--help`                       | Die Optionen auflisten.                                                                                       |
 
 Sie können es jederzeit erneut ausführen, etwa nach einem Upgrade: Es behält die
 Einstellungsdatei, die Volumes und die Inhalte und legt keinen zweiten Admin an.
@@ -57,7 +61,8 @@ Einstellungsdatei, die Volumes und die Inhalte und legt keinen zweiten Admin an.
    ```
 
    Das lädt die API (der Worker läuft mit demselben Image), den Editor und das Backup-Image. Den
-   MCP-Server lädt es mit, wenn Sie ihn betreiben (`docker compose --profile mcp pull`).
+   MCP-Server und das Leseportal lädt es mit, wenn Sie sie betreiben (`docker compose --profile mcp pull`,
+   `--profile portal`).
 
    Oder bauen Sie sie aus dem Checkout und nennen Sie dann in jedem `docker compose`-Befehl beide
    Dateien (oder setzen Sie `COMPOSE_FILE=compose.yaml:compose.build.yaml` in der

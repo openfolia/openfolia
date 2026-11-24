@@ -20,6 +20,10 @@ services:
     build:
       context: ..
       target: mcp
+  portal:
+    build:
+      context: ..
+      target: portal
   backup:
     build:
       context: ..

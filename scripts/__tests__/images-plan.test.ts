@@ -18,7 +18,14 @@ const never = () => {
 
 describe('images-plan', () => {
   it('names every image compose.yaml and compose.embedder.yaml run, the backup image included', () => {
-    expect(IMAGES).toEqual(['api', 'backup', 'editor', 'embedder', 'mcp']);
+    expect(IMAGES).toEqual([
+      'api',
+      'backup',
+      'editor',
+      'embedder',
+      'mcp',
+      'portal',
+    ]);
     const compose = ['compose.yaml', 'compose.embedder.yaml']
       .map((file) => readFileSync(join(root, 'deploy', file), 'utf8'))
       .join('\n');
@@ -45,7 +52,7 @@ describe('images-plan', () => {
       }),
     ).toEqual({
       images: ['api', 'backup'],
-      unaffected: ['editor', 'embedder', 'mcp'],
+      unaffected: ['editor', 'embedder', 'mcp', 'portal'],
     });
     expect(affectedProjects).toHaveBeenCalledTimes(1);
   });
@@ -85,17 +92,32 @@ describe('images-plan', () => {
       }),
     ).toEqual({
       images: ['editor'],
-      unaffected: ['api', 'backup', 'embedder', 'mcp'],
+      unaffected: ['api', 'backup', 'embedder', 'mcp', 'portal'],
     });
   });
 
-  it('follows Nx through the dependencies: a shared package rebuilds all four', () => {
+  it('follows Nx through the dependencies: a shared package rebuilds all five', () => {
     expect(
       planImages({
         changedFiles: ['packages/content-model/src/index.ts'],
-        affectedProjects: () => ['content-model', 'api', 'mcp', 'editor'],
+        affectedProjects: () => [
+          'content-model',
+          'api',
+          'mcp',
+          'editor',
+          'portal',
+        ],
       }).images,
-    ).toEqual(['api', 'backup', 'editor', 'mcp']);
+    ).toEqual(['api', 'backup', 'editor', 'mcp', 'portal']);
+  });
+
+  it('rebuilds only the portal image for a portal-only change', () => {
+    expect(
+      planImages({
+        changedFiles: ['frontend/portal/build/refresh.ts'],
+        affectedProjects: () => ['portal'],
+      }).images,
+    ).toEqual(['portal']);
   });
 
   it('builds nothing when no image project is affected', () => {

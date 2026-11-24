@@ -48,6 +48,7 @@ export const PLACEHOLDERS = [
   'SIGNATURE_SHA256_EDITOR',
   'SIGNATURE_SHA256_BACKUP',
   'SIGNATURE_SHA256_MCP',
+  'SIGNATURE_SHA256_PORTAL',
   'SIGNER_IDENTITY',
   'SIGNER_ISSUER',
   'SIGNED_IMAGES',
@@ -55,7 +56,7 @@ export const PLACEHOLDERS = [
 ];
 
 /** The images whose signature bundles the guide downloads, one placeholder each. */
-const SIGNED_IMAGES = ['api', 'editor', 'backup', 'mcp'];
+const SIGNED_IMAGES = ['api', 'editor', 'backup', 'mcp', 'portal'];
 
 /** What the signature values read as when the release's images are not signed. */
 export const UNSIGNED = 'unsigned';
@@ -138,6 +139,7 @@ export function guideValues(settings, composeText, lang) {
     SIGNATURE_SHA256_EDITOR: bundleSum('editor'),
     SIGNATURE_SHA256_BACKUP: bundleSum('backup'),
     SIGNATURE_SHA256_MCP: bundleSum('mcp'),
+    SIGNATURE_SHA256_PORTAL: bundleSum('portal'),
     SIGNER_IDENTITY: signatures?.identity ?? unsigned,
     SIGNER_ISSUER: signatures?.issuer ?? unsigned,
     SIGNED_IMAGES: signedImages,

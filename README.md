@@ -92,7 +92,9 @@ pnpm nx run portal:site                  # builds into frontend/portal/dist
 npx serve frontend/portal/dist -l 4330   # then open http://localhost:4330
 ```
 
-Use your own API's address (`PORT`, default 3100). The settings, branding and hosting are in the
+Use your own API's address (`PORT`, default 3100). A self-hosted stack runs it as a Compose
+profile instead, rebuilt after each release: `deploy/self-host.sh --portal`
+([With Docker Compose](https://docs.openfolia.com/guide/portal/compose)). The settings, branding and hosting are in the
 [portal guide](https://docs.openfolia.com/guide/portal); the project's own README is
 [`frontend/portal/README.md`](frontend/portal/README.md).
 

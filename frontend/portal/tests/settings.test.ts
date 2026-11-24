@@ -125,6 +125,24 @@ describe('portal settings', () => {
       ).toBe('http:');
   });
 
+  it('allows http to a host of CCMS_PORTAL_HTTP_HOSTS too (a container network), no other', () => {
+    const hosts = { CCMS_PORTAL_HTTP_HOSTS: 'api, Docs-API.internal' };
+    for (const url of ['http://api:3000', 'http://docs-api.internal/v1'])
+      expect(
+        readSettings(settingsOf({ ...hosts, CCMS_PORTAL_API_URL: url }), '/')
+          .apiUrl.protocol,
+      ).toBe('http:');
+    expect(() =>
+      readSettings(
+        settingsOf({ ...hosts, CCMS_PORTAL_API_URL: 'http://api2:3000' }),
+        '/',
+      ),
+    ).toThrow('or a host of CCMS_PORTAL_HTTP_HOSTS');
+    expect(() =>
+      readSettings(settingsOf({ CCMS_PORTAL_HTTP_HOSTS: 'api:3000' }), '/'),
+    ).toThrow('CCMS_PORTAL_HTTP_HOSTS: comma-separated host names');
+  });
+
   it('documents every setting in .env.example', () => {
     const example = readFileSync(
       join(import.meta.dirname, '..', '..', '..', '.env.example'),
@@ -138,6 +156,11 @@ describe('portal settings', () => {
       'CCMS_PORTAL_RELEASES',
       'CCMS_PORTAL_OUT_DIR',
       'CCMS_PORTAL_BASE_PATH',
+      'CCMS_PORTAL_BRANDING',
+      'CCMS_PORTAL_HTTP_HOSTS',
+      'CCMS_PORTAL_REFRESH_SECONDS',
+      'CCMS_PORTAL_TOKEN_FILE',
+      'OPENFOLIA_PORTAL_PORT',
     ])
       expect(example).toMatch(new RegExp(`^${key}=$`, 'm'));
   });

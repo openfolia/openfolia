@@ -386,7 +386,7 @@ jobs:
           # its tag, and the digest its build leg pushed and the registry names for the tag now.
           # Anything else, and an image missing or named twice, signs nothing.
           repository="$REGISTRY/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/openfolia"
-          release_images="api backup editor embedder mcp"
+          release_images="api backup editor embedder mcp portal"
           targets="$RUNNER_TEMP/targets"
           : >"$targets"
           while read -r line; do

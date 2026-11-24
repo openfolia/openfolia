@@ -1,5 +1,5 @@
 #!/bin/sh
-# Entrypoint of the API, backup and MCP images (Dockerfile): secrets from files, then the command.
+# Entrypoint of the API, backup, MCP and portal images (Dockerfile): secrets from files, then the command.
 #
 # For each setting below, <NAME>_FILE may name a file holding its value instead (a Docker or
 # Compose secret, mounted under /run/secrets/): the file is read, its trailing newlines dropped,
@@ -16,6 +16,7 @@ for name in \
   CCMS_EMBEDDER_API_KEY \
   CCMS_MCP_API_TOKEN \
   CCMS_MCP_HTTP_TOKEN \
+  CCMS_PORTAL_TOKEN \
   CCMS_AUDIT_SINK_SECRET \
   CCMS_OIDC_CLIENT_SECRET \
   CCMS_BACKUP_VERIFY_DATABASE_URL \

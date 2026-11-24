@@ -98,6 +98,7 @@ describe('release-signatures (#745)', () => {
         `editor ${hex(IMAGES.indexOf('editor') + 1)}`,
         `backup ${hex(IMAGES.indexOf('backup') + 1)}`,
         `mcp ${hex(IMAGES.indexOf('mcp') + 1)}`,
+        `portal ${hex(IMAGES.indexOf('portal') + 1)}`,
       ].join('\n'),
     );
     expect(() =>

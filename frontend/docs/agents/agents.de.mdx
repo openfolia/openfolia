@@ -15,16 +15,16 @@ es auch als reines Markdown unter `%%SITE_URL%%/agents.md`.
 
 %%RELEASE_NOTE%%
 
-| Was                 | Wert                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| Version             | `%%RELEASE%%`                                                                            |
-| Images              | `%%IMAGES%%/<api, editor, mcp, backup>:%%RELEASE%%`, jedes über seinen Digest festgelegt |
-| Compose-Datei       | `%%RELEASE_URL%%/compose.yaml`                                                           |
-| Ihre SHA-256        | `%%COMPOSE_SHA256%%`                                                                     |
-| Digests der Images  | `%%RELEASE_URL%%/compose.digests.yaml`                                                   |
-| Ihre SHA-256        | `%%DIGESTS_SHA256%%`                                                                     |
-| Signaturen          | %%SIGNATURES_NOTE%%                                                                      |
-| Doku dieser Version | `%%SITE_URL%%`                                                                           |
+| Was                 | Wert                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Version             | `%%RELEASE%%`                                                                                    |
+| Images              | `%%IMAGES%%/<api, editor, mcp, portal, backup>:%%RELEASE%%`, jedes über seinen Digest festgelegt |
+| Compose-Datei       | `%%RELEASE_URL%%/compose.yaml`                                                                   |
+| Ihre SHA-256        | `%%COMPOSE_SHA256%%`                                                                             |
+| Digests der Images  | `%%RELEASE_URL%%/compose.digests.yaml`                                                           |
+| Ihre SHA-256        | `%%DIGESTS_SHA256%%`                                                                             |
+| Signaturen          | %%SIGNATURES_NOTE%%                                                                              |
+| Doku dieser Version | `%%SITE_URL%%`                                                                                   |
 
 ## Regeln für den Agenten
 
@@ -252,7 +252,9 @@ else
       curl -fsSL -o backup.sigstore.json '%%RELEASE_URL%%/backup.sigstore.json' &&
       echo '%%SIGNATURE_SHA256_BACKUP%%  backup.sigstore.json' | shasum -a 256 -c - &&
       curl -fsSL -o mcp.sigstore.json '%%RELEASE_URL%%/mcp.sigstore.json' &&
-      echo '%%SIGNATURE_SHA256_MCP%%  mcp.sigstore.json' | shasum -a 256 -c -
+      echo '%%SIGNATURE_SHA256_MCP%%  mcp.sigstore.json' | shasum -a 256 -c - &&
+      curl -fsSL -o portal.sigstore.json '%%RELEASE_URL%%/portal.sigstore.json' &&
+      echo '%%SIGNATURE_SHA256_PORTAL%%  portal.sigstore.json' | shasum -a 256 -c -
   ) || failed=1
   while read -r image digest; do
     [ "$failed" = 0 ] || break
@@ -278,7 +280,7 @@ fi
 
 Auf einem System ohne `shasum` verwende `sha256sum -c -` an seiner Stelle, wie in Schritt 3.
 
-**Prüfung:** Es gibt `<image>: signature verified` für `api`, `editor`, `backup` und `mcp` aus,
+**Prüfung:** Es gibt `<image>: signature verified` für `api`, `editor`, `backup`, `mcp` und `portal` aus,
 dann `every signature verified`. Ein `NOT verified`, eine Prüfsumme, die nicht stimmt, oder eine
 Datei, die sich nicht laden lässt, heißt: Ein Image oder eine Datei ist nicht die, die der Workflow
 dieser Veröffentlichung signiert hat. Halte an, zeige der Person die Ausgabe und lade nichts. Es

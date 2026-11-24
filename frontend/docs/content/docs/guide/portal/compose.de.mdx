@@ -1,0 +1,99 @@
+---
+title: 'Mit Docker Compose'
+description: 'Das Portal neben einem selbst betriebenen OpenFolia: ein Container, der es aus der API erstellt, nach jeder Veröffentlichung neu erstellt und mit den richtigen Headern ausliefert.'
+articleId: 'guide.portal.compose'
+---
+
+Ein selbst betriebenes OpenFolia kann das Portal für Sie betreiben. Der Dienst `portal` des
+Compose-Stacks erstellt das Portal aus der API, liefert es aus und erstellt es nach jeder
+Veröffentlichung neu. Sie erstellen und kopieren keine Dateien von Hand, und Leser sehen die neue
+Veröffentlichung ohne Neustart.
+
+## Mit einem Befehl einrichten
+
+`deploy/self-host.sh` fragt, ob das Portal laufen soll (standardmäßig ja), oder nimmt `--portal`:
+
+```sh
+deploy/self-host.sh --portal
+```
+
+Das Skript:
+
+1. legt eine Rolle `portal-reader` an, die nur freigegebene Inhalte lesen darf, bis zu einer
+   Zielgruppe. Das ist die am wenigsten eingeschränkte Zielgruppenstufe Ihrer `openfolia.yaml`
+   (`public` im Beispielinhalt), außer Sie nennen mit `--portal-audience <id>` eine andere;
+2. legt das Dienstkonto `portal` mit dieser Rolle an und dazu ein Token, 366 Tage gültig. Es
+   schreibt das Token in die Einstellungsdatei `deploy/.env` (nur für Sie lesbar) und zeigt es
+   nie an;
+3. startet das Portal und gibt seine Adresse neben der des Editors aus:
+   standardmäßig `http://127.0.0.1:8090/`.
+
+Bevor die erste Veröffentlichung herausgegeben ist, zeigt das Portal eine Seite, die das sagt, und
+sieht jede Minute erneut nach. Sobald eine Veröffentlichung vorliegt, erscheinen ihre Handbücher.
+
+Sie können das Skript jederzeit erneut ausführen: Es behält das Token. `--no-portal` überspringt
+die Frage; ein zuvor eingerichtetes Portal läuft weiter (`COMPOSE_PROFILES=portal` in
+`deploy/.env`).
+
+## Oder von Hand
+
+Legen Sie eine Rolle mit nur `content.read` und einer `maxAudience` an, ein Dienstkonto mit dieser
+Rolle und sein Token, im Editor (Admin, Dienstkonten) oder wie unter
+[Erstellen und Vorschau](/de/guide/portal/build) beschrieben. Ergänzen Sie dann `deploy/.env`:
+
+```sh
+COMPOSE_PROFILES=portal
+CCMS_PORTAL_AUDIENCE=public
+CCMS_PORTAL_TOKEN=<das Token>
+```
+
+und starten Sie es:
+
+```sh
+cd deploy
+docker compose up -d --wait
+```
+
+Die übrigen Einstellungen aus [Erstellen und Vorschau](/de/guide/portal/build) gelten auch hier:
+die Sprachen, die Veröffentlichungen, der Basispfad und das Branding. Der Port ist
+`OPENFOLIA_PORTAL_PORT` (Standard `8090`), auf `127.0.0.1` wie der des Editors.
+
+## Wann es neu erstellt wird
+
+Das Portal liest die Veröffentlichungen der API alle fünf Minuten (`CCMS_PORTAL_REFRESH_SECONDS`,
+Standard `300`). Wurde seit seiner letzten Erstellung eine Veröffentlichung herausgegeben oder
+zurückgezogen oder sind ihre PDFs fertig gerendert, erstellt es sich neu. Leser sehen den letzten
+gelungenen Stand, während ein neuer entsteht, und auch dann, wenn eine Erstellung fehlschlägt. Die
+eine Ausnahme ist eine zurückgezogene Veröffentlichung: Schlägt die Erstellung ohne sie fehl,
+zeigt das Portal die Seite, die sagt, dass noch nichts veröffentlicht ist, statt der
+zurückgezogenen Handbücher. Das Log des Containers sagt, warum eine Erstellung fehlschlug; das
+Portal versucht es nach einer Weile erneut und sofort nach der nächsten Veröffentlichung. Das
+Portal prüft die Veröffentlichungen selbst und braucht keinen Webhook.
+
+Der Container ist gesund, sobald er einen Stand ausliefert oder die Seite, die sagt, dass noch
+nichts veröffentlicht ist. Den letzten Stand behält er in einem eigenen Volume, sodass er ihn nach
+einem Neustart sofort ausliefert, während er den nächsten erstellt. Haben Sie die Zielgruppe, die
+Sprachen oder den Basispfad geändert, zeigt er stattdessen diese Seite, bis der neue Stand fertig
+ist.
+
+## Davor
+
+Das Portal antwortet mit einfachem HTTP. Setzen Sie Ihren Reverse Proxy mit TLS davor, auf einem
+eigenen Hostnamen wie beim Editor ([Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy)). Der
+Container sendet die Header aus [Das Portal bereitstellen](/de/guide/portal/hosting) bereits
+selbst.
+
+Das Portal ist öffentlich: Wer es erreicht, liest jedes Handbuch, das es zeigt. **Ein Portal für
+eine Zielgruppe, die nicht öffentlich ist, braucht eine Anmeldung davor**, die Ihres Proxys, wie
+[Das Portal bereitstellen](/de/guide/portal/hosting) beschreibt.
+
+Um es unter einem Pfad wie `/manuals/` auszuliefern, setzen Sie `CCMS_PORTAL_BASE_PATH=/manuals/`
+und lassen Ihren Proxy `/manuals/` ohne den Pfad an das Portal weitergeben.
+
+## Das Token
+
+Das Token ist 366 Tage gültig. Erstellen Sie vor Ablauf ein neues: Löschen Sie die Zeile
+`CCMS_PORTAL_TOKEN` aus `deploy/.env` und führen Sie `deploy/self-host.sh` erneut aus. Es erstellt
+ein neues Token für dasselbe Dienstkonto. Widerrufen Sie danach das alte im Editor (Admin,
+Dienstkonten, `portal`). Bis dahin liefert ein Portal mit abgelaufenem Token seinen letzten Stand
+weiter aus und protokolliert, dass es die Veröffentlichungen nicht lesen kann.

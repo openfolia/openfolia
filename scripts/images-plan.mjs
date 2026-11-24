@@ -17,7 +17,8 @@ import { pathToFileURL } from 'node:url';
  * the API image plus the Postgres client (the Dockerfile, target `backup`), so whatever rebuilds
  * the API rebuilds it; its own part of the build lives in the Dockerfile and deploy/, which
  * REBUILD_ALL covers. `embedder` is the local embedding worker
- * (deploy/compose.embedder.yaml, #532).
+ * (deploy/compose.embedder.yaml, #532); `portal` the reader portal (#819), which also renders
+ * with render-html and content-model, so Nx rebuilds it with them.
  */
 export const IMAGE_PROJECTS = Object.freeze({
   api: 'api',
@@ -25,6 +26,7 @@ export const IMAGE_PROJECTS = Object.freeze({
   editor: 'editor',
   embedder: 'embedder',
   mcp: 'mcp',
+  portal: 'portal',
 });
 
 export const IMAGES = Object.freeze(Object.keys(IMAGE_PROJECTS));

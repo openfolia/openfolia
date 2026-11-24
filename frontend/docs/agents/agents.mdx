@@ -15,16 +15,16 @@ The rest of this page is written for the agent. It is also served as plain Markd
 
 %%RELEASE_NOTE%%
 
-| What                | Value                                                                          |
-| ------------------- | ------------------------------------------------------------------------------ |
-| Release             | `%%RELEASE%%`                                                                  |
-| Images              | `%%IMAGES%%/<api, editor, mcp, backup>:%%RELEASE%%`, each pinned by its digest |
-| Compose file        | `%%RELEASE_URL%%/compose.yaml`                                                 |
-| Its SHA-256         | `%%COMPOSE_SHA256%%`                                                           |
-| Image digests       | `%%RELEASE_URL%%/compose.digests.yaml`                                         |
-| Its SHA-256         | `%%DIGESTS_SHA256%%`                                                           |
-| Signatures          | %%SIGNATURES_NOTE%%                                                            |
-| Docs of the release | `%%SITE_URL%%`                                                                 |
+| What                | Value                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| Release             | `%%RELEASE%%`                                                                          |
+| Images              | `%%IMAGES%%/<api, editor, mcp, portal, backup>:%%RELEASE%%`, each pinned by its digest |
+| Compose file        | `%%RELEASE_URL%%/compose.yaml`                                                         |
+| Its SHA-256         | `%%COMPOSE_SHA256%%`                                                                   |
+| Image digests       | `%%RELEASE_URL%%/compose.digests.yaml`                                                 |
+| Its SHA-256         | `%%DIGESTS_SHA256%%`                                                                   |
+| Signatures          | %%SIGNATURES_NOTE%%                                                                    |
+| Docs of the release | `%%SITE_URL%%`                                                                         |
 
 ## Rules for the agent
 
@@ -242,7 +242,9 @@ else
       curl -fsSL -o backup.sigstore.json '%%RELEASE_URL%%/backup.sigstore.json' &&
       echo '%%SIGNATURE_SHA256_BACKUP%%  backup.sigstore.json' | shasum -a 256 -c - &&
       curl -fsSL -o mcp.sigstore.json '%%RELEASE_URL%%/mcp.sigstore.json' &&
-      echo '%%SIGNATURE_SHA256_MCP%%  mcp.sigstore.json' | shasum -a 256 -c -
+      echo '%%SIGNATURE_SHA256_MCP%%  mcp.sigstore.json' | shasum -a 256 -c - &&
+      curl -fsSL -o portal.sigstore.json '%%RELEASE_URL%%/portal.sigstore.json' &&
+      echo '%%SIGNATURE_SHA256_PORTAL%%  portal.sigstore.json' | shasum -a 256 -c -
   ) || failed=1
   while read -r image digest; do
     [ "$failed" = 0 ] || break
@@ -268,7 +270,7 @@ fi
 
 On a system without `shasum`, use `sha256sum -c -` in its place, as in step 3.
 
-**Check:** it prints `<image>: signature verified` for `api`, `editor`, `backup` and `mcp`, and then
+**Check:** it prints `<image>: signature verified` for `api`, `editor`, `backup`, `mcp` and `portal`, and then
 `every signature verified`. A `NOT verified`, a checksum that fails or a file that can't be
 downloaded means an image or a file is not the one this release's workflow signed: stop, show the
 person the output, and pull nothing. It may also print `this release is not signed` (go on), or

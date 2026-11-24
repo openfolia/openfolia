@@ -17,6 +17,7 @@ Repository; diese Seite fasst sie zusammen, und die
 | `worker`   | Hintergrundarbeit: Dateien der Veröffentlichungen, Importe, Webhooks, Aufräumläufe. Skaliert horizontal. |
 | `editor`   | Der Editor als statischer Build hinter nginx, das auch `/api` an die API weiterleitet.                   |
 | `mcp`      | Optional: der MCP-Server für KI-Assistenten über die freigegebenen Inhalte.                              |
+| `portal`   | Optional: das Leseportal, nach jeder Veröffentlichung neu erstellt ([Portal](/de/guide/portal/compose)). |
 | `backup`   | Geplante, verschlüsselte und geprüfte Sicherungen.                                                       |
 
 Alles Dauerhafte liegt in drei Volumes: der Datenbank, dem Datenvolume (das

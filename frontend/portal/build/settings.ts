@@ -49,7 +49,12 @@ const Env = z.object({
   CCMS_PORTAL_BRANDING: z
     .enum(['on', 'off'], { error: 'on or off' })
     .optional(),
+  CCMS_PORTAL_HTTP_HOSTS: z.string().optional(),
 });
+
+/** A host name as `URL` writes one: lowercase labels of letters, digits and hyphens. */
+const HOST_NAME =
+  /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/;
 
 /**
  * The settings from the environment. Every message names the setting, never its value: the
@@ -82,10 +87,21 @@ export function readSettings(
   }
   if (apiUrl.protocol !== 'https:' && apiUrl.protocol !== 'http:')
     throw new SettingsError('CCMS_PORTAL_API_URL: http or https only');
-  // The token goes in a header on every request: never in plain text across a network.
-  if (apiUrl.protocol === 'http:' && !LOOPBACK.has(apiUrl.hostname))
+  // The token goes in a header on every request: never in plain text across a network, but
+  // to this machine or a host named in CCMS_PORTAL_HTTP_HOSTS (the API's service on a
+  // container network of its own, deploy/compose.yaml).
+  const httpHosts = list(e.CCMS_PORTAL_HTTP_HOSTS)?.map((h) => h.toLowerCase());
+  if (httpHosts?.some((host) => !HOST_NAME.test(host)))
     throw new SettingsError(
-      'CCMS_PORTAL_API_URL: https, or http only to this machine (127.0.0.1, localhost, [::1])',
+      'CCMS_PORTAL_HTTP_HOSTS: comma-separated host names, e.g. api',
+    );
+  if (
+    apiUrl.protocol === 'http:' &&
+    !LOOPBACK.has(apiUrl.hostname) &&
+    !httpHosts?.includes(apiUrl.hostname)
+  )
+    throw new SettingsError(
+      'CCMS_PORTAL_API_URL: https, or http only to this machine (127.0.0.1, localhost, [::1]) or a host of CCMS_PORTAL_HTTP_HOSTS',
     );
   if (
     apiUrl.username !== '' ||

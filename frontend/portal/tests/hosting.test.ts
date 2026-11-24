@@ -18,6 +18,10 @@ describe('the headers a host sends', () => {
   it.each([
     ['the portal README', ['README.md']],
     ['the deployment guide', ['..', '..', 'deploy', 'README.md']],
+    [
+      "the portal image's web server",
+      ['..', '..', 'deploy', 'docker', 'portal', 'Caddyfile'],
+    ],
   ])('%s lists them', (_, path) => {
     const text = read(...path);
     expect(text).toContain(HOST_CSP);

@@ -3,7 +3,9 @@
 # (containers and volumes): the API's health, the editor, the editor's /api proxy and its host and
 # origin checks, a PDF rendered through each, the editor after the API is recreated, the MCP
 # server, a release's files rendered by two separate workers, none twice and within the
-# per-release cap, with the workers' health, and the backups: a verified backup to an S3 server
+# per-release cap, with the workers' health, the reader portal (--profile portal: built from that
+# release with a read-only token, its headers, a new release shown without a restart, no file
+# holding the token), and the backups: a verified backup to an S3 server
 # in a container, restored onto a fresh stack that renders a PDF and still opens its sealed
 # secrets (deploy/README.md, "Smoke test").
 #
@@ -11,7 +13,8 @@
 #   SMOKE_BUILD=0 deploy/smoke-test.sh   the images as they are (OPENFOLIA_IMAGES, OPENFOLIA_VERSION)
 #
 # Settings: SMOKE_PROJECT (the Compose project, default openfolia-smoke), SMOKE_API_PORT,
-# SMOKE_EDITOR_PORT and SMOKE_MCP_PORT (published on 127.0.0.1, default 3103, 4303 and 3203), SMOKE_KEEP=1 to leave the
+# SMOKE_EDITOR_PORT, SMOKE_MCP_PORT and SMOKE_PORTAL_PORT (published on 127.0.0.1, default 3103, 4303, 3203
+# and 8193), SMOKE_KEEP=1 to leave the
 # stack running. Everything it makes is random and thrown away. It reads no settings file: not
 # the deploy/.env or deploy/api.env of a deployment on the same machine (--env-file /dev/null,
 # OPENFOLIA_API_ENV_FILE=/dev/null), and it names its images itself: openfolia-smoke/<image>:smoke
@@ -26,6 +29,8 @@ api="http://127.0.0.1:${api_port}"
 editor="http://127.0.0.1:${editor_port}"
 mcp_port=${SMOKE_MCP_PORT:-3203}
 mcp="http://127.0.0.1:${mcp_port}"
+portal_port=${SMOKE_PORTAL_PORT:-8193}
+portal="http://127.0.0.1:${portal_port}"
 pdf_path=/manuals/operating/variants/model=large/en/pdf
 work=$(mktemp -d)
 
@@ -63,7 +68,7 @@ cleanup() {
     compose logs --no-color --tail 40 >&2 || true
   fi
   if [ "${SMOKE_KEEP:-0}" != 1 ]; then
-    compose --profile mcp down --volumes --remove-orphans >/dev/null 2>&1 || true
+    compose --profile mcp --profile portal down --volumes --remove-orphans >/dev/null 2>&1 || true
   fi
   rm -rf "$work"
   exit "$status"
@@ -101,7 +106,7 @@ up() {
 
 if [ "${SMOKE_BUILD:-1}" = 1 ]; then
   step "build"
-  compose --profile mcp build --quiet
+  compose --profile mcp --profile portal build --quiet
 fi
 
 step "sample content onto the empty data volume"
@@ -249,6 +254,56 @@ code=$(status -H "Authorization: Bearer $publisher" "$api/releases/$release/outp
 head -c 5 "$work/body" | grep -q '%PDF-' || fail "the release file $file (kind pdf) is no PDF: $(head -c 16 "$work/body" | od -An -c | head -n 1)"
 echo "GET /releases/$release/outputs/$file/file -> $code, $(wc -c <"$work/body" | tr -d ' ') bytes"
 
+step "the reader portal (--profile portal), built from that release"
+# A read-only role up to the least restricted audience, and its service account's token, as
+# deploy/self-host.sh makes them.
+echo '{"roles":[{"id":"smoke-portal","name":"Smoke portal","permissions":["content.read"],"scope":{"maxAudience":"public"}}],"users":[]}' |
+  compose exec -T api node dist/database/seed.main.js /dev/stdin >/dev/null
+CCMS_PORTAL_TOKEN=$(compose exec -T api node dist/database/service-token.main.js smoke-portal --role smoke-portal --name portal | tail -n 1)
+case "$CCMS_PORTAL_TOKEN" in ccms_sat_*) ;; *) fail "no token for the portal" ;; esac
+export CCMS_PORTAL_TOKEN CCMS_PORTAL_AUDIENCE=public CCMS_PORTAL_REFRESH_SECONDS=5 OPENFOLIA_PORTAL_PORT="$portal_port"
+up --profile portal --no-deps portal
+started_at=$(docker inspect --format '{{.State.StartedAt}}' "$(compose --profile portal ps -q portal)")
+code=$(curl -sg -D "$work/headers" -o "$work/body" -w '%{http_code}' "$portal/")
+[ "$code" = 200 ] || fail "the portal's start page answered $code"
+grep -qi "^content-security-policy: .*frame-ancestors 'none'" "$work/headers" || fail "the start page has no CSP with frame-ancestors: $(cat "$work/headers")"
+grep -qi '^x-content-type-options: nosniff' "$work/headers" || fail "the start page has no nosniff"
+echo "GET / on the portal -> $code, with its Content-Security-Policy (frame-ancestors 'none') and nosniff"
+manual=/en/north/operating/model=large/
+code=$(status "$portal$manual")
+[ "$code" = 200 ] || fail "the manual page $manual answered $code"
+grep -q "Release $revision<" "$work/body" || fail "the manual page does not show the release $revision"
+echo "GET $manual -> $code, the operating manual of release $revision"
+code=$(status "$portal/de/no-such-page/")
+[ "$code" = 404 ] && grep -q '<html lang="de"' "$work/body" || fail "a missing German page answered $code, not the German 404 page"
+echo "GET /de/no-such-page/ -> $code, the German 404 page"
+# The token (and its secret part) in no file the portal wrote or staged: patterns on stdin, never
+# in a command line.
+secret=${CCMS_PORTAL_TOKEN##*_}
+# grep answers 1 for no match; a match (0) or an error (2) fails.
+found=0
+printf '%s\n%s\n' "$CCMS_PORTAL_TOKEN" "$secret" | compose --profile portal exec -T portal grep -rlF -f - /app/portal/out /tmp >"$work/found" 2>&1 || found=$?
+[ "$found" = 1 ] || fail "files hold the portal's token (grep $found): $(cat "$work/found")"
+echo "no file of the portal's volume or /tmp holds the token"
+
+step "the portal shows a new release without a restart"
+next="$revision-2"
+code=$(status -X POST -H "Authorization: Bearer $publisher" -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"Release\",\"attributes\":{\"product\":\"north\",\"revision\":\"$next\"}}}" "$api/releases")
+[ "$code" = 201 ] || fail "POST /releases ($next) answered $code: $(head -c 400 "$work/body")"
+shown=
+for _ in $(seq 1 90); do
+  if [ "$(status "$portal$manual")" = 200 ] && grep -q "Release $next<" "$work/body"; then
+    shown=1
+    break
+  fi
+  sleep 2
+done
+[ -n "$shown" ] || fail "the portal did not show the release $next within 180 s: $(compose --profile portal logs --no-color --tail 20 portal)"
+[ "$(docker inspect --format '{{.State.StartedAt}}' "$(compose --profile portal ps -q portal)")" = "$started_at" ] ||
+  fail "the portal container was restarted"
+echo "GET $manual -> the release $next, the same container"
+
 step "a preview (the API's own small PDF pool)"
 code=$(status -H "Authorization: Bearer $token" "$api$pdf_path/pages/1.png?width=200")
 [ "$code" = 200 ] || fail "the page image answered $code: $(head -c 300 "$work/body")"
@@ -329,7 +384,7 @@ compose logs --no-color backup 2>&1 | grep -q "$SMOKE_S3_SECRET_ACCESS_KEY" && f
 echo "the S3 secret is in no log"
 
 step "backups: restore onto a fresh stack, from the S3 location"
-compose rm -sfv api worker editor backup mcp postgres >/dev/null
+compose --profile portal rm -sfv api worker editor backup mcp portal postgres >/dev/null
 docker volume rm "${project}_postgres" "${project}_data" "${project}_backups" >/dev/null
 up postgres s3
 printf '%s\n' "CCMS_BACKUP_LOCATION=s3" "CCMS_BACKUP_S3_ENDPOINT=http://s3:8333" "CCMS_BACKUP_S3_BUCKET=openfolia-backups" \

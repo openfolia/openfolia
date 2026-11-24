@@ -44,6 +44,7 @@ describe('release-digests (#739)', () => {
       { service: 'backup', image: 'backup' },
       { service: 'restore', image: 'backup' },
       { service: 'mcp', image: 'mcp' },
+      { service: 'portal', image: 'portal' },
     ]);
   });
 

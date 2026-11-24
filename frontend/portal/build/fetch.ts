@@ -133,12 +133,7 @@ export async function fetchSnapshots(
   const { audience, log } = options;
   const me = await client.resource('/me');
   const releases = await chooseReleases(client, options.releases);
-  if (releases.length === 0)
-    throw new ApiError(
-      'no release to build: none is published (or all are withdrawn)',
-      0,
-      undefined,
-    );
+  if (releases.length === 0) throw new NothingReleased();
 
   // The audience levels come from the newest release's configuration; every release's own is checked too.
   const configs = new Map<string, Config>();
@@ -363,6 +358,13 @@ export async function fetchSnapshots(
     builds.push({ lang, snapshot });
   }
   return builds;
+}
+
+/** No release to build: none is published, or each one is withdrawn. Not a failure of the build. */
+export class NothingReleased extends Error {
+  constructor() {
+    super('no release to build: none is published (or all are withdrawn)');
+  }
 }
 
 /** The releases asked for, or each product's newest that is not withdrawn; newest first. */

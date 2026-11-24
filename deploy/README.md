@@ -966,10 +966,71 @@ server {
 
 ## The static portal
 
-The portal (`frontend/portal/README.md`) is plain files, built for one audience: serve its
-output folder with any static file server or host, on a host name of its own or under a path
-(`CCMS_PORTAL_BASE_PATH`). It needs no API at run time. A non-public portal needs a sign-in
-in front of it (your proxy's or your host's), which the portal does not provide.
+The portal (`frontend/portal/README.md`) is the released manuals for one audience, a site per
+language. Run it beside the stack with the `portal` image and profile (below), or build its files
+yourself and serve them with any static host ("Building it yourself").
+
+**Public by default.** The portal has no sign-in: anyone who reaches it reads every manual it
+shows. A portal for an audience that is not public needs a sign-in in front of it (your proxy's or
+your host's), which the portal does not provide. One portal per stack, for one audience.
+
+### The portal image and the Compose profile
+
+`ghcr.io/<owner>/openfolia/portal` (Dockerfile target `portal`, #819) builds the portal from the
+API and serves it with Caddy on port 8080 inside the container, published on
+`${OPENFOLIA_BIND:-127.0.0.1}:${OPENFOLIA_PORTAL_PORT:-8090}`. It sends the headers below itself
+(the policy with `frame-ancestors 'none'`, `nosniff`, the referrer policy, HSTS for the proxy's
+HTTPS, the `.bin` attachment headers) and answers a missing path with its language's 404 page.
+
+`deploy/self-host.sh --portal` sets it up (or answer yes when it asks): a role `portal-reader`
+with only `content.read` up to the audience (`--portal-audience <id>`; default the least
+restricted level of `openfolia.yaml`), the service account `portal` holding it, its token (366
+days) written into `deploy/.env` (never shown), `COMPOSE_PROFILES=portal`, and the profile
+started; it prints the portal's address next to the editor's. By hand:
+
+```sh
+# in deploy/.env: a service account token whose roles hold content.read only, up to the audience
+COMPOSE_PROFILES=portal
+CCMS_PORTAL_AUDIENCE=public
+CCMS_PORTAL_TOKEN=ccms_sat_...
+docker compose up -d --wait
+```
+
+`compose.yaml` sets `CCMS_PORTAL_API_URL=http://api:3000` (the API on the stack's own network,
+allowed over plain http by `CCMS_PORTAL_HTTP_HOSTS=api`); the other `CCMS_PORTAL_*` settings of
+`.env.example`, "Portal", come from `deploy/.env` (`CCMS_PORTAL_TOKEN_FILE` for a secret file).
+
+- **When it builds:** at start, and again whenever a release was published or withdrawn, or its
+  PDFs finished rendering (a build takes only the rendered ones): it reads
+  `GET /releases` every `CCMS_PORTAL_REFRESH_SECONDS` (default 300). It polls rather than taking
+  the API's webhooks, because webhooks deliver only to public `https` addresses, never to a
+  container beside the API, and a subscription needs `webhook.manage`; reading the releases needs
+  only the portal's own read-only token.
+- **The last good build:** a build writes into a folder beside the site and replaces it only when
+  every language is built and no file holds the token, so readers get the last good build while
+  one runs. A failed build is logged and leaves the site as it was; it is tried again after one
+  interval, then after twice as long each time (at most an hour), or at once when a release
+  changes. Never a withdrawn release, though: when the build without it fails, the holding page
+  below takes its place. The site is in the `portal` volume, with a record beside it of the
+  settings it was built with, so a restart serves it at once, unless the audience, languages,
+  releases, base path or branding changed: then the holding page until the new build is ready.
+- **Before the first release** (or when every release is withdrawn) it shows a page saying no
+  manuals are released yet, which reloads every minute.
+- **Health:** healthy once it serves a build or that page (`/healthz`); the first build may take
+  minutes, so the image's health check has a long start period.
+- **The token:** in the build's process only, never in the web server's environment or a file it
+  writes. Renew it before it runs out (366 days): delete the `CCMS_PORTAL_TOKEN` line and run
+  `deploy/self-host.sh` again, then revoke the old token (Admin, Service accounts, `portal`).
+  With an expired token the portal keeps serving its last build and logs that it cannot read
+  the releases.
+- **Behind the proxy:** a host name of its own, TLS at the proxy. Under a path
+  (`CCMS_PORTAL_BASE_PATH=/manuals/`), the proxy passes the path on to the portal without it.
+
+### Building it yourself
+
+The portal is plain files, built for one audience (`pnpm nx run portal:site`,
+`frontend/portal/README.md`): serve its output folder with any static file server or host, on a
+host name of its own or under a path (`CCMS_PORTAL_BASE_PATH`). It needs no API at run time.
 
 Each page carries its Content Security Policy as a meta tag. A host must send these headers
 too, since a meta tag cannot carry them:
@@ -1220,6 +1281,7 @@ docker build --target editor -t openfolia/editor:local .
 docker build --target mcp    -t openfolia/mcp:local .
 docker build --target backup -t openfolia/backup:local .   # the API image plus the Postgres client
 docker build --target embedder -t openfolia/embedder:local .   # the local embedding worker (no model inside)
+docker build --target portal -t openfolia/portal:local .   # the reader portal (Caddy and the portal's build)
 ```
 
 - **Stages:** the dependencies are fetched from the lockfile alone, so a source change doesn't
@@ -1242,11 +1304,11 @@ docker build --target embedder -t openfolia/embedder:local .   # the local embed
     calls the deploy webhook, but only for a tag on a commit of `main`.
 
   GitHub creates a new container package as private: make each of `openfolia/api`,
-  `openfolia/editor`, `openfolia/mcp`, `openfolia/backup` and `openfolia/embedder` public once (the package's
+  `openfolia/editor`, `openfolia/mcp`, `openfolia/backup`, `openfolia/embedder` and `openfolia/portal` public once (the package's
   settings, after its first push), so anyone can pull them without signing in.
 
   "Affected" (`scripts/images-plan.mjs`) follows Nx: a change in `packages/content-model`
-  rebuilds the API, the MCP server and the editor. The backup image is the API image plus the
+  rebuilds the API, the MCP server, the editor and the portal. The backup image is the API image plus the
   Postgres client, so whatever rebuilds the API rebuilds it too. A change to the `Dockerfile`,
   `deploy/`, the lockfile or the workflow rebuilds every image.
 
@@ -1384,10 +1446,16 @@ content, with random secrets. It checks:
 - a PDF, rendered both directly and through the editor;
 - the editor still reaching the API after the API container is recreated;
 - the MCP server: refused without its token, and `tools/list` with it;
+- the reader portal (`--profile portal`, a read-only token up to `public`): healthy, its start
+  page 200 with the Content Security Policy (`frame-ancestors 'none'`) and `nosniff`, a manual
+  page of the release, the German 404 page for a missing German path, no file of its volume or
+  `/tmp` holding the token, and a second release shown within three minutes by the same
+  container;
 - the secret key file on the data volume.
 
 Then it removes the containers and volumes again. It reads no settings file. The ports are
-`SMOKE_API_PORT` and `SMOKE_EDITOR_PORT` (default 3103 and 4303). With `SMOKE_BUILD=0` it
+`SMOKE_API_PORT`, `SMOKE_EDITOR_PORT`, `SMOKE_MCP_PORT` and `SMOKE_PORTAL_PORT` (default 3103,
+4303, 3203 and 8193). With `SMOKE_BUILD=0` it
 skips the build and uses the images as they are; with `SMOKE_KEEP=1` it leaves the stack
 running.
 
@@ -1407,10 +1475,15 @@ never pushed, that signs in a known login without a password). It checks:
   `first-admin`, their password chosen through it, a sign-in with it, and the link refused the
   second time;
 - the sample content through the editor;
+- the reader portal (`--portal`): its address printed, its profile, audience and token in the
+  settings file (the token never printed), the page saying nothing is released yet with its
+  policy, then a release published and its manual shown by the same container, no file of the
+  portal holding the token;
 - a second run of `self-host.sh` on a recreated API: the settings and the content kept, no
-  second admin, no new link, one user in the database.
+  second admin, no new link, one user in the database, and the portal's token kept.
 
 Then it removes the containers and volumes again. The ports are `SELF_HOST_API_PORT`,
-`SELF_HOST_EDITOR_PORT` and `SELF_HOST_OIDC_PORT` (default 3104, 4304 and 9404);
+`SELF_HOST_EDITOR_PORT`, `SELF_HOST_OIDC_PORT` and `SELF_HOST_PORTAL_PORT` (default 3104, 4304, 9404
+and 8194);
 `SELF_HOST_KEEP=1` leaves the stack running. CI runs it on every pull request that changes an
 image, and a release is deployed only after it passed.

@@ -79,6 +79,11 @@ export async function buildPortal(options: BuildOptions): Promise<void> {
         options.basePath,
       ),
     );
+    // For a path outside every language: the first language's 404 page (its links are absolute).
+    copyFileSync(
+      join(next, builds[0]!.lang, '404.html'),
+      join(next, '404.html'),
+    );
     refuseToken(next, options.token);
     replaceOutput(next, options.outDir);
   } finally {
@@ -192,6 +197,83 @@ function languageIndex(languages: readonly string[], basePath: string): string {
     .join('');
   return `<!doctype html><html lang="${first}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="0; url=${basePath}${first}/"><title>${name(first)}</title></head><body><ul>${links}</ul></body></html>\n`;
 }
+
+/**
+ * What a portal shows before anything is released for it (`scripts/serve.ts`): one page that says
+ * so and looks again every minute, in place of `outDir` as a build would be. English and German,
+ * since the languages come from a release's configuration; its look from a stylesheet beside it
+ * (the Content Security Policy allows no inline style element).
+ */
+export function writeHoldingPage(outDir: string): void {
+  const next = `${outDir}.next`;
+  rmSync(next, { recursive: true, force: true });
+  mkdirSync(next, { recursive: true });
+  try {
+    writeFileSync(join(next, 'index.html'), HOLDING_PAGE);
+    writeFileSync(join(next, 'holding.css'), HOLDING_CSS);
+    replaceOutput(next, outDir);
+  } finally {
+    rmSync(next, { recursive: true, force: true });
+  }
+}
+
+const HOLDING_PAGE = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="60">
+<title>No manuals yet</title>
+<link rel="stylesheet" href="holding.css">
+</head>
+<body>
+<main>
+<h1>No manuals have been released yet</h1>
+<p>The manuals appear here once the first release is published. This page looks again every minute.</p>
+<div lang="de">
+<h2>Noch keine Handbücher veröffentlicht</h2>
+<p>Die Handbücher erscheinen hier, sobald die erste Version veröffentlicht ist. Diese Seite sieht jede Minute erneut nach.</p>
+</div>
+</main>
+</body>
+</html>
+`;
+
+const HOLDING_CSS = `:root {
+  color-scheme: light dark;
+  --paper: #fbfaf7;
+  --ink: #1f2328;
+  --muted: #59606a;
+  --rule: #dcd8cf;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16181b;
+    --ink: #e8e6e1;
+    --muted: #a3a8b0;
+    --rule: #33373d;
+  }
+}
+html { background: var(--paper); color: var(--ink); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+  font: 1rem/1.6 ui-sans-serif, system-ui, sans-serif;
+}
+main { max-width: 34rem; }
+h1, h2 { font-weight: 600; line-height: 1.25; text-wrap: balance; margin: 0 0 0.75rem; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.125rem; }
+p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+[lang="de"] { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+`;
 
 /** A last check: the token (or its secret part) in no file of the output. */
 export function refuseToken(dir: string, token: string): void {
