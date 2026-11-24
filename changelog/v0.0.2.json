@@ -1,0 +1,30 @@
+{
+  "version": "v0.0.2",
+  "date": "2026-11-24",
+  "repository": "https://github.com/openfolia/openfolia",
+  "previous": "v0.0.1",
+  "summary": {
+    "en": "The reader portal now runs as part of a self-hosted OpenFolia. Until this release it was static\nfiles you built by hand from a checkout of the repository; now the stack can run it for you and\nkeep it current.\n\n- Portal: a portal image and an optional portal Compose profile. It builds the portal from the\n  API with a read-only token, serves it on its own port (8090 by default), sends the security\n  headers a portal needs, and shows each new release within a few minutes without a restart. A\n  failed build keeps the last good one online, and withdrawn content is taken down.\n- Portal: deploy/self-host.sh --portal sets it up in one step: a read-only role and service\n  account for the audience you choose, its token stored in the stack's settings and never shown,\n  and the portal's address printed next to the editor's.\n- Docs: a Portal section of its own in the user guide (overview, build and preview, branding,\n  hosting, and running it with Docker Compose). The old portal page forwards to it.\n- Docs: a release's documentation now includes that release in its changelog.\n\nTo upgrade from v0.0.1, follow \"Upgrades\" in deploy/README.md. The\nportal is optional: without the portal profile, nothing changes.",
+    "de": "Das Leserportal läuft jetzt als Teil einer selbst betriebenen OpenFolia-Installation. Bisher\nwaren es statische Dateien, die Sie von Hand aus einem Klon des Repositorys gebaut haben; jetzt\nkann der Stack das Portal für Sie betreiben und aktuell halten.\n\n- Portal: ein Portal-Image und ein optionales Compose-Profil portal. Es baut das Portal mit\n  einem Token, das nur lesen darf, aus der API, stellt es auf einem eigenen Port bereit\n  (standardmäßig 8090), sendet die Sicherheits-Header, die ein Portal braucht, und zeigt jede neue\n  Veröffentlichung nach wenigen Minuten, ohne Neustart. Schlägt ein Build fehl, bleibt der letzte\n  gute online; zurückgezogene Inhalte werden entfernt.\n- Portal: deploy/self-host.sh --portal richtet es in einem Schritt ein: eine Rolle und ein\n  Dienstkonto, die nur lesen dürfen, für die Zielgruppe Ihrer Wahl, das Token in den Einstellungen\n  des Stacks gespeichert und nie angezeigt, und die Adresse des Portals neben der des Editors.\n- Dokumentation: ein eigener Abschnitt „Portal“ im Benutzerhandbuch (Überblick, Bauen und\n  Vorschau, Branding, Hosting und Betrieb mit Docker Compose). Die alte Portalseite leitet dorthin\n  weiter.\n- Dokumentation: Die Dokumentation einer Veröffentlichung enthält diese jetzt in ihrem\n  Änderungsprotokoll.\n\nFür das Upgrade von v0.0.1 folgen Sie „Upgrades“ in deploy/README.md. Das\nPortal ist optional: Ohne das Profil portal ändert sich nichts."
+  },
+  "groups": [],
+  "upgrade": {
+    "breaking": [],
+    "migrations": [],
+    "settings": {
+      "added": [
+        "OPENFOLIA_PORTAL_PORT",
+        "CCMS_PORTAL_HTTP_HOSTS",
+        "CCMS_PORTAL_REFRESH_SECONDS",
+        "CCMS_PORTAL_TOKEN_FILE"
+      ],
+      "changed": [
+        "OPENFOLIA_IMAGES",
+        "OPENFOLIA_EDITOR_PORT",
+        "CCMS_PORTAL_API_URL"
+      ],
+      "removed": []
+    },
+    "notes": []
+  }
+}

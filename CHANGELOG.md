@@ -4,6 +4,28 @@ Every release, newest first: what is new, improved and fixed, the security fixes
 when you upgrade. `scripts/release.mjs` writes this file on each release tag, with the same notes
 as the release on GitHub (CONTRIBUTING.md, "Releases"); don't edit it by hand.
 
+<!-- release v0.0.2 2026-11-24 -->
+## [v0.0.2](https://github.com/openfolia/openfolia/releases/tag/v0.0.2) (2026-11-24)
+
+The reader portal now runs as part of a self-hosted OpenFolia. Until this release it was static files you built by hand from a checkout of the repository; now the stack can run it for you and keep it current.
+
+- Portal: a portal image and an optional portal Compose profile. It builds the portal from the API with a read-only token, serves it on its own port (8090 by default), sends the security headers a portal needs, and shows each new release within a few minutes without a restart. A failed build keeps the last good one online, and withdrawn content is taken down.
+- Portal: [deploy/self-host.sh](https://github.com/openfolia/openfolia/blob/v0.0.2/deploy/self-host.sh) --portal sets it up in one step: a read-only role and service account for the audience you choose, its token stored in the stack's settings and never shown, and the portal's address printed next to the editor's.
+- Docs: a Portal section of its own in the user guide (overview, build and preview, branding, hosting, and running it with Docker Compose). The old portal page forwards to it.
+- Docs: a release's documentation now includes that release in its changelog.
+
+To upgrade from v0.0.1, follow "Upgrades" in [deploy/README.md](https://github.com/openfolia/openfolia/blob/v0.0.2/deploy/README.md). The portal is optional: without the portal profile, nothing changes.
+
+### Upgrade notes
+
+From v0.0.1: take a backup first and follow [Upgrades](https://github.com/openfolia/openfolia/blob/v0.0.2/deploy/README.md#upgrades) in deploy/README.md.
+
+**Settings** (see [.env.example](https://github.com/openfolia/openfolia/blob/v0.0.2/.env.example)):
+
+- New: `OPENFOLIA_PORTAL_PORT`, `CCMS_PORTAL_HTTP_HOSTS`, `CCMS_PORTAL_REFRESH_SECONDS`, `CCMS_PORTAL_TOKEN_FILE`
+- Changed description or example: `OPENFOLIA_IMAGES`, `OPENFOLIA_EDITOR_PORT`, `CCMS_PORTAL_API_URL`
+<!-- /release v0.0.2 -->
+
 <!-- release v0.0.1 2026-11-24 -->
 ## [v0.0.1](https://github.com/openfolia/openfolia/releases/tag/v0.0.1) (2026-11-24)
 
