@@ -10,20 +10,31 @@ handelt mit den Rollen des Service-Accounts und mit nichts sonst.
 
 ## Ein Token erhalten
 
-- **Von einem Admin:** Ein Admin legt den Service-Account an, gibt ihm eine Rolle und stellt im
-  Editor ein Token aus ([Service-Accounts und Tokens](/de/guide/admin/service-accounts)) oder über
-  die API (`POST /service-accounts/{id}/tokens`). Das Token wird einmal angezeigt.
-- **Das erste einer Installation**, bevor sich jemand anmelden kann, auf der Kommandozeile des
-  Servers. Der Befehl legt den Service-Account mit den angegebenen Rollen an, wenn es ihn noch nicht
-  gibt, und gibt das Token einmal aus:
+Tokens gehören zu Service-Accounts, nie zu einer Person. Ein Admin erstellt sie im Editor:
 
-  ```sh
-  docker compose exec api node dist/database/service-token.main.js portal-build \
-    --role <role> --name "Portal-Build, Produktion" --days 90
-  ```
+1. Jemand mit der Berechtigung `admin.roles` öffnet **Verwaltung**, dann **Service-Accounts**.
+2. Er oder sie legt einen Service-Account an und gibt ihm eine Rolle. Kein Service-Account darf
+   `admin.roles` haben.
+3. Er oder sie stellt ein Token aus, wählt, wie lange es gilt, und kopiert es. Es wird nur einmal
+   angezeigt.
 
-  Die Rollen müssen existieren, und keine darf `admin.roles` enthalten. Für einen bestehenden
-  Account lassen Sie `--role` weg: Seine Rollen ändern Sie im Editor.
+[Service-Accounts und Tokens](/de/guide/admin/service-accounts) beschreibt jeden Schritt. Dasselbe
+geht über die API (`POST /service-accounts/{id}/tokens`).
+
+### Das erste Token eines selbst betriebenen Servers
+
+Auf einem Server, den Sie selbst betreiben, kommt das erste Token, bevor sich jemand anmelden kann,
+von der Kommandozeile des Servers. Der Befehl legt den Service-Account mit den angegebenen Rollen
+an, wenn es ihn noch nicht gibt, und gibt das Token einmal aus:
+
+```sh
+docker compose exec api node dist/database/service-token.main.js portal-build \
+  --role <role> --name "Portal-Build, Produktion" --days 90
+```
+
+Die Rollen müssen existieren, und keine darf `admin.roles` enthalten. Für einen bestehenden
+Account lassen Sie `--role` weg: Seine Rollen ändern Sie im Editor. Ein gehostetes OpenFolia hat für
+Sie keine Kommandozeile: Tokens entstehen im Editor.
 
 Für eine Integration, die nur veröffentlichte Inhalte liest, sollte die Rolle **nur `content.read`**
 enthalten, im Bereich, den sie braucht (Sprachen, Modultypen, Zielgruppen). Ein solches Token liest
@@ -31,10 +42,13 @@ enthalten, im Bereich, den sie braucht (Sprachen, Modultypen, Zielgruppen). Ein 
 
 ## Das Token senden
 
-Senden Sie das Token im Header `Authorization` jeder Anfrage und nirgends sonst:
+Die API liegt unter der Adresse Ihres OpenFolia plus `/api`: `https://<team>.openfolia.com/api`,
+wenn es für Sie gehostet wird, sonst unter der Adresse Ihres eigenen Editors plus `/api`
+(ein Server kann der API auch einen eigenen Host geben: [Selbst betreiben](/de/self-hosting)). Senden
+Sie das Token im Header `Authorization` jeder Anfrage und nirgends sonst:
 
 ```sh
-curl -s https://docs.example.com/api/releases \
+curl -s https://<team>.openfolia.com/api/releases \
   -H 'Authorization: Bearer ccms_sat_…' \
   -H 'Accept: application/vnd.api+json'
 ```

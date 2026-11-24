@@ -20,10 +20,6 @@ FROM scratch AS site
 COPY frontend/docs/out/ /
 
 FROM ${CADDY_IMAGE}
-# The API's origin (scheme, host and port) the reference's playground sends requests to: the
-# Content-Security-Policy's connect-src allows it beside the site itself. The publish command
-# passes the origin of the DOCS_API_BASE_URL the site was built with.
-ARG DOCS_API_ORIGIN=""
 # The base image lets its caddy bind ports below 1024 by a file capability. Port 8080 needs none,
 # and a file capability can stop the binary from starting where a platform drops capabilities. The
 # unprivileged user `docs` runs it, named by its uid so a platform can check it is not root.
@@ -36,8 +32,7 @@ COPY LICENSE THIRD-PARTY-NOTICES.md /usr/share/openfolia/
 COPY deploy/docker/docs/Caddyfile /etc/caddy/Caddyfile
 COPY --from=site / /srv/docs
 USER 10001:10001
-ENV DOCS_API_ORIGIN=${DOCS_API_ORIGIN} \
-    XDG_CONFIG_HOME=/tmp/caddy/config \
+ENV XDG_CONFIG_HOME=/tmp/caddy/config \
     XDG_DATA_HOME=/tmp/caddy/data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

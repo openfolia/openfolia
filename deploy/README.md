@@ -1139,12 +1139,10 @@ and never builds the repository. The image is built for `linux/arm64` and `linux
 ```sh
 # The development docs (before a release, or between releases):
 DOCS_SITE_URL=https://docs.example.com \
-DOCS_API_BASE_URL=https://api.example.com \
 pnpm docs:publish --push
 
 # A release's docs, from the commit that adds the release's changelog (CONTRIBUTING.md, "Releases"):
 DOCS_SITE_URL=https://docs.example.com \
-DOCS_API_BASE_URL=https://api.example.com \
 DOCS_RELEASE_DIGESTS="$(cat images.lock)" \
 pnpm docs:publish --release vX.Y.Z --push
 ```
@@ -1152,7 +1150,7 @@ pnpm docs:publish --release vX.Y.Z --push
 `pnpm docs:publish [--release vX.Y.Z] [--push] [--tag <tag>] [--platform <os/arch,...>]`
 (`scripts/docs-publish.mjs`):
 
-- **Checks first, builds nothing until they pass.** `DOCS_SITE_URL` and `DOCS_API_BASE_URL` must
+- **Checks first, builds nothing until they pass.** `DOCS_SITE_URL` must
   be set (`.env.example`, "Docs site"); with `--release`, `DOCS_RELEASE_DIGESTS` too, and
   `DOCS_RELEASE_SIGNATURES` when the release is signed. The command sets `DOCS_RELEASE` from
   `--release` itself; a release's settings without `--release` are refused, so development docs
@@ -1204,8 +1202,8 @@ docker run -d --name docs -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp \
 - **Compression:** zstd and gzip, as the browser asks.
 - **Headers:** a Content-Security-Policy (`default-src 'self'`, scripts and styles of the site,
   inline ones included because the export puts each page's data in inline scripts; `connect-src`
-  the site and the origin of the `DOCS_API_BASE_URL` it was built with, for the API reference's
-  playground; `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`,
+  only the site itself, since the API reference sends no requests to an instance (#858);
+  `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`. HSTS is your
   proxy's to send, as it serves HTTPS.
 
@@ -1268,8 +1266,28 @@ CCMS_MCP_HTTP_TOKEN=<openssl rand -hex 32>
 docker compose --profile mcp up -d --wait
 ```
 
-The endpoint is `http://127.0.0.1:3200/mcp`. Put TLS in front of it as you do for the editor.
-`backend/mcp/README.md` describes its settings.
+The editor serves it at its own address plus `/mcp` (`CCMS_EDITOR_MCP_URL`, which `compose.yaml`
+sets to the `mcp` service), so behind your reverse proxy its address is
+`https://<editor host>/mcp`, under the editor's TLS. It is also on `http://127.0.0.1:3200/mcp`
+(`OPENFOLIA_MCP_PORT`). Without the `mcp` profile, the editor starts as usual and `/mcp` answers
+404; while the service restarts, 404 or 502, for up to 10 s after it is back (nginx keeps the
+name's lookup that long).
+
+- **What the editor passes on:** the request as it came, the caller's `Authorization` and `Origin`
+  included, never the editor's own `CCMS_EDITOR_API_TOKEN` or a session cookie. The server checks
+  the token, the origin (`CCMS_MCP_HTTP_ALLOWED_ORIGINS`), the lockout and the rate itself.
+- **The caller's address**, which the lockout and the rate limit count by: the editor appends the
+  address it saw to `X-Forwarded-For`, and the server believes `CCMS_MCP_HTTP_TRUST_PROXY` hops of
+  it (`compose.yaml`: `1`, the editor), only from the peers `CCMS_MCP_HTTP_PROXY_ADDRESSES` names
+  (`compose.yaml`: `editor`, the service's name, looked up again every 10 s). A caller on the
+  published port counts by its own address, whatever it sends. With a reverse proxy in front of the
+  editor, set `2`, as for `CCMS_TRUST_PROXY`; left at `1`, every caller counts as your proxy (one
+  budget for all). A count higher than the proxies really in front lets callers name any address.
+- **Your proxy** needs no rule of its own for `/mcp`, but a read timeout of at least 120 s (a
+  tool call's limit).
+
+`backend/mcp/README.md` describes its settings, and the docs site's `/guides/mcp` how to connect
+an assistant.
 
 ## The sandbox image
 
@@ -1634,7 +1652,9 @@ content, with random secrets. It checks:
 - `/api` through the editor, and that a request from another origin is refused there;
 - a PDF, rendered both directly and through the editor;
 - the editor still reaching the API after the API container is recreated;
-- the MCP server: refused without its token, and `tools/list` with it;
+- the MCP server, on its port and through the editor's `/mcp` (404 before it runs): refused without
+  its token, `tools/list` with it, an `Origin` it does not allow refused, and wrong tokens locked
+  out by the address the editor saw, whatever `X-Forwarded-For` they name;
 - the reader portal (`--profile portal`, a read-only token up to `public`): healthy, its start
   page 200 with the Content Security Policy (`frame-ancestors 'none'`) and `nosniff`, a manual
   page of the release, the German 404 page for a missing German path, no file of its volume or

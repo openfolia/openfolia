@@ -8,8 +8,12 @@ Sperren und Arbeitskopien, Veröffentlichungen und ihre Ausgaben, Übersetzungen
 Prüfungen, Benutzer, Rollen und Dienstkonten, Branding, Webhooks, Sicherungen, das Audit-Log.
 
 Jede Operation steht einmal: die lesenden Routen über freigegebene Inhalte sind in der
-[Delivery API](/de/api/delivery), und das vollständige Dokument des Servers (`GET /openapi.json`
-auf einem laufenden Server) enthält beide. Die Seiten der einzelnen Operationen sind auf Englisch.
+[Delivery API](/de/api/delivery), und das vollständige Dokument des Servers (`/api/openapi.json`
+auf Ihrer Instanz) enthält beide. Anfragen gehen an die Adresse Ihrer Instanz plus `/api`:
+`https://<team>.openfolia.com/api` für ein gehostetes Team, die Adresse Ihres Editors plus `/api`,
+wenn Sie es selbst betreiben, mit dem Token eines Service-Accounts
+([Die Adresse Ihrer API und ein Token](/de/api#die-adresse-ihrer-api-und-ein-token)). `/api/docs`
+auf Ihrer Instanz ist deren eigene interaktive Referenz, in der Sie Anfragen senden können. Die Seiten der einzelnen Operationen sind auf Englisch.
 
 Das Dokument der Management API zum Herunterladen:
 

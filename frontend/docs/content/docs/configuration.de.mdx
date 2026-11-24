@@ -1,23 +1,45 @@
 ---
 title: Konfiguration
-description: Die zwei Stellen, an denen OpenFolia konfiguriert wird, die Einstellungen des Servers und die openfolia.yaml jedes Inhaltsrepositorys.
+description: Was jedes Team konfiguriert, in der openfolia.yaml und im Editor, und die Einstellungen des Servers, wenn Sie ihn selbst betreiben.
 ---
 
-OpenFolia wird an zwei Stellen konfiguriert:
+OpenFolia wird von Ihrem Team konfiguriert, in der `openfolia.yaml` und im Editor, und von der
+Person, die den Server betreibt, in seiner Umgebung. Was Ihr Team konfiguriert, funktioniert gleich, ob
+OpenFolia für Sie gehostet wird oder auf Ihrem eigenen Server läuft. Die Einstellungen des Servers
+ändern Sie nur, wenn Sie ihn selbst betreiben.
 
-- **Die Einstellungen des Servers**, aus seiner Umgebung: wo das Inhaltsrepository und die
-  Datenbank liegen, wie sich Clients anmelden, Speicher, Grenzen, Worker. Die
-  [Referenz der Einstellungen](/de/reference/settings) führt jede auf, erzeugt aus `.env.example`.
+## Was jedes Team konfiguriert
+
 - **Die Projektkonfiguration**, `openfolia.yaml` im Wurzelverzeichnis jedes Inhaltsrepositorys: seine
   Sprachen, Modultypen, Zielgruppen, Facetten, Variantenmerkmale, Sicherheitssymbole, die in
   Ausgaben gedruckten Beschriftungen, die Terminologie- und Stilregeln je Sprache
   (`styleRules`, `terminology`, [Terminologie und Stil](/de/guide/checks/writing)) und das
-  Verhalten von Veröffentlichungen und Auslieferung. Die
+  Verhalten von Veröffentlichungen und Auslieferung. Admins ändern sie im Editor unter
+  [Projekteinstellungen](/de/guide/admin/project-settings). Die
   [Referenz der `openfolia.yaml`](/de/reference/project-config) führt jeden Schlüssel auf, erzeugt aus
-  dem Schema des Inhaltsmodells. Sie gehört zu den Inhalten: eine Änderung läuft über eine
+  dem Schema des Inhaltsmodells. Sie gehört zu den Inhalten: Eine Änderung läuft über eine
   Überarbeitung und eine Prüfung ([Fast alles ist Inhalt](/de/guide/getting-started/content)).
+- **Die Verwaltung im Editor**: [Benutzer und Rollen](/de/guide/admin/users-and-roles),
+  [Service-Accounts und Tokens](/de/guide/admin/service-accounts), [Branding](/de/guide/admin/branding),
+  [Webhooks](/de/guide/admin/webhooks) und [Gruppenzuordnungen](/de/guide/admin/group-mappings).
 
-## Die wichtigsten Einstellungen
+### Rollen und Berechtigungen
+
+Wer was darf, sind Daten, keine Konfiguration: Rollen bündeln
+[Berechtigungen](/de/reference/permissions) mit einem Geltungsbereich und werden im
+Admin-Bereich des Editors oder über die [Management API](/de/api/management) verwaltet.
+
+## Einstellungen des Servers (selbst betrieben)
+
+Wenn Sie OpenFolia selbst betreiben, liest der Server seine Einstellungen aus seiner Umgebung: wo
+das Inhaltsrepository und die Datenbank liegen, wie sich Clients anmelden, Speicher, Grenzen,
+Worker. Die [Referenz der Einstellungen](/de/reference/settings) führt jede auf, erzeugt aus
+`.env.example`, und der Abschnitt [Betrieb](/de/guide/self-hosting) erklärt jeden Teil.
+
+Bei einem gehosteten OpenFolia legt Ihr Anbieter sie fest: Wenn eine für Sie wichtig ist, fragen
+Sie Ihren Anbieter oder Ihren Admin.
+
+### Die wichtigsten Einstellungen
 
 | Einstellung         | Was sie festlegt                                                                         |
 | ------------------- | ---------------------------------------------------------------------------------------- |
@@ -27,9 +49,3 @@ OpenFolia wird an zwei Stellen konfiguriert:
 | `CCMS_BLOB_DRIVER`  | Wo Bilder, Anhänge und die Dateien der Veröffentlichungen liegen: `fs` oder `s3`.        |
 | `CCMS_PUBLIC_URL`   | Die Adresse, unter der Lesende die Instanz erreichen, für stabile Adressen und QR-Codes. |
 | `CCMS_TRUST_PROXY`  | Welchen Proxys vor der API für Client-Adressen vertraut wird.                            |
-
-## Rollen und Berechtigungen
-
-Wer was darf, sind Daten, keine Konfiguration: Rollen bündeln
-[Berechtigungen](/de/reference/permissions) mit einem Geltungsbereich und werden im
-Admin-Bereich des Editors oder über die [Management API](/de/api/management) verwaltet.

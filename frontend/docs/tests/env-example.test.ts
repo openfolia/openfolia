@@ -62,7 +62,7 @@ describe('parseEnvExample', () => {
     const names = parsed.sections.flatMap((s) => s.settings.map((x) => x.name));
     for (const name of text.matchAll(/^([A-Z][A-Z0-9_]*)=/gm))
       expect(names).toContain(name[1]);
-    expect(names).toContain('DOCS_API_BASE_URL');
+    expect(names).toContain('DOCS_SITE_URL');
   });
 });
 

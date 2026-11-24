@@ -9,8 +9,17 @@ release, in your organisation's branding. It needs no editor and no API once it 
 server that serves files can host it.
 
 Writers and reviewers do not work in the portal. They publish a release, and the portal shows what
-that release holds. Building one is a task for whoever runs your installation; a self-hosted
-OpenFolia can run it for you, rebuilt after each release ([With Docker Compose](/guide/portal/compose)).
+that release holds.
+
+## Who runs it
+
+- **Hosted:** your provider can run the portal for you, rebuilt after each release; ask your
+  provider or your admin whether yours does, and at which address. Your team still decides what
+  readers see: the branding ([Branding](/guide/portal/branding)) and the audiences in the
+  [project settings](/guide/admin/project-settings).
+- **Self-hosted:** whoever runs your installation builds it ([Build and preview](/guide/portal/build)),
+  or lets the container setup run it, rebuilt after each release
+  ([With Docker Compose](/guide/portal/compose)).
 
 ## What readers see
 

@@ -45,9 +45,14 @@ commit read.
 ## What keeps it safe
 
 - `Content-Security-Policy` allows no script of any kind and nothing from another origin.
-- It may be framed only by the API's own origin and those in `CCMS_EDITOR_ORIGINS`
-  (`frame-ancestors`): to frame it elsewhere, the operator adds that origin there.
+- It may be framed only by the API's own origin and the editor origins the server allows
+  (`frame-ancestors`).
 - `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+
+<ServerSetting>
+  To frame it on another origin, add that origin to
+  [`CCMS_EDITOR_ORIGINS`](/reference/settings#ccms_editor_origins).
+</ServerSetting>
 
 Text is escaped by the renderer, so no content becomes markup. To list what the variant conditions
 leave out of a page, use `GET /modules/<lang>/<id>/hidden-content` and

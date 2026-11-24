@@ -2,6 +2,7 @@ import type { DocsPage } from './source';
 import { i18n } from './i18n';
 import { pagesOf } from './tree';
 import { withAgentInstallText } from './agent-install';
+import { withServerSettingText } from './server-setting';
 
 /**
  * Where a page's Markdown is served (#423): its address plus `.md` (`/guide/writing.md`), the
@@ -19,10 +20,14 @@ export function markdownPages(): Map<string, DocsPage> {
   );
 }
 
+/** A page's processed Markdown with the site's components written out as text. */
+export const withComponentText = (markdown: string): string =>
+  withServerSettingText(withAgentInstallText(markdown));
+
 /** A page as Markdown: its title, its description and its text after the MDX is processed. */
 export async function pageMarkdown(page: DocsPage): Promise<string> {
   const description = page.data.description
     ? `\n\n${page.data.description}`
     : '';
-  return `# ${page.data.title}${description}\n\n${withAgentInstallText(await page.data.getText('processed'))}`;
+  return `# ${page.data.title}${description}\n\n${withComponentText(await page.data.getText('processed'))}`;
 }

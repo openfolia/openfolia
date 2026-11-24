@@ -2,6 +2,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { HttpContentApi } from './api-client.js';
 import { isLoopback, MCP_PATH, startHttpServer } from './http.js';
+import { ProxyAddresses } from './proxies.js';
 import { createContext, createMcpServer } from './server.js';
 import { loadSettings } from './settings.js';
 
@@ -27,11 +28,14 @@ async function main(argv: string[]): Promise<void> {
         settings.CCMS_MCP_API_TOKEN,
       ),
     );
+    const proxies = new ProxyAddresses(settings.CCMS_MCP_HTTP_PROXY_ADDRESSES);
+    await proxies.refresh();
     const server = await startHttpServer(context, {
       host: settings.CCMS_MCP_HTTP_HOST,
       port: settings.CCMS_MCP_HTTP_PORT,
       token: settings.CCMS_MCP_HTTP_TOKEN,
       allowedOrigins: settings.CCMS_MCP_HTTP_ALLOWED_ORIGINS,
+      trustProxy: { hops: settings.CCMS_MCP_HTTP_TRUST_PROXY, proxies },
     });
     const address = server.address();
     const port =

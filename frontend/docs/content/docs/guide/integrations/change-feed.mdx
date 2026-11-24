@@ -64,9 +64,15 @@ else. These answers say what to do:
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | 400 `cursor-expired` | The instance secret key was rotated, the cursor was issued to someone else, or changed.                                                                            | Start again without a cursor.               |
 | 410 `cursor-gone`    | The content the cursor stands on is gone from the repository (a history rewrite, say), or the cursor is from before the database was restored from another server. | Resync, below.                              |
-| 503 `outbox-blocked` | The server was restored onto another database server and the operator has not finished.                                                                            | Keep your cursor and retry (`Retry-After`). |
+| 503 `outbox-blocked` | The server was restored onto another database server, and the restore is not finished yet.                                                                         | Keep your cursor and retry (`Retry-After`). |
 | 429 `rate-limited`   | You asked for another page while one was still being made.                                                                                                         | Wait `Retry-After` and ask again.           |
-| 404 `not-configured` | The server has no instance secret key.                                                                                                                             | Ask the operator.                           |
+| 404 `not-configured` | The server has no instance secret key.                                                                                                                             | Ask your provider or your admin.            |
+
+<ServerSetting>
+  The key is set up as in [Instance secret key](/guide/self-hosting/secret-key),
+  and a restore is finished as in [After a
+  restore](/guide/self-hosting/after-a-restore).
+</ServerSetting>
 
 **Resync** in one of two ways:
 
@@ -77,5 +83,4 @@ else. These answers say what to do:
   feed again without a cursor: its snapshot upserts what changed since, and costs no embedding for
   the rest.
 
-For the whole loop of a retrieval index, see [Integrating with a RAG pipeline](/guides/rag). The
-operator's side of a restore is [After a restore](/guide/self-hosting/after-a-restore).
+For the whole loop of a retrieval index, see [Integrating with a RAG pipeline](/guides/rag).

@@ -170,7 +170,14 @@ nicht senden kann. Derselbe Import noch einmal schreibt für Unverändertes nich
 - Ein Verweis auf eine Datei, die das Paket nicht enthält, außer Sie dürfen sie auf dem Server
   schon lesen (`missing-asset`).
 
-Die Größengrenzen sind Einstellungen: `CCMS_IMPORT_MAX_BYTES`, `CCMS_IMPORT_MAX_FILES`,
-`CCMS_IMPORT_MAX_UNPACKED_BYTES`, `CCMS_IMPORT_MAX_PATH_DEPTH` und die übrigen in der
-[Referenz der Einstellungen](/de/reference/settings). Für ein DITA-Projekt siehe
+Ein Paket über den Größengrenzen des Servers wird abgelehnt. Für ein DITA-Projekt siehe
 [DITA-Import](/de/guide/integrations/dita-import).
+
+<ServerSetting lang="de">
+  Die Größengrenzen sind
+  [`CCMS_IMPORT_MAX_BYTES`](/de/reference/settings#ccms_import_max_bytes),
+  [`CCMS_IMPORT_MAX_FILES`](/de/reference/settings#ccms_import_max_files),
+  [`CCMS_IMPORT_MAX_UNPACKED_BYTES`](/de/reference/settings#ccms_import_max_unpacked_bytes),
+  [`CCMS_IMPORT_MAX_PATH_DEPTH`](/de/reference/settings#ccms_import_max_path_depth)
+  und die übrigen Einstellungen `CCMS_IMPORT_*`.
+</ServerSetting>

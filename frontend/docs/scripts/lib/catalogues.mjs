@@ -270,10 +270,16 @@ export function renderPermissions(permissions, apis, pageOf, lang = 'en') {
   return out.join('\n');
 }
 
-/** The MCP tools reference, from `TOOLS` (`backend/mcp`) with JSON Schemas for their inputs. */
-export function renderMcpTools(tools) {
+/**
+ * The MCP tools and resources reference: the tools from `TOOLS` (`backend/mcp`) with JSON Schemas
+ * for their inputs, and the resource templates from `RESOURCE_TEMPLATES` with their bounds.
+ *
+ * @param {{ name: string, title: string, description: string, inputSchema: object }[]} tools
+ * @param {{ templates: readonly { uriTemplate: string, name: string, title: string, description: string, mimeType: string }[], pageSize?: number, textLimit?: number }} [resources]
+ */
+export function renderMcpTools(tools, resources = { templates: [] }) {
   const out = [
-    'The MCP server (`backend/mcp`) gives agents the released content through these tools. It is a client of the API and acts with the token it is given, so a tool sees only what that token may read.',
+    'The MCP server (`backend/mcp`) gives agents the released content through these tools and resources. It is a client of the API and acts with the token it is given, so a tool sees only what that token may read. Every tool is read-only. How to connect a client: [The MCP server](/guides/mcp).',
     '',
     table(
       ['Tool', 'What it does'],
@@ -293,6 +299,32 @@ export function renderMcpTools(tools) {
     );
     const rows = fields(t.inputSchema);
     out.push(rows.length === 0 ? 'Takes no arguments.' : fieldsTable(rows), '');
+  }
+  if (resources.templates.length > 0) {
+    out.push(
+      '## Resources',
+      '',
+      'Besides the tools, a client can list the manuals as resources (`resources/list`, paged by `cursor`) and read one (`resources/read`). `resources/templates/list` gives their address templates:',
+      '',
+    );
+    for (const r of resources.templates) {
+      out.push(
+        `### ${r.name}`,
+        '',
+        `**${mdx(r.title)}.** ${mdx(r.description)}`,
+        '',
+        `- Address: ${code(r.uriTemplate)}`,
+        `- Type: ${code(r.mimeType)}`,
+        '',
+      );
+    }
+    const bounds = [
+      resources.pageSize !== undefined &&
+        `\`resources/list\` lists ${resources.pageSize} manuals a page, each once per variant and language.`,
+      resources.textLimit !== undefined &&
+        `A read gives at most ${resources.textLimit.toLocaleString('en')} characters; \`_meta.truncated\` says when the text was cut.`,
+    ].filter(Boolean);
+    if (bounds.length > 0) out.push(bounds.join(' '), '');
   }
   return out.join('\n');
 }

@@ -10,12 +10,16 @@ export {
   startHttpServer,
   type HttpOptions,
 } from './http.js';
+export { ProxyAddresses } from './proxies.js';
 export { checkRefForm, ReleasedRefs, TokenCheck } from './released.js';
 export {
   createContext,
   createMcpServer,
   Limiter,
   manualUri,
+  RESOURCE_TEMPLATES,
+  RESOURCE_TEXT_LIMIT,
+  RESOURCES_PAGE_SIZE,
   TOOLS,
   type McpContext,
 } from './server.js';

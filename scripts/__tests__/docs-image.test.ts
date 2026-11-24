@@ -74,8 +74,6 @@ describe.skipIf(!available)('the docs image', () => {
         join(root, 'deploy/docker/docs/Dockerfile'),
         '--build-context',
         `site=${site}`,
-        '--build-arg',
-        'DOCS_API_ORIGIN=https://api.example.org',
         '--tag',
         image,
         '--load',
@@ -140,7 +138,8 @@ describe.skipIf(!available)('the docs image', () => {
     expect(response.headers.get('cache-control')).toBe('no-cache');
     const csp = response.headers.get('content-security-policy') ?? '';
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).toContain("connect-src 'self' https://api.example.org;");
+    // The API reference sends no requests to an instance (#858): only the site itself.
+    expect(csp).toContain("connect-src 'self';");
     expect(csp).toContain("object-src 'none'");
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(response.headers.get('referrer-policy')).toBe(

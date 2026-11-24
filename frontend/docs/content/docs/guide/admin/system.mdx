@@ -4,8 +4,9 @@ description: 'The storage used, the instance, email, the background work and the
 articleId: 'guide.admin.system'
 ---
 
-**Admin › System** shows the state of the installation. Most of it is set on the server by whoever
-runs it; the page says what is set, and what to do when something needs attention.
+**Admin › System** shows the state of the installation. Most of it is set on the server: by whoever
+runs it when OpenFolia is self-hosted, by your provider when it is hosted for you. The page says
+what is set, and what to do when something needs attention.
 
 ![The System page with the storage used, the instance and the email section](/images/guide/en/admin-system.webp)
 
@@ -35,6 +36,11 @@ in the server's environment, so they are read-only here.
 - **Email is off: it needs the instance secret key**: a mail server is set, but the server has no
   secret key. **Where the secret key is set** jumps to it.
 
+<ServerSetting>
+  Email and the secret key are set up as in [Email](/guide/self-hosting/email)
+  and [Instance secret key](/guide/self-hosting/secret-key).
+</ServerSetting>
+
 When email is on, **Send a test email** sends one to you. It should arrive within a minute; a
 failure shows in the [audit log](/guide/admin/audit-log).
 
@@ -43,9 +49,14 @@ failure shows in the [audit log](/guide/admin/audit-log).
 **Background work** shows the workers that make release files, run imports and deliver webhooks:
 how many run, how many jobs wait, and the longest wait.
 
-- **Jobs are waiting, and no worker takes them**: ask whoever runs the server to check that the
-  worker service runs and reaches the database.
+- **Jobs are waiting, and no worker takes them**: the worker service is not running, or cannot
+  reach the database.
 - **Delivery is held after a restore**: the database was restored from another server, and
   notifications, webhooks and the change feed wait for one more step. **How to finish the
   restore** opens [After a restore](/guide/self-hosting/after-a-restore). Nothing is lost
   meanwhile.
+
+<ServerSetting>
+  Check the worker service as in [Workers](/guide/self-hosting/workers), and
+  finish a restore as in [After a restore](/guide/self-hosting/after-a-restore).
+</ServerSetting>

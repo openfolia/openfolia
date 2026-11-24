@@ -4,6 +4,8 @@
 # "Container deployment"):
 #   CCMS_EDITOR_PORT            port to listen on (default 8080)
 #   CCMS_EDITOR_API_URL         the API's address, http(s)://host[:port] (default http://api:3000)
+#   CCMS_EDITOR_MCP_URL         optional: the MCP server's address, http(s)://host[:port], proxied
+#                               at /mcp (unset: /mcp answers 404)
 #   CCMS_EDITOR_HOSTS           the hosts the editor answers for, host[:port],... (any when unset;
 #                               required with a token); any other Host gets 421
 #   CCMS_EDITOR_API_TOKEN       optional: a token the proxy adds to every same-origin /api request
@@ -17,6 +19,7 @@ fail() {
 
 port=${CCMS_EDITOR_PORT:-8080}
 api=${CCMS_EDITOR_API_URL:-http://api:3000}
+mcp=${CCMS_EDITOR_MCP_URL:-}
 hosts=${CCMS_EDITOR_HOSTS:-}
 token=${CCMS_EDITOR_API_TOKEN:-}
 if [ -n "${CCMS_EDITOR_API_TOKEN_FILE:-}" ]; then
@@ -37,6 +40,14 @@ case "$api" in
 esac
 printf '%s' "$api" | grep -Eq '^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$' ||
   fail "CCMS_EDITOR_API_URL must be http(s)://host[:port] without a path, not '$api'."
+mcp=${mcp%/}
+if [ -n "$mcp" ]; then
+  case "$mcp" in
+    *[!A-Za-z0-9.:/-]*) fail "CCMS_EDITOR_MCP_URL may hold only A-Z a-z 0-9 . : / -." ;;
+  esac
+  printf '%s' "$mcp" | grep -Eq '^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$' ||
+    fail "CCMS_EDITOR_MCP_URL must be http(s)://host[:port] without a path, not '$mcp'."
+fi
 if [ -n "$token" ]; then
   case "$token" in
     *[!A-Za-z0-9._~+/=-]*) fail "CCMS_EDITOR_API_TOKEN may hold only A-Z a-z 0-9 . _ ~ + / = -." ;;
@@ -100,11 +111,14 @@ fi
 # resolver, so a recreated API container with a new address is found without restarting this
 # one. An API at an IPv4 address (the sandbox image's, in the same container) needs no lookup,
 # and no resolver: the sandbox may run without any network.
+by_name() {
+  ! printf '%s' "$1" | grep -Eq '^https?://[0-9]{1,3}(\.[0-9]{1,3}){3}(:[0-9]{1,5})?$'
+}
 resolver_line=''
-if ! printf '%s' "$api" | grep -Eq '^https?://[0-9]{1,3}(\.[0-9]{1,3}){3}(:[0-9]{1,5})?$'; then
+if by_name "$api" || { [ -n "$mcp" ] && by_name "$mcp"; }; then
   resolver=$(awk '$1 == "nameserver" { print $2; exit }' /etc/resolv.conf 2>/dev/null || true)
   case "$resolver" in
-    '' | *[!0-9A-Fa-f.:]*) fail "no usable nameserver in /etc/resolv.conf to look the API's address up with." ;;
+    '' | *[!0-9A-Fa-f.:]*) fail "no usable nameserver in /etc/resolv.conf to look the API's or the MCP server's address up with." ;;
     *:*) resolver="[$resolver]" ;;
   esac
   resolver_line="resolver $resolver valid=10s;"
@@ -126,11 +140,25 @@ fi
   printf 'set $openfolia_api %s;\n' "$api"
   printf 'proxy_pass $openfolia_api$request_uri;\n'
 } >/tmp/openfolia/addresses.conf
+# /mcp (#860): the MCP server's own endpoint, proxied as it is, never with the token: the server
+# checks the caller's bearer token, Origin and rate itself. Looked up like the API's, so the
+# editor starts without the MCP service, and /mcp answers 404 while its name resolves to nothing
+# (@mcp_unavailable in nginx.conf).
+if [ -n "$mcp" ]; then
+  {
+    [ -z "$resolver_line" ] || printf '%s\n' "$resolver_line"
+    printf 'set $openfolia_mcp %s;\n' "$mcp"
+    printf 'proxy_pass $openfolia_mcp$request_uri;\n'
+  } >/tmp/openfolia/mcp.conf
+else
+  printf 'return 404;\n' >/tmp/openfolia/mcp.conf
+fi
 if [ -n "$token" ]; then
   echo "openfolia-editor: /api -> $api, adding the token to same-origin requests for${names}: anyone who reaches this editor acts with it (deploy/README.md, \"Signing in\")." >&2
 else
   echo "openfolia-editor: /api -> $api${names:+, for$names}" >&2
 fi
+[ -z "$mcp" ] || echo "openfolia-editor: /mcp -> $mcp (404 while it is not running)" >&2
 unset CCMS_EDITOR_API_TOKEN CCMS_EDITOR_API_TOKEN_FILE token
 
 exec "$@"

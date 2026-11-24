@@ -59,18 +59,28 @@ export function managementDocument(full) {
   };
 }
 
-/** The document with one server, the playground's base URL. */
-export function withServer(doc, url) {
-  return {
-    ...doc,
-    servers: [
-      {
-        url,
-        description:
-          'The API this reference describes (DOCS_API_BASE_URL); set the address of your own server.',
-      },
-    ],
-  };
+/**
+ * The one server of the reference, its pages and its downloads (#858): the instance's address
+ * plus `/api`, the host a variable the reader fills in. The default is a placeholder that still
+ * parses as a URL, so the code samples read `https://your-team.openfolia.com/api/...` until the
+ * reader types their own.
+ */
+export const API_SERVER = {
+  url: 'https://{host}/api',
+  description:
+    "Your instance's API: https://<team>.openfolia.com/api for a hosted OpenFolia, or your own editor's address plus /api.",
+  variables: {
+    host: {
+      default: 'your-team.openfolia.com',
+      description:
+        "Your team's address, https://<team>.openfolia.com for a hosted OpenFolia, or your own host.",
+    },
+  },
+};
+
+/** The document with the reference's one server. */
+export function withServer(doc) {
+  return { ...doc, servers: [API_SERVER] };
 }
 
 /** Every `$ref` inside a value. */
@@ -89,7 +99,7 @@ const unescape = (segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~');
 /**
  * The document cut down to one operation and what it references, so a page carries kilobytes, not
  * the whole document: the API reference has a page per operation, and each page embeds its
- * document for the playground and the schema views.
+ * document for the code samples and the schema views.
  */
 export function pruneToOperation(doc, path, method) {
   const item = doc.paths[path];

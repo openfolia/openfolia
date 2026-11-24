@@ -7,8 +7,11 @@ The Delivery API is what someone building their own viewer, portal or integratio
 read routes over released content, and nothing about drafts. A consumer's token belongs to a
 service account whose role holds only `content.read`.
 
-Each operation has a page in the sidebar, with its parameters, responses, schemas, code samples
-and a playground. The document itself is `backend/api/openapi/delivery.yaml` in the repository
+Each operation has a page in the sidebar, with its parameters, responses, schemas and code
+samples for your instance's address: `https://<team>.openfolia.com/api` for a hosted team, your
+editor's address plus `/api` when you host it yourself ([your API's address and a
+token](/api#your-apis-address-and-a-token)). To send requests, open `/api/docs/delivery` on your
+instance, its own interactive reference. The document itself is `backend/api/openapi/delivery.yaml` in the repository
 (OpenAPI 3.0), for generating a client, and here to download:
 
 <OpenAPIDownload api="delivery" />

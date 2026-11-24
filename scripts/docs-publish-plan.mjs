@@ -185,13 +185,6 @@ export function planPublish({ args, env, git }) {
   // As the site's build requires (frontend/docs/scripts/lib/settings.mjs), checked here first.
   if (args.release !== null && site.protocol !== 'https:')
     fail(`DOCS_SITE_URL must be an https:// URL for a release's docs`);
-  const api = requiredUrl(env, 'DOCS_API_BASE_URL', why);
-  // The origin goes into the Content-Security-Policy, through the image's environment.
-  const apiOrigin = api.origin;
-  if (!/^https?:\/\/[A-Za-z0-9.\-[\]:]+$/.test(apiOrigin))
-    fail(
-      `DOCS_API_BASE_URL has an origin the image cannot allow: "${apiOrigin}"`,
-    );
 
   const image = imageRepository(env);
   const short = git.sha.slice(0, 7);
@@ -236,8 +229,6 @@ export function planPublish({ args, env, git }) {
     'deploy/docker/docs/Dockerfile',
     '--build-context',
     'site=frontend/docs/out',
-    '--build-arg',
-    `DOCS_API_ORIGIN=${apiOrigin}`,
   ];
   for (const [key, value] of Object.entries(labels))
     docker.push('--label', `${key}=${value}`);
@@ -255,7 +246,6 @@ export function planPublish({ args, env, git }) {
     references,
     platforms,
     labels,
-    apiOrigin,
     buildEnv,
     docker,
   };

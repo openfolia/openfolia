@@ -47,11 +47,14 @@ With the default Postgres search (`CCMS_SEARCH_ADAPTER=postgres`), nothing to se
 
 - **Word forms** in the module's language: `starting` finds `starts`.
 - **Typos** in titles and keywords.
-- **Meaning**, when the operator turned on semantic search: a reader's words find a module that
-  says the same in others. Without it, no text leaves the server. See
-  [Semantic search](/guide/self-hosting/semantic-search).
+- **Meaning**, when semantic search is turned on: a reader's words find a module that says the
+  same in others. Without it, no text leaves the server.
 
-`CCMS_SEARCH_ADAPTER=memory` matches words alone.
+<ServerSetting>
+  [Semantic search](/guide/self-hosting/semantic-search) turns meaning on.
+  [`CCMS_SEARCH_ADAPTER=memory`](/reference/settings#ccms_search_adapter)
+  matches words alone.
+</ServerSetting>
 
 ## Limits
 
@@ -64,3 +67,8 @@ With the default Postgres search (`CCMS_SEARCH_ADAPTER=postgres`), nothing to se
 Each carries `Retry-After`: wait that long and ask again. The limits hold per server, so behind
 several servers a reader gets as many times the rate. Never a partial page: a search answers in
 full or not at all.
+
+<ServerSetting>
+  Each limit is the setting in the table, with its default in brackets. The
+  [settings reference](/reference/settings) describes them.
+</ServerSetting>

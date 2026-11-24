@@ -236,6 +236,18 @@ export function createMcpServer(context: McpContext): McpServer {
 
 const RESOURCE_TEMPLATE = 'openfolia://manuals/{id}/{variant}/{lang}';
 
+/** The resource templates `resources/templates/list` answers with (and the docs' reference lists). */
+export const RESOURCE_TEMPLATES = [
+  {
+    uriTemplate: RESOURCE_TEMPLATE,
+    name: 'manual',
+    title: 'A released manual for a variant and language',
+    description:
+      'A manual at `main`, resolved for a variant and language, as Markdown (as `read_manual` gives it).',
+    mimeType: 'text/markdown',
+  },
+] as const;
+
 /** `openfolia://manuals/<id>/<variant>/<lang>`, the variant slug percent-encoded. */
 export function manualUri(id: string, variant: string, lang: string): string {
   return `openfolia://manuals/${id}/${encodeURIComponent(variant)}/${lang}`;
@@ -278,16 +290,7 @@ function registerManualResources(server: McpServer, context: McpContext) {
     );
   };
   server.server.setRequestHandler(ListResourceTemplatesRequestSchema, () => ({
-    resourceTemplates: [
-      {
-        uriTemplate: RESOURCE_TEMPLATE,
-        name: 'manual',
-        title: 'A released manual for a variant and language',
-        description:
-          'A manual at `main`, resolved for a variant and language, as Markdown (as `read_manual` gives it).',
-        mimeType: 'text/markdown',
-      },
-    ],
+    resourceTemplates: [...RESOURCE_TEMPLATES],
   }));
   server.server.setRequestHandler(
     ListResourcesRequestSchema,

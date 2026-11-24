@@ -8,10 +8,13 @@ import {
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { paged, stubContext } from '../tests/stub-api.js';
+import { ProxyAddresses } from './proxies.js';
 import {
   MAX_BODY_BYTES,
   MAX_FAILURES_PER_WINDOW,
   MAX_FAILURES_PER_WINDOW_ALL,
+  MAX_REQUESTS_PER_WINDOW,
+  clientAddress,
   createHttpHandler,
   startHttpServer,
 } from './http.js';
@@ -275,5 +278,139 @@ describe('failed authentications', () => {
     expect(await send('wrong', '10.9.9.9')).toBe(429);
     // The token is still served; requests stop there, before any MCP work.
     expect(await send(TOKEN, '10.9.9.9')).not.toBe(429);
+  });
+});
+
+describe('behind a proxy (CCMS_MCP_HTTP_TRUST_PROXY, CCMS_MCP_HTTP_PROXY_ADDRESSES)', () => {
+  const PROXY = '172.18.0.4';
+  const proxies = new ProxyAddresses([PROXY]);
+  const trust = (hops: number) => ({ hops, proxies });
+  const req = (socket: string, forwarded?: string) =>
+    ({
+      socket: { remoteAddress: socket },
+      headers: forwarded === undefined ? {} : { 'x-forwarded-for': forwarded },
+    }) as unknown as IncomingMessage;
+
+  it('takes the address the trusted hops saw, never what a client wrote further left', () => {
+    // Without trust, the connection's address, whatever the header says.
+    expect(clientAddress(req(PROXY, '203.0.113.7'))).toBe(PROXY);
+    // One hop (the editor's nginx): the address it appended, the rightmost.
+    expect(clientAddress(req(PROXY, '203.0.113.7'), trust(1))).toBe(
+      '203.0.113.7',
+    );
+    expect(clientAddress(req(PROXY, '1.1.1.1, 203.0.113.7'), trust(1))).toBe(
+      '203.0.113.7',
+    );
+    // Two hops (a reverse proxy in front of the editor).
+    expect(
+      clientAddress(req(PROXY, '1.1.1.1, 198.51.100.2, 10.0.0.9'), trust(2)),
+    ).toBe('198.51.100.2');
+    // A shorter chain gives its leftmost; no header, the connection.
+    expect(clientAddress(req(PROXY, '198.51.100.2'), trust(3))).toBe(
+      '198.51.100.2',
+    );
+    expect(clientAddress(req(PROXY), trust(1))).toBe(PROXY);
+    // An entry that is no address counts as the connection.
+    expect(clientAddress(req(PROXY, 'not-an-ip'), trust(1))).toBe(PROXY);
+    expect(clientAddress(req(PROXY, '2001:db8::1'), trust(1))).toBe(
+      '2001:db8::1',
+    );
+    // A dual-stack socket's form of the proxy's address is the proxy too.
+    expect(clientAddress(req(`::ffff:${PROXY}`, '203.0.113.7'), trust(1))).toBe(
+      '203.0.113.7',
+    );
+  });
+
+  it('never believes a peer that is not one of the proxies (the published port)', () => {
+    expect(clientAddress(req('172.18.0.1', '203.0.113.7'), trust(1))).toBe(
+      '172.18.0.1',
+    );
+    expect(clientAddress(req('127.0.0.1', '203.0.113.7'), trust(2))).toBe(
+      '127.0.0.1',
+    );
+  });
+
+  // The handler on its own; each request from `peer`, through the editor by default.
+  function behindProxy(hops: number) {
+    const handle = createHttpHandler(stubContext(), {
+      token: TOKEN,
+      allowedOrigins: ['https://allowed.example'],
+      loopbackOnly: false,
+      trustProxy: trust(hops),
+      now: () => 0,
+    });
+    return async (
+      token: string,
+      client: string,
+      extra: Record<string, string> = {},
+      peer = PROXY,
+    ) => {
+      const r = {
+        url: '/mcp',
+        // GET: past the checks, the 405 answers without any MCP work.
+        method: 'GET',
+        headers: {
+          authorization: `Bearer ${token}`,
+          host: 'team.example',
+          'x-forwarded-for': client,
+          ...extra,
+        },
+        socket: { remoteAddress: peer },
+      } as unknown as IncomingMessage;
+      let status: number | undefined;
+      const res = {
+        headersSent: false,
+        writeHead: (code: number) => (status = code),
+        end: () => undefined,
+      } as unknown as ServerResponse;
+      await handle(r, res);
+      return status;
+    };
+  }
+
+  it('locks out a client address, not every caller behind the proxy', async () => {
+    const send = behindProxy(1);
+    for (let i = 0; i < MAX_FAILURES_PER_WINDOW; i++) {
+      expect(await send('wrong', '203.0.113.7')).toBe(401);
+    }
+    expect(await send('wrong', '203.0.113.7')).toBe(429);
+    // A forged entry left of the proxy's own changes nothing.
+    expect(await send('wrong', '198.51.100.9, 203.0.113.7')).toBe(429);
+    // Another client behind the same proxy is still answered 401, not locked out.
+    expect(await send('wrong', '198.51.100.2')).toBe(401);
+  });
+
+  it('limits the rate of each client address apart', async () => {
+    const send = behindProxy(1);
+    for (let i = 0; i < MAX_REQUESTS_PER_WINDOW; i++) {
+      expect(await send(TOKEN, '203.0.113.7')).toBe(405);
+    }
+    expect(await send(TOKEN, '203.0.113.7')).toBe(429);
+    expect(await send(TOKEN, '198.51.100.2')).toBe(405);
+  });
+
+  it('locks out and rate-limits a direct client by its own address, whatever X-Forwarded-For it sends', async () => {
+    const send = behindProxy(1);
+    const direct = '172.18.0.1';
+    for (let i = 0; i < MAX_FAILURES_PER_WINDOW; i++) {
+      expect(await send('wrong', `198.51.100.${i}`, {}, direct)).toBe(401);
+    }
+    expect(await send('wrong', '198.51.100.200', {}, direct)).toBe(429);
+    for (let i = 0; i < MAX_REQUESTS_PER_WINDOW; i++) {
+      expect(await send(TOKEN, `203.0.113.${i % 250}`, {}, direct)).toBe(405);
+    }
+    expect(await send(TOKEN, '203.0.113.251', {}, direct)).toBe(429);
+    // Callers through the editor are not affected.
+    expect(await send(TOKEN, '198.51.100.2')).toBe(405);
+  });
+
+  it('still refuses an Origin it does not allow', async () => {
+    const send = behindProxy(1);
+    expect(
+      await send(TOKEN, '203.0.113.7', { origin: 'https://team.example' }),
+    ).toBe(403);
+    expect(
+      await send(TOKEN, '203.0.113.7', { origin: 'https://allowed.example' }),
+    ).toBe(405);
   });
 });

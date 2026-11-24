@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { proxyEntryProblem } from './proxies.js';
 
 /**
  * The least length of `CCMS_MCP_HTTP_TOKEN` and of different characters in
@@ -22,6 +23,9 @@ export function isPeriodic(token: string): boolean {
   }
   return false;
 }
+
+/** The most hops `CCMS_MCP_HTTP_TRUST_PROXY` may name. */
+export const MAX_TRUST_PROXY_HOPS = 10;
 
 const Common = z.object({
   CCMS_MCP_API_URL: z
@@ -61,6 +65,48 @@ const Http = Common.extend({
         .map((o) => o.trim())
         .filter((o) => o !== ''),
     ),
+  // `none` (the default): the client is the connection; a hop count believes that many proxies'
+  // `X-Forwarded-For` (`clientAddress`), from the peers CCMS_MCP_HTTP_PROXY_ADDRESSES names only.
+  CCMS_MCP_HTTP_TRUST_PROXY: z
+    .string()
+    .trim()
+    .default('none')
+    .transform((value, ctx) => {
+      if (value.toLowerCase() === 'none') return 0;
+      const hops = /^\d{1,2}$/.test(value) ? Number(value) : NaN;
+      if (hops >= 1 && hops <= MAX_TRUST_PROXY_HOPS) return hops;
+      ctx.addIssue({
+        code: 'custom',
+        message: `none, or a hop count from 1 to ${MAX_TRUST_PROXY_HOPS}`,
+      });
+      return z.NEVER;
+    }),
+  CCMS_MCP_HTTP_PROXY_ADDRESSES: z
+    .string()
+    .default('')
+    .transform((value, ctx) => {
+      const entries = value
+        .split(',')
+        .map((e) => e.trim())
+        .filter((e) => e !== '');
+      for (const entry of entries) {
+        const problem = proxyEntryProblem(entry);
+        if (problem) ctx.addIssue({ code: 'custom', message: problem });
+      }
+      return entries;
+    }),
+}).superRefine((settings, ctx) => {
+  if (
+    settings.CCMS_MCP_HTTP_TRUST_PROXY > 0 &&
+    settings.CCMS_MCP_HTTP_PROXY_ADDRESSES.length === 0
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['CCMS_MCP_HTTP_PROXY_ADDRESSES'],
+      message:
+        'required with CCMS_MCP_HTTP_TRUST_PROXY: the addresses, subnets or host names of the proxies in front',
+    });
+  }
 });
 
 export type StdioSettings = z.infer<typeof Common>;

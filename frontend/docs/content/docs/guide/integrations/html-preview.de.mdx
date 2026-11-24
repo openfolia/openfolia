@@ -47,9 +47,14 @@ ist sie `private, no-cache` mit einem ETag, und `If-None-Match` erhält ein gün
 ## Was sie sicher hält
 
 - `Content-Security-Policy` erlaubt keinerlei Skript und nichts von einem anderen Origin.
-- Nur der eigene Origin der API und die in `CCMS_EDITOR_ORIGINS` dürfen sie in einen Frame laden
-  (`frame-ancestors`): Um sie anderswo einzubetten, trägt der Betrieb diesen Origin dort ein.
+- Nur der eigene Origin der API und die Editor-Origins, die der Server erlaubt, dürfen sie in einen
+  Frame laden (`frame-ancestors`).
 - `X-Content-Type-Options: nosniff` und `Referrer-Policy: no-referrer`.
+
+<ServerSetting lang="de">
+  Um sie unter einem anderen Origin einzubetten, tragen Sie diesen Origin in
+  [`CCMS_EDITOR_ORIGINS`](/de/reference/settings#ccms_editor_origins) ein.
+</ServerSetting>
 
 Text wird vom Renderer maskiert, sodass kein Inhalt zu Markup wird. Was die Variantenbedingungen aus
 einer Seite auslassen, listen `GET /modules/<lang>/<id>/hidden-content` und

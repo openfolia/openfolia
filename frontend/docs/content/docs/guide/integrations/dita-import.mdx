@@ -78,10 +78,16 @@ code.
 - **Nothing outside the archive:** a reference leaving the archive resolves to nothing
   (`outside-archive`), and nothing is fetched (`external-reference`).
 - **Bounded:** content references, keys and maps are followed only so deep and so wide
-  (`expansion-limit`). The conversion runs in a process of its own, bounded by
-  `CCMS_IMPORT_CONVERT_MAX_MEMORY_MB` and `CCMS_IMPORT_CONVERT_TIMEOUT_MS`; past either, the import
-  is 422 `import-too-large`.
+  (`expansion-limit`). The conversion runs in a process of its own, bounded in memory and
+  time; past either, the import is 422 `import-too-large`.
 - **No counterpart:** index terms, relationship tables, inline conditions and the like are left
   out or kept without what they said, each reported.
+
+<ServerSetting>
+  The conversion's bounds are
+  [`CCMS_IMPORT_CONVERT_MAX_MEMORY_MB`](/reference/settings#ccms_import_convert_max_memory_mb)
+  and
+  [`CCMS_IMPORT_CONVERT_TIMEOUT_MS`](/reference/settings#ccms_import_convert_timeout_ms).
+</ServerSetting>
 
 The way back out is the [DITA export](/guide/releases/dita) of a release.

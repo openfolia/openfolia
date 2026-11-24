@@ -68,7 +68,15 @@ Stufe in dessen Sprache liest; alle anderen erhalten 404.
 Die Seiten führen kein Skript außer der Suche aus und lassen nichts von außerhalb des Pakets zu
 (eine Content Security Policy). Ein Paket, das größer als `CCMS_RELEASE_ARCHIVE_MAX_BYTES` wäre
 oder mehr als 50.000 Dateien hätte, schlägt mit `offline-package-too-large` fehl; die PDFs bleiben.
-Ein Betreiber schaltet die Pakete mit `CCMS_OFFLINE_PACKAGES=false` ab.
+Die Pakete lassen sich für einen ganzen Server abschalten.
+
+<ServerSetting lang="de">
+  Die Größengrenze eines Archivs und eines Pakets ist
+  [`CCMS_RELEASE_ARCHIVE_MAX_BYTES`](/de/reference/settings#ccms_release_archive_max_bytes)
+  (2 GiB), und
+  [`CCMS_OFFLINE_PACKAGES=false`](/de/reference/settings#ccms_offline_packages)
+  schaltet die Pakete ab.
+</ServerSetting>
 
 Die iiRDS- und DITA-Pakete einer Veröffentlichung werden auf Anfrage erstellt: siehe
 [iiRDS](/de/guide/releases/iirds) und [DITA](/de/guide/releases/dita).
@@ -82,7 +90,7 @@ legt eine Veröffentlichung fest.
 
 `GET /stable-addresses` listet sie, eine je Datei einer Veröffentlichung, die der Leser lesen darf,
 mit den Adressen `latest` und `pinned`, jede mit `html` und `pdf` als `path` und als vollständige
-`url` (null, bis der Betrieb `CCMS_PUBLIC_URL` setzt). Filter: `filter[release]`,
+`url` (null, bis der Server seine öffentliche Adresse kennt, `CCMS_PUBLIC_URL`). Filter: `filter[release]`,
 `filter[product]`, `filter[manual]`, `filter[lang]`.
 
 Was eine dauerhafte Adresse antwortet:
@@ -97,13 +105,23 @@ Was eine dauerhafte Adresse antwortet:
 | 410     | Eine festgelegte Veröffentlichung wurde zurückgezogen: ein Hinweis mit Link auf die neueste Adresse.    |
 | 429     | `rate-limited`: mehr als `CCMS_DELIVERY_PER_MINUTE` Seiten, PDFs und QR-Codes pro Minute.               |
 
-Wer sie öffnen darf, regelt `delivery.access` in `openfolia.yaml`, höchstens so weit, wie der Betrieb
+Wer sie öffnen darf, regelt `delivery.access` in `openfolia.yaml`, höchstens so weit, wie der Server
 erlaubt (`CCMS_DELIVERY_MAX_ACCESS`): `public`-Adressen lesen als öffentliche Zielgruppe, wer auch
 fragt, und beachten kein Token; `signed-in`-Adressen brauchen ein Token oder eine Sitzung; `off`
 ist 404. Seiten, PDFs und QR-Codes sind `no-cache` mit einem ETag: Ein Cache davor prüft jedes Mal
 nach, und eine neue Veröffentlichung oder eine Rücknahme erreicht die Leser sofort.
 Abfrageparameter wie `utm_*` werden dort übergangen (`CCMS_DELIVERY_IGNORED_QUERY`); jeder andere
 ist 400.
+
+<ServerSetting lang="de">
+  Die öffentliche Adresse ist
+  [`CCMS_PUBLIC_URL`](/de/reference/settings#ccms_public_url), die Rate
+  [`CCMS_DELIVERY_PER_MINUTE`](/de/reference/settings#ccms_delivery_per_minute),
+  der weiteste Zugriff
+  [`CCMS_DELIVERY_MAX_ACCESS`](/de/reference/settings#ccms_delivery_max_access)
+  und die übergangenen Abfrageparameter
+  [`CCMS_DELIVERY_IGNORED_QUERY`](/de/reference/settings#ccms_delivery_ignored_query).
+</ServerSetting>
 
 Eine statische Website der veröffentlichten Anleitungen, aus der API erstellt, ist das
 [Portal](/de/guide/portal).

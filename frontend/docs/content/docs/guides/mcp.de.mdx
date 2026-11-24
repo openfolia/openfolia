@@ -1,25 +1,283 @@
 ---
 title: 'Der MCP-Server'
-description: 'KI-Assistenten und Agenten über den MCP-Server die freigegebenen Inhalte geben.'
+description: 'Einen KI-Assistenten über MCP mit Ihrem OpenFolia verbinden: die Adresse, das Token, eine funktionierende Client-Konfiguration, die Werkzeuge und Ressourcen und was zu tun ist, wenn ein Aufruf scheitert.'
 ---
 
-Der MCP-Server (`backend/mcp`) lässt KI-Assistenten und Agenten die freigegebene Dokumentation
-durchsuchen und lesen. Er ist ein Client der API: jeder Werkzeugaufruf liest über die API mit dem
-Token des Dienstkontos des Servers, sodass ein Agent genau sieht, was dieses Konto lesen darf, und
-nichts schreibt.
+Über den MCP-Server durchsuchen und lesen KI-Assistenten und Agenten (Claude Code, Cursor, Claude
+Desktop, Ihre eigenen) Ihre **veröffentlichte** Dokumentation über das
+[Model Context Protocol](https://modelcontextprotocol.io). Er liest nur. Ein Assistent sieht `main`
+und die Tags der Veröffentlichungen, nie einen Entwurf, eine Überarbeitung oder einen Kommentar, und
+nur, was der Service-Account des Servers lesen darf. Ändern kann er nichts.
 
-## Betrieb
+Für die Verbindung brauchen Sie zwei Dinge: die **Adresse** des Servers und sein **Token**.
 
-Er spricht MCP über stdio (ein Desktop-Assistent startet ihn) oder über Streamable HTTP
-(`--http`). Er braucht die Basis-URL der API (`CCMS_MCP_API_URL`) und das Token eines
-Dienstkontos, dessen Rollen nur `content.read` halten (`CCMS_MCP_API_TOKEN`); über HTTP außerdem
-das Bearer-Token, das seine Aufrufer senden (`CCMS_MCP_HTTP_TOKEN`). Die
-[Referenz der Einstellungen](/de/reference/settings) beschreibt jede, und die Container-Einrichtung
-startet ihn als optionalen Dienst `mcp` ([Selbst betreiben](/de/self-hosting)).
+## Die Adresse
 
-Ein Token, dessen Rollen mehr als `content.read` halten, lässt jeden Aufruf scheitern: der Server
-liest immer nur freigegebene Inhalte.
+Der Server spricht Streamable HTTP unter `/mcp` auf der Adresse des Editors:
+
+| Wo Ihr OpenFolia läuft                         | Die MCP-Adresse                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------ |
+| Gehostet                                       | `https://<team>.openfolia.com/mcp`                                       |
+| Selbst betrieben, über den Editor              | die Adresse des Editors und `/mcp`, z. B. `https://docs.example.com/mcp` |
+| Selbst betrieben, direkt auf demselben Rechner | `http://127.0.0.1:3200/mcp` (der MCP-Port, `OPENFOLIA_MCP_PORT`)         |
+
+Der Endpunkt ist **zustandslos**: Jede Anfrage ist ein `POST` mit einer JSON-RPC-Nachricht, die
+Antwort ist JSON. Es gibt keine Sitzungen und keinen Ereignisstrom, daher antworten `GET` und
+`DELETE` mit 405, was MCP-Clients erwarten. Wo kein MCP-Server läuft, antwortet `/mcp` mit 404.
+
+## Das Token
+
+Jede Anfrage sendet `Authorization: Bearer <Token>`.
+
+- **Gehostet:** Ihr Anbieter oder Ihr OpenFolia-Admin gibt Ihnen das Token.
+- **Selbst betrieben:** Es ist `CCMS_MCP_HTTP_TOKEN` in der Einstellungsdatei (`deploy/.env`),
+  erzeugt mit `openssl rand -hex 32`. [Selbst betreiben](#selbst-betreiben) zeigt, wie.
+
+Es gibt ein Token je Installation, das sich alle teilen, die sich verbinden. Das Token lässt Sie nur
+hinein. Was Sie lesen, bestimmt der **Service-Account** hinter dem Server (`CCMS_MCP_API_TOKEN`),
+dessen Rolle `content.read` hält und sonst nichts. Sein Bereich (Sprachen, Modultypen, Zielgruppe,
+Facetten) ist für jeden Aufrufer derselbe. Ein Modul außerhalb dieses Bereichs ist `not-found`,
+genau wie eines, das es nicht gibt. Halten Sie das Token aus geteilten Dateien und Chats heraus:
+Wer es hat, liest, was der Service-Account liest. Zum Widerrufen setzt ein Admin ein neues
+`CCMS_MCP_HTTP_TOKEN` und startet den Server neu. Jeder Client braucht dann das neue.
+
+## Claude Code verbinden
+
+1. **Legen Sie das Token in eine Umgebungsvariable.** Tragen Sie diese Zeile mit einem Editor in
+   das Profil Ihrer Shell ein (`~/.zshrc`, `~/.bashrc`), statt sie zu tippen, damit das Token weder
+   im Verlauf Ihrer Shell noch in Ihren Projektdateien steht:
+
+   ```sh
+   export OPENFOLIA_MCP_TOKEN='<das Token>'
+   ```
+
+2. **Fügen Sie den Server hinzu.** Ihre Shell setzt das Token ein, und Claude Code speichert es in
+   Ihrer eigenen Konfiguration (`~/.claude.json`):
+
+   ```sh
+   claude mcp add --transport http --scope user openfolia https://<team>.openfolia.com/mcp \
+     --header "Authorization: Bearer $OPENFOLIA_MCP_TOKEN"
+   ```
+
+   Mit `--scope user` steht er in jedem Projekt bereit. Ohne die Option gilt er nur für das
+   aktuelle Projekt.
+
+3. **Prüfen Sie es:** `claude mcp list` zeigt `openfolia` als `✔ Connected`. In einer Sitzung führt
+   `/mcp` ihn mit seinen Werkzeugen auf. Fragen Sie dann etwa „Welche Anleitungen gibt es in
+   OpenFolia?“: Claude ruft `list_manuals` auf.
+
+**Für ein ganzes Team, im Repository:** Die `.mcp.json` eines Projekts wird über Git geteilt, also
+nennt sie die Variable, nie das Token. Claude Code setzt `${…}` in `url` und `headers` ein, und
+jede Person setzt `OPENFOLIA_MCP_TOKEN` selbst:
+
+```json
+{
+  "mcpServers": {
+    "openfolia": {
+      "type": "http",
+      "url": "https://<team>.openfolia.com/mcp",
+      "headers": { "Authorization": "Bearer ${OPENFOLIA_MCP_TOKEN}" }
+    }
+  }
+}
+```
+
+## Cursor und andere Clients mit URL und Headern
+
+Cursor liest `~/.cursor/mcp.json` (für Sie) oder `.cursor/mcp.json` (für ein Projekt) und setzt
+`${env:NAME}` in `url` und `headers` ein:
+
+```json
+{
+  "mcpServers": {
+    "openfolia": {
+      "url": "https://<team>.openfolia.com/mcp",
+      "headers": { "Authorization": "Bearer ${env:OPENFOLIA_MCP_TOKEN}" }
+    }
+  }
+}
+```
+
+Andere Clients, die sich mit eigenen Headern zu einem Streamable-HTTP-Server verbinden, nehmen
+dieselben zwei Werte: die URL und den Header `Authorization: Bearer <Token>`. Wie ein Client die
+Felder nennt und Variablen einsetzt, steht in seiner eigenen Dokumentation.
+
+## Claude Desktop und andere Clients, die einen lokalen Server starten (stdio)
+
+Ein Client, der Server nur auf Ihrem Rechner startet, führt den MCP-Server selbst aus, über stdio.
+Dieser Server liest die API direkt, er bekommt also die Adresse der API und das Token eines
+Service-Accounts statt des HTTP-Tokens:
+
+- `CCMS_MCP_API_URL`: die API, `https://<team>.openfolia.com/api` (selbst betrieben: die Adresse
+  des Editors und `/api`).
+- `CCMS_MCP_API_TOKEN`: das Token eines Service-Accounts (`ccms_sat_…`), dessen Rolle nur
+  `content.read` hält. Ein Admin stellt es im Editor aus
+  ([Service-Accounts und Tokens](/de/guide/admin/service-accounts)). Ein Token, das mehr darf, lehnt
+  der Server ab.
+
+Mit Docker läuft das MCP-Image der Version Ihrer Installation. Die Konfigurationsdatei von Claude
+Desktop ist unter macOS `~/Library/Application Support/Claude/claude_desktop_config.json` und unter
+Windows `%APPDATA%\Claude\claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "openfolia": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "CCMS_MCP_API_URL",
+        "-e",
+        "CCMS_MCP_API_TOKEN",
+        "ghcr.io/<owner>/openfolia/mcp:<version>",
+        "node",
+        "dist/main.js"
+      ],
+      "env": {
+        "CCMS_MCP_API_URL": "https://<team>.openfolia.com/api",
+        "CCMS_MCP_API_TOKEN": "ccms_sat_…"
+      }
+    }
+  }
+}
+```
+
+Aus einem Checkout des Repositorys (`pnpm nx build mcp`) nehmen Sie `"command": "node"` und
+`"args": ["/pfad/zum/checkout/backend/mcp/dist/main.js"]` mit demselben `env`. Das Token steht dann
+in dieser Datei: Behalten Sie die Datei für sich.
+
+## Ohne Client prüfen
+
+```sh
+curl -sS -X POST https://<team>.openfolia.com/mcp \
+  -H "Authorization: Bearer $OPENFOLIA_MCP_TOKEN" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Die Antwort führt die neun Werkzeuge auf. Ohne den Header ist sie 401.
 
 ## Die Werkzeuge
 
-Die [Referenz der MCP-Werkzeuge](/de/reference/mcp-tools) führt jedes Werkzeug und seine Argumente auf.
+Jedes Werkzeug liest nur. Die [Referenz der MCP-Werkzeuge und -Ressourcen](/de/reference/mcp-tools)
+führt jedes mit allen Argumenten auf, erzeugt aus den Definitionen des Servers.
+
+| Werkzeug                                                                   | Was es liefert                                                                                   |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [`search`](/de/reference/mcp-tools#search)                                 | bis zu 20 Treffer mit Auszügen, gefiltert nach Sprache, Typ, Zielgruppe, Facetten, Schlagwörtern |
+| [`read_module`](/de/reference/mcp-tools#read_module)                       | ein Modul als Markdown, wahlweise für eine Variante, mit seinen Metadaten                        |
+| [`list_manuals`](/de/reference/mcp-tools#list_manuals)                     | die Anleitungen mit ihren Varianten und die eingestellten Sprachen                               |
+| [`read_manual`](/de/reference/mcp-tools#read_manual)                       | eine Anleitung für eine Variante und Sprache als Markdown, in ihrer Reihenfolge                  |
+| [`get_chunks`](/de/reference/mcp-tools#get_chunks)                         | Retrieval-Chunks mit ihren Metadaten, gefiltert oder seit einem Zeitpunkt geändert               |
+| [`list_variants`](/de/reference/mcp-tools#list_variants)                   | die Variantenmerkmale und ihre Werte                                                             |
+| [`list_releases`](/de/reference/mcp-tools#list_releases)                   | die Veröffentlichungen, die neueste zuerst, und ob eine zurückgezogen wurde                      |
+| [`list_downloads`](/de/reference/mcp-tools#list_downloads)                 | die herunterladbaren Dateien jedes Produkts in seiner neuesten Veröffentlichung                  |
+| [`list_download_versions`](/de/reference/mcp-tools#list_download_versions) | die Versionen eines Downloads über die Veröffentlichungen hinweg                                 |
+
+Listen werden mit `cursor` geblättert: `nextCursor` einer Antwort fragt nach der nächsten Seite und
+ist nach der letzten null.
+
+## Ressourcen
+
+Neben den Werkzeugen ist jede Anleitung eine Ressource je Variante und Sprache,
+`openfolia://manuals/<id>/<variant>/<lang>`, als Markdown (was `read_manual` liefert), auf `main`.
+Clients, die Ressourcen zeigen (etwa zum Anhängen), listen sie mit `resources/list` und lesen eine
+mit `resources/read`. Siehe [Resources](/de/reference/mcp-tools#resources) in der Referenz.
+
+## Welcher Inhalt: `ref`
+
+Die Inhaltswerkzeuge nehmen `ref`: `main` (der Standard, der aktuelle veröffentlichte Inhalt) oder
+das Tag einer Veröffentlichung aus `list_releases`, um die Dokumentation so zu lesen, wie sie bei
+dieser Veröffentlichung war. Der Branch einer Überarbeitung, eine Commit-ID oder der Branch einer
+Wartungslinie wird abgelehnt (`ref-not-released`), bevor etwas gelesen wird, ebenso eine
+zurückgezogene Veröffentlichung (`release-withdrawn`).
+
+## Fehler
+
+Ein Werkzeug, das scheitert, antwortet mit `isError` und einem JSON-Körper
+`{ "error": { "code", "title", "detail"?, "status"?, "retryAfter"? } }`. `code` bleibt gleich: Ein
+Assistent (oder Ihr eigener Code) kann danach handeln. Die häufigsten:
+
+| Code                                    | Was er bedeutet                                                                                 |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `not-found`                             | kein solches Modul und keine solche Anleitung, oder außerhalb des Bereichs des Service-Accounts |
+| `unknown-variant`                       | die Anleitung hat keine solche Variante                                                         |
+| `ref-not-released`, `release-withdrawn` | `ref` ist kein veröffentlichter Inhalt (siehe oben)                                             |
+| `token-not-read-only`                   | der Service-Account des Servers darf mehr als lesen: Jeder Aufruf scheitert                     |
+| `busy`                                  | zu viele Aufrufe auf einmal: Versuchen Sie es gleich noch einmal                                |
+| `api-unavailable`                       | der Server hat die API nicht erreicht                                                           |
+| `invalid-cursor`                        | ein `cursor`, den dieser Server nicht ausgegeben hat                                            |
+
+Die vollständige Liste steht in `backend/mcp/README.md` im Repository, der Dokumentation des
+Servers selbst.
+
+## Grenzen
+
+- Ein Server führt höchstens **8 Werkzeugaufrufe gleichzeitig** aus und reiht 32 weitere ein;
+  darüber hinaus `busy`.
+- Ein Aufruf hat **120 Sekunden**, Wartezeit eingeschlossen. Bricht der Client ihn ab, wird sein
+  Platz frei.
+- Eine Client-Adresse darf **600 Anfragen pro Minute** senden; danach 429 mit `Retry-After`.
+- Falsche Tokens: nach **10 pro Minute von einer Adresse** oder 100 von allen Adressen zusammen
+  bekommt jedes falsche Token 429, bis die Minute um ist. Das richtige Token wird immer bedient,
+  auch von dieser Adresse.
+- Der Körper einer Anfrage hält höchstens **1 MiB** und eine JSON-RPC-Nachricht (keine Batches).
+- `read_module` liefert bis zu 100.000 Zeichen je Aufruf, das Lesen einer Ressource bis zu 500.000.
+  Ein längerer Text kommt in Teilen per `cursor` oder sagt, dass er gekürzt wurde.
+
+## Fehlerbehebung
+
+**401 Unauthorized.** Der Header fehlt, oder das Token ist falsch oder wurde ersetzt. Der Header
+lautet genau `Authorization: Bearer <Token>`, ohne Anführungszeichen oder Zeilenumbruch im Token.
+Prüfen Sie, dass die Variable, die Ihre Konfiguration nennt, dort gesetzt ist, wo der Client läuft
+(`echo ${#OPENFOLIA_MCP_TOKEN}` gibt ihre Länge aus: 64 für ein Token aus `openssl rand -hex 32`).
+
+**`token-not-read-only`.** Jeder Werkzeugaufruf scheitert damit, obwohl Sie hineingekommen sind.
+Der Service-Account des Servers hält mehr als `content.read` (Entwürfe, Bearbeiten), also antwortet
+der Server lieber gar nicht, als mehr zu zeigen. Ihr Admin gibt diesem Konto eine Rolle, die nur
+`content.read` hält.
+
+**403 `Forbidden: origin not allowed`.** Die Anfrage trug einen `Origin`-Header, wie ihn ein Client
+im Browser sendet, und der Server lässt standardmäßig keinen zu (er schützt so vor DNS-Rebinding).
+Wer selbst betreibt, trägt den Origin des Clients in `CCMS_MCP_HTTP_ALLOWED_ORIGINS` ein. Desktop-
+und Kommandozeilen-Clients senden keinen `Origin` und sehen das nie.
+
+**429.** `Too many failed attempts`: Von Ihrer Adresse (oder von vielen zugleich) kamen falsche
+Tokens. Berichtigen Sie das Token und warten Sie die Sekunden, die `Retry-After` nennt.
+`Too many requests`: mehr als 600 pro Minute von Ihrer Adresse; bremsen Sie den Client. Der Fehler
+`busy` eines Werkzeugs heißt, dass der Server schon seine 8 Aufrufe gleichzeitig ausführt.
+
+**404 unter `/mcp`.** Auf dieser Installation läuft kein MCP-Server (selbst betrieben: er ist
+optional, siehe unten), oder die URL hat einen Pfad nach `/mcp` oder einen Schrägstrich am Ende.
+Während der MCP-Server neu startet, antwortet `/mcp` mit 404 oder **502** (er ist da, hat aber
+nicht geantwortet), bis zu 10 Sekunden über seinen Neustart hinaus.
+
+## Selbst betreiben
+
+In einer Container-Installation ist der MCP-Server der optionale Dienst `mcp`. Sobald er läuft,
+bedient ihn der Editor unter seiner eigenen Adresse und `/mcp` und am MCP-Port desselben Rechners.
+
+1. Eine Rolle, die nur `content.read` hält, ein Service-Account mit ihr und sein Token als
+   `CCMS_MCP_API_TOKEN`.
+2. Ein zufälliges `CCMS_MCP_HTTP_TOKEN` (`openssl rand -hex 32`) und `COMPOSE_PROFILES=mcp` in
+   `deploy/.env`, dann `docker compose up -d --wait`.
+
+Die [Installationsanleitung für Coding-Agenten](/de/agents), Schritt 9, führt jeden Schritt mit
+einer Prüfung aus, und [Selbst betreiben](/de/self-hosting) beschreibt die Installation. Hinter
+Ihrem eigenen Reverse Proxy:
+
+- **Zeitlimits:** Lassen Sie für `/mcp` mindestens 120 Sekunden zu, so lange darf ein Aufruf
+  dauern.
+- **Die Adresse des Aufrufers:** Die Sperre und das Ratenlimit zählen nach ihr. Der Server glaubt
+  dem Editor die Adresse (`CCMS_MCP_HTTP_TRUST_PROXY=1`, der Standard der Compose-Datei). Mit einem
+  Reverse Proxy vor dem Editor setzen Sie den Wert auf `2`, wie `CCMS_TRUST_PROXY`, damit jeder
+  Aufrufer für sich zählt und nicht alle als Ihr Proxy. Ein höherer Wert als die Zahl der Proxys,
+  die wirklich davor stehen, ließe Aufrufer jede Adresse angeben. Der Server glaubt nur dem Editor
+  (`CCMS_MCP_HTTP_PROXY_ADDRESSES=editor`): Ein Aufrufer am MCP-Port zählt nach seiner eigenen
+  Adresse, gleich was er sendet.
+
+Die Einstellungen des Servers stehen in der [Referenz der Einstellungen](/de/reference/settings)
+unter „MCP server“.

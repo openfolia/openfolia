@@ -24,7 +24,54 @@ describe('loadSettings', () => {
       CCMS_MCP_HTTP_PORT: 3200,
       CCMS_MCP_HTTP_TOKEN: token,
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: [],
+      CCMS_MCP_HTTP_TRUST_PROXY: 0,
+      CCMS_MCP_HTTP_PROXY_ADDRESSES: [],
     });
+  });
+
+  it('takes none or a hop count from 1 to 10 for CCMS_MCP_HTTP_TRUST_PROXY, with the proxies named', () => {
+    const http = (env: Record<string, string>) =>
+      loadSettings('http', {
+        ...API,
+        CCMS_MCP_HTTP_TOKEN: '9f3c2a71e04b8d65c1a7f0e93b42d8a6',
+        ...env,
+      });
+    const trust = (value: string) =>
+      http({
+        CCMS_MCP_HTTP_TRUST_PROXY: value,
+        CCMS_MCP_HTTP_PROXY_ADDRESSES: 'editor',
+      }).CCMS_MCP_HTTP_TRUST_PROXY;
+    expect(() => http({ CCMS_MCP_HTTP_TRUST_PROXY: '1' })).toThrow(
+      /CCMS_MCP_HTTP_PROXY_ADDRESSES: required/,
+    );
+    expect(
+      http({
+        CCMS_MCP_HTTP_TRUST_PROXY: '1',
+        CCMS_MCP_HTTP_PROXY_ADDRESSES:
+          ' editor, 172.18.0.0/16 ,fd00::/16,10.0.0.2',
+      }).CCMS_MCP_HTTP_PROXY_ADDRESSES,
+    ).toEqual(['editor', '172.18.0.0/16', 'fd00::/16', '10.0.0.2']);
+    for (const bad of [
+      '0.0.0.0/0',
+      '10.0.0.0/7',
+      '::/8',
+      'a b',
+      'x/16',
+      '10.0.0.1/33',
+    ]) {
+      expect(() =>
+        http({
+          CCMS_MCP_HTTP_TRUST_PROXY: '1',
+          CCMS_MCP_HTTP_PROXY_ADDRESSES: bad,
+        }),
+      ).toThrow(/CCMS_MCP_HTTP_PROXY_ADDRESSES/);
+    }
+    expect(trust('none')).toBe(0);
+    expect(trust(' 1 ')).toBe(1);
+    expect(trust('10')).toBe(10);
+    for (const bad of ['0', '11', 'true', '-1', '1.5', '10.0.0.1']) {
+      expect(() => trust(bad)).toThrow(/CCMS_MCP_HTTP_TRUST_PROXY/);
+    }
   });
 
   it('refuses a short HTTP token, one equal to the API token, and a URL that is no http(s), naming no value', () => {

@@ -161,7 +161,14 @@ bundle again writes nothing for what is unchanged.
 - A reference to a file the bundle does not carry, unless you may already read it on the server
   (`missing-asset`).
 
-The size limits are settings: `CCMS_IMPORT_MAX_BYTES`, `CCMS_IMPORT_MAX_FILES`,
-`CCMS_IMPORT_MAX_UNPACKED_BYTES`, `CCMS_IMPORT_MAX_PATH_DEPTH` and the others in the
-[settings reference](/reference/settings). For a DITA project, see
+A bundle past the server's size limits is refused. For a DITA project, see
 [DITA import](/guide/integrations/dita-import).
+
+<ServerSetting>
+  The size limits are
+  [`CCMS_IMPORT_MAX_BYTES`](/reference/settings#ccms_import_max_bytes),
+  [`CCMS_IMPORT_MAX_FILES`](/reference/settings#ccms_import_max_files),
+  [`CCMS_IMPORT_MAX_UNPACKED_BYTES`](/reference/settings#ccms_import_max_unpacked_bytes),
+  [`CCMS_IMPORT_MAX_PATH_DEPTH`](/reference/settings#ccms_import_max_path_depth)
+  and the other `CCMS_IMPORT_*` settings.
+</ServerSetting>

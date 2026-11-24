@@ -62,8 +62,16 @@ handler, embedded page, animation or link out of it (a style sheet only when it 
 on its own. One that cannot be read as an SVG is left out (`leftOut`, `unsafe-svg`). An attached
 HTML, XML or script file is kept as `.bin`, so opening it shows no page; its link still saves it
 under its own name. A package larger than `CCMS_RELEASE_ARCHIVE_MAX_BYTES` or with more than 50,000
-files fails with `offline-package-too-large`; the PDFs stay. An operator turns packages off with
-`CCMS_OFFLINE_PACKAGES=false`.
+files fails with `offline-package-too-large`; the PDFs stay. Packages can be turned off for a
+whole server.
+
+<ServerSetting>
+  The size limit of an archive and a package is
+  [`CCMS_RELEASE_ARCHIVE_MAX_BYTES`](/reference/settings#ccms_release_archive_max_bytes)
+  (2 GiB), and
+  [`CCMS_OFFLINE_PACKAGES=false`](/reference/settings#ccms_offline_packages)
+  turns packages off.
+</ServerSetting>
 
 The iiRDS and DITA packages of a release are made on request: see [iiRDS](/guide/releases/iirds)
 and [DITA](/guide/releases/dita).
@@ -76,7 +84,7 @@ or `…/qr.png` a QR code of the address. `<lang>@<revision>` pins one release.
 
 `GET /stable-addresses` lists them, one per output of a release the reader may read, with the
 `latest` and `pinned` addresses, each with `html` and `pdf` as a `path` and a full `url` (null
-until the operator sets `CCMS_PUBLIC_URL`). Filters: `filter[release]`, `filter[product]`,
+until the server knows its public address, `CCMS_PUBLIC_URL`). Filters: `filter[release]`, `filter[product]`,
 `filter[manual]`, `filter[lang]`.
 
 What a stable address answers:
@@ -91,12 +99,22 @@ What a stable address answers:
 | 410    | A pinned release that was withdrawn: a notice linking the latest address.              |
 | 429    | `rate-limited`: past `CCMS_DELIVERY_PER_MINUTE` pages, PDFs and QR codes a minute.     |
 
-Who may open them is `delivery.access` in `openfolia.yaml`, at most what the operator allows
+Who may open them is `delivery.access` in `openfolia.yaml`, at most what the server allows
 (`CCMS_DELIVERY_MAX_ACCESS`): `public` addresses read as the public audience whoever asks, and
 never look at a token; `signed-in` ones need a token or a session; `off` is 404. The pages, PDFs
 and QR codes are `no-cache` with an ETag, so a cache in front revalidates each time and a new
 release or a withdrawal reaches readers at once. Query parameters such as `utm_*` are ignored
 there (`CCMS_DELIVERY_IGNORED_QUERY`); any other is 400.
+
+<ServerSetting>
+  The public address is
+  [`CCMS_PUBLIC_URL`](/reference/settings#ccms_public_url), the rate
+  [`CCMS_DELIVERY_PER_MINUTE`](/reference/settings#ccms_delivery_per_minute),
+  the widest access
+  [`CCMS_DELIVERY_MAX_ACCESS`](/reference/settings#ccms_delivery_max_access) and
+  the ignored query parameters
+  [`CCMS_DELIVERY_IGNORED_QUERY`](/reference/settings#ccms_delivery_ignored_query).
+</ServerSetting>
 
 A static site of the released manuals, built from the API, is the
 [portal](/guide/portal).

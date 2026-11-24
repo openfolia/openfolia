@@ -85,10 +85,16 @@ Abbildungstabelle und jeden Code des Berichts.
 - **Nichts außerhalb des Archivs:** Ein Verweis, der das Archiv verlässt, führt ins Leere
   (`outside-archive`), und nichts wird abgerufen (`external-reference`).
 - **Begrenzt:** Inhaltsverweisen, Schlüsseln und Maps wird nur bis zu einer festen Tiefe und Breite
-  gefolgt (`expansion-limit`). Die Umwandlung läuft in einem eigenen Prozess, begrenzt durch
-  `CCMS_IMPORT_CONVERT_MAX_MEMORY_MB` und `CCMS_IMPORT_CONVERT_TIMEOUT_MS`; wird eine Grenze
-  überschritten, ist der Import 422 `import-too-large`.
+  gefolgt (`expansion-limit`). Die Umwandlung läuft in einem eigenen Prozess, begrenzt in Speicher und
+  Zeit; wird eine Grenze überschritten, ist der Import 422 `import-too-large`.
 - **Kein Gegenstück:** Indexeinträge, Beziehungstabellen, Bedingungen im Fließtext und Ähnliches
   werden ausgelassen oder ohne ihre Aussage behalten, jeweils gemeldet.
+
+<ServerSetting lang="de">
+  Die Grenzen der Umwandlung sind
+  [`CCMS_IMPORT_CONVERT_MAX_MEMORY_MB`](/de/reference/settings#ccms_import_convert_max_memory_mb)
+  und
+  [`CCMS_IMPORT_CONVERT_TIMEOUT_MS`](/de/reference/settings#ccms_import_convert_timeout_ms).
+</ServerSetting>
 
 Der Weg zurück ist der [DITA-Export](/de/guide/releases/dita) einer Veröffentlichung.

@@ -14,28 +14,54 @@ Almost everything in it is content: the modules, and also the manuals, the proje
 page designs and the terms, all versioned in Git and changed through review. See
 [Almost everything is content](/guide/getting-started/content).
 
-<AgentInstall />
+## Use your OpenFolia
+
+Your OpenFolia has an address of its own: `https://<team>.openfolia.com` when it is hosted for you,
+or the address your admin gives you. Open it in your browser and sign in. Programs and
+agents reach the same content through its API at that address plus `/api`.
 
 <Cards>
   <Card
-    title="Getting started"
-    href="/getting-started"
-    description="Run it on your machine with the sample content."
-  />
-  <Card
-    title="Self-hosting"
-    href="/self-hosting"
-    description="Run it on a server with containers."
-  />
-  <Card
-    title="API reference"
-    href="/api"
-    description="The Delivery API for integrators, and the Management API."
+    title="Sign in"
+    href="/guide/getting-started/sign-in"
+    description="Open your address and sign in the way your page offers."
   />
   <Card
     title="User guide"
     href="/guide"
     description="For writers, reviewers, translators and admins."
+  />
+  <Card
+    title="Tokens and the API"
+    href="/guide/integrations/authentication"
+    description="A service account token, and your address plus /api."
+  />
+  <Card
+    title="MCP server"
+    href="/guides/mcp"
+    description="Give AI assistants and agents the released content."
+  />
+</Cards>
+
+[Getting started](/getting-started) walks through it, from signing in to a first API call.
+
+## Run it yourself
+
+OpenFolia is open source. Run it on your machine with the sample content, or on a server of yours
+with containers.
+
+<AgentInstall />
+
+<Cards>
+  <Card
+    title="On your machine"
+    href="/getting-started#run-it-yourself"
+    description="Start it with the sample content, and make a first API call."
+  />
+  <Card
+    title="On a server"
+    href="/self-hosting"
+    description="Self-hosting with containers, Postgres and a Git repository you own."
   />
 </Cards>
 
@@ -43,8 +69,9 @@ page designs and the terms, all versioned in Git and changed through review. See
 
 The reference is generated from the source code, so it always matches the release it belongs to:
 
-- [API reference](/api): every route of the Delivery API and the Management API, with schemas,
-  code samples and a playground.
+- [API reference](/api): every route of the Delivery API and the Management API, with schemas and
+  code samples for your address. To send requests, use the interactive reference at `/api/docs` on
+  your OpenFolia.
 - [Error codes](/reference/errors), [permissions](/reference/permissions) and
   [settings](/reference/settings).
 - [Project configuration (`openfolia.yaml`)](/reference/project-config),

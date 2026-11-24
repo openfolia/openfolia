@@ -20,9 +20,29 @@ sind auf Englisch.
   />
 </Cards>
 
+## Die Adresse Ihrer API und ein Token
+
+Jede Anfrage geht an die Adresse Ihrer Instanz plus `/api`:
+
+- **Gehostetes OpenFolia:** `https://<team>.openfolia.com/api`, mit dem Namen Ihres Teams.
+- **Selbst betrieben:** die Adresse Ihres Editors plus `/api`, etwa `https://openfolia.example.com/api`.
+
+Die Seite jeder Operation hat über der Operation ein Feld für Ihren Host; die Codebeispiele
+verwenden ihn, und Ihr Browser behält ihn für die anderen Seiten. Diese Website sendet selbst
+keine Anfragen: Kopieren Sie ein Beispiel und führen Sie es aus, oder öffnen Sie `/api/docs` auf
+Ihrer Instanz (`https://<team>.openfolia.com/api/docs`), deren eigene interaktive Referenz, um
+Anfragen dort auszuprobieren.
+
+Eine Anfrage braucht ein Token: `Authorization: Bearer <token>`. Stellen Sie eines für einen
+Service-Account unter **Verwaltung › Service-Accounts** aus
+([Service-Accounts und Tokens](/de/guide/admin/service-accounts)); dafür brauchen Sie die
+Berechtigung **admin.roles**. Wenn Sie sie nicht haben, bitten Sie eine Administratorin oder
+einen Administrator um ein Token.
+
 ## Die Dokumente herunterladen
 
-Beide Dokumente, OpenAPI 3.0, mit der Adresse dieser API als Server:
+Beide Dokumente, OpenAPI 3.0. Ihr Server ist `https://{host}/api`, mit `host` als Variable:
+Setzen Sie sie nach dem Import auf den Host Ihrer Instanz.
 
 <OpenAPIDownload api="delivery" lang="de" />
 

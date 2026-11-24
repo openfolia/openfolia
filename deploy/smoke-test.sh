@@ -2,7 +2,7 @@
 # Starts the compose stack from scratch on the sample content, checks it, and removes it again
 # (containers and volumes): the API's health, the editor, the editor's /api proxy and its host and
 # origin checks, a PDF rendered through each, the editor after the API is recreated, the MCP
-# server, a release's files rendered by two separate workers, none twice and within the
+# server on its port and at the editor's /mcp (its token, origin check and lockout), a release's files rendered by two separate workers, none twice and within the
 # per-release cap, with the workers' health, the reader portal (--profile portal: built from that
 # release with a read-only token, its headers, a new release shown without a restart, no file
 # holding the token), and the backups: a verified backup to an S3 server
@@ -52,7 +52,7 @@ if [ "${SMOKE_BUILD:-1}" = 1 ]; then
   export OPENFOLIA_IMAGES=openfolia-smoke OPENFOLIA_VERSION=smoke
 fi
 export OPENFOLIA_BIND=127.0.0.1 OPENFOLIA_API_BIND=127.0.0.1 OPENFOLIA_API_PORT="$api_port" OPENFOLIA_EDITOR_PORT="$editor_port"
-unset CCMS_TRUST_PROXY
+unset CCMS_TRUST_PROXY CCMS_MCP_HTTP_TRUST_PROXY
 
 files="-f ${here}/compose.yaml -f ${here}/smoke-s3.yaml"
 if [ "${SMOKE_BUILD:-1}" = 1 ]; then files="$files -f ${here}/compose.build.yaml"; fi
@@ -175,6 +175,9 @@ compose exec -T api node dist/database/seed.main.js --example >/dev/null
 CCMS_MCP_API_TOKEN=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp --role reader | tail -n 1)
 CCMS_MCP_HTTP_TOKEN=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
 export CCMS_MCP_API_TOKEN CCMS_MCP_HTTP_TOKEN OPENFOLIA_MCP_PORT="$mcp_port"
+code=$(status -X POST "$editor/mcp")
+[ "$code" = 404 ] || fail "POST /mcp through the editor without the MCP service answered $code"
+echo "POST /mcp through the editor, no MCP service yet -> $code"
 up --profile mcp --no-deps mcp
 code=$(status -X POST "$mcp/mcp")
 [ "$code" = 401 ] || fail "POST /mcp without the token answered $code"
@@ -183,6 +186,54 @@ code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Conten
   -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$mcp/mcp")
 [ "$code" = 200 ] && grep -q '"tools"' "$work/body" || fail "tools/list answered $code: $(head -c 300 "$work/body")"
 echo "POST /mcp tools/list -> $code, $(grep -o '"name":"[a-z_-]*"' "$work/body" | wc -l | tr -d ' ') tools"
+
+step "the MCP server at the editor's address (/mcp, #860)"
+# The editor's own CCMS_EDITOR_API_TOKEN never reaches /mcp: without the MCP token, 401. The
+# editor keeps the name's failed lookup (before the service ran) for up to 10 s: wait that out.
+for wait in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  code=$(status -X POST "$editor/mcp")
+  [ "$code" = 404 ] || break
+  sleep 1
+done
+[ "$code" = 401 ] || fail "POST /mcp through the editor without the token answered $code"
+echo "POST /mcp through the editor without the token -> $code"
+code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$editor/mcp")
+[ "$code" = 200 ] && grep -q '"tools"' "$work/body" || fail "tools/list through the editor answered $code: $(head -c 300 "$work/body")"
+echo "POST /mcp tools/list through the editor -> $code, $(grep -o '"name":"[a-z_-]*"' "$work/body" | wc -l | tr -d ' ') tools"
+# The server's origin allowlist (none here) still applies behind the proxy, the editor's own too.
+code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H "Origin: $editor" "$editor/mcp")
+[ "$code" = 403 ] || fail "POST /mcp through the editor with an Origin not allowed answered $code"
+echo "POST /mcp through the editor with an Origin not allowed -> $code"
+# A caller on the MCP port is never believed about its address (CCMS_MCP_HTTP_PROXY_ADDRESSES is
+# the editor alone): wrong tokens, each naming another address, are locked out by its own.
+locked=
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  code=$(status -X POST -H "Authorization: Bearer wrong-$attempt" -H "X-Forwarded-For: 203.0.113.$attempt" "$mcp/mcp")
+  if [ "$code" = 429 ]; then locked=$attempt && break; fi
+  [ "$code" = 401 ] || fail "a wrong token on the MCP port answered $code"
+done
+[ -n "$locked" ] || fail "12 wrong tokens on the MCP port, each naming another address, were never locked out"
+echo "wrong tokens on the MCP port, forged addresses -> 429 at attempt $locked"
+# The lockout through the editor counts the address the editor saw (CCMS_MCP_HTTP_TRUST_PROXY=1):
+# wrong tokens, each naming another address in X-Forwarded-For, are still locked out together...
+locked=
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  code=$(status -X POST -H "Authorization: Bearer wrong-$attempt" -H "X-Forwarded-For: 198.51.100.$attempt" "$editor/mcp")
+  if [ "$code" = 429 ]; then locked=$attempt && break; fi
+  [ "$code" = 401 ] || fail "a wrong token through the editor answered $code"
+done
+[ -n "$locked" ] || fail "12 wrong tokens through the editor, each naming another address, were never locked out"
+echo "wrong tokens through the editor, forged addresses -> 429 at attempt $locked"
+# ...while a caller at another address is not, and the token is served from the locked one.
+code=$(compose exec -T editor wget -q -S -O /dev/null --header 'Authorization: Bearer wrong' --post-data '{}' \
+  http://127.0.0.1:8080/mcp 2>&1 | sed -n 's/^ *HTTP\/1\.[01] \([0-9]*\).*/\1/p' | tail -n 1)
+[ "$code" = 401 ] || fail "a wrong token from another address through the editor answered $code"
+echo "a wrong token from another address (inside the editor's container) -> $code"
+code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' "$editor/mcp")
+[ "$code" = 200 ] || fail "the token through the editor from a locked-out address answered $code"
+echo "the token from the locked-out address -> $code"
 
 step "the workers' health (inside their containers: no port is published)"
 for index in 1 2; do

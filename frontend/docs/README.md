@@ -74,7 +74,14 @@ files at build time, never a copy:
 
 The API reference has a page per operation (fumadocs-openapi), by tag. Each page embeds a document
 cut down to its own operation and the schemas it references (`pruneToOperation`), not the whole
-document. Its playground sends requests to `DOCS_API_BASE_URL`.
+document. Every document has one server, `https://{host}/api` (`API_SERVER` in
+`scripts/lib/openapi.mjs`, #858): the reader types their instance's host (a hosted team's
+`<team>.openfolia.com`, or their own) once, in the field above each operation
+(`components/api-page.tsx`), and the code samples use it; it is kept in the browser for the other
+pages. The site sends no requests itself: a static site on another origin can't reach an instance
+(the API sends no CORS headers, and the image's Content-Security-Policy allows only the site), so
+the field replaces the playground's send action, and points to `/api/docs` on the instance, which
+serves its own interactive reference.
 
 **Drift checks.** The build fails, and with it `pnpm check`, when a reference cannot describe
 something:
@@ -139,7 +146,8 @@ The product's website, the README and the editor link to these, so `scripts/chec
 - the files `/agents.md`, `/llms.txt`, `/llms-full.txt`, `/guide-index.json` and `/changelog.xml`, and both OpenAPI
   documents to download: `/openapi/delivery.yaml`, `/openapi/delivery.json`,
   `/openapi/management.yaml` and `/openapi/management.json` (`app/openapi/`), the documents the
-  reference is made from, their server `DOCS_API_BASE_URL`, for Postman and similar tools.
+  reference is made from, with the same server and its `host` variable, for Postman and similar
+  tools.
 
 A page that moves keeps its old address with a redirect: add it to `REDIRECTS` in
 `scripts/lib/redirects.mjs` (#820), which `build` turns into a small page per language at the old
@@ -205,8 +213,7 @@ and favicon come from `@openfolia/theme/brand`.
 
 ## Settings
 
-Read from the build's environment (`.env.example`, "Docs site"): `DOCS_API_BASE_URL` (the
-playground's API), `DOCS_SITE_URL` (absolute links in `llms.txt`, the agent guide and its
+Read from the build's environment (`.env.example`, "Docs site"): `DOCS_SITE_URL` (absolute links in `llms.txt`, the agent guide and its
 one-liner) and `DOCS_REPOSITORY_URL` (the GitHub link in the navigation and links to files in the
 repository; by default the project's own, `https://github.com/openfolia/openfolia`); for the
 agent guide, `DOCS_RELEASE`, `DOCS_RELEASE_URL`, `DOCS_IMAGES`, `DOCS_RELEASE_DIGESTS`,

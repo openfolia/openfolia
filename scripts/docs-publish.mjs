@@ -5,7 +5,7 @@
 //   pnpm docs:publish [--release vX.Y.Z] [--push] [--tag <tag>] [--platform <os/arch,...>]
 //
 // 1. Checks the arguments, the settings and the working tree (scripts/docs-publish-plan.mjs):
-//    the development docs need DOCS_SITE_URL and DOCS_API_BASE_URL; a release's docs also
+//    the development docs need DOCS_SITE_URL; a release's docs also
 //    DOCS_RELEASE_DIGESTS; a push needs a clean working tree, and a release's push HEAD at the
 //    release's tag or after it with only the changelog differing.
 // 2. Builds the site (`nx run docs:build`) with the DOCS_* settings of the environment, and

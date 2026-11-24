@@ -11,10 +11,7 @@ import {
 
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 const clean = { sha: SHA, dirty: false };
-const dev = {
-  DOCS_SITE_URL: 'https://docs.example.org',
-  DOCS_API_BASE_URL: 'https://api.example.org/v1',
-};
+const dev = { DOCS_SITE_URL: 'https://docs.example.org' };
 const LOCK = 'ghcr.io/openfolia/openfolia/api:v1.2.3@sha256:' + 'a'.repeat(64);
 const release = { ...dev, DOCS_RELEASE_DIGESTS: LOCK };
 
@@ -73,19 +70,13 @@ describe('docs:publish arguments', () => {
 });
 
 describe('docs:publish settings', () => {
-  it('refuses the development docs without DOCS_SITE_URL or DOCS_API_BASE_URL', () => {
-    expect(() =>
-      plan([], { DOCS_API_BASE_URL: dev.DOCS_API_BASE_URL }),
-    ).toThrow(/DOCS_SITE_URL must be set for the development docs/);
-    expect(() => plan([], { DOCS_SITE_URL: dev.DOCS_SITE_URL })).toThrow(
-      /DOCS_API_BASE_URL must be set for the development docs/,
+  it('refuses the development docs without DOCS_SITE_URL', () => {
+    expect(() => plan([], {})).toThrow(
+      /DOCS_SITE_URL must be set for the development docs/,
     );
     expect(() =>
       plan([], { ...dev, DOCS_SITE_URL: 'docs.example.org' }),
     ).toThrow(/absolute http\(s\) URL/);
-    expect(() =>
-      plan([], { ...dev, DOCS_API_BASE_URL: 'ftp://api.example.org' }),
-    ).toThrow(/http\(s\) URL/);
   });
 
   it("refuses a release's docs without DOCS_RELEASE_DIGESTS, and takes the signatures when set", () => {
@@ -93,10 +84,7 @@ describe('docs:publish settings', () => {
       /DOCS_RELEASE_DIGESTS must be set/,
     );
     expect(() =>
-      plan(['--release', 'v1.2.3'], {
-        DOCS_RELEASE_DIGESTS: LOCK,
-        DOCS_API_BASE_URL: dev.DOCS_API_BASE_URL,
-      }),
+      plan(['--release', 'v1.2.3'], { DOCS_RELEASE_DIGESTS: LOCK }),
     ).toThrow(/DOCS_SITE_URL must be set for a release's docs/);
     const signed = plan(['--release', 'v1.2.3'], {
       ...release,
@@ -240,15 +228,8 @@ describe('docs:publish image', () => {
     });
   });
 
-  it("passes the API's origin for the Content-Security-Policy", () => {
-    const { docker, apiOrigin } = plan([], {
-      ...dev,
-      DOCS_API_BASE_URL: 'https://api.example.org:8443/base/',
-    });
-    expect(apiOrigin).toBe('https://api.example.org:8443');
-    expect(values(docker, '--build-arg')).toEqual([
-      'DOCS_API_ORIGIN=https://api.example.org:8443',
-    ]);
+  it('passes no build arguments: the image allows no API origin (#858)', () => {
+    expect(values(plan([], dev).docker, '--build-arg')).toEqual([]);
   });
 
   it('loads a local build for the machine, and pushes arm64 and amd64 with --push', () => {

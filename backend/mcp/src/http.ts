@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 import {
   createServer,
   type IncomingMessage,
@@ -29,6 +30,12 @@ export interface HttpOptions {
   readonly allowedOrigins: readonly string[];
   /** Whether the server listens on a loopback address only: then `Host` must name one. */
   readonly loopbackOnly: boolean;
+  /**
+   * Proxies in front to believe about the client's address: that many hops
+   * (`CCMS_MCP_HTTP_TRUST_PROXY`), and only from these peers
+   * (`CCMS_MCP_HTTP_PROXY_ADDRESSES`). Unset: none, the connection's address.
+   */
+  readonly trustProxy?: { readonly hops: number; readonly proxies: Proxies };
   readonly now?: () => number;
 }
 
@@ -41,6 +48,38 @@ export function isLoopback(host: string): boolean {
     host === '::1' ||
     /^127(\.\d{1,3}){3}$/.test(host)
   );
+}
+
+/** The peers to believe `X-Forwarded-For` from (`ProxyAddresses`). */
+export interface Proxies {
+  has(address: string): boolean;
+}
+
+/**
+ * The client's address, which the lockout and the rate limit count by: the
+ * connection's, unless the connection comes from one of the `proxies`; then,
+ * with `hops` trusted proxies in front, the address the outermost of them
+ * saw. Each proxy appends the address it saw to `X-Forwarded-For`, so that one
+ * is `hops - 1` entries from the right; what a client wrote further left is
+ * never read, and a client connecting directly is never believed at all. A
+ * shorter chain gives its leftmost entry, and an entry that is no IP address
+ * gives the connection's.
+ */
+export function clientAddress(
+  req: IncomingMessage,
+  trust?: { readonly hops: number; readonly proxies: Proxies },
+): string {
+  const socket = req.socket.remoteAddress ?? 'unknown';
+  const hops = trust?.hops ?? 0;
+  if (hops <= 0 || !trust?.proxies.has(socket)) return socket;
+  const header = req.headers['x-forwarded-for'];
+  const forwarded = (Array.isArray(header) ? header.join(',') : (header ?? ''))
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+  const chain = [socket, ...forwarded.reverse()];
+  const address = chain[Math.min(hops, chain.length - 1)] ?? socket;
+  return isIP(address) === 0 ? socket : address;
 }
 
 /** Counts per client address in fixed windows. */
@@ -170,8 +209,9 @@ class BodyError extends Error {
  * The Streamable HTTP transport's request handler: one stateless MCP server
  * per request (no sessions), after these checks, in order: the path, the
  * `Origin` (DNS rebinding; any not allowed is 403), the `Host` when bound to
- * loopback, the client's rate, the bearer token (compared in constant time;
- * failures counted per address), the method (POST only) and the body size.
+ * loopback, the bearer token (compared in constant time; failures counted
+ * per client address, `clientAddress`), the client's rate, the method (POST
+ * only) and the body size.
  */
 export function createHttpHandler(
   context: McpContext,
@@ -184,7 +224,7 @@ export function createHttpHandler(
   const expected = digest(options.token);
   const origins = new Set(options.allowedOrigins);
   return async (req, res) => {
-    const address = req.socket.remoteAddress ?? 'unknown';
+    const address = clientAddress(req, options.trustProxy);
     const path = (req.url ?? '').split('?')[0];
     if (path !== MCP_PATH) return refuse(res, 404, 'Not found');
     const origin = req.headers.origin;

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parse } from 'yaml';
+import { parse, stringify } from 'yaml';
 import {
+  API_SERVER,
   managementDocument,
   operations,
   pruneToOperation,
@@ -109,14 +110,32 @@ describe('the API references', () => {
     );
   });
 
-  it('point the playground at the configured server', () => {
-    expect(withServer(doc, 'https://api.example.test').servers).toEqual([
-      {
-        url: 'https://api.example.test',
-        description:
-          'The API this reference describes (DOCS_API_BASE_URL); set the address of your own server.',
+  it('name one server, the instance with an editable host, never localhost (#858)', () => {
+    const server = {
+      url: 'https://{host}/api',
+      description: expect.stringContaining('https://<team>.openfolia.com/api'),
+      variables: {
+        host: {
+          default: 'your-team.openfolia.com',
+          description: expect.stringContaining('https://<team>.openfolia.com'),
+        },
       },
+    };
+    const whole = withServer({ ...doc, servers: [{ url: 'http://x.test' }] });
+    expect(whole.servers).toEqual([server]);
+    // An operation's page embeds the same server.
+    expect(pruneToOperation(whole, '/modules', 'get').servers).toEqual([
+      server,
     ]);
+    // And so does the download, as YAML.
+    const yaml = stringify(whole, { lineWidth: 0 });
+    expect(parse(yaml).servers).toEqual([server]);
+    expect(yaml).not.toMatch(/localhost/);
+    // The default fills in to a URL the code samples can show.
+    expect(
+      new URL(server.url.replace('{host}', API_SERVER.variables.host.default))
+        .href,
+    ).toBe('https://your-team.openfolia.com/api');
   });
 
   it('make addresses from operation IDs', () => {

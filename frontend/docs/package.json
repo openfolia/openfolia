@@ -73,9 +73,6 @@
           },
           "{workspaceRoot}/pnpm-lock.yaml",
           {
-            "env": "DOCS_API_BASE_URL"
-          },
-          {
             "env": "DOCS_SITE_URL"
           },
           {
@@ -124,9 +121,6 @@
             "dependentTasksOutputFiles": "**/*"
           },
           "{workspaceRoot}/pnpm-lock.yaml",
-          {
-            "env": "DOCS_API_BASE_URL"
-          },
           {
             "env": "DOCS_SITE_URL"
           },

@@ -173,12 +173,11 @@ function signatures(env, version, repositoryUrl) {
 }
 
 /**
- * @returns {{ apiBaseUrl: string, siteUrl: string, repositoryUrl: string, release: string | null, images: string, digests: Record<string, string> | null, signatures: { trustedRoot: string, bundles: Record<string, string>, identity: string, issuer: string } | null, releaseUrl: string | null }}
+ * @returns {{ siteUrl: string, repositoryUrl: string, release: string | null, images: string, digests: Record<string, string> | null, signatures: { trustedRoot: string, bundles: Record<string, string>, identity: string, issuer: string } | null, releaseUrl: string | null }}
  */
 export function docsSettings(env) {
   const repositoryUrl = url(env, 'DOCS_REPOSITORY_URL', DEFAULT_REPOSITORY_URL);
   const settings = {
-    apiBaseUrl: url(env, 'DOCS_API_BASE_URL', 'http://localhost:3000'),
     siteUrl: url(env, 'DOCS_SITE_URL', 'http://localhost:3000'),
     repositoryUrl,
     ...release(env, repositoryUrl),

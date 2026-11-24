@@ -223,7 +223,7 @@ changelog files differ, and refuses anything else, naming the files:
 
 ```sh
 git checkout <the changelog commit>   # or vX.Y.Z itself
-DOCS_SITE_URL=https://docs.example.com DOCS_API_BASE_URL=https://api.example.com \
+DOCS_SITE_URL=https://docs.example.com \
 DOCS_RELEASE_DIGESTS="$(cat images.lock)" \
 pnpm docs:publish --release vX.Y.Z --push
 ```

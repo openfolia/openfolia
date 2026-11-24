@@ -10,20 +10,29 @@ account's roles, and nothing else.
 
 ## Get a token
 
-- **From an admin:** an admin creates the service account, gives it a role and issues a token in
-  the editor ([Service accounts and tokens](/guide/admin/service-accounts)), or through the API
-  (`POST /service-accounts/{id}/tokens`). The token is shown once.
-- **The first one of a deployment**, before anyone can sign in, on the server's command line. It
-  makes the service account with the roles given when it does not exist yet, and prints the token
-  once:
+Tokens belong to service accounts, never to a person. An admin makes them in the editor:
 
-  ```sh
-  docker compose exec api node dist/database/service-token.main.js portal-build \
-    --role <role> --name "Portal build, production" --days 90
-  ```
+1. Someone with the `admin.roles` permission opens **Admin**, then **Service accounts**.
+2. They add a service account and give it a role. No service account may hold `admin.roles`.
+3. They issue a token, choose how long it lasts, and copy it. It is shown once.
 
-  The roles must exist, and none may hold `admin.roles`. For an account that exists already, leave
-  out `--role`: its roles are changed in the editor.
+[Service accounts and tokens](/guide/admin/service-accounts) has each step. The same can be done
+through the API (`POST /service-accounts/{id}/tokens`).
+
+### The first token of a self-hosted server
+
+On a server you run yourself, the first token, before anyone can sign in, comes from the server's
+command line. It makes the service account with the roles given when it does not exist yet, and
+prints the token once:
+
+```sh
+docker compose exec api node dist/database/service-token.main.js portal-build \
+  --role <role> --name "Portal build, production" --days 90
+```
+
+The roles must exist, and none may hold `admin.roles`. For an account that exists already, leave
+out `--role`: its roles are changed in the editor. A hosted OpenFolia has no command
+line for you: tokens are made in the editor.
 
 For an integration that only reads released content, the role should hold **only `content.read`**,
 in the scope it needs (languages, module types, audience levels). Such a token reads `main` and
@@ -31,10 +40,13 @@ release tags, never drafts.
 
 ## Send it
 
-Send the token in the `Authorization` header of every request, and nowhere else:
+The API is at your OpenFolia's address plus `/api`: `https://<team>.openfolia.com/api` when it is
+hosted for you, or your own editor's address plus `/api`
+(a server can also give the API a host of its own: [Self-hosting](/self-hosting)). Send the token in the `Authorization`
+header of every request, and nowhere else:
 
 ```sh
-curl -s https://docs.example.com/api/releases \
+curl -s https://<team>.openfolia.com/api/releases \
   -H 'Authorization: Bearer ccms_sat_…' \
   -H 'Accept: application/vnd.api+json'
 ```

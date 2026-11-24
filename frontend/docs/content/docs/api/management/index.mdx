@@ -8,8 +8,12 @@ working copies, releases and their outputs, translations, imports, comments, che
 roles and service accounts, branding, webhooks, backups, the audit log.
 
 It lists each operation once: the read routes of released content are in the
-[Delivery API](/api/delivery), and the server's full document (`GET /openapi.json` on a running
-server) holds both.
+[Delivery API](/api/delivery), and the server's full document (`/api/openapi.json` on your
+instance) holds both. Requests go to your instance's address plus `/api`:
+`https://<team>.openfolia.com/api` for a hosted team, your editor's address plus `/api` when you
+host it yourself, with a service account's token ([your API's address and a
+token](/api#your-apis-address-and-a-token)). `/api/docs` on your instance is its own interactive
+reference, where you can send requests.
 
 The Management API's document, to download:
 

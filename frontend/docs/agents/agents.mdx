@@ -189,7 +189,8 @@ What each line is, to tell the person in one line each:
 Only for the choices the person made in step 1, add:
 
 - **A domain:** `CCMS_PUBLIC_URL=https://docs.example.com/`, `CCMS_EDITOR_HOSTS=docs.example.com`
-  (any other host name is refused) and `CCMS_TRUST_PROXY=2` (their proxy is one more hop).
+  (any other host name is refused), `CCMS_TRUST_PROXY=2` and `CCMS_MCP_HTTP_TRUST_PROXY=2`
+  (their proxy is one more hop).
 - **Email:** `CCMS_MAIL_URL` (`smtp://host:587` or `smtps://host:465`), `CCMS_MAIL_FROM` and, if
   the server wants a sign-in, `CCMS_MAIL_USER`. Ask the person to add the password themselves
   (`CCMS_MAIL_PASSWORD=…` in `.env`): never ask them to tell it to you.
@@ -489,8 +490,18 @@ the MCP server, with a service account that may only read.
      `127.0.0.1` only.
 
 4. **Add the server to your own MCP configuration**, in the way your agent documents it, as a
-   Streamable HTTP server: the URL `http://127.0.0.1:3200/mcp`, and the header
-   `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN from .env>`. Tell the person which file of yours
+   Streamable HTTP server: the editor's address plus `/mcp`, `http://127.0.0.1:8080/mcp`, and the
+   header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN from .env>`. With a domain, the URL is
+   `https://<their domain>/mcp` instead: the editor then answers for that name only. Claude Code,
+   for example:
+
+   ```sh
+   cd ~/openfolia
+   claude mcp add --transport http openfolia http://127.0.0.1:8080/mcp \
+     --header "Authorization: Bearer $(sed -n 's/^CCMS_MCP_HTTP_TOKEN=//p' .env | tail -n 1)"
+   ```
+
+   Other clients' configurations: [The MCP server](%%SITE_URL%%/guides/mcp). Tell the person which file of yours
    now holds that token. Never paste it into the conversation, and never read the value yourself:
    write it into your configuration with a shell command that reads `.env` directly, or name the
    setting where your configuration takes one from the environment. If you can't change your own
@@ -504,7 +515,7 @@ the MCP server, with a service account that may only read.
 
    ```sh
    cd ~/openfolia
-   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env)." >> INSTALL-RECORD.md
+   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server at http://127.0.0.1:8080/mcp and on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env)." >> INSTALL-RECORD.md
    ```
 
    Add a line naming your configuration file, if you changed it.
@@ -561,5 +572,5 @@ This upgrades an installation to the release of this guide, `%%RELEASE%%`.
 On an instance that runs already, step 9 is the whole flow: in the install folder, with the
 person's consent, make the read-only role (ask first if `agent-reader` exists, in Admin, Roles),
 its token and the MCP server, then add the server to your configuration and list the manuals. The
-[MCP server guide](/guides/mcp) describes the server, and the [MCP tools reference](/reference/mcp-tools)
+[MCP server guide](/guides/mcp) describes the server, and the [MCP tools and resources reference](/reference/mcp-tools)
 its tools.

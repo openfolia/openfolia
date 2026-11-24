@@ -69,9 +69,16 @@ niemand anderem. Diese Antworten sagen, was zu tun ist:
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | 400 `cursor-expired` | Der geheime Schlüssel der Instanz wurde gewechselt, der Cursor wurde jemand anderem ausgestellt oder verändert.                                                                                                 | Ohne Cursor neu beginnen.                             |
 | 410 `cursor-gone`    | Die Inhalte, auf denen der Cursor steht, sind nicht mehr im Repository (etwa nach einem Umschreiben der Historie), oder der Cursor stammt von vor der Wiederherstellung der Datenbank von einem anderen Server. | Neu abgleichen, siehe unten.                          |
-| 503 `outbox-blocked` | Der Server wurde auf einen anderen Datenbankserver wiederhergestellt, und der Betrieb hat das noch nicht abgeschlossen.                                                                                         | Cursor behalten und erneut versuchen (`Retry-After`). |
+| 503 `outbox-blocked` | Der Server wurde auf einen anderen Datenbankserver wiederhergestellt, und die Wiederherstellung ist noch nicht abgeschlossen.                                                                                   | Cursor behalten und erneut versuchen (`Retry-After`). |
 | 429 `rate-limited`   | Sie haben eine weitere Seite angefragt, während eine noch erstellt wurde.                                                                                                                                       | `Retry-After` abwarten und erneut fragen.             |
-| 404 `not-configured` | Der Server hat keinen geheimen Schlüssel der Instanz.                                                                                                                                                           | Wenden Sie sich an den Betrieb.                       |
+| 404 `not-configured` | Der Server hat keinen geheimen Schlüssel der Instanz.                                                                                                                                                           | Fragen Sie Ihren Anbieter oder Ihren Admin.           |
+
+<ServerSetting lang="de">
+  Der Schlüssel wird wie unter
+  [Instanzschlüssel](/de/guide/self-hosting/secret-key) eingerichtet, eine
+  Wiederherstellung wie unter [Nach einer
+  Wiederherstellung](/de/guide/self-hosting/after-a-restore) abgeschlossen.
+</ServerSetting>
 
 **Neu abgleichen** auf eine von zwei Arten:
 
@@ -85,5 +92,4 @@ niemand anderem. Diese Antworten sagen, was zu tun ist:
   und kostet für den Rest kein Embedding.
 
 Die ganze Schleife eines Retrieval-Index beschreibt
-[Anbindung an eine RAG-Pipeline](/de/guides/rag). Die Seite des Betriebs bei einer
-Wiederherstellung ist [Nach einer Wiederherstellung](/de/guide/self-hosting/after-a-restore).
+[Anbindung an eine RAG-Pipeline](/de/guides/rag).

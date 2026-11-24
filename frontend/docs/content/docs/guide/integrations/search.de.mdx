@@ -50,11 +50,15 @@ Mit der Standardsuche in Postgres (`CCMS_SEARCH_ADAPTER=postgres`) ist nichts ei
 
 - **Wortformen** in der Sprache des Moduls: `startet` findet `starten`.
 - **Tippfehler** in Titeln und Schlagwörtern.
-- **Bedeutung**, wenn der Betrieb die semantische Suche eingeschaltet hat: Die Worte eines Lesers
-  finden ein Modul, das dasselbe mit anderen sagt. Ohne sie verlässt kein Text den Server. Siehe
-  [Semantische Suche](/de/guide/self-hosting/semantic-search).
+- **Bedeutung**, wenn die semantische Suche eingeschaltet ist: Die Worte eines Lesers finden ein
+  Modul, das dasselbe mit anderen sagt. Ohne sie verlässt kein Text den Server.
 
-`CCMS_SEARCH_ADAPTER=memory` vergleicht nur Wörter.
+<ServerSetting lang="de">
+  Die [semantische Suche](/de/guide/self-hosting/semantic-search) schaltet die
+  Bedeutung ein.
+  [`CCMS_SEARCH_ADAPTER=memory`](/de/reference/settings#ccms_search_adapter)
+  vergleicht nur Wörter.
+</ServerSetting>
 
 ## Grenzen
 
@@ -67,3 +71,8 @@ Mit der Standardsuche in Postgres (`CCMS_SEARCH_ADAPTER=postgres`) ist nichts ei
 Jede trägt `Retry-After`: Warten Sie so lange und fragen Sie erneut. Die Grenzen gelten je Server,
 hinter mehreren Servern erhält ein Leser also entsprechend mehr. Nie eine halbe Seite: Eine Suche
 antwortet vollständig oder gar nicht.
+
+<ServerSetting lang="de">
+  Jede Grenze ist die Einstellung in der Tabelle, ihr Standardwert in Klammern.
+  Die [Einstellungsreferenz](/de/reference/settings) beschreibt sie.
+</ServerSetting>

@@ -51,9 +51,14 @@ festen Liste.
 ## Refs und Caching
 
 Jede Inhaltsroute liest eine Version der Inhalte, gewählt mit `?ref=`: ein Branch, der Tag einer
-Veröffentlichung oder eine Commit-ID. Ohne ihn gilt der Standard des Servers (`CCMS_DEFAULT_REF`,
-normalerweise `main`). Ein Token mit nur `content.read` darf `main` und die Tags der
+Veröffentlichung oder eine Commit-ID. Ohne ihn gilt der Standard des Servers, normalerweise
+`main`. Ein Token mit nur `content.read` darf `main` und die Tags der
 Veröffentlichungen lesen; andere Refs brauchen `content.read.draft`.
+
+<ServerSetting lang="de">
+  Der Standard ist
+  [`CCMS_DEFAULT_REF`](/de/reference/settings#ccms_default_ref).
+</ServerSetting>
 
 - **`X-Ccms-Commit`** nennt den Commit, aus dem eine Antwort gelesen wurde. Um eine Liste mit
   mehreren Seiten einheitlich zu lesen, lesen Sie jede Seite beim Tag einer Veröffentlichung, der

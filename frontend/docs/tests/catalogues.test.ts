@@ -293,5 +293,31 @@ describe('schemas as tables', () => {
       '## search\n\n**Search the content.** Finds modules.',
     );
     expect(body).toContain('| <code>q</code> | `string` | yes |  | Words. |');
+    expect(body).not.toContain('## Resources');
+  });
+
+  it('renders the MCP resources from their templates, with their bounds', () => {
+    const body = renderMcpTools([], {
+      templates: [
+        {
+          uriTemplate: 'openfolia://manuals/{id}/{variant}/{lang}',
+          name: 'manual',
+          title: 'A released manual',
+          description: 'As `read_manual` gives it.',
+          mimeType: 'text/markdown',
+        },
+      ],
+      pageSize: 20,
+      textLimit: 500_000,
+    });
+    expect(body).toContain(
+      '### manual\n\n**A released manual.** As `read_manual` gives it.',
+    );
+    expect(body).toContain(
+      '- Address: `openfolia://manuals/{id}/{variant}/{lang}`',
+    );
+    expect(body).toContain('- Type: `text/markdown`');
+    expect(body).toContain('20 manuals a page');
+    expect(body).toContain('at most 500,000 characters');
   });
 });

@@ -49,9 +49,12 @@ list.
 ## Refs and caching
 
 Every content route reads one version of the content, chosen with `?ref=`: a branch, a release tag
-or a commit ID. Without it, the server's default applies (`CCMS_DEFAULT_REF`, normally `main`). A
-token with only `content.read` may read `main` and release tags; other refs need
-`content.read.draft`.
+or a commit ID. Without it, the server's default applies, normally `main`. A token with only
+`content.read` may read `main` and release tags; other refs need `content.read.draft`.
+
+<ServerSetting>
+  The default is [`CCMS_DEFAULT_REF`](/reference/settings#ccms_default_ref).
+</ServerSetting>
 
 - **`X-Ccms-Commit`** names the commit an answer was read from. To read a list of several pages
   consistently, read every page at a release tag, which never moves. A token with only

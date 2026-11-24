@@ -196,7 +196,7 @@ Nur für das, was die Person in Schritt 1 gewählt hat, füge hinzu:
 
 - **Eine Domain:** `CCMS_PUBLIC_URL=https://docs.example.com/`,
   `CCMS_EDITOR_HOSTS=docs.example.com` (jeder andere Hostname wird abgewiesen) und
-  `CCMS_TRUST_PROXY=2` (ihr Proxy ist ein Hop mehr).
+  `CCMS_TRUST_PROXY=2` und `CCMS_MCP_HTTP_TRUST_PROXY=2` (ihr Proxy ist ein Hop mehr).
 - **E-Mail:** `CCMS_MAIL_URL` (`smtp://host:587` oder `smtps://host:465`), `CCMS_MAIL_FROM` und,
   wenn der Server eine Anmeldung will, `CCMS_MAIL_USER`. Bitte die Person, das Passwort selbst
   einzutragen (`CCMS_MAIL_PASSWORD=…` in `.env`): Bitte sie nie, es dir zu sagen.
@@ -505,8 +505,18 @@ MCP-Server durchsuchen und lesen, mit einem Dienstkonto, das nur lesen darf.
      auf `127.0.0.1` veröffentlicht.
 
 4. **Trag den Server in deine eigene MCP-Konfiguration ein**, so wie dein Agent es beschreibt,
-   als Streamable-HTTP-Server: die URL `http://127.0.0.1:3200/mcp` und den Header
-   `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN aus .env>`. Sag der Person, welche deiner Dateien
+   als Streamable-HTTP-Server: die Adresse des Editors und `/mcp`, `http://127.0.0.1:8080/mcp`, und
+   den Header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN aus .env>`. Mit einer Domain ist die URL
+   stattdessen `https://<ihre Domain>/mcp`: Der Editor antwortet dann nur für diesen Namen. Claude
+   Code zum Beispiel:
+
+   ```sh
+   cd ~/openfolia
+   claude mcp add --transport http openfolia http://127.0.0.1:8080/mcp \
+     --header "Authorization: Bearer $(sed -n 's/^CCMS_MCP_HTTP_TOKEN=//p' .env | tail -n 1)"
+   ```
+
+   Die Konfigurationen anderer Clients: [Der MCP-Server](%%SITE_URL%%/de/guides/mcp). Sag der Person, welche deiner Dateien
    nun dieses Token enthält. Füge es nie in das Gespräch ein, und lies den Wert nie selbst:
    Schreib ihn mit einem Shell-Befehl, der `.env` direkt liest, in deine Konfiguration, oder nenne
    die Einstellung, wo deine Konfiguration einen Wert aus der Umgebung nimmt. Kannst du deine
@@ -521,7 +531,7 @@ MCP-Server durchsuchen und lesen, mit einem Dienstkonto, das nur lesen darf.
 
    ```sh
    cd ~/openfolia
-   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env)." >> INSTALL-RECORD.md
+   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server at http://127.0.0.1:8080/mcp and on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env)." >> INSTALL-RECORD.md
    ```
 
    Füge eine Zeile mit deiner Konfigurationsdatei hinzu, wenn du sie geändert hast.

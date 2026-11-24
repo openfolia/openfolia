@@ -1,23 +1,44 @@
 ---
 title: Configuration
-description: The two places OpenFolia is configured, the server's settings and each content repository's openfolia.yaml.
+description: What every team configures, in openfolia.yaml and the editor, and the server's settings when you run it yourself.
 ---
 
-OpenFolia is configured in two places:
+OpenFolia is configured by your team, in `openfolia.yaml` and the editor, and by whoever runs the
+server, in its environment. What your team configures works the same whether OpenFolia
+is hosted for you or runs on your own server. The server's settings are only yours to change when
+you run it yourself.
 
-- **The server's settings**, from its environment: where the content repository and the
-  database are, how clients sign in, storage, limits, workers. The
-  [settings reference](/reference/settings) lists every one, generated from `.env.example`.
+## What every team configures
+
 - **The project configuration**, `openfolia.yaml` at the root of each content repository: its
   languages, module types, audiences, facets, variant attributes, safety symbols, the labels
   printed in outputs, the terminology and style rules per language (`styleRules`,
   `terminology`, [Terminology and style](/guide/checks/writing)), and how releases and deliveries
-  behave. The
-  [`openfolia.yaml` reference](/reference/project-config) lists every key, generated from the content
-  model's schema. It is content: a change to it goes through a change set and review
+  behave. Admins change it in the editor, under [Project settings](/guide/admin/project-settings).
+  The [`openfolia.yaml` reference](/reference/project-config) lists every key, generated from the
+  content model's schema. It is content: a change to it goes through a change set and review
   ([Almost everything is content](/guide/getting-started/content)).
+- **The editor's admin area**: [users and roles](/guide/admin/users-and-roles),
+  [service accounts and tokens](/guide/admin/service-accounts), [branding](/guide/admin/branding),
+  [webhooks](/guide/admin/webhooks) and [group mappings](/guide/admin/group-mappings).
 
-## Settings to look at first
+### Roles and permissions
+
+Who may do what is data, not configuration: roles bundle [permissions](/reference/permissions)
+with a scope, and are managed in the editor's admin area or through the
+[Management API](/api/management).
+
+## Server settings (self-hosted)
+
+When you run OpenFolia yourself, the server reads its settings from its environment: where the
+content repository and the database are, how clients sign in, storage, limits, workers. The
+[settings reference](/reference/settings) lists every one, generated from `.env.example`, and the
+[operator guide](/guide/self-hosting) explains each part.
+
+On a hosted OpenFolia, your provider sets them: when one matters to you, ask your provider or your
+admin.
+
+### Settings to look at first
 
 | Setting             | What it decides                                                               |
 | ------------------- | ----------------------------------------------------------------------------- |
@@ -27,9 +48,3 @@ OpenFolia is configured in two places:
 | `CCMS_BLOB_DRIVER`  | Where images, attachments and release files are stored: `fs` or `s3`.         |
 | `CCMS_PUBLIC_URL`   | The address readers reach the instance at, for stable addresses and QR codes. |
 | `CCMS_TRUST_PROXY`  | Which proxies in front of the API to believe for client addresses.            |
-
-## Roles and permissions
-
-Who may do what is data, not configuration: roles bundle [permissions](/reference/permissions)
-with a scope, and are managed in the editor's admin area or through the
-[Management API](/api/management).

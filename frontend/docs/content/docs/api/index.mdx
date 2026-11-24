@@ -19,9 +19,26 @@ and schemas, so they always match the release they belong to.
   />
 </Cards>
 
+## Your API's address and a token
+
+Every request goes to your instance's address plus `/api`:
+
+- **Hosted OpenFolia:** `https://<team>.openfolia.com/api`, with your team's name.
+- **Self-hosted:** your editor's address plus `/api`, such as `https://openfolia.example.com/api`.
+
+Each operation's page has a field for your host above the operation; the code samples use it,
+and your browser keeps it for the other pages. This site sends no requests itself: copy a sample
+and run it, or open `/api/docs` on your instance (`https://<team>.openfolia.com/api/docs`), its
+own interactive reference, to try requests there.
+
+A request needs a token: `Authorization: Bearer <token>`. Issue one for a service account under
+**Admin › Service accounts** ([Service accounts and tokens](/guide/admin/service-accounts)); this
+needs the **admin.roles** permission, so if you don't hold it, ask an admin for a token.
+
 ## Download the documents
 
-Both documents, OpenAPI 3.0, with this API's address as their server:
+Both documents, OpenAPI 3.0. Their server is `https://{host}/api`, with `host` a variable: set it to
+your instance's host after importing them.
 
 <OpenAPIDownload api="delivery" />
 

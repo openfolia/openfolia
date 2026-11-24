@@ -14,28 +14,56 @@ Fast alles darin ist Inhalt: die Module, aber auch die Anleitungen, die Projekte
 Seitengestaltungen und die Begriffe, alle in Git versioniert und über die Prüfung geändert. Siehe
 [Fast alles ist Inhalt](/de/guide/getting-started/content).
 
-<AgentInstall lang="de" />
+## Ihr OpenFolia nutzen
+
+Ihr OpenFolia hat eine eigene Adresse: `https://<team>.openfolia.com`, wenn es für Sie gehostet
+wird, oder die Adresse, die Ihr Admin Ihnen nennt. Öffnen Sie sie im Browser und melden Sie sich an.
+Programme und Agenten erreichen dieselben Inhalte über die API unter
+dieser Adresse plus `/api`.
 
 <Cards>
   <Card
-    title="Erste Schritte"
-    href="/de/getting-started"
-    description="Auf dem eigenen Rechner mit den Beispielinhalten starten."
-  />
-  <Card
-    title="Selbst betreiben"
-    href="/de/self-hosting"
-    description="Mit Containern auf einem Server betreiben."
-  />
-  <Card
-    title="API-Referenz"
-    href="/de/api"
-    description="Die Delivery API für Integrationen und die Management API."
+    title="Anmelden"
+    href="/de/guide/getting-started/sign-in"
+    description="Ihre Adresse öffnen und sich so anmelden, wie die Seite es anbietet."
   />
   <Card
     title="Benutzeranleitung"
     href="/de/guide"
     description="Für Schreibende, Prüfende, Übersetzende und Admins."
+  />
+  <Card
+    title="Tokens und die API"
+    href="/de/guide/integrations/authentication"
+    description="Das Token eines Service-Accounts und Ihre Adresse plus /api."
+  />
+  <Card
+    title="MCP-Server"
+    href="/de/guides/mcp"
+    description="KI-Assistenten und Agenten die veröffentlichten Inhalte geben."
+  />
+</Cards>
+
+[Erste Schritte](/de/getting-started) führt Sie hindurch, von der Anmeldung bis zum ersten
+API-Aufruf.
+
+## Selbst betreiben
+
+OpenFolia ist quelloffen. Betreiben Sie es auf Ihrem Rechner mit den Beispielinhalten oder mit
+Containern auf einem eigenen Server.
+
+<AgentInstall lang="de" />
+
+<Cards>
+  <Card
+    title="Auf Ihrem Rechner"
+    href="/de/getting-started#selbst-betreiben"
+    description="Mit den Beispielinhalten starten und die API zum ersten Mal aufrufen."
+  />
+  <Card
+    title="Auf einem Server"
+    href="/de/self-hosting"
+    description="Mit Containern, Postgres und einem eigenen Git-Repository betreiben."
   />
 </Cards>
 
@@ -43,8 +71,9 @@ Seitengestaltungen und die Begriffe, alle in Git versioniert und über die Prüf
 
 Die Referenz wird aus dem Quellcode erzeugt und passt so immer zu ihrer Version:
 
-- [API-Referenz](/de/api): jede Route der Delivery API und der Management API, mit Schemas,
-  Codebeispielen und einer Testumgebung.
+- [API-Referenz](/de/api): jede Route der Delivery API und der Management API, mit Schemas und
+  Codebeispielen für Ihre Adresse. Anfragen senden Sie in der interaktiven Referenz unter `/api/docs`
+  Ihres OpenFolia.
 - [Fehlercodes](/de/reference/errors), [Berechtigungen](/de/reference/permissions) und
   [Einstellungen](/de/reference/settings).
 - [Projektkonfiguration (`openfolia.yaml`)](/de/reference/project-config),

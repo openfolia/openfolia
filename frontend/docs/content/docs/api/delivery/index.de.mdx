@@ -7,8 +7,12 @@ Die Delivery API enthält, was jemand für einen eigenen Viewer, ein Portal oder
 braucht: die lesenden Routen über freigegebene Inhalte und nichts über Entwürfe. Das Token eines
 Konsumenten gehört zu einem Dienstkonto, dessen Rolle nur `content.read` hält.
 
-Jede Operation hat eine Seite in der Seitenleiste, mit Parametern, Antworten, Schemas,
-Codebeispielen und einer Testumgebung; diese Seiten sind auf Englisch. Das Dokument selbst ist
+Jede Operation hat eine Seite in der Seitenleiste, mit Parametern, Antworten, Schemas und
+Codebeispielen für die Adresse Ihrer Instanz: `https://<team>.openfolia.com/api` für ein
+gehostetes Team, die Adresse Ihres Editors plus `/api`, wenn Sie es selbst betreiben
+([Die Adresse Ihrer API und ein Token](/de/api#die-adresse-ihrer-api-und-ein-token)); diese Seiten
+sind auf Englisch. Um Anfragen zu senden, öffnen Sie `/api/docs/delivery` auf Ihrer Instanz, deren
+eigene interaktive Referenz. Das Dokument selbst ist
 `backend/api/openapi/delivery.yaml` im Repository (OpenAPI 3.0), etwa um einen Client zu erzeugen, und
 hier zum Herunterladen:
 

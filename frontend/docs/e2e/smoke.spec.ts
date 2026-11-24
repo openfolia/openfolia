@@ -268,7 +268,17 @@ for (const api of ['delivery', 'management'] as const) {
     for (const document of [parse(await yaml.text()), await json.json()]) {
       expect(document.openapi).toMatch(/^3\.\d+\.\d+$/);
       expect(Object.keys(document.paths ?? {}).length).toBeGreaterThan(0);
-      expect(document.servers?.[0]?.url).toMatch(/^https?:\/\//);
+      // One server, the reader's instance (#858), never this machine.
+      expect(document.servers).toEqual([
+        expect.objectContaining({
+          url: 'https://{host}/api',
+          variables: {
+            host: expect.objectContaining({
+              default: 'your-team.openfolia.com',
+            }),
+          },
+        }),
+      ]);
     }
     await open(page, `/api/${api}/`);
     await expect(
@@ -276,6 +286,64 @@ for (const api of ['delivery', 'management'] as const) {
     ).toHaveAttribute('href', `/openapi/${api}.yaml`);
   });
 }
+
+test('an operation page takes the reader’s host, its code samples use it, and it sends nothing (#858)', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await open(page, '/api/delivery/changes/changes-list/');
+  const host = page.getByRole('textbox', { name: 'Your instance’s host' });
+  await expect(host).toBeVisible();
+  await expect(host).toHaveValue('');
+  // No playground: the site can't reach an instance, so it offers no send.
+  await expect(page.getByRole('button', { name: /playground/i })).toHaveCount(
+    0,
+  );
+  const sample = page
+    .locator('pre')
+    .filter({ hasText: '/api/changes' })
+    .first();
+  await expect(sample).toContainText(
+    'https://your-team.openfolia.com/api/changes',
+  );
+
+  await host.fill('acme example');
+  await expect(host).toHaveAttribute('aria-invalid', 'true');
+  await expect(sample).toContainText(
+    'https://your-team.openfolia.com/api/changes',
+  );
+
+  // A pasted address keeps only its host.
+  await host.fill('https://acme.example.org/api/');
+  await expect(host).not.toHaveAttribute('aria-invalid', 'true');
+  await expect(sample).toContainText('https://acme.example.org/api/changes');
+  await expect(
+    page.getByRole('link', { name: 'https://acme.example.org/api/docs' }),
+  ).toHaveAttribute('href', 'https://acme.example.org/api/docs');
+
+  // Kept for the other pages.
+  await open(page, '/api/delivery/health/health-check/');
+  await expect(
+    page.getByRole('textbox', { name: 'Your instance’s host' }),
+  ).toHaveValue('acme.example.org');
+  await expect(
+    page.locator('pre').filter({ hasText: '/api/health' }).first(),
+  ).toContainText('https://acme.example.org/api/health');
+
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow, 'the page scrolls sideways').toBeLessThanOrEqual(0);
+  expect(
+    requests.filter((url) => !url.startsWith(new URL(page.url()).origin)),
+    'requests to another origin',
+  ).toEqual([]);
+  expect(errors).toEqual([]);
+});
 
 for (const { lang, path, heading } of [
   { lang: 'en', path: '/changelog/', heading: 'Changelog' },
@@ -385,5 +453,18 @@ test('the agent guide is served as Markdown, and the files for language models a
     expect(answer.ok()).toBe(true);
     expect(answer.headers()['content-type']).toMatch(/^text\/plain/);
   }
-  expect(await (await request.get('/llms.txt')).text()).toContain('/agents.md');
+  const index = await (await request.get('/llms.txt')).text();
+  expect(index).toContain('/agents.md');
+  // A hosted user's agent is told there is nothing to install (#859).
+  expect(index).toContain('## Two ways to use OpenFolia');
+  expect(index).toContain('https://<team>.openfolia.com');
+  // The operator note is written out as text, in each language (#859).
+  const full = await (await request.get('/llms-full.txt')).text();
+  expect(full).not.toContain('<ServerSetting');
+  expect(full).toContain('> **Hosted:** Ask your provider or your admin.');
+  const german = await (
+    await request.get('/de/guide/integrations/search.md')
+  ).text();
+  expect(german).not.toContain('<ServerSetting');
+  expect(german).toContain('> **Selbst betrieben:**');
 });

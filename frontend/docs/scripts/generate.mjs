@@ -32,8 +32,8 @@
 //
 //   node scripts/generate.mjs
 //
-// Settings (read from the environment): DOCS_API_BASE_URL, DOCS_SITE_URL, DOCS_REPOSITORY_URL,
-// DOCS_RELEASE, DOCS_RELEASE_URL, DOCS_IMAGES (`.env.example`).
+// Settings (read from the environment): DOCS_SITE_URL, DOCS_REPOSITORY_URL, DOCS_RELEASE,
+// DOCS_RELEASE_URL, DOCS_IMAGES (`.env.example`).
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
@@ -143,10 +143,10 @@ const apis = {
 const titles = { delivery: 'Delivery API', management: 'Management API' };
 for (const [api, doc] of Object.entries(apis)) {
   problems.push(...undocumented(doc, titles[api]));
-  apis[api] = withServer(doc, settings.apiBaseUrl);
+  apis[api] = withServer(doc);
   writeJson(join(openapiOut, `${api}.json`), apis[api]);
   // The whole document to download (`/openapi/<api>.yaml` and `.json`, `app/openapi/`): for
-  // Postman and the like, its server the API the reference describes (#618).
+  // Postman and the like, its server the reader's instance (`API_SERVER`, #618, #858).
   write(
     join(openapiOut, `${api}.yaml`),
     stringify(apis[api], { lineWidth: 0 }),
@@ -327,8 +327,8 @@ const mcp = await importFrom('@openfolia/mcp');
 const mcpZod = zodOf('@openfolia/mcp');
 page(
   'mcp-tools',
-  'MCP tools',
-  'The tools the MCP server gives agents, and their arguments.',
+  'MCP tools and resources',
+  'The tools the MCP server gives agents, their arguments, and its resources.',
   renderMcpTools(
     mcp.TOOLS.map((tool) => ({
       name: tool.name,
@@ -339,6 +339,11 @@ page(
         unrepresentable: 'any',
       }),
     })),
+    {
+      templates: mcp.RESOURCE_TEMPLATES,
+      pageSize: mcp.RESOURCES_PAGE_SIZE,
+      textLimit: mcp.RESOURCE_TEXT_LIMIT,
+    },
   ),
 );
 
@@ -373,12 +378,12 @@ const ENGLISH_REFERENCES = {
       'dem JSON-Schema der `import.json` erzeugt, das nur auf Englisch geschrieben ist',
   },
   'mcp-tools': {
-    title: 'MCP-Werkzeuge',
+    title: 'MCP-Werkzeuge und -Ressourcen',
     description:
-      'Die Werkzeuge, die der MCP-Server Agenten gibt, und ihre Argumente.',
-    english: 'MCP tools',
+      'Die Werkzeuge, die der MCP-Server Agenten gibt, ihre Argumente und seine Ressourcen.',
+    english: 'MCP tools and resources',
     source:
-      'den Werkzeugdefinitionen des MCP-Servers erzeugt, die nur auf Englisch geschrieben sind',
+      'den Werkzeug- und Ressourcendefinitionen des MCP-Servers erzeugt, die nur auf Englisch geschrieben sind',
   },
 };
 for (const [name, t] of Object.entries(ENGLISH_REFERENCES)) {

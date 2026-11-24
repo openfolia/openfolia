@@ -1,21 +1,71 @@
 ---
 title: Getting started
-description: Run OpenFolia on your machine with the sample content, and make your first API call.
+description: Sign in to your OpenFolia and make a first API call, or run it yourself with the sample content.
 ---
 
-This page gets OpenFolia running locally on a sample content repository. To run it on a server,
+There are two ways in: use an OpenFolia that runs for you, or run it yourself. Both have the same
+editor, the same API and the same user guide.
+
+## Use your OpenFolia
+
+A hosted OpenFolia has an address like `https://<team>.openfolia.com`. Elsewhere, your admin gives
+you the address. Nothing to install.
+
+### Sign in
+
+1. Open your address in the browser.
+2. Sign in the way the page offers: with your organisation's account, a password or a code by
+   email. Your admin decides which ways there are. See [Sign in and out](/guide/getting-started/sign-in).
+3. You see **Content**. [Find your way](/guide/getting-started/find-your-way) and
+   [The first edit](/guide/getting-started/first-edit) take it from there.
+
+### Make a token
+
+A program, such as a pipeline, a portal build or an agent, calls the API with a service account's
+token. Tokens belong to service accounts, never to a person.
+
+1. Someone with the `admin.roles` permission opens **Admin**, then **Service accounts**.
+2. They add a service account with a role that holds what the program needs. For reading released
+   content, that is `content.read` alone.
+3. They issue a token for it and copy it. It is shown once.
+
+[Service accounts and tokens](/guide/admin/service-accounts) has each step, and
+[Authenticate with a service account token](/guide/integrations/authentication) how to send it.
+
+### Call the API
+
+The API is at your address plus `/api`. List the manuals:
+
+```sh
+curl -s https://<team>.openfolia.com/api/manuals \
+  -H 'Authorization: Bearer ccms_sat_…' \
+  -H 'Accept: application/vnd.api+json'
+```
+
+Its interactive reference is at `/api/docs` on the same address. The [Delivery API](/api/delivery)
+describes the routes a portal or an integration reads, and the [API reference](/api) every route.
+
+### Connect an agent
+
+The [MCP server](/guides/mcp) lets AI assistants and agents search and read the released content.
+Connect a client to the address plus `/mcp` (`https://<team>.openfolia.com/mcp`), with the MCP
+token your provider or your admin gives you. It only reads.
+
+## Run it yourself
+
+This part gets OpenFolia running locally on a sample content repository. To run it on a server,
 see [Self-hosting](/self-hosting).
 
 Or let your coding agent install and start it for you, with you:
 
 <AgentInstall />
 
-## What you need
+### What you need
 
 - Docker with Compose 2.24 or newer.
 - For working on the code: Node 24 and pnpm 11.
 
-## Start the containers
+### Start the containers
 
 The quickest way is the container setup in `deploy/` with the sample content. Create
 `deploy/.env` with a Postgres password, build the images, put the sample content on the data
@@ -33,7 +83,7 @@ curl -s http://127.0.0.1:3000/health
 The editor is at `http://127.0.0.1:8080` and the API at `http://127.0.0.1:3000`, with its
 interactive reference at `/docs`. [Self-hosting](/self-hosting) explains each step.
 
-## A first API call
+### A first API call
 
 Every route except `/health`, `/about` and the API reference needs a token. Make a service
 account's token (it is printed once), then list the manuals of the sample content:
@@ -45,7 +95,7 @@ curl -s -H "Authorization: Bearer <token>" http://127.0.0.1:3000/manuals
 
 The [Delivery API](/api/delivery) describes the routes a portal or an integration reads.
 
-## A reader portal
+### A reader portal
 
 The same content can become a portal: a static site your readers browse and search, besides the
 editor, the PDF files and the API. With the API running, make a service account's token with only
@@ -62,7 +112,7 @@ npx serve frontend/portal/dist -l 4330   # then open http://localhost:4330
 
 The [portal guide](/guide/portal) explains the settings, the branding and hosting it.
 
-## From the source
+### From the source
 
 ```sh
 pnpm install
@@ -73,10 +123,10 @@ pnpm nx run api:serve-local   # the API on that sample content
 
 ## Next steps
 
+- [User guide](/guide): writing, reviewing and releasing in the editor.
 - [Try the demo](/demo): one command, no Docker, and a walkthrough as an author, a reviewer and
   an admin.
-- [Configuration](/configuration): the settings and the project configuration.
-- [User guide](/guide): writing, reviewing and releasing in the editor.
+- [Configuration](/configuration): the project configuration, and the server settings when you run it yourself.
 - [The portal](/guide/portal): give readers a site to browse and search the released manuals.
 - [Almost everything is content](/guide/getting-started/content): what lives in the content
   repository, what lives in the database, and what to back up.

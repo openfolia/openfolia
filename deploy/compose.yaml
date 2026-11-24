@@ -155,6 +155,9 @@ services:
       # The editor's own host names (host[:port], comma-separated); any other Host gets 421.
       # Required with CCMS_EDITOR_API_TOKEN. Default: unset, any Host.
       CCMS_EDITOR_HOSTS: ${CCMS_EDITOR_HOSTS:-}
+      # The MCP server at the editor's own address plus /mcp (#860), when the `mcp` profile runs;
+      # without it, /mcp answers 404.
+      CCMS_EDITOR_MCP_URL: http://mcp:3200
     tmpfs:
       - /tmp:mode=1777
     ports:
@@ -200,7 +203,8 @@ services:
       - backups:/backups
       - backup-staging:/staging
 
-  # The MCP server for agents, over HTTP: `docker compose --profile mcp up -d`.
+  # The MCP server for agents, over HTTP: `docker compose --profile mcp up -d`. Served at the
+  # editor's address plus /mcp, and on its own port (OPENFOLIA_MCP_PORT, on OPENFOLIA_BIND).
   mcp:
     <<: *hardening
     image: ${OPENFOLIA_IMAGES:-openfolia}/mcp:${OPENFOLIA_VERSION:-local}
@@ -213,6 +217,13 @@ services:
       CCMS_MCP_API_TOKEN: ${CCMS_MCP_API_TOKEN:-}
       CCMS_MCP_HTTP_TOKEN: ${CCMS_MCP_HTTP_TOKEN:-}
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: ${CCMS_MCP_HTTP_ALLOWED_ORIGINS:-}
+      # Proxies to believe about the caller's address, for the lockout and the rate limit: 1, the
+      # editor's nginx (its /mcp); 2 with a reverse proxy in front of the editor (as
+      # CCMS_TRUST_PROXY, deploy/README.md "The MCP server"). Believed only from the editor's own
+      # address (its service name, looked up again every 10 s): a caller on the published port
+      # counts by its own address, whatever X-Forwarded-For it sends.
+      CCMS_MCP_HTTP_TRUST_PROXY: ${CCMS_MCP_HTTP_TRUST_PROXY:-1}
+      CCMS_MCP_HTTP_PROXY_ADDRESSES: ${CCMS_MCP_HTTP_PROXY_ADDRESSES:-editor}
     tmpfs:
       - /tmp:mode=1777
     ports:

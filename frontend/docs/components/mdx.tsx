@@ -3,6 +3,7 @@ import type { MDXComponents } from 'mdx/types';
 import { OpenAPIDownload } from './openapi-download';
 import { ChangelogRelease } from './changelog-release';
 import { AgentInstall } from './agent-install';
+import { ServerSetting } from './server-setting';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -10,6 +11,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     OpenAPIDownload,
     ChangelogRelease,
     AgentInstall,
+    ServerSetting,
     ...components,
   };
 }

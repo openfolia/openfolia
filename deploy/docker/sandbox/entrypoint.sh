@@ -38,7 +38,7 @@ fi
 # The settings that make it a sandbox are the image's, whatever the container was given; the
 # API refuses the rest of what could reach outside (backend/api/README.md, "Public sandbox").
 for name in CCMS_SECRET_KEY CCMS_SECRET_KEY_FILE CCMS_WEBHOOKS_SECRET_KEY CCMS_WEBHOOKS_SECRET_KEY_FILE CCMS_API_TOKEN CCMS_API_TOKEN_FILE \
-  CCMS_DATABASE_URL CCMS_DATABASE_URL_FILE CCMS_EDITOR_API_TOKEN CCMS_EDITOR_API_TOKEN_FILE CCMS_EDITOR_API_URL; do
+  CCMS_DATABASE_URL CCMS_DATABASE_URL_FILE CCMS_EDITOR_API_TOKEN CCMS_EDITOR_API_TOKEN_FILE CCMS_EDITOR_API_URL CCMS_EDITOR_MCP_URL; do
   [ -z "${!name:-}" ] || fail "$name is the sandbox's own: leave it unset."
 done
 

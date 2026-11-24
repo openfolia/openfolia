@@ -31,6 +31,8 @@ CCMS_MCP_API_URL=… CCMS_MCP_API_TOKEN=… CCMS_MCP_HTTP_TOKEN=$(openssl rand -
 | `CCMS_MCP_HTTP_PORT`            | `--http`: the port (default 3200)                                                               |
 | `CCMS_MCP_HTTP_TOKEN`           | `--http`: the bearer token callers send, at least 32 characters, not the API token (required)   |
 | `CCMS_MCP_HTTP_ALLOWED_ORIGINS` | `--http`: comma-separated `Origin`s a browser-based caller may send (default none)              |
+| `CCMS_MCP_HTTP_TRUST_PROXY`     | `--http`: proxies to believe about the caller's address, `none` (default) or 1-10 hops          |
+| `CCMS_MCP_HTTP_PROXY_ADDRESSES` | `--http`: the peers believed (addresses, subnets, host names); required with a hop count        |
 
 Settings come from the environment (`.env.example`, "MCP server"); a missing or malformed one
 stops the start with its name, never its value. Logs go to stderr (on stdio, stdout is the
@@ -46,8 +48,10 @@ run is refused for that reason (it reads drafts).
 
 ### In a container deployment
 
-The container setup runs this server as its optional `mcp` service, over Streamable HTTP on
-`127.0.0.1:3200/mcp` (`deploy/README.md`, "The MCP server"). To connect a coding agent to such an
+The container setup runs this server as its optional `mcp` service, over Streamable HTTP. The
+editor serves it at its own address plus `/mcp` (#860: `https://<team>.openfolia.com/mcp` when
+hosted), and it is also on `127.0.0.1:3200/mcp` (`deploy/README.md`, "The MCP server"). Client
+configurations for assistants: the docs site's `/guides/mcp`. To connect a coding agent to such an
 instance, in its install folder (#423; the docs site's `/agents`, step 9, does each step with a
 check):
 
@@ -59,7 +63,7 @@ check):
    `CCMS_MCP_HTTP_TOKEN` from `openssl rand -hex 32`, and `COMPOSE_PROFILES=mcp` so every later
    `docker compose up` starts it.
 3. `docker compose up -d --wait`, then the agent's MCP configuration: a Streamable HTTP server at
-   `http://127.0.0.1:3200/mcp` with the header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN>`.
+   the editor's address plus `/mcp` (`http://127.0.0.1:8080/mcp`) with the header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN>`.
    Verify with `list_manuals`.
 
 ### A desktop assistant over stdio
@@ -91,7 +95,10 @@ bearer token (scheme case aside), compared in constant time (401 with `WWW-Authe
 Bearer`; a caller sending the token is always served; past 10 failures a minute from one address, or 100
 from all addresses together, every wrong token gets the same 429 with `Retry-After` until the
 window ends, so a guess then learns only that it is not the token); the client address's rate (600 requests a minute, 429 with
-`Retry-After`); `POST` only; a body of at most 1 MiB (413, also before reading one announced
+`Retry-After`; the address is the connection's, or, when the connection comes from one of
+`CCMS_MCP_HTTP_PROXY_ADDRESSES`, the one the outermost of `CCMS_MCP_HTTP_TRUST_PROXY` hops appended
+to `X-Forwarded-For`, as the editor's `/mcp` does: entries a client wrote further left are never
+read, and a client connecting from anywhere else is never believed); `POST` only; a body of at most 1 MiB (413, also before reading one announced
 larger); and one JSON-RPC message per request (a batch is 400, so the rate counts calls). **Why a valid token passes a lockout:** the lockout does not slow guessing
 down (a wrong token is still compared, and the right one is still served); it only changes the
 answer to wrong tokens, which bounds the 401s and the noise. The defence is the token's entropy,
