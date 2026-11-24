@@ -101,6 +101,8 @@ export const ANY_ACTOR_ROUTES = [
   // The same for the stable address pages (#450), for whoever may open an address.
   'GET /d/-/:name',
   'GET /d/-/fonts/:name',
+  // Whether this is a public sandbox (#826), for its banner: only what the settings say.
+  'GET /sandbox',
 ];
 
 /**
@@ -163,9 +165,13 @@ export const ON_TOP_OF_EDITING = [
 
 /**
  * Any-actor routes that exist only in demo mode (`CCMS_AUTH_MODE=demo`):
- * 404 `not-found` in the default token mode these tests run in.
+ * 404 (`not-found`; `not-configured` for the sandbox) in the default token mode these tests run in.
  */
-export const DEMO_ONLY_ROUTES = ['GET /demo/users'];
+export const DEMO_ONLY_ROUTES = [
+  'GET /demo/users',
+  // Only in a public sandbox (#826), which is in demo mode.
+  'GET /sandbox',
+];
 
 /**
  * Answers besides 200, 201 and 404 that say a route's action ran for the

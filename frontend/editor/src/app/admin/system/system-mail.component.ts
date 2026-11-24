@@ -29,6 +29,8 @@ import { ToastService } from '@openfolia/ui/toast';
 
 import { ApiClient, toApiError, type ApiError, type Response } from '../../api';
 import { apiErrorText } from '../../i18n';
+import { SandboxSession } from '../../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../../sandbox/sandbox-note.component';
 
 type MailSettings = Response<'/mail'>['data'];
 
@@ -45,6 +47,7 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
 @Component({
   selector: 'of-system-mail',
   imports: [
+    SandboxNoteComponent,
     TranslocoPipe,
     NgIcon,
     ZardButtonComponent,
@@ -71,6 +74,10 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
           {{ 'editor.admin.system.mail.readOnly' | transloco }}
         </span>
       </div>
+      @if (sandbox.on()) {
+        <!-- A public sandbox sends no email (issue 826): every message is dropped. -->
+        <of-sandbox-note [text]="'editor.sandbox.mailOff' | transloco" />
+      }
 
       @if (loadError(); as e) {
         <of-error-state
@@ -146,35 +153,38 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
                   </dd>
                 </div>
               </dl>
-              <div class="flex min-w-0 flex-wrap items-center gap-3">
-                <button
-                  z-button
-                  zType="outline"
-                  type="button"
-                  data-slot="mail-test"
-                  [zLoading]="sending()"
-                  [zDisabled]="sending()"
-                  (click)="sendTest()"
-                >
-                  {{ 'editor.admin.system.mail.sendTest' | transloco }}
-                </button>
-                @if (queuedTo(); as to) {
-                  <p
-                    role="status"
-                    class="text-muted-foreground of-mail-fade m-0 flex min-w-0 items-start gap-2 text-xs"
-                    data-slot="mail-test-queued"
+              <!-- A public sandbox sends no email (issue 826): no test, the note above says why. -->
+              @if (!sandbox.on()) {
+                <div class="flex min-w-0 flex-wrap items-center gap-3">
+                  <button
+                    z-button
+                    zType="outline"
+                    type="button"
+                    data-slot="mail-test"
+                    [zLoading]="sending()"
+                    [zDisabled]="sending()"
+                    (click)="sendTest()"
                   >
-                    <ng-icon
-                      name="lucideMailCheck"
-                      aria-hidden="true"
-                      class="mt-0.5 shrink-0"
-                    />
-                    <span class="min-w-0 [overflow-wrap:anywhere]">{{
-                      'editor.admin.system.mail.queued' | transloco: { to }
-                    }}</span>
-                  </p>
-                }
-              </div>
+                    {{ 'editor.admin.system.mail.sendTest' | transloco }}
+                  </button>
+                  @if (queuedTo(); as to) {
+                    <p
+                      role="status"
+                      class="text-muted-foreground of-mail-fade m-0 flex min-w-0 items-start gap-2 text-xs"
+                      data-slot="mail-test-queued"
+                    >
+                      <ng-icon
+                        name="lucideMailCheck"
+                        aria-hidden="true"
+                        class="mt-0.5 shrink-0"
+                      />
+                      <span class="min-w-0 [overflow-wrap:anywhere]">{{
+                        'editor.admin.system.mail.queued' | transloco: { to }
+                      }}</span>
+                    </p>
+                  }
+                </div>
+              }
             }
             @case ('no-secret-key') {
               <div
@@ -254,6 +264,7 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
   `,
 })
 export class SystemMailComponent {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly language = inject(LanguageService);
   private readonly toast = inject(ToastService);

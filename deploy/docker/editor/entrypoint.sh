@@ -98,14 +98,19 @@ else
 fi
 # The API's name is looked up again while nginx runs (every 10 s), through the container's own
 # resolver, so a recreated API container with a new address is found without restarting this
-# one.
-resolver=$(awk '$1 == "nameserver" { print $2; exit }' /etc/resolv.conf 2>/dev/null || true)
-case "$resolver" in
-  '' | *[!0-9A-Fa-f.:]*) fail "no usable nameserver in /etc/resolv.conf to look the API's address up with." ;;
-  *:*) resolver="[$resolver]" ;;
-esac
+# one. An API at an IPv4 address (the sandbox image's, in the same container) needs no lookup,
+# and no resolver: the sandbox may run without any network.
+resolver_line=''
+if ! printf '%s' "$api" | grep -Eq '^https?://[0-9]{1,3}(\.[0-9]{1,3}){3}(:[0-9]{1,5})?$'; then
+  resolver=$(awk '$1 == "nameserver" { print $2; exit }' /etc/resolv.conf 2>/dev/null || true)
+  case "$resolver" in
+    '' | *[!0-9A-Fa-f.:]*) fail "no usable nameserver in /etc/resolv.conf to look the API's address up with." ;;
+    *:*) resolver="[$resolver]" ;;
+  esac
+  resolver_line="resolver $resolver valid=10s;"
+fi
 {
-  printf 'resolver %s valid=10s;\n' "$resolver"
+  [ -z "$resolver_line" ] || printf '%s\n' "$resolver_line"
   printf 'set $openfolia_api %s;\n' "$api"
   printf 'proxy_pass $openfolia_api$openfolia_api_uri;\n'
   if [ -n "$token" ]; then
@@ -117,7 +122,7 @@ esac
 # follows a printed QR code reads only what the API serves without one (openfolia.yaml
 # delivery.access).
 {
-  printf 'resolver %s valid=10s;\n' "$resolver"
+  [ -z "$resolver_line" ] || printf '%s\n' "$resolver_line"
   printf 'set $openfolia_api %s;\n' "$api"
   printf 'proxy_pass $openfolia_api$request_uri;\n'
 } >/tmp/openfolia/addresses.conf

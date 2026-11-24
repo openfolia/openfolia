@@ -1,0 +1,32 @@
+{
+  "name": "@openfolia/sandbox",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "The sandbox image's embedded database: PGlite served over the Postgres protocol (deploy/README.md, \"The sandbox image\").",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "sandbox"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.14",
+    "@electric-sql/pglite-socket": "0.2.17",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "pg": "8.23.1"
+  }
+}

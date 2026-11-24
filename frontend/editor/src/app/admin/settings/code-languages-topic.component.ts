@@ -57,7 +57,7 @@ const SHIPPED: ReadonlyMap<string, string> = new Map(
   host: { class: 'block max-w-4xl min-w-0' },
   template: `
     <div
-      class="border-border bg-card relative max-h-[max(12rem,calc(100dvh-34rem))] min-h-0 min-w-0 overflow-y-auto rounded-xl border px-2 py-1.5 md:max-h-[max(12rem,calc(100dvh-24rem))]"
+      class="border-border bg-card relative max-h-[max(12rem,calc(100dvh_-_34rem_-_var(--of-sandbox-h,0px)))] min-h-0 min-w-0 overflow-y-auto rounded-xl border px-2 py-1.5 md:max-h-[max(12rem,calc(100dvh_-_24rem_-_var(--of-sandbox-h,0px)))]"
       data-slot="code-language-rows"
     >
       @if (own().length > 0) {

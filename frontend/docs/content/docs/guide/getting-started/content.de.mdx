@@ -5,25 +5,25 @@ articleId: 'guide.getting-started.content'
 ---
 
 Fast alles, was Sie in OpenFolia anlegen, ist Inhalt. Dazu gehören die Module, aber auch die
-Handbücher, die Projekteinstellungen, die Seitengestaltungen und die Begriffe. Inhalt ist eine
+Anleitungen, die Projekteinstellungen, die Seitengestaltungen und die Begriffe. Inhalt ist eine
 Menge von Dateien in einem Git-Repository. Jede Änderung daran kommt in eine Überarbeitung, wird
 geprüft und gilt, sobald die Überarbeitung zusammengeführt ist. Eine Veröffentlichung hält alles
 zu einem Zeitpunkt fest.
 
 ## Was Inhalt ist
 
-| Was                                                                                                                                                                                                          | Wo es liegt                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Module und ihre Blöcke, eine Datei je Sprache                                                                                                                                                                | `modules/<sprache>/<id>.adoc`                                                                                                          |
-| Textbausteine: Module eines Typs, der als Textbaustein markiert ist                                                                                                                                          | `modules/…`, wie jedes Modul                                                                                                           |
-| Handbücher: ihre Module, Kapitel, Varianten und Zielgruppe                                                                                                                                                   | `manuals/<id>.yaml`                                                                                                                    |
-| Die Projekteinstellungen: Sprachen, Modultypen, Zielgruppen, Facetten, Variantenmerkmale, Textattribute, Sicherheitssymbole, Ausgabetexte, und wie sich Veröffentlichungen und die festen Adressen verhalten | `openfolia.yaml`                                                                                                                       |
-| Begriffe, aus denen das Glossar entsteht                                                                                                                                                                     | `terms/<id>.yaml`, eine Datei je Begriff                                                                                               |
-| Seitengestaltungen, mit ihren Texten und deren Übersetzungen                                                                                                                                                 | `design/<id>.yaml`                                                                                                                     |
-| Die eigene Typst-Vorlage einer Seitengestaltung                                                                                                                                                              | `templates/<name>/`, mit der Einstiegsdatei `manual.typ`                                                                               |
-| Woraus jeder übersetzte Block übersetzt wurde                                                                                                                                                                | `modules/<sprache>/<id>.translation.yaml`, neben der Übersetzung; bei einer Seitengestaltung und einem Handbuch in deren eigener Datei |
-| Die Grafiken der Sicherheitssymbole                                                                                                                                                                          | `symbols/<id>.svg` oder `.png`                                                                                                         |
-| Bilder, Anhänge sowie Schriften, Logos und Titelbilder einer Seitengestaltung                                                                                                                                | im Inhalt über ihren SHA-256-Hash genannt; die Dateien liegen im Blob-Speicher                                                         |
+| Was                                                                                                                                                                                                          | Wo es liegt                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Module und ihre Blöcke, eine Datei je Sprache                                                                                                                                                                | `modules/<sprache>/<id>.adoc`                                                                                                           |
+| Textbausteine: Module eines Typs, der als Textbaustein markiert ist                                                                                                                                          | `modules/…`, wie jedes Modul                                                                                                            |
+| Anleitungen: ihre Module, Kapitel, Varianten und Zielgruppe                                                                                                                                                  | `manuals/<id>.yaml`                                                                                                                     |
+| Die Projekteinstellungen: Sprachen, Modultypen, Zielgruppen, Facetten, Variantenmerkmale, Textattribute, Sicherheitssymbole, Ausgabetexte, und wie sich Veröffentlichungen und die festen Adressen verhalten | `openfolia.yaml`                                                                                                                        |
+| Begriffe, aus denen das Glossar entsteht                                                                                                                                                                     | `terms/<id>.yaml`, eine Datei je Begriff                                                                                                |
+| Seitengestaltungen, mit ihren Texten und deren Übersetzungen                                                                                                                                                 | `design/<id>.yaml`                                                                                                                      |
+| Die eigene Typst-Vorlage einer Seitengestaltung                                                                                                                                                              | `templates/<name>/`, mit der Einstiegsdatei `manual.typ`                                                                                |
+| Woraus jeder übersetzte Block übersetzt wurde                                                                                                                                                                | `modules/<sprache>/<id>.translation.yaml`, neben der Übersetzung; bei einer Seitengestaltung und einer Anleitung in deren eigener Datei |
+| Die Grafiken der Sicherheitssymbole                                                                                                                                                                          | `symbols/<id>.svg` oder `.png`                                                                                                          |
+| Bilder, Anhänge sowie Schriften, Logos und Titelbilder einer Seitengestaltung                                                                                                                                | im Inhalt über ihren SHA-256-Hash genannt; die Dateien liegen im Blob-Speicher                                                          |
 
 Überarbeitungen sind Branches desselben Repositorys, Veröffentlichungen sind Tags darin.
 
@@ -49,19 +49,19 @@ lassen sich jederzeit neu daraus erstellen.
 
 - **Jede Änderung hat einen Verlauf.** Git behält jede Fassung jeder Datei. Der
   [Verlauf eines Moduls](/de/guide/writing/history) und der
-  [Verlauf eines Handbuchs](/de/guide/manuals/history) zeigen jede Fassung und vergleichen zwei
+  [Verlauf einer Anleitung](/de/guide/manuals/history) zeigen jede Fassung und vergleichen zwei
   davon.
 - **Eine Änderung an den Einstellungen, einem Begriff, einer Seitengestaltung oder ihrer Vorlage
   wird geprüft wie ein Modul.** Sie kommt in eine Überarbeitung, erscheint in der Prüfung als eigener Eintrag und
   gilt erst nach dem Zusammenführen. Siehe
   [Einstellungen und Begriffe prüfen](/de/guide/review/configuration-changes). Die Prüfungen
-  eines Handbuchs prüfen auch die Seitengestaltung und ihre Vorlage: Eine fehlerhafte Vorlage verhindert
+  einer Anleitung prüfen auch die Seitengestaltung und ihre Vorlage: Eine fehlerhafte Vorlage verhindert
   das Zusammenführen.
 - **Eine Veröffentlichung hält alles fest.** Eine Veröffentlichung setzt einen Tag auf einen
-  Commit: die Module, Handbücher, Einstellungen, Seitengestaltungen und Begriffe, wie sie da waren,
+  Commit: die Module, Anleitungen, Einstellungen, Seitengestaltungen und Begriffe, wie sie da waren,
   und über ihre Hashes genau die Bilder. Siehe [Veröffentlichungen und PDFs](/de/guide/releases).
 - **Übersetzung umfasst mehr als Module.** Die Texte einer Seitengestaltung und der Titelbildtext
-  eines Handbuchs erscheinen im Übersetzungsstand und gehen wie Module in einem Delta-Export
+  einer Anleitung erscheinen im Übersetzungsstand und gehen wie Module in einem Delta-Export
   hinaus. Siehe [Übersetzungen](/de/guide/translations).
 - **Eine Kopie des Repositorys ist eine Kopie des Inhalts.** Sichern Sie den Blob-Speicher, die
   Datenbank und den Instanzschlüssel mit: Der Blob-Speicher hält die Bilder und Anhänge, die
@@ -74,6 +74,6 @@ lassen sich jederzeit neu daraus erstellen.
 
 ## Wie es weitergeht
 
-- [Die Wörter des Editors](/de/guide/getting-started/concepts): Modul, Variante, Handbuch, Überarbeitung,
+- [Die Wörter des Editors](/de/guide/getting-started/concepts): Modul, Variante, Anleitung, Überarbeitung,
   Prüfung und Veröffentlichung.
 - [Anmelden](/de/guide/getting-started/sign-in)

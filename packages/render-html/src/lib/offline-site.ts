@@ -35,13 +35,13 @@ export const OFFLINE_LABELS: Readonly<Record<string, OfflineLabels>> = {
     offline: 'Offline documentation',
   },
   de: {
-    manuals: 'Handbücher',
+    manuals: 'Anleitungen',
     search: 'Suchen',
     searchHint: 'Titel und Überschriften durchsuchen',
     noResults: 'Nichts gefunden.',
-    allManuals: 'Alle Handbücher',
+    allManuals: 'Alle Anleitungen',
     downloadPdf: 'PDF',
-    noManuals: 'Dieses Paket enthält keine Handbücher.',
+    noManuals: 'Dieses Paket enthält keine Anleitungen.',
     offline: 'Offline-Dokumentation',
   },
   fr: {

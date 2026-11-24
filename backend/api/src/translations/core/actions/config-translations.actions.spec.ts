@@ -95,7 +95,7 @@ const translated = (
 const GERMAN: Record<string, string> = {
   Concept: 'Konzept',
   Public: 'Öffentlich',
-  'Manual user-manual': 'Handbuch',
+  'Manual user-manual': 'Anleitung',
   'Title of guide': 'Titel',
   'Hello.': 'Hallo.',
 };

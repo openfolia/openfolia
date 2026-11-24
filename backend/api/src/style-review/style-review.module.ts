@@ -10,6 +10,7 @@ import { ReviewModuleStyleAction } from './core/actions/review-module-style.acti
 import { StyleReviewer, StyleReviewLimits } from './core/style-reviewer.js';
 import { HttpStyleReviewer } from './repos/http-style-reviewer.js';
 import { NoStyleReviewer } from './repos/no-style-reviewer.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
 
 /**
  * The model-based style review (#248): off (`NoStyleReviewer`) unless
@@ -23,8 +24,13 @@ import { NoStyleReviewer } from './repos/no-style-reviewer.js';
     GetStyleReviewStatusAction,
     {
       provide: StyleReviewer,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService<Env, true>): StyleReviewer => {
+      inject: [ConfigService, Sandbox],
+      useFactory: (
+        config: ConfigService<Env, true>,
+        sandbox: Sandbox,
+      ): StyleReviewer => {
+        // A public sandbox (#826) sends nothing to a model provider.
+        if (sandbox.on) return new NoStyleReviewer();
         const url = config.get('CCMS_STYLE_REVIEW_URL', { infer: true });
         const model = config.get('CCMS_STYLE_REVIEW_MODEL', { infer: true });
         if (!url || !model) return new NoStyleReviewer();

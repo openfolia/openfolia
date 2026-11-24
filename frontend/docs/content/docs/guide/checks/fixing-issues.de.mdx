@@ -1,6 +1,6 @@
 ---
 title: 'Beheben, was die Prüfungen finden'
-description: 'Was jede Prüfung bedeutet und wie Sie es beheben: Einstellungen, Varianten, Handbücher und abgeleitete Handbücher.'
+description: 'Was jede Prüfung bedeutet und wie Sie es beheben: Einstellungen, Varianten, Anleitungen und abgeleitete Anleitungen.'
 articleId: 'guide.checks.fixing-issues'
 ---
 
@@ -22,7 +22,7 @@ Wert, den es gibt, oder bitten Sie eine Administratorin oder einen Administrator
 **Verwaltung** › **Projekteinstellungen** anzulegen.
 
 - **Unbekannter Modultyp**, **Unbekannte Zielgruppe**, **Unbekannte Sprache**: die Angaben des
-  Moduls. Ein Modul mit unbekannter Zielgruppe fehlt in jedem Handbuch.
+  Moduls. Ein Modul mit unbekannter Zielgruppe fehlt in jeder Anleitung.
 - **Unbekannte Facette**, **Unbekannter Facettenwert**: die Angaben des Moduls.
 - **Unbekanntes Sicherheitssymbol**: die **Symbole** eines Sicherheitshinweises.
 - **Unbekanntes Textattribut**, **Unbekanntes Variantenmerkmal**, **Unbekannter Variantenwert**:
@@ -34,12 +34,12 @@ Wert, den es gibt, oder bitten Sie eine Administratorin oder einen Administrator
 
 ## Varianten und Textattribute
 
-- **Variantenmerkmal nicht gesetzt** (blockierend): Eine Variante des Handbuchs setzt ein
+- **Variantenmerkmal nicht gesetzt** (blockierend): Eine Variante der Anleitung setzt ein
   Merkmal nicht, das eine Bedingung prüft, daher fehlt der Inhalt darunter. Geben Sie der Variante
   das Merkmal.
 - **Textattribut nicht gesetzt** (blockierend): Eine Variante hat keinen Wert für ein Textattribut,
-  das der Inhalt verwendet. Geben Sie dem Handbuch einen Wert dafür.
-- **Uneinheitliche Varianten** (Warnung): Die Varianten des Handbuchs setzen verschiedene
+  das der Inhalt verwendet. Geben Sie der Anleitung einen Wert dafür.
+- **Uneinheitliche Varianten** (Warnung): Die Varianten der Anleitung setzen verschiedene
   Merkmale. Lassen Sie jede Variante dieselben setzen.
 
 ## Platzhalter und nicht lesbare Dateien
@@ -48,7 +48,7 @@ Wert, den es gibt, oder bitten Sie eine Administratorin oder einen Administrator
   Seitengestaltung. Nehmen Sie ihn aus dem Modul.
 - **Unbekannter Platzhalter** (blockierend): Ein Platzhalter nennt keinen bekannten Wert.
   Korrigieren Sie ihn.
-- **Modul nicht lesbar**, **Handbuch nicht lesbar** (blockierend): Die Datei lässt sich nicht
+- **Modul nicht lesbar**, **Anleitung nicht lesbar** (blockierend): Die Datei lässt sich nicht
   lesen, meist nach einer Änderung außerhalb des Editors. Bitten Sie eine Administratorin oder einen
   Administrator, sie zu reparieren oder zu entfernen.
 
@@ -62,34 +62,34 @@ Alle Warnungen.
 - **Textbaustein zu groß**: Ein Textbaustein enthält eine Überschrift oder einen Modulverweis.
   Halten Sie Textbausteine bei wenigen Textblöcken.
 
-## Handbücher
+## Anleitungen
 
-- **Über der Zielgruppe des Handbuchs** (Warnung): Das Modul ist für eine engere Zielgruppe und
-  fehlt im Handbuch. Prüfen Sie, ob das so gewollt ist.
-- **Adresse vergeben** (blockierend): Die Adresse eines Handbuchs ist die ID eines anderen, daher
-  öffnet sie das falsche Handbuch. Ändern Sie den Slug oder die frühere Adresse in den
-  Auslieferungseinstellungen des Handbuchs.
+- **Über der Zielgruppe der Anleitung** (Warnung): Das Modul ist für eine engere Zielgruppe und
+  fehlt in der Anleitung. Prüfen Sie, ob das so gewollt ist.
+- **Adresse vergeben** (blockierend): Die Adresse einer Anleitung ist die ID einer anderen, daher
+  öffnet sie die falsche Anleitung. Ändern Sie den Slug oder die frühere Adresse in den
+  Auslieferungseinstellungen der Anleitung.
 - **Zugriff auf Adressen begrenzt** (Warnung): Die Adressen sind weiter geöffnet, als dieser Server
   erlaubt. Sie öffnen nur so weit, wie der Server erlaubt; das entscheidet die Administration.
-- **Titelbild fehlt** (Warnung): Wählen Sie das Bild in den Einstellungen des Handbuchs erneut.
+- **Titelbild fehlt** (Warnung): Wählen Sie das Bild in den Einstellungen der Anleitung erneut.
 - **Titelbild ohne Text in der Ausgangssprache** (blockierend): Schreiben Sie den Alternativtext
-  des Titelbilds in der Ausgangssprache, in den Einstellungen des Handbuchs.
-- **Titelbild ohne Variante** (Warnung): Entfernen Sie das Titelbild einer Variante, die das
-  Handbuch nicht erstellt.
+  des Titelbilds in der Ausgangssprache, in den Einstellungen der Anleitung.
+- **Titelbild ohne Variante** (Warnung): Entfernen Sie das Titelbild einer Variante, die die
+  Anleitung nicht erstellt.
 
-## Abgeleitete Handbücher
+## Abgeleitete Anleitungen
 
-Ein abgeleitetes Handbuch, etwa ein Sicherheitsblatt, sammelt seine Inhalte nach einer Regel aus
-einem Quellhandbuch. Siehe [Ein Sicherheitsblatt erstellen](/de/guide/manuals/safety-leaflet).
+Eine abgeleitete Anleitung, etwa ein Sicherheitsblatt, sammelt ihre Inhalte nach einer Regel aus
+einer Quellanleitung. Siehe [Ein Sicherheitsblatt erstellen](/de/guide/manuals/safety-leaflet).
 
-- **Quellhandbuch fehlt**, **Quelle ist abgeleitet** (blockierend): Nennen Sie ein bestehendes,
-  zusammengestelltes Handbuch als Quelle.
+- **Quellanleitung fehlt**, **Quelle ist abgeleitet** (blockierend): Nennen Sie eine bestehende,
+  zusammengestellte Anleitung als Quelle.
 - **Keine Modultypen zum Übernehmen** (blockierend): Nennen Sie die Typen in der Regel, oder bitten
   Sie die Administration, die Sicherheitstypen bei den Modultypen zu markieren.
-- **Breitere Zielgruppe als die Quelle** (blockierend): Geben Sie dem abgeleiteten Handbuch die
+- **Breitere Zielgruppe als die Quelle** (blockierend): Geben Sie der abgeleiteten Anleitung die
   Zielgruppe der Quelle oder eine engere.
 - **Sicherheitsmodul ausgelassen**, **Sicherheitshinweis ausgelassen** (Warnungen): Die Regel lässt
   Sicherheitsinhalte der Quelle aus. Prüfen Sie, ob das so gewollt ist.
 - **Ausgeschlossenes Modul nicht in der Quelle** (Warnung): Entfernen Sie es aus der Regel.
-- **Nichts übernommen** (Warnung): Die Regel sammelt nichts; das Handbuch enthält nur seine eigenen
+- **Nichts übernommen** (Warnung): Die Regel sammelt nichts; die Anleitung enthält nur ihre eigenen
   Module davor und danach. Erweitern Sie die Regel.

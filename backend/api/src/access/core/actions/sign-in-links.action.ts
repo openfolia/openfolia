@@ -36,6 +36,7 @@ import {
 } from '../sign-in-links.js';
 import { UserIdentities } from '../user-identities.js';
 import { WaysIn } from '../ways-in.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** Who records what nobody signed in asked for ("Forgot password"): outside `UserId`'s format. */
 export const SIGN_IN_ACTOR: Actor = Object.freeze({
@@ -89,6 +90,7 @@ export class CreateSignInLinkAction extends ActorAction<
     private readonly mail: MailOutbox,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -102,6 +104,7 @@ export class CreateSignInLinkAction extends ActorAction<
     userId: string;
     kind: SignInLinkKind;
   }): Promise<MadeSignInLink> {
+    this.sandbox.refuse('invitations');
     refuseWhenOff(this.settings);
     return this.unit.run(async (tx) => {
       await beginAccessChange(this.admin, tx, actor);

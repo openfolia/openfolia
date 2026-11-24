@@ -14,6 +14,7 @@ import { ApiClient, toApiError, type ApiError, type Schema } from '../../api';
 import { MeService } from '../../permissions/me';
 import { PermissionService } from '../../permissions/permission.service';
 import { injectFailureText } from '../../session/failure-text';
+import { SandboxSession } from '../../sandbox/sandbox-session';
 import type { DesignChangeSet, DesignMode } from './design-draft';
 
 /** A file of a template's folder as the screen lists it. */
@@ -74,6 +75,7 @@ export function utf8Bytes(text: string): number {
 @Injectable()
 export class TemplateDraft {
   private readonly api = inject(ApiClient);
+  private readonly sandbox = inject(SandboxSession);
   private readonly me = inject(MeService);
   private readonly permissions = inject(PermissionService);
   private readonly toast = inject(ToastService);
@@ -257,6 +259,8 @@ export class TemplateDraft {
     changeSet: DesignChangeSet | null,
   ): string | null | undefined {
     if (!this.mayEdit()) return null;
+    // A public sandbox never changes a template (#826): it is read, with why.
+    if (this.sandbox.on()) return 'editor.sandbox.templatesOff';
     if (!changeSet) return 'editor.admin.pageDesigns.blocked.needsChangeSet';
     if (changeSet.state !== 'draft') {
       return 'editor.admin.pageDesigns.blocked.notDraft';

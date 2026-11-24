@@ -41,6 +41,8 @@ import { DrizzleWebhookOwners } from './repos/drizzle-webhook-owners.js';
 import { DrizzleWebhookStore } from './repos/drizzle-webhook-store.js';
 import { NodeWebhookSender } from './repos/node-webhook-sender.js';
 import { SealedWebhookSecrets } from './repos/sealed-webhook-secrets.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
+import { SandboxWebhookSender } from './repos/sandbox-webhook-sender.js';
 
 /**
  * Webhooks (#42): subscribers (`webhook.manage`), a second outbox consumer
@@ -92,9 +94,12 @@ import { SealedWebhookSecrets } from './repos/sealed-webhook-secrets.js';
     { provide: WebhookSecrets, useClass: SealedWebhookSecrets },
     {
       provide: WebhookSender,
-      inject: [WebhookSettings],
-      useFactory: (settings: WebhookSettings) =>
-        new NodeWebhookSender(settings.rules, settings.timeoutMs),
+      inject: [WebhookSettings, Sandbox],
+      // A public sandbox (#826) never connects to a subscriber.
+      useFactory: (settings: WebhookSettings, sandbox: Sandbox) =>
+        sandbox.on
+          ? new SandboxWebhookSender()
+          : new NodeWebhookSender(settings.rules, settings.timeoutMs),
     },
     { provide: WebhookStore, useClass: DrizzleWebhookStore },
     { provide: WebhookOwners, useClass: DrizzleWebhookOwners },

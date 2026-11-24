@@ -97,7 +97,7 @@
     "next": "Weiter"
   },
   "moduleTree": {
-    "label": "Aufbau des Handbuchs",
+    "label": "Aufbau der Anleitung",
     "moved": "{title}: {number}, Ebene {level} der Gliederung"
   },
   "select": {
@@ -425,7 +425,7 @@
         "searchFor": "Nach einem Befehl suchen.",
         "goTo": "Gehe zu",
         "content": "Inhalte",
-        "manuals": "Handbücher",
+        "manuals": "Anleitungen",
         "review": "Prüfung",
         "notAvailable": "Nicht verfügbar",
         "heading": "Befehle",

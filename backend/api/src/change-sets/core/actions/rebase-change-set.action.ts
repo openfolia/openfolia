@@ -13,6 +13,7 @@ import {
   UnitOfWork,
 } from '../../../base/core/unit-of-work.js';
 import { ReadableRefs } from '../../../content/core/readable-refs.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 import { CarryChange, type CarryConflict } from '../carry-change.js';
 import {
   type ChangeSet,
@@ -124,6 +125,7 @@ export class RebaseChangeSetAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly events: ChangeSetEvents,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -176,7 +178,10 @@ export class RebaseChangeSetAction extends ActorAction<
       onto: base.commit,
     });
     if (active === undefined) {
-      changeSet = await this.start(actor, source, base);
+      // A public sandbox counts it like any change set made (#826).
+      changeSet = await this.sandbox.counted('change-sets', () =>
+        this.start(actor, source, base),
+      );
     } else {
       // A request cut off earlier: its draft is gone on with, nobody else's.
       const found = await this.store.find(active);

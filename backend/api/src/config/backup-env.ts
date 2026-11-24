@@ -4,6 +4,7 @@ import { endpointProblem } from '../backups/core/backup-endpoint.js';
 import { DatabaseEnv } from './database-env.js';
 import { field, flag, text, wholeNumber } from './fields.js';
 import { checkSecretKeyEnv, SecretKeyEnv } from './secret-key-env.js';
+import { SandboxEnv } from './sandbox-env.js';
 
 const absolute = text.refine(
   (value) => isAbsolute(value),
@@ -79,9 +80,19 @@ export const BackupEnv = DatabaseEnv.pick({ CCMS_DATABASE_URL: true })
     CCMS_BACKUP_VERIFY_BY_DECRYPTING: field(flag.optional()),
     /** An age identity file (`age-keygen`): backups are encrypted to its recipient. */
     CCMS_BACKUP_KEY_FILE: field(absolute.optional()),
+    /** Read only to refuse it (#826): a public sandbox is thrown away, never backed up or copied off. */
+    CCMS_PUBLIC_SANDBOX: SandboxEnv.shape.CCMS_PUBLIC_SANDBOX,
   })
   .superRefine(checkSecretKeyEnv)
   .superRefine((env, ctx) => {
+    if (env.CCMS_PUBLIC_SANDBOX === 'on') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CCMS_PUBLIC_SANDBOX'],
+        message:
+          'the backup service does not run in a public sandbox: it is deleted after the session, and nothing of it is copied off the instance.',
+      });
+    }
     const endpoint = env.CCMS_BACKUP_S3_ENDPOINT;
     if (
       endpoint !== undefined &&

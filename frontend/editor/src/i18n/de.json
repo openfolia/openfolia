@@ -1,7 +1,7 @@
 {
   "nav": {
     "content": "Inhalte",
-    "manuals": "Handbücher",
+    "manuals": "Anleitungen",
     "review": "Prüfung",
     "translations": "Übersetzungen",
     "releases": "Veröffentlichungen",
@@ -461,11 +461,11 @@
       },
       "hints": {
         "languages": "Die Quellsprache, in der Inhalte geschrieben werden, und die Sprachen, in die übersetzt wird.",
-        "moduleTypes": "Welche Arten von Modulen es gibt. Eingeschränkte Typen brauchen eine zusätzliche Abzeichnung; Module eines Textbaustein-Typs sind wiederverwendbare Formulierungen, beim Schreiben vorgeschlagen; ein abgeleitetes Handbuch wie ein Sicherheitsblatt sammelt die Module der Sicherheitstypen, sofern seine Regel keine anderen nennt.",
+        "moduleTypes": "Welche Arten von Modulen es gibt. Eingeschränkte Typen brauchen eine zusätzliche Abzeichnung; Module eines Textbaustein-Typs sind wiederverwendbare Formulierungen, beim Schreiben vorgeschlagen; eine abgeleitete Anleitung wie ein Sicherheitsblatt sammelt die Module der Sicherheitstypen, sofern ihre Regel keine anderen nennt.",
         "audiences": "Für wen Inhalte sind, von der offensten zur am stärksten eingeschränkten. Ein Modul ohne Zielgruppe erhält die letzte.",
         "facets": "Klassifizierungen der Module, jede mit ihren Werten.",
         "variantAttributes": "Worin sich Varianten unterscheiden: eine Menge von Werten oder eine Version, die als Zahl verglichen wird. Archivieren Sie einen Wert, den Inhalte noch nutzen: Er bleibt gültig, und Auswahllisten bieten ihn nicht mehr an.",
-        "textAttributes": "Benannte Texte in Inhalten, etwa ein Produktname; Handbücher legen ihre Werte fest.",
+        "textAttributes": "Benannte Texte in Inhalten, etwa ein Produktname; Anleitungen legen ihre Werte fest.",
         "safetySymbols": "Die Symbole, die Sicherheitshinweise zeigen dürfen.",
         "codeLanguages": "Die eingebauten Sprachen stehen immer zur Wahl. Fügen Sie eigene hinzu oder benennen Sie eine um.",
         "outputLabels": "Die festen Texte, die Ausgaben drucken, je Sprache. Leere Felder nutzen den eingebauten Text, den sie zeigen.",
@@ -572,8 +572,8 @@
         "level": "Überschrift {level}"
       },
       "usage": {
-        "short": "{modules, plural, one {# Modul} other {# Module}}{manuals, plural, =0 {} one {, # Handbuch} other {, # Handbücher}}",
-        "summary": "Verwendet von {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Handbuch} other {# Handbüchern}}, die Sie sehen.",
+        "short": "{modules, plural, one {# Modul} other {# Module}}{manuals, plural, =0 {} one {, # Anleitung} other {, # Anleitungen}}",
+        "summary": "Verwendet von {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Anleitung} other {# Anleitungen}}, die Sie sehen.",
         "showModules": "Module anzeigen"
       },
       "inUse": {
@@ -690,7 +690,7 @@
         "website": "Website",
         "websiteHint": "Eine vollständige Adresse, etwa https://example.com.",
         "check": "Vor einer Veröffentlichung ohne Herstellerangaben warnen",
-        "checkHint": "Solange diese Angaben fehlen, zeigen die Prüfungen jedes Handbuchs eine Warnung, damit kein Handbuch ohne Impressum veröffentlicht wird.",
+        "checkHint": "Solange diese Angaben fehlen, zeigen die Prüfungen jeder Anleitung eine Warnung, damit keine Anleitung ohne Impressum veröffentlicht wird.",
         "problems": {
           "name": "Ein Name ist nötig: Ohne ihn wird nichts gespeichert.",
           "tooLong": "Jede Zeile hat höchstens {max} Zeichen.",
@@ -715,19 +715,19 @@
         "values": "Werte",
         "valueCount": "{count, plural, one {# Wert} other {# Werte}}{archived, plural, =0 {} other {, # archiviert}}",
         "usage": "Wo es verwendet wird",
-        "usesLabel": "Handbücher und Module, die es nennen",
+        "usesLabel": "Anleitungen und Module, die es nennen",
         "buildsLabel": "Builds, in denen es vorkommt",
-        "noUses": "Kein Handbuch und kein Modul, das Sie sehen können, nennt es.",
+        "noUses": "Keine Anleitung und kein Modul, das Sie sehen können, nennt es.",
         "noBuilds": "Es kommt in keinem Build vor, den Sie sehen können.",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "module": "Modul · {languages}",
         "tabs": {
           "content": "Inhalt",
           "builds": "Builds"
         },
-        "inUseValue": "Dieser Wert wird noch verwendet: in {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Handbuch} other {# Handbüchern}}, die Sie sehen können, in {builds, plural, one {# Build} other {# Builds}}. Er kann nicht entfernt werden; archivieren Sie ihn, damit er nicht mehr angeboten wird und der Inhalt ihn behält.",
-        "inUseArchived": "Archiviert: Auswahlen bieten ihn nicht mehr an, und Inhalt, der ihn verwendet, bleibt gültig ({modules, plural, one {# Modul} other {# Module}}, {manuals, plural, one {# Handbuch} other {# Handbücher}}, die Sie sehen können, in {builds, plural, one {# Build} other {# Builds}}).",
-        "inUseAttribute": "Dieses Merkmal wird noch verwendet: in {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Handbuch} other {# Handbüchern}}, die Sie sehen können. Solange es verwendet wird, kann es nicht entfernt werden."
+        "inUseValue": "Dieser Wert wird noch verwendet: in {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Anleitung} other {# Anleitungen}}, die Sie sehen können, in {builds, plural, one {# Build} other {# Builds}}. Er kann nicht entfernt werden; archivieren Sie ihn, damit er nicht mehr angeboten wird und der Inhalt ihn behält.",
+        "inUseArchived": "Archiviert: Auswahlen bieten ihn nicht mehr an, und Inhalt, der ihn verwendet, bleibt gültig ({modules, plural, one {# Modul} other {# Module}}, {manuals, plural, one {# Anleitung} other {# Anleitungen}}, die Sie sehen können, in {builds, plural, one {# Build} other {# Builds}}).",
+        "inUseAttribute": "Dieses Merkmal wird noch verwendet: in {modules, plural, one {# Modul} other {# Modulen}} und {manuals, plural, one {# Anleitung} other {# Anleitungen}}, die Sie sehen können. Solange es verwendet wird, kann es nicht entfernt werden."
       },
       "new": {
         "description": "Es wird sofort in der Überarbeitung gespeichert und vor dem Übernehmen geprüft.",
@@ -795,7 +795,7 @@
         "changeSet": "Überarbeitung",
         "mail": "E-Mail",
         "module": "Modul",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "config": "Projekteinstellungen",
         "term": "Begriff",
         "design": "Seitengestaltung",
@@ -855,8 +855,8 @@
         "mailFailed": "E-Mail fehlgeschlagen",
         "mailTest": "Test-E-Mail gesendet",
         "maintenanceLineStart": "Wartungslinie begonnen",
-        "manualDelete": "Handbuch gelöscht",
-        "manualWrite": "Handbuch gespeichert",
+        "manualDelete": "Anleitung gelöscht",
+        "manualWrite": "Anleitung gespeichert",
         "moduleDelete": "Modul gelöscht",
         "moduleStyleReview": "Stilprüfung ausgeführt",
         "moduleWrite": "Modul gespeichert",
@@ -943,10 +943,10 @@
         "skipped": "Übersprungen"
       },
       "events": {
-        "manualReleased": "Ein Handbuch wurde freigegeben.",
+        "manualReleased": "Eine Anleitung wurde freigegeben.",
         "moduleReleased": "Ein Modul wurde freigegeben.",
         "moduleDeprecated": "Ein freigegebenes Modul wurde mit einer Überarbeitung als veraltet markiert.",
-        "manualDeprecated": "Ein freigegebenes Handbuch wurde mit einer Überarbeitung als veraltet markiert.",
+        "manualDeprecated": "Eine freigegebene Anleitung wurde mit einer Überarbeitung als veraltet markiert.",
         "releaseWithdrawn": "Eine Veröffentlichung wurde zurückgezogen.",
         "translationImported": "Eine Übersetzung wurde importiert."
       },
@@ -1521,7 +1521,7 @@
       "list": {
         "label": "Seitengestaltungen",
         "empty": "Noch keine Seitengestaltungen",
-        "emptyDescription": "Handbücher nutzen die eingebaute Gestaltung. Mit „Neue Gestaltung“ legen Sie eine eigene an.",
+        "emptyDescription": "Anleitungen nutzen die eingebaute Gestaltung. Mit „Neue Gestaltung“ legen Sie eine eigene an.",
         "facts": "{id} · {preset} · {issues, plural, =0 {keine Probleme} one {1 Problem} other {# Probleme}}",
         "unreadable": "{id} · diese Gestaltung lässt sich nicht lesen"
       },
@@ -1530,10 +1530,10 @@
         "builtin": "Eingebaute Gestaltung",
         "badge": "Standard",
         "change": "Standard-Seitengestaltung ändern",
-        "hint": "Handbücher ohne eigene Gestaltung werden damit gedruckt. Die Änderung wird in den Projekteinstellungen der Revision gespeichert.",
-        "readOnly": "Handbücher ohne eigene Gestaltung werden damit gedruckt. Sie zu ändern braucht eine Rolle, die die Projekteinstellungen ändern darf, in einem eigenen Entwurf.",
+        "hint": "Anleitungen ohne eigene Gestaltung werden damit gedruckt. Die Änderung wird in den Projekteinstellungen der Revision gespeichert.",
+        "readOnly": "Anleitungen ohne eigene Gestaltung werden damit gedruckt. Sie zu ändern braucht eine Rolle, die die Projekteinstellungen ändern darf, in einem eigenen Entwurf.",
         "inDraft": "In einem Entwurf ändern",
-        "inDraftHint": "Handbücher ohne eigene Gestaltung werden damit gedruckt. Ändern Sie sie in einem eigenen Entwurf: Sie gilt, sobald die Revision zusammengeführt ist.",
+        "inDraftHint": "Anleitungen ohne eigene Gestaltung werden damit gedruckt. Ändern Sie sie in einem eigenen Entwurf: Sie gilt, sobald die Revision zusammengeführt ist.",
         "draftTitle": "Standard-Seitengestaltung"
       },
       "create": {
@@ -1549,14 +1549,14 @@
         "action": "Gestaltung anlegen",
         "failed": "Die Seitengestaltung konnte nicht angelegt werden: {why}",
         "asDefault": "Als Standardgestaltung verwenden",
-        "asDefaultHint": "Das Projekt verwendet jetzt die eingebaute Gestaltung. Handbücher ohne eigene Gestaltung werden mit der neuen gedruckt, sobald die Revision zusammengeführt ist.",
+        "asDefaultHint": "Das Projekt verwendet jetzt die eingebaute Gestaltung. Anleitungen ohne eigene Gestaltung werden mit der neuen gedruckt, sobald die Revision zusammengeführt ist.",
         "asDefaultReplaces": "Ersetzt „{name}“ als Standard, sobald die Revision zusammengeführt ist.",
         "notDefault": "„{name}“ wurde angelegt, ist aber nicht die Standardgestaltung: Die Projekteinstellungen konnten nicht gespeichert werden. Wählen Sie sie in der Liste der Seitengestaltungen als Standard, sobald sie sich ändern lassen."
       },
       "layout": {
         "title": "Layout",
-        "hint": "Wie die Titelseite aufgebaut ist. Die Vorschau zeigt sie mit Ihrem Handbuch.",
-        "coverNote": "Dieses Layout zeigt ein Titelbild: Ein Handbuch oder eine Variante legt es in den Einstellungen des Handbuchs fest. Ohne Bild rückt das farbige Band nach oben, und es bleibt keine leere Fläche.",
+        "hint": "Wie die Titelseite aufgebaut ist. Die Vorschau zeigt sie mit Ihrer Anleitung.",
+        "coverNote": "Dieses Layout zeigt ein Titelbild: Eine Anleitung oder eine Variante legt es in den Einstellungen der Anleitung fest. Ohne Bild rückt das farbige Band nach oben, und es bleibt keine leere Fläche.",
         "presets": {
           "classic": "Klassisch",
           "classicHint": "Logo oben, der Titel im oberen Drittel",
@@ -1673,7 +1673,7 @@
         "evenOwn": "Auf linken Seiten anders",
         "choices": {
           "none": "Nichts",
-          "title": "Titel des Handbuchs",
+          "title": "Titel der Anleitung",
           "chapter": "Kapiteltitel",
           "page": "Seitenzahl",
           "pageOf": "Seite von Seiten",
@@ -1793,17 +1793,17 @@
       },
       "preview": {
         "title": "Vorschau",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "variant": "Variante",
         "language": "Sprache",
-        "noManuals": "Es gibt kein Handbuch, mit dem sich die Gestaltung zeigen lässt.",
+        "noManuals": "Es gibt keine Anleitung, mit der sich die Gestaltung zeigen lässt.",
         "titlePage": "Titelseite",
         "page": "Seite {page}",
         "previous": "Vorige Seite",
         "next": "Nächste Seite",
         "titleAlt": "Die Titelseite mit dieser Gestaltung",
         "innerAlt": "Seite {page} mit dieser Gestaltung",
-        "noInner": "Das Handbuch hat keine Innenseite.",
+        "noInner": "Die Anleitung hat keine Innenseite.",
         "rendering": "Wird gerendert …",
         "failed": "Die Vorschau konnte nicht gerendert werden.",
         "warningsFailed": "Die Layoutwarnungen konnten nicht gelesen werden.",
@@ -1867,7 +1867,7 @@
         "positions": {
           "last": "Letzte Seite",
           "insideCover": "Innenseite des Titelblatts",
-          "lastHint": "Nach dem Inhalt, als letzte Seite des Handbuchs (bei doppelseitigem Druck eine linke Seite).",
+          "lastHint": "Nach dem Inhalt, als letzte Seite der Anleitung (bei doppelseitigem Druck eine linke Seite).",
           "insideCoverHint": "Auf der Rückseite des Titelblatts, vor dem Inhaltsverzeichnis."
         },
         "documentNumber": "Dokumentnummer zeigen",
@@ -1889,7 +1889,7 @@
       },
       "templates": {
         "title": "Vorlage",
-        "hint": "Die Dateien von {folder} im Inhalts-Repository. Änderungen werden in Ihrer Überarbeitung gespeichert; sobald sie übernommen ist, wird jedes Handbuch, dessen Seitengestaltung diese Vorlage nennt, damit gesetzt.",
+        "hint": "Die Dateien von {folder} im Inhalts-Repository. Änderungen werden in Ihrer Überarbeitung gespeichert; sobald sie übernommen ist, wird jede Anleitung, deren Seitengestaltung diese Vorlage nennt, damit gesetzt.",
         "readOnly": "Diese Vorlage, wie sie im gewählten Inhalt ist. Ihre Rolle kann sie nicht ändern.",
         "bytes": "{n} B",
         "kib": "{n} KiB",
@@ -1977,7 +1977,7 @@
           "checking": "Die Vorlage wird geprüft …"
         },
         "preview": {
-          "hint": "Ein kleines Handbuch, das jede Funktion nutzt, die eine Vorlage festlegt, gesetzt mit der Vorlage, wie sie in Ihrer Überarbeitung gespeichert ist.",
+          "hint": "Eine kleine Anleitung, die jede Funktion nutzt, die eine Vorlage festlegt, gesetzt mit der Vorlage, wie sie in Ihrer Überarbeitung gespeichert ist.",
           "with": "Mit",
           "design": "Seitengestaltung für die Vorschau",
           "alt": "Seite {page} der Vorschau der Vorlage",
@@ -2022,7 +2022,7 @@
         "required": "Bitte ausfüllen.",
         "invalidJson": "Das ist kein gültiges JSON.",
         "wrongType": "Dieses JSON passt nicht zu dieser Option.",
-        "updateExisting": "Vorhandene Module und Handbücher aktualisieren",
+        "updateExisting": "Vorhandene Module und Anleitungen aktualisieren",
         "updateExistingHint": "Ohne diese Option wird Vorhandenes übersprungen und bleibt, wie es ist."
       },
       "setup": {
@@ -2095,7 +2095,7 @@
       },
       "kind": {
         "module": "Modul",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "asset": "Datei"
       },
       "reason": {
@@ -2132,13 +2132,13 @@
         "title": "Wird importiert",
         "label": "Fortschritt des Imports",
         "assets": "{done} von {total} Dateien hochgeladen",
-        "files": "{done} von {total} Modulen und Handbüchern gespeichert",
+        "files": "{done} von {total} Modulen und Anleitungen gespeichert",
         "commits": "{count, plural, =0 {Noch kein Speicherpunkt} one {1 Speicherpunkt} other {# Speicherpunkte}}",
         "phase": {
           "queued": "Wartet auf den Start …",
           "changeSet": "Die Überarbeitung wird angelegt …",
           "assets": "Die Dateien werden hochgeladen …",
-          "files": "Die Module und Handbücher werden gespeichert …",
+          "files": "Die Module und Anleitungen werden gespeichert …",
           "done": "Fertig."
         }
       },
@@ -2152,7 +2152,7 @@
       "failure": {
         "title": "Der Import ist fehlgeschlagen",
         "outdated": "Das Projekt hat sich seit dem Probelauf geändert, der Import würde jetzt etwas anderes tun. Führen Sie den Probelauf erneut aus.",
-        "locked": "Eine andere Überarbeitung hält ein Modul oder Handbuch dieses Imports. Versuchen Sie es erneut, sobald sie zusammengeführt oder verworfen ist.",
+        "locked": "Eine andere Überarbeitung hält ein Modul oder eine Anleitung dieses Imports. Versuchen Sie es erneut, sobald sie zusammengeführt oder verworfen ist.",
         "importerGone": "Die Person, die den Import gestartet hat, kann nicht mehr handeln.",
         "forbidden": "Ihre Rollen erlauben diesen Import nicht mehr.",
         "uploadMissing": "Die hochgeladene Datei ist nicht mehr auf dem Server. Führen Sie den Probelauf erneut aus.",
@@ -2219,8 +2219,8 @@
       "chunk-sets-busy": "Die Prüfungen sind mit anderen Überarbeitungen ausgelastet. Versuchen Sie es gleich noch einmal.",
       "render-timeout": "Das Erstellen des PDFs hat zu lange gedauert.",
       "render-failed": "Das PDF konnte nicht erstellt werden.",
-      "pdf-accessibility": "Das PDF kann nicht barrierefrei (PDF/UA-1) erstellt werden: Die Prüfungen des Handbuchs nennen den Grund.",
-      "expansion-too-large": "Mit seinen Modulverweisen ist das Handbuch zu groß, um es zu erstellen: Verweisen Sie auf weniger Module, über weniger Wege oder weniger tief verschachtelt. Seine Prüfungen nennen die überschrittene Grenze.",
+      "pdf-accessibility": "Das PDF kann nicht barrierefrei (PDF/UA-1) erstellt werden: Die Prüfungen der Anleitung nennen den Grund.",
+      "expansion-too-large": "Mit ihren Modulverweisen ist die Anleitung zu groß, um sie zu erstellen: Verweisen Sie auf weniger Module, über weniger Wege oder weniger tief verschachtelt. Ihre Prüfungen nennen die überschrittene Grenze.",
       "table-too-large": "Eine Tabelle ist zu groß: Eine Tabelle hat höchstens {columns, number} Spalten und {cells, number} Zellen (Zeilen × Spalten).",
       "database-unavailable": "Die Datenbank ist nicht erreichbar. Versuchen Sie es gleich noch einmal.",
       "shutting-down": "Der Server startet neu. Versuchen Sie es gleich noch einmal.",
@@ -2248,8 +2248,8 @@
       "not-restorable": "Die Datei auf der Basis ist kein lesbarer Text und kann nicht wiederhergestellt werden.",
       "last-admin": "Dann könnte niemand mehr Rollen verwalten. Geben Sie admin.roles zuerst jemand anderem.",
       "term-in-use": "Module verlinken diesen Begriff noch. Entfernen Sie zuerst die Begriffslinks.",
-      "design-in-use": "Der Projektstandard oder ein Handbuch verwendet diese Seitengestaltung noch. Wählen Sie dort zuerst eine andere Gestaltung.",
-      "derived-source-outside-scope": "Das Quellhandbuch dürfen Sie nicht lesen. Wählen Sie ein Handbuch als Quelle, das Sie öffnen können.",
+      "design-in-use": "Der Projektstandard oder eine Anleitung verwendet diese Seitengestaltung noch. Wählen Sie dort zuerst eine andere Gestaltung.",
+      "derived-source-outside-scope": "Die Quellanleitung dürfen Sie nicht lesen. Wählen Sie eine Anleitung als Quelle, die Sie öffnen können.",
       "role-in-use": "Personen, Service-Accounts oder Gruppenzuordnungen geben diese Rolle noch. Entziehen Sie sie ihnen, oder entfernen Sie die Zuordnungen, zuerst.",
       "group-mapping-exists": "Diese Gruppe gibt diese Rolle bereits.",
       "role-exists": "Eine Rolle mit dieser ID gibt es schon.",
@@ -2387,7 +2387,9 @@
       "already-carried-forward": "Sie wurde bereits übernommen.",
       "not-on-maintenance-line": "Sie wurde in keine Wartungslinie zusammengeführt, es gibt also nichts zu übernehmen.",
       "maintenance-line-exists": "Diese Veröffentlichung hat bereits eine Wartungslinie.",
-      "invalid-maintenance-branch": "Der Zweigname der Wartungslinie lässt sich für diese Veröffentlichung nicht bilden. Eine Administratorin oder ein Administrator kann das Muster ändern."
+      "invalid-maintenance-branch": "Der Zweigname der Wartungslinie lässt sich für diese Veröffentlichung nicht bilden. Eine Administratorin oder ein Administrator kann das Muster ändern.",
+      "sandbox-not-allowed": "{refused, select, uploads {In dieser Sandbox sind Uploads ausgeschaltet.} imports {In dieser Sandbox sind Importe ausgeschaltet.} templates {Vorlagen lassen sich in dieser Sandbox nicht ändern.} users {In dieser Sandbox können Sie keine Benutzer hinzufügen: Die Sandbox gehört nur Ihnen.} invitations {In dieser Sandbox gibt es keine Einladungen und Zurücksetzen-Links: Die Sandbox gehört nur Ihnen.} serviceAccounts {In dieser Sandbox gibt es keine Service-Accounts: Nichts von außen darf die Sandbox erreichen.} tokens {In dieser Sandbox können Sie keine Tokens ausstellen: Nichts von außen darf die Sandbox erreichen.} webhooks {Webhooks sind in dieser Sandbox ausgeschaltet: Nichts verlässt die Sandbox.} mail {E-Mail ist in dieser Sandbox ausgeschaltet: Nichts verlässt die Sandbox.} backups {Backups sind in dieser Sandbox ausgeschaltet.} other {Das ist in einer öffentlichen Sandbox ausgeschaltet.}}",
+      "sandbox-limit-reached": "{limit, select, moduleBytes {Das ist größer, als eine Sandbox speichert. Kürzen oder teilen Sie es.} commentLength {Ein Kommentar in einer Sandbox hat höchstens {max, number} Zeichen.} changeSets {Diese Sandbox hat so viele Überarbeitungen angelegt, wie sie darf ({max, number}).} modules {Diese Sandbox hat so viele Module angelegt, wie sie darf ({max, number}).} manuals {Diese Sandbox hat so viele Anleitungen angelegt, wie sie darf ({max, number}).} releasesPerHour {Diese Sandbox hat in dieser Stunde so viele Veröffentlichungen erstellt, wie sie darf ({max, number}). Versuchen Sie es später erneut.} writeBytes {Diese Sandbox hat so viel geschrieben, wie sie in ihrer Sitzung darf.} other {Diese Sandbox hat eine ihrer Grenzen erreicht.}}"
     }
   },
   "theme": {
@@ -2585,7 +2587,7 @@
       "xref": "Querverweis",
       "xrefHint": "Ein Abschnitt, eine Abbildung, Tabelle, Handlungsanweisung oder ein Schritt",
       "attribute": "Textattribut",
-      "attributeHint": "Ein Wert, der je Handbuch eingesetzt wird, etwa ein Produktname",
+      "attributeHint": "Ein Wert, der je Anleitung eingesetzt wird, etwa ein Produktname",
       "kbd": "Tastenkombination",
       "kbdHint": "Tasten als Tastenkappen, etwa Strg+S",
       "term": "Begriff",
@@ -2863,8 +2865,8 @@
       "current": "Das ist die aktuelle Version.",
       "lockedElsewhere": "Jemand bearbeitet dieses Modul in einer anderen Überarbeitung: Es kann wiederhergestellt werden, sobald diese Bearbeitung abgeschlossen ist.",
       "hiddenEntries": "{revision} nennt Module, die Sie nicht sehen dürfen, und kann daher nicht von Ihnen wiederhergestellt werden.",
-      "removedManualVersion": "Diese Version ist die Löschung des Handbuchs: Wählen Sie eine Version mit Inhalt.",
-      "lockedElsewhereManual": "Jemand bearbeitet dieses Handbuch in einer anderen Überarbeitung: Es kann wiederhergestellt werden, sobald diese Bearbeitung abgeschlossen ist."
+      "removedManualVersion": "Diese Version ist die Löschung der Anleitung: Wählen Sie eine Version mit Inhalt.",
+      "lockedElsewhereManual": "Jemand bearbeitet diese Anleitung in einer anderen Überarbeitung: Sie kann wiederhergestellt werden, sobald diese Bearbeitung abgeschlossen ist."
     }
   },
   "session": {
@@ -3057,7 +3059,7 @@
       "again": "Erneut aktualisieren",
       "kind": {
         "module": "Modul",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "config": "Konfiguration",
         "term": "Begriff",
         "design": "Seitengestaltung",
@@ -3112,7 +3114,7 @@
       "open": "Neues Modul",
       "title": "Neues Modul",
       "description": "Es wird in der Überarbeitung „{changeSet}“ angelegt und im Editor geöffnet.",
-      "descriptionManual": "Es wird in der Überarbeitung „{changeSet}“ angelegt und dem Handbuch „{manual}“ hinzugefügt.",
+      "descriptionManual": "Es wird in der Überarbeitung „{changeSet}“ angelegt und der Anleitung „{manual}“ hinzugefügt.",
       "titleField": "Titel",
       "idHint": "Gespeichert als {id}",
       "idEmpty": "Der Titel braucht einen Buchstaben oder eine Ziffer, um daraus die ID des Moduls zu bilden.",
@@ -3202,10 +3204,10 @@
       "usedInTitle": "Wo es verwendet wird",
       "usedIn": "{count, plural, =0 {Nirgends verwendet} one {An einer Stelle verwendet} other {An # Stellen verwendet}}",
       "checking": "Es wird geprüft, wo es verwendet wird …",
-      "manual": "Handbuch",
+      "manual": "Anleitung",
       "module": "Modul, das darauf verweist",
       "checksNote": "Es kann trotzdem gelöscht werden: Die Prüfungen melden diese Verwendungen dann, bis sie behoben sind.",
-      "unused": "Kein Handbuch und kein Modul, das Sie sehen können, verwendet es.",
+      "unused": "Keine Anleitung und kein Modul, das Sie sehen können, verwendet es.",
       "incomplete": "Nicht jede Verwendung ist hier aufgeführt: Es gibt mehr, als angezeigt werden können.",
       "usageFailed": "Wo es verwendet wird, konnte nicht gelesen werden.",
       "lockedElsewhere": "Jemand anderes bearbeitet es in einer anderen Überarbeitung: Es kann gelöscht werden, sobald die Bearbeitung beendet ist.",
@@ -3224,10 +3226,10 @@
   },
   "search": {
     "title": "Suche",
-    "description": "Module und Handbücher suchen, eine Seite öffnen oder eine Aktion ausführen.",
+    "description": "Module und Anleitungen suchen, eine Seite öffnen oder eine Aktion ausführen.",
     "open": "Suchen",
-    "label": "Module, Handbücher, Seiten und Aktionen suchen",
-    "placeholder": "Module, Handbücher, Seiten und Aktionen suchen…",
+    "label": "Module, Anleitungen, Seiten und Aktionen suchen",
+    "placeholder": "Module, Anleitungen, Seiten und Aktionen suchen…",
     "placeholderActions": "Seiten und Aktionen suchen…",
     "searching": "Suche läuft…",
     "noAccess": "Sie dürfen die Inhalte nicht durchsuchen.",
@@ -3242,7 +3244,7 @@
     "groups": {
       "recent": "Zuletzt geöffnet",
       "modules": "Module",
-      "manuals": "Handbücher",
+      "manuals": "Anleitungen",
       "actions": "Aktionen",
       "changeSets": "Überarbeitung wechseln",
       "pages": "Seiten",
@@ -3250,12 +3252,12 @@
     },
     "kinds": {
       "action": "Aktion",
-      "manual": "Handbuch",
+      "manual": "Anleitung",
       "textMatch": "Treffer im Text · {language}",
       "keywordMatch": "Schlagwort · {language}",
       "questionMatch": "FAQ-Frage · {language}",
       "page": "Seite",
-      "guide": "Benutzerhandbuch"
+      "guide": "Benutzeranleitung"
     },
     "more": {
       "label": "Weitere Treffer zeigen ({shown} von {total})",
@@ -3286,8 +3288,8 @@
         "description": "Ein Modul im aktuellen Ordner anlegen"
       },
       "newManual": {
-        "label": "Neues Handbuch",
-        "description": "Ein Handbuch in der aktuellen Überarbeitung anlegen"
+        "label": "Neue Anleitung",
+        "description": "Eine Anleitung in der aktuellen Überarbeitung anlegen"
       },
       "openReview": {
         "label": "Prüfung öffnen",
@@ -3350,9 +3352,9 @@
       "label": "Änderungen",
       "loading": "Änderungen werden geladen",
       "emptyTitle": "Nichts geändert",
-      "emptyHint": "Diese Überarbeitung ändert kein Modul und kein Handbuch, das Sie sehen können.",
+      "emptyHint": "Diese Überarbeitung ändert kein Modul und keine Anleitung, die Sie sehen können.",
       "comparedWith": "verglichen mit {ref}",
-      "manual": "Handbuch",
+      "manual": "Anleitung",
       "config": "Konfiguration",
       "term": "Begriff",
       "design": "Seitengestaltung",
@@ -3486,11 +3488,11 @@
       "referenceChanged": "Verweist auf ein anderes Modul",
       "movedFrom": "{kind} verschoben aus „{section}“",
       "movedFromTop": "{kind} verschoben vom Anfang des Moduls",
-      "movedFromManualTop": "{kind} verschoben von der obersten Ebene des Handbuchs",
+      "movedFromManualTop": "{kind} verschoben von der obersten Ebene der Anleitung",
       "reordered": "{kind} an eine andere Stelle verschoben",
       "movedTo": "{kind} verschoben nach „{section}“",
       "movedToTop": "{kind} verschoben an den Anfang des Moduls",
-      "movedToManualTop": "{kind} verschoben auf die oberste Ebene des Handbuchs",
+      "movedToManualTop": "{kind} verschoben auf die oberste Ebene der Anleitung",
       "wasHere": "{kind} stand vorher hier",
       "showWas": "Zeigen, wo es war",
       "showNow": "Zeigen, wo es jetzt ist",
@@ -3654,9 +3656,9 @@
     },
     "usedIn": {
       "title": "Verwendet in",
-      "note": "{count, plural, one {Änderungen erreichen dieses Handbuch mit seiner nächsten Veröffentlichung.} other {Änderungen erreichen diese # Handbücher mit ihrer nächsten Veröffentlichung.}}",
-      "none": "Noch kein Handbuch verwendet dieses Modul.",
-      "failed": "Die Handbücher konnten nicht gelesen werden."
+      "note": "{count, plural, one {Änderungen erreichen diese Anleitung mit ihrer nächsten Veröffentlichung.} other {Änderungen erreichen diese # Anleitungen mit ihrer nächsten Veröffentlichung.}}",
+      "none": "Noch keine Anleitung verwendet dieses Modul.",
+      "failed": "Die Anleitungen konnten nicht gelesen werden."
     },
     "rename": {
       "action": "ID ändern",
@@ -3675,7 +3677,7 @@
       "failed": "Die ID von „{title}“ konnte nicht geändert werden",
       "undoFailed": "Die ID von „{title}“ konnte nicht zurückgesetzt werden",
       "lockedModule": "Die ID kann nicht geändert werden: Jemand bearbeitet dieses Modul oder ein Modul, das es nennt, in einer anderen Überarbeitung.",
-      "lockedManual": "Die ID kann nicht geändert werden: Jemand bearbeitet ein Handbuch, das dieses Modul verwendet, in einer anderen Überarbeitung."
+      "lockedManual": "Die ID kann nicht geändert werden: Jemand bearbeitet eine Anleitung, die dieses Modul verwendet, in einer anderen Überarbeitung."
     },
     "outline": {
       "title": "Gliederung",
@@ -3870,26 +3872,26 @@
     }
   },
   "manuals": {
-    "title": "Handbücher",
+    "title": "Anleitungen",
     "structure": "Struktur",
-    "loading": "Handbuch wird geladen",
+    "loading": "Anleitung wird geladen",
     "runChecks": "Prüfungen ausführen",
     "missing": "Nicht gefunden",
     "none": {
-      "title": "Noch keine Handbücher",
-      "description": "Handbücher, die Sie lesen dürfen, erscheinen hier.",
-      "create": "Beginnen Sie eines mit „Neues Handbuch“, hier oder in der Liste am Titel."
+      "title": "Noch keine Anleitungen",
+      "description": "Anleitungen, die Sie lesen dürfen, erscheinen hier.",
+      "create": "Beginnen Sie eine mit „Neue Anleitung“, hier oder in der Liste am Titel."
     },
     "empty": {
-      "title": "Keine Module in diesem Handbuch",
+      "title": "Keine Module in dieser Anleitung",
       "description": "Fügen Sie ein Modul hinzu, um die Gliederung zu beginnen.",
       "readOnly": "Die Gliederung ist leer."
     },
     "blocked": {
-      "needsChangeSet": "Wählen Sie eine Überarbeitung im Entwurf, um das Handbuch zu ändern.",
+      "needsChangeSet": "Wählen Sie eine Überarbeitung im Entwurf, um die Anleitung zu ändern.",
       "notDraft": "Diese Überarbeitung ist kein Entwurf mehr und kann nicht mehr geändert werden.",
       "notAuthor": "Nur wer diese Überarbeitung begonnen hat, ändert sie.",
-      "locked": "Eine andere Überarbeitung hält die Sperre dieses Handbuchs."
+      "locked": "Eine andere Überarbeitung hält die Sperre dieser Anleitung."
     },
     "add": {
       "open": "Modul hinzufügen",
@@ -3897,7 +3899,7 @@
       "new": "Neues Modul…",
       "newNamed": "Neues Modul „{query}“…",
       "newNotAllowed": "Ihre Rolle darf keine Module anlegen.",
-      "created": "Modul „{title}“ angelegt und dem Handbuch hinzugefügt.",
+      "created": "Modul „{title}“ angelegt und der Anleitung hinzugefügt.",
       "searching": "Module werden gesucht…",
       "failed": "Die Module konnten nicht gesucht werden.",
       "retry": "Erneut versuchen",
@@ -3918,8 +3920,8 @@
       "someVariants": "Nur für einige Varianten…",
       "everyVariant": "Gilt für jede Variante",
       "pickTitle": "Diese Zeile aufnehmen für",
-      "pickModule": "Modul im Handbuch · {title}",
-      "pickChapter": "Kapitel im Handbuch · {title}"
+      "pickModule": "Modul in der Anleitung · {title}",
+      "pickChapter": "Kapitel in der Anleitung · {title}"
     },
     "chapter": {
       "wrapTitle": "Neues Kapitel",
@@ -3948,9 +3950,9 @@
     "preview": {
       "heading": "PDF-Vorschau",
       "variant": "Variante",
-      "noVariants": "Das Handbuch hat keine Variante, die sich erstellen lässt.",
+      "noVariants": "Die Anleitung hat keine Variante, die sich erstellen lässt.",
       "failed": "Die Vorschau von {title} konnte nicht erstellt werden.",
-      "empty": "Fügen Sie zuerst ein Modul hinzu: Das Handbuch hat noch keines.",
+      "empty": "Fügen Sie zuerst ein Modul hinzu: Die Anleitung hat noch keines.",
       "pages": "Titelseite und erste Seite",
       "open": "Vorschau von {title}, {variant} öffnen",
       "coverAlt": "Titelseite von {title}, {variant}",
@@ -3961,37 +3963,37 @@
     },
     "save": {
       "failed": "{title} konnte nicht gespeichert werden.",
-      "reloaded": "Das Handbuch wurde anderswo geändert und neu geladen.",
+      "reloaded": "Die Anleitung wurde anderswo geändert und neu geladen.",
       "savePointFailed": "{title} ist gespeichert, aber der Speicherpunkt konnte nicht angelegt werden."
     },
     "openPreview": "Vorschau",
     "new": {
-      "open": "Neues Handbuch",
-      "title": "Neues Handbuch",
-      "description": "Es wird in der Überarbeitung „{changeSet}“ angelegt und im Editor geöffnet. Veröffentlichte Inhalte erhalten es, sobald die Überarbeitung zusammengeführt ist.",
+      "open": "Neue Anleitung",
+      "title": "Neue Anleitung",
+      "description": "Sie wird in der Überarbeitung „{changeSet}“ angelegt und im Editor geöffnet. Veröffentlichte Inhalte erhalten sie, sobald die Überarbeitung zusammengeführt ist.",
       "titleField": "Titel",
       "idHint": "Gespeichert als {id}",
-      "idFromTitle": "Die ID des Handbuchs wird aus seinem Titel gebildet.",
-      "idEmpty": "Der Titel braucht einen Buchstaben oder eine Ziffer, um daraus die ID des Handbuchs zu bilden.",
-      "titleMissing": "Geben Sie dem Handbuch einen Titel.",
-      "idTaken": "Ein Handbuch mit der ID {id} gibt es bereits. Wählen Sie einen anderen Titel.",
+      "idFromTitle": "Die ID der Anleitung wird aus ihrem Titel gebildet.",
+      "idEmpty": "Der Titel braucht einen Buchstaben oder eine Ziffer, um daraus die ID der Anleitung zu bilden.",
+      "titleMissing": "Geben Sie der Anleitung einen Titel.",
+      "idTaken": "Eine Anleitung mit der ID {id} gibt es bereits. Wählen Sie einen anderen Titel.",
       "audience": "Zielgruppe",
       "noAudience": "Nicht gesetzt (jede Zielgruppe)",
-      "copy": "Mit einer Kopie eines anderen Handbuchs beginnen",
-      "copyFrom": "Zu kopierendes Handbuch",
-      "copyMissing": "Wählen Sie das zu kopierende Handbuch.",
+      "copy": "Mit einer Kopie einer anderen Anleitung beginnen",
+      "copyFrom": "Zu kopierende Anleitung",
+      "copyMissing": "Wählen Sie die zu kopierende Anleitung.",
       "cancel": "Abbrechen",
       "create": "Anlegen und öffnen",
-      "needsChangeSet": "Wählen oder beginnen Sie zuerst eine Überarbeitung im Entwurf: Neue Handbücher werden darin gespeichert.",
+      "needsChangeSet": "Wählen oder beginnen Sie zuerst eine Überarbeitung im Entwurf: Neue Anleitungen werden darin gespeichert.",
       "notDraft": "Die Überarbeitung ist kein Entwurf mehr: Beginnen oder wählen Sie eine Überarbeitung im Entwurf.",
       "loading": "Die Projekteinstellungen werden noch geladen.",
       "kind": "Art",
       "assembled": "Aus Modulen zusammengestellt",
-      "derived": "Aus einem anderen Handbuch abgeleitet",
-      "derivedHint": "Ein abgeleitetes Handbuch, etwa ein Sicherheitsblatt, sammelt die Module einiger Typen aus seinem Quellhandbuch und folgt ihm, wenn es sich ändert.",
-      "source": "Quellhandbuch",
-      "sourceMissing": "Das Handbuch wählen, aus dem es sammelt.",
-      "noSources": "Für diese Zielgruppe kommt kein Handbuch als Quelle infrage: Eine Quelle ist ein zusammengestelltes Handbuch für dieselbe Zielgruppe oder eine weitere.",
+      "derived": "Aus einer anderen Anleitung abgeleitet",
+      "derivedHint": "Eine abgeleitete Anleitung, etwa ein Sicherheitsblatt, sammelt die Module einiger Typen aus ihrer Quellanleitung und folgt der Quelle, wenn diese sich ändert.",
+      "source": "Quellanleitung",
+      "sourceMissing": "Die Anleitung wählen, aus der gesammelt wird.",
+      "noSources": "Für diese Zielgruppe kommt keine Anleitung als Quelle infrage: Eine Quelle ist eine zusammengestellte Anleitung für dieselbe Zielgruppe oder eine weitere.",
       "types": "Gesammelte Modultypen",
       "typesSafety": "Keiner gewählt: die Sicherheitstypen, die die Einstellungen markieren ({types}).",
       "typesNoSafety": "Die Einstellungen markieren keinen Typ als Sicherheitsinhalt: die zu sammelnden Typen wählen.",
@@ -3999,7 +4001,7 @@
     },
     "create": {
       "done": "{title} angelegt",
-      "exists": "Ein Handbuch mit der ID {id} gibt es in dieser Überarbeitung bereits.",
+      "exists": "Eine Anleitung mit der ID {id} gibt es in dieser Überarbeitung bereits.",
       "failed": "{title} konnte nicht angelegt werden."
     },
     "delete": {
@@ -4015,7 +4017,7 @@
     "menu": {
       "label": "Aktionen für {title}",
       "duplicate": "Duplizieren",
-      "delete": "Handbuch löschen",
+      "delete": "Anleitung löschen",
       "rename": "Umbenennen",
       "history": "Verlauf"
     },
@@ -4023,20 +4025,20 @@
       "title": "Kopie von {title}"
     },
     "rename": {
-      "label": "Titel des Handbuchs",
+      "label": "Titel der Anleitung",
       "required": "Geben Sie einen Titel ein."
     },
     "deleted": {
       "title": "In dieser Überarbeitung gelöscht",
-      "description": "Veröffentlichte Inhalte behalten dieses Handbuch, bis die Überarbeitung zusammengeführt ist. Machen Sie das Löschen über seine Meldung rückgängig oder wählen Sie ein anderes Handbuch."
+      "description": "Veröffentlichte Inhalte behalten diese Anleitung, bis die Überarbeitung zusammengeführt ist. Machen Sie das Löschen über ihre Meldung rückgängig oder wählen Sie eine andere Anleitung."
     },
     "settings": {
       "heading": "Einstellungen",
       "edit": "Einstellungen bearbeiten",
       "view": "Einstellungen anzeigen",
       "title": "Einstellungen · {title}",
-      "description": "Wofür das Handbuch erstellt wird. Änderungen werden sofort in der Überarbeitung gespeichert.",
-      "descriptionReadOnly": "Wofür das Handbuch erstellt wird.",
+      "description": "Wofür die Anleitung erstellt wird. Änderungen werden sofort in der Überarbeitung gespeichert.",
+      "descriptionReadOnly": "Wofür die Anleitung erstellt wird.",
       "issues": "{count, plural, one {# Problem} other {# Probleme}}",
       "issueError": "Fehler:",
       "issueWarning": "Warnung:",
@@ -4052,13 +4054,13 @@
       },
       "variants": {
         "heading": "Varianten-Builds ({count})",
-        "hint": "Jede Kombination wird als eigenes Handbuch erstellt und geprüft.",
+        "hint": "Jede Kombination wird als eigene Anleitung erstellt und geprüft.",
         "list": "Varianten-Builds",
         "add": "Varianten-Build hinzufügen",
         "edit": "{variant} bearbeiten",
         "remove": "{variant} entfernen",
         "removed": "Varianten-Build {variant} entfernt",
-        "keepOne": "Ein Handbuch wird für mindestens eine Variante erstellt.",
+        "keepOne": "Eine Anleitung wird für mindestens eine Variante erstellt.",
         "notSet": "Nicht gesetzt",
         "nothingSet": "Nichts gesetzt",
         "versionPlaceholder": "z. B. 2.3 (leer: nicht gesetzt)",
@@ -4091,15 +4093,15 @@
         "heading": "Seitengestaltung",
         "projectDefault": "Projektstandard ({name})",
         "builtin": "Eingebaute Gestaltung",
-        "hint": "Das PDF des Handbuchs wird damit gedruckt. Den Projektstandard legen Sie unter Verwaltung › Seitengestaltung fest.",
+        "hint": "Das PDF der Anleitung wird damit gedruckt. Den Projektstandard legen Sie unter Verwaltung › Seitengestaltung fest.",
         "missing": "Die Seitengestaltung {id} ist nicht in dieser Revision: Das PDF verwendet die eingebaute Gestaltung."
       },
       "cover": {
         "heading": "Titelbild",
-        "hint": "Die Seitengestaltung zeigt es auf der Titelseite. Das eigene Bild einer Variante ersetzt das des Handbuchs. Ohne Bild wird das der Gestaltung verwendet, falls sie eins hat.",
+        "hint": "Die Seitengestaltung zeigt es auf der Titelseite. Das eigene Bild einer Variante ersetzt das der Anleitung. Ohne Bild wird das der Gestaltung verwendet, falls sie eins hat.",
         "manual": "Alle Varianten",
         "own": "Eigenes Bild",
-        "fromManual": "Bild des Handbuchs",
+        "fromManual": "Bild der Anleitung",
         "fromDesign": "Bild der Gestaltung, falls vorhanden",
         "choose": "Bild wählen",
         "change": "Ändern",
@@ -4116,7 +4118,7 @@
         "cardOwn": "Gesetzt",
         "cardVariants": "{count, plural, one {Gesetzt, # Variante mit eigenem} other {Gesetzt, # Varianten mit eigenem}}",
         "cardNone": "Das der Gestaltung",
-        "unshown": "{target} hat ein eigenes Titelbild, das nie gezeigt wird: Das Handbuch erstellt diese Variante nicht, oder sie hat schon eins."
+        "unshown": "{target} hat ein eigenes Titelbild, das nie gezeigt wird: Die Anleitung erstellt diese Variante nicht, oder die Variante hat schon eines."
       },
       "titleSection": {
         "heading": "Titel",
@@ -4125,14 +4127,14 @@
     },
     "count": "{count, plural, one {# Modul} other {# Module}}",
     "switcher": {
-      "hint": "(Handbuch wechseln)",
-      "search": "Handbücher suchen",
+      "hint": "(Anleitung wechseln)",
+      "search": "Anleitungen suchen",
       "current": "(aktuell)",
       "showDeleted": "Gelöschte anzeigen",
       "deleted": "Gelöscht",
       "deletedOn": "Gelöscht am {date}: Öffnen Sie den Verlauf, um eine Version wiederherzustellen",
-      "deletedFailed": "Die gelöschten Handbücher konnten nicht geladen werden.",
-      "deletedNeedsDrafts": "Gelöschte Handbücher aufzulisten erfordert Zugriff auf Entwürfe."
+      "deletedFailed": "Die gelöschten Anleitungen konnten nicht geladen werden.",
+      "deletedNeedsDrafts": "Gelöschte Anleitungen aufzulisten erfordert Zugriff auf Entwürfe."
     },
     "previewMenu": {
       "label": "Weitere Vorschauoptionen",
@@ -4168,17 +4170,17 @@
     },
     "rule": {
       "heading": "Sammelregel",
-      "hint": "Dieses Handbuch ist abgeleitet: Seine Gliederung wird nach dieser Regel aus dem Quellhandbuch gesammelt, in dessen Reihenfolge, und folgt der Quelle, wenn sie sich ändert.",
+      "hint": "Diese Anleitung ist abgeleitet: Ihre Gliederung wird nach dieser Regel aus der Quellanleitung gesammelt, in deren Reihenfolge, und folgt der Quelle, wenn sie sich ändert.",
       "blocking": "Blockierend:",
       "warning": "Warnung:",
       "issueAt": "({module})",
-      "source": "Quellhandbuch",
-      "sourceNone": "Handbuch wählen",
-      "noSources": "Kein Handbuch kommt als Quelle infrage: Eine Quelle ist ein zusammengestelltes Handbuch für die Zielgruppe dieses Handbuchs oder eine weitere.",
+      "source": "Quellanleitung",
+      "sourceNone": "Anleitung wählen",
+      "noSources": "Keine Anleitung kommt als Quelle infrage: Eine Quelle ist eine zusammengestellte Anleitung für die Zielgruppe dieser Anleitung oder eine weitere.",
       "types": "Gesammelte Modultypen",
       "typesNone": "Keine Sicherheitstypen eingerichtet",
-      "typesOwn": "Es sammelt die Module der hier gewählten Typen.",
-      "typesSafety": "Keiner gewählt: Es sammelt die Sicherheitstypen, die die Einstellungen markieren ({types}).",
+      "typesOwn": "Die Regel sammelt die Module der hier gewählten Typen.",
+      "typesSafety": "Keiner gewählt: Die Regel sammelt die Sicherheitstypen, die die Einstellungen markieren ({types}).",
       "typesNoSafety": "Keiner gewählt, und die Einstellungen markieren keinen Typ als Sicherheitsinhalt: die zu sammelnden Typen wählen.",
       "front": "Vorspann (vor den gesammelten Modulen)",
       "back": "Nachspann (nach den gesammelten Modulen)",
@@ -4193,11 +4195,11 @@
       "gatheredCount": "{count, plural, one {# Modul} other {# Module}}, gesammelt aus {source}",
       "gatherFailed": "Was die Regel sammelt, ließ sich nicht lesen: Die Gliederung zeigt die letzte Antwort.",
       "emptyTitle": "Nichts gesammelt",
-      "emptyDescription": "Die Regel sammelt kein Modul aus dem Quellhandbuch. Die Prüfungen neben der Regel sagen, warum.",
+      "emptyDescription": "Die Regel sammelt kein Modul aus der Quellanleitung. Die Prüfungen neben der Regel sagen, warum.",
       "frontBadge": "Vorspann",
       "backBadge": "Nachspann",
       "notInVariant": "Nicht in {variant}",
-      "gathering": "Was es sammelt",
+      "gathering": "Was die Regel sammelt",
       "gatherModules": "Ganze Module der Typen unten",
       "gatherNotices": "Sicherheitshinweise der Module der Quelle",
       "grouping": "Hinweise gruppieren",
@@ -4214,11 +4216,11 @@
       },
       "typesSearched": "Modultypen, die nach Hinweisen durchsucht werden",
       "typesEvery": "Alle Typen",
-      "typesSearchedOwn": "Es sammelt die Hinweise der Module der hier gewählten Typen.",
-      "typesSearchedEvery": "Keiner gewählt: Es durchsucht die Module aller Typen nach Hinweisen.",
+      "typesSearchedOwn": "Die Regel sammelt die Hinweise der Module der hier gewählten Typen.",
+      "typesSearchedEvery": "Keiner gewählt: Die Regel durchsucht die Module aller Typen nach Hinweisen.",
       "noticeCountByModule": "{count, plural, one {# Modul} other {# Module}} mit Hinweisen, gesammelt aus {source}, eine Gruppe je Modul",
       "noticeCountByLevel": "{count, plural, one {# Modul} other {# Module}} mit Hinweisen, gesammelt aus {source}, nach Gefahrenstufe gruppiert",
-      "emptyNoticesDescription": "Die Regel sammelt keinen Sicherheitshinweis aus ihrem Quellhandbuch. Ihre Prüfungen neben der Regel sagen, warum."
+      "emptyNoticesDescription": "Die Regel sammelt keinen Sicherheitshinweis aus ihrer Quellanleitung. Die Prüfungen neben der Regel sagen, warum."
     }
   },
   "checks": {
@@ -4229,13 +4231,13 @@
       "blocked": "Beheben Sie zuerst die blockierenden Probleme."
     },
     "scope": {
-      "manual": "Handbuch „{title}“, veröffentlichter Inhalt",
-      "manualIn": "Handbuch „{title}“ in der Überarbeitung „{changeSet}“",
+      "manual": "Anleitung „{title}“, veröffentlichter Inhalt",
+      "manualIn": "Anleitung „{title}“ in der Überarbeitung „{changeSet}“",
       "changeSet": "Was die Überarbeitung „{title}“ ändert"
     },
     "noScope": {
       "title": "Nichts zu prüfen",
-      "description": "Wählen Sie oben eine Überarbeitung, um ihre Änderungen zu prüfen, oder öffnen Sie die Prüfungen eines Handbuchs im Handbuch."
+      "description": "Wählen Sie oben eine Überarbeitung, um ihre Änderungen zu prüfen, oder öffnen Sie die Prüfungen einer Anleitung im Anleitungs-Editor."
     },
     "summary": {
       "blocking": "{count, plural, one {Blockierendes Problem} other {Blockierende Probleme}}",
@@ -4257,7 +4259,7 @@
       "inVariants": "In {variants}"
     },
     "group": {
-      "manual": "Handbuch · {id}",
+      "manual": "Anleitung · {id}",
       "module": "{id} · {language}",
       "blocking": "{count, plural, one {# blockierend} other {# blockierend}}",
       "warnings": "{count, plural, one {# Warnung} other {# Warnungen}}",
@@ -4286,8 +4288,8 @@
       "xref-unknown-module": "Verlinkt auf „{module}“, das es nicht gibt.",
       "xref-unknown-block": "Verlinkt auf den Block „{block}“ in „{module}“, den es nicht gibt.",
       "module-ref-unknown-block": "Bindet den Block „{block}“ aus „{module}“ ein, den es nicht gibt.",
-      "xref-outside-manual": "Verlinkt auf „{module}“, das nicht in diesem Handbuch ist.",
-      "missing-translation": "Keine Übersetzung ({language}): Das Handbuch zeigt die Quellsprache.",
+      "xref-outside-manual": "Verlinkt auf „{module}“, das nicht in dieser Anleitung ist.",
+      "missing-translation": "Keine Übersetzung ({language}): Die Anleitung zeigt die Quellsprache.",
       "missing-label": "Keine Ausgabebeschriftungen auf {language}: Englisch wird verwendet.",
       "pdf-accessibility": "Das PDF erfüllt PDF/UA-1 nicht: {problem}",
       "deprecated-module": "Enthält {module}, das veraltet ist.",
@@ -4296,16 +4298,16 @@
       "deprecated-term": "Verlinkt den Begriff {term}, der veraltet ist.",
       "deprecated-term-replaced": "Verlinkt den Begriff {term}, der veraltet ist: Verwenden Sie stattdessen {replacedBy}.",
       "unknown-replacement": "Der Ersatz {replacedBy} existiert nicht.",
-      "address-taken-own": "Seine Adresse „{address}“ ist die ID des Handbuchs „{manual}“: Die Adresse jenes Handbuchs öffnet dieses.",
-      "address-taken-other": "Das Handbuch „{manual}“ hat die ID dieses Handbuchs, „{address}“, als Adresse: Die Adresse dieses Handbuchs öffnet jenes.",
-      "delivery-access-capped": "Seine Adressen sind auf „{access}“ gestellt, dieser Server erlaubt aber höchstens „{maxAccess}“: Sie öffnen als „{maxAccess}“.",
-      "unknown-page-design-manual": "Das Handbuch nennt die Seitengestaltung {design}, die nicht existiert: Die eingebaute Gestaltung wird verwendet.",
+      "address-taken-own": "Ihre Adresse „{address}“ ist die ID der Anleitung „{manual}“: Die Adresse jener Anleitung öffnet diese.",
+      "address-taken-other": "Die Anleitung „{manual}“ hat die ID dieser Anleitung, „{address}“, als Adresse: Die Adresse dieser Anleitung öffnet jene.",
+      "delivery-access-capped": "Ihre Adressen sind auf „{access}“ gestellt, dieser Server erlaubt aber höchstens „{maxAccess}“: Sie öffnen als „{maxAccess}“.",
+      "unknown-page-design-manual": "Die Anleitung nennt die Seitengestaltung {design}, die nicht existiert: Die eingebaute Gestaltung wird verwendet.",
       "unknown-page-design-config": "Die Standard-Seitengestaltung {design} des Projekts existiert nicht: Die eingebaute Gestaltung wird verwendet.",
       "page-design-missing-value": "Die Seitengestaltung {design} hat keinen Wert für {name} ({at}).",
       "page-design-missing-text-attribute": "Die Seitengestaltung {design} verwendet das Textattribut {name}, für das diese Variante keinen Wert hat ({at}).",
       "page-design-missing-variant-attribute": "Eine Bedingung in der Seitengestaltung {design} prüft {name}, das diese Variante nicht setzt ({at}).",
       "page-design-missing-translation": "Die Seitengestaltung {design} hat keine Übersetzung von {at}: Der Text der Ausgangssprache wird verwendet.",
-      "page-design-dropped-text": "Die Seitengestaltung {design} hat {at} weder in der Sprache des Handbuchs noch in der Ausgangssprache: Der Text entfällt.",
+      "page-design-dropped-text": "Die Seitengestaltung {design} hat {at} weder in der Sprache der Anleitung noch in der Ausgangssprache: Der Text entfällt.",
       "page-design-region-languages-differ": "Die Übersetzung von {at} in der Seitengestaltung {design} hat andere Blöcke als ihr Text auf {language}.",
       "page-design-missing-font": "Die Seitengestaltung {design} nennt bei {at} eine Schrift, die nicht gespeichert oder keine Schrift ist: Das PDF nutzt die Standardschrift.",
       "page-design-template-error": "Die Vorlage {template} enthält einen Fehler: {file}, Zeile {line}, Spalte {column}: {problem}",
@@ -4327,8 +4329,8 @@
         "detail": "Die Datei des Moduls lässt sich nicht als Modul lesen."
       },
       "invalid-manifest": {
-        "title": "Handbuch nicht lesbar",
-        "detail": "Die Datei des Handbuchs lässt sich nicht lesen."
+        "title": "Anleitung nicht lesbar",
+        "detail": "Die Datei der Anleitung lässt sich nicht lesen."
       },
       "unknown-module-type": {
         "title": "Unbekannter Modultyp",
@@ -4336,7 +4338,7 @@
       },
       "unknown-audience": {
         "title": "Unbekannte Zielgruppe",
-        "detail": "Die Zielgruppe ist nicht konfiguriert; das Modul fehlt in jedem Handbuch."
+        "detail": "Die Zielgruppe ist nicht konfiguriert; das Modul fehlt in jeder Anleitung."
       },
       "unknown-language": {
         "title": "Unbekannte Sprache",
@@ -4420,11 +4422,11 @@
       },
       "page-design-missing-value": {
         "title": "Wert der Seitengestaltung fehlt",
-        "detail": "Ein Platzhalter oder ein Feld der Titelseite der Seitengestaltung hat für dieses Handbuch und diese Variante keinen Wert: Der Platzhalter bleibt stehen, das Feld entfällt. Geben Sie dem Handbuch den Wert, oder nehmen Sie ihn aus der Gestaltung."
+        "detail": "Ein Platzhalter oder ein Feld der Titelseite der Seitengestaltung hat für diese Anleitung und diese Variante keinen Wert: Der Platzhalter bleibt stehen, das Feld entfällt. Geben Sie der Anleitung den Wert, oder nehmen Sie ihn aus der Gestaltung."
       },
       "page-design-missing-text-attribute": {
         "title": "Textattribut der Seitengestaltung fehlt",
-        "detail": "Ein Text der Seitengestaltung verwendet ein Textattribut, für das diese Variante keinen Wert hat. Geben Sie dem Handbuch einen Wert dafür."
+        "detail": "Ein Text der Seitengestaltung verwendet ein Textattribut, für das diese Variante keinen Wert hat. Geben Sie der Anleitung einen Wert dafür."
       },
       "page-design-missing-variant-attribute": {
         "title": "Bedingung der Seitengestaltung unbekannt",
@@ -4444,11 +4446,11 @@
       },
       "inconsistent-variants": {
         "title": "Uneinheitliche Varianten",
-        "detail": "Die Varianten des Handbuchs setzen unterschiedliche Merkmale."
+        "detail": "Die Varianten der Anleitung setzen unterschiedliche Merkmale."
       },
       "above-audience": {
-        "title": "Über der Zielgruppe des Handbuchs",
-        "detail": "Das Modul ist für eine engere Zielgruppe bestimmt und fehlt im Handbuch."
+        "title": "Über der Zielgruppe der Anleitung",
+        "detail": "Das Modul ist für eine engere Zielgruppe bestimmt und fehlt in der Anleitung."
       },
       "delivery-access-capped": {
         "title": "Zugriff auf Adressen begrenzt",
@@ -4468,7 +4470,7 @@
       },
       "expansion-too-large": {
         "title": "Mit Verweisen zu groß",
-        "detail": "Mit seinen Modulverweisen ist dies zu groß (mehr als 500.000 Inhaltselemente oder 12.000.000 Zeichen oder mehr als 100 Ebenen tief verschachtelt). Ein Handbuch lässt sich weder zusammenstellen noch in der Vorschau zeigen oder drucken; ein Modul fehlt in den Abschnitten für Suche und Assistenten (Retrieval-Chunks). Verweisen Sie auf weniger Module, über weniger Wege oder weniger tief verschachtelt."
+        "detail": "Mit seinen Modulverweisen ist dies zu groß (mehr als 500.000 Inhaltselemente oder 12.000.000 Zeichen oder mehr als 100 Ebenen tief verschachtelt). Eine Anleitung lässt sich weder zusammenstellen noch in der Vorschau zeigen oder drucken; ein Modul fehlt in den Abschnitten für Suche und Assistenten (Retrieval-Chunks). Verweisen Sie auf weniger Module, über weniger Wege oder weniger tief verschachtelt."
       },
       "chunk-set-too-large": {
         "title": "Abschnitte zusammen zu groß",
@@ -4487,8 +4489,8 @@
         "detail": "Verlinkt auf einen Block, den es nicht gibt."
       },
       "xref-outside-manual": {
-        "title": "Verweis außerhalb des Handbuchs",
-        "detail": "Verlinkt auf ein Modul, das nicht in diesem Handbuch ist."
+        "title": "Verweis außerhalb der Anleitung",
+        "detail": "Verlinkt auf ein Modul, das nicht in dieser Anleitung ist."
       },
       "missing-image": {
         "title": "Fehlendes Bild",
@@ -4504,7 +4506,7 @@
       },
       "missing-translation": {
         "title": "Fehlende Übersetzung",
-        "detail": "Keine Übersetzung in eine Zielsprache: Das Handbuch zeigt die Quellsprache."
+        "detail": "Keine Übersetzung in eine Zielsprache: Die Anleitung zeigt die Quellsprache."
       },
       "outdated-translation": {
         "title": "Veraltete Übersetzung",
@@ -4512,7 +4514,7 @@
       },
       "missing-label": {
         "title": "Fehlende Ausgabebeschriftungen",
-        "detail": "Keine Ausgabebeschriftungen in der Sprache des Handbuchs: Englisch wird verwendet."
+        "detail": "Keine Ausgabebeschriftungen in der Sprache der Anleitung: Englisch wird verwendet."
       },
       "unknown-term": {
         "title": "Unbekannter Begriff",
@@ -4532,7 +4534,7 @@
       },
       "address-taken": {
         "title": "Adresse vergeben",
-        "detail": "Eine dauerhafte Adresse eines Handbuchs ist die ID eines anderen Handbuchs, daher öffnet diese Adresse das falsche Handbuch. Ändern Sie den Slug oder die frühere Adresse in den Einstellungen zur Auslieferung."
+        "detail": "Eine dauerhafte Adresse einer Anleitung ist die ID einer anderen Anleitung, daher öffnet diese Adresse die falsche Anleitung. Ändern Sie den Slug oder die frühere Adresse in den Einstellungen zur Auslieferung."
       },
       "unknown-callout": {
         "title": "Unbekannte Positionsnummer",
@@ -4548,19 +4550,19 @@
       },
       "unknown-page-design": {
         "title": "Unbekannte Seitengestaltung",
-        "detail": "Die Seitengestaltung, mit der das Handbuch gedruckt wird, existiert nicht: Die eingebaute Gestaltung wird verwendet."
+        "detail": "Die Seitengestaltung, mit der die Anleitung gedruckt wird, existiert nicht: Die eingebaute Gestaltung wird verwendet."
       },
       "page-design-missing-translation": {
         "title": "Text der Seitengestaltung nicht übersetzt",
-        "detail": "Ein Text der Seitengestaltung hat keine Fassung in der Sprache des Handbuchs: Die der Ausgangssprache wird verwendet. Übersetzen Sie ihn in der Gestaltung."
+        "detail": "Ein Text der Seitengestaltung hat keine Fassung in der Sprache der Anleitung: Die der Ausgangssprache wird verwendet. Übersetzen Sie ihn in der Gestaltung."
       },
       "page-design-dropped-text": {
         "title": "Text der Seitengestaltung entfällt",
-        "detail": "Ein Text der Seitengestaltung hat weder eine Fassung in der Sprache des Handbuchs noch in der Ausgangssprache, daher lässt das PDF ihn weg. Ergänzen Sie ihn in der Gestaltung in der Ausgangssprache."
+        "detail": "Ein Text der Seitengestaltung hat weder eine Fassung in der Sprache der Anleitung noch in der Ausgangssprache, daher lässt das PDF ihn weg. Ergänzen Sie ihn in der Gestaltung in der Ausgangssprache."
       },
       "page-design-region-languages-differ": {
         "title": "Übersetzung der Seitengestaltung weicht ab",
-        "detail": "Ein Bereich der Seitengestaltung hat in der Sprache des Handbuchs andere Blöcke als in der Ausgangssprache. Geben Sie seiner Übersetzung dieselben Blöcke."
+        "detail": "Ein Bereich der Seitengestaltung hat in der Sprache der Anleitung andere Blöcke als in der Ausgangssprache. Geben Sie seiner Übersetzung dieselben Blöcke."
       },
       "page-design-missing-font": {
         "title": "Schrift der Seitengestaltung fehlt",
@@ -4568,55 +4570,55 @@
       },
       "missing-cover-image": {
         "title": "Titelbild fehlt",
-        "detail": "Das Titelbild des Handbuchs oder einer Variante ist nicht gespeichert oder kein Bild, darum hat das PDF keins. Wählen Sie das Bild in den Einstellungen des Handbuchs erneut."
+        "detail": "Das Titelbild der Anleitung oder einer Variante ist nicht gespeichert oder kein Bild, darum hat das PDF keins. Wählen Sie das Bild in den Einstellungen der Anleitung erneut."
       },
       "missing-cover-alt": {
         "title": "Titelbild ohne Text in der Ausgangssprache",
-        "detail": "Der Alternativtext des Titelbilds hat keine Fassung in der Ausgangssprache, auf die alle anderen Sprachen zurückgreifen. Schreiben Sie ihn in den Einstellungen des Handbuchs."
+        "detail": "Der Alternativtext des Titelbilds hat keine Fassung in der Ausgangssprache, auf die alle anderen Sprachen zurückgreifen. Schreiben Sie ihn in den Einstellungen der Anleitung."
       },
       "unknown-cover-variant": {
         "title": "Titelbild ohne Variante",
-        "detail": "Das Handbuch gibt einer Variante, die es nicht erstellt oder die schon eins hat, ein Titelbild: Es wird nie gezeigt. Entfernen Sie es in den Einstellungen des Handbuchs."
+        "detail": "Die Anleitung gibt einer Variante, die sie nicht erstellt oder die schon eins hat, ein Titelbild: Es wird nie gezeigt. Entfernen Sie es in den Einstellungen der Anleitung."
       },
       "unknown-source-manual": {
-        "title": "Quellhandbuch fehlt",
-        "detail": "Das abgeleitete Handbuch übernimmt seinen Inhalt aus einem Handbuch, das es nicht gibt oder das sich nicht lesen lässt. Es enthält daher nur seine eigenen Module davor und danach. Geben Sie ein vorhandenes Handbuch als Quelle an."
+        "title": "Quellanleitung fehlt",
+        "detail": "Die abgeleitete Anleitung übernimmt ihren Inhalt aus einer Anleitung, die es nicht gibt oder die sich nicht lesen lässt. Sie enthält daher nur ihre eigenen Module davor und danach. Geben Sie eine vorhandene Anleitung als Quelle an."
       },
       "derived-source": {
         "title": "Quelle ist abgeleitet",
-        "detail": "Das abgeleitete Handbuch nennt ein abgeleitetes Handbuch oder sich selbst als Quelle, daher wird nichts übernommen. Geben Sie ein zusammengestelltes Handbuch als Quelle an."
+        "detail": "Die abgeleitete Anleitung nennt eine abgeleitete Anleitung oder sich selbst als Quelle, daher wird nichts übernommen. Geben Sie eine zusammengestellte Anleitung als Quelle an."
       },
       "no-gathered-types": {
         "title": "Keine Modultypen zum Übernehmen",
-        "detail": "Die Regel des abgeleiteten Handbuchs nennt keine Modultypen, und die Konfiguration kennzeichnet keinen als Sicherheitsinhalt, daher wird nichts übernommen. Nennen Sie die Typen in der Regel oder kennzeichnen Sie die Sicherheitstypen in den Einstellungen."
+        "detail": "Die Regel der abgeleiteten Anleitung nennt keine Modultypen, und die Konfiguration kennzeichnet keinen als Sicherheitsinhalt, daher wird nichts übernommen. Nennen Sie die Typen in der Regel oder kennzeichnen Sie die Sicherheitstypen in den Einstellungen."
       },
       "safety-module-excluded": {
         "title": "Sicherheitsmodul ausgelassen",
-        "detail": "Ein Sicherheitsmodul des Quellhandbuchs fehlt im abgeleiteten Handbuch: Seine Regel schließt es aus oder übernimmt seinen Typ nicht. Prüfen Sie, ob das so gewollt ist."
+        "detail": "Ein Sicherheitsmodul der Quellanleitung fehlt in der abgeleiteten Anleitung: Ihre Regel schließt es aus oder übernimmt seinen Typ nicht. Prüfen Sie, ob das so gewollt ist."
       },
       "safety-notice-excluded": {
         "title": "Sicherheitshinweis ausgelassen",
-        "detail": "Ein Sicherheitshinweis des Quellhandbuchs fehlt im abgeleiteten Handbuch: Seine Regel lässt jedes Modul aus, das ihn enthält, durchsucht deren Typ nicht oder übernimmt seine Gefahrenstufe nicht. Prüfen Sie, ob das so gewollt ist."
+        "detail": "Ein Sicherheitshinweis der Quellanleitung fehlt in der abgeleiteten Anleitung: Die Regel lässt jedes Modul aus, das ihn enthält, durchsucht dessen Typ nicht oder übernimmt seine Gefahrenstufe nicht. Prüfen Sie, ob das so gewollt ist."
       },
       "unknown-excluded-module": {
         "title": "Ausgeschlossenes Modul nicht in der Quelle",
-        "detail": "Die Regel des abgeleiteten Handbuchs schließt ein Modul aus, das sein Quellhandbuch nicht enthält. Entfernen Sie es aus der Regel."
+        "detail": "Die Regel der abgeleiteten Anleitung schließt ein Modul aus, das ihre Quellanleitung nicht enthält. Entfernen Sie es aus der Regel."
       },
       "empty-derived-manual": {
         "title": "Nichts übernommen",
-        "detail": "Die Regel des abgeleiteten Handbuchs übernimmt kein Modul aus seinem Quellhandbuch. Es enthält daher nur seine eigenen Module davor und danach."
+        "detail": "Die Regel der abgeleiteten Anleitung übernimmt kein Modul aus ihrer Quellanleitung. Sie enthält daher nur ihre eigenen Module davor und danach."
       },
       "derived-audience-wider": {
         "title": "Breitere Zielgruppe als die Quelle",
-        "detail": "Das abgeleitete Handbuch ist für eine breitere Zielgruppe als sein Quellhandbuch, daher wird nichts daraus übernommen: Es enthält nur seine eigenen Module davor und danach. Geben Sie ihm die Zielgruppe der Quelle oder eine engere, oder übernehmen Sie aus einem Handbuch für seine Zielgruppe."
+        "detail": "Die abgeleitete Anleitung ist für eine breitere Zielgruppe als ihre Quellanleitung, daher wird nichts daraus übernommen: Sie enthält nur ihre eigenen Module davor und danach. Geben Sie ihr die Zielgruppe der Quelle oder eine engere, oder übernehmen Sie aus einer Anleitung für ihre Zielgruppe."
       },
       "missing-manufacturer": {
         "title": "Herstellerangaben fehlen",
-        "detail": "Das Projekt hat keine Herstellerangaben, das Handbuch würde also ohne Impressum veröffentlicht. Ergänzen Sie sie in den Projekteinstellungen unter Hersteller."
+        "detail": "Das Projekt hat keine Herstellerangaben, die Anleitung würde also ohne Impressum veröffentlicht. Ergänzen Sie sie in den Projekteinstellungen unter Hersteller."
       },
       "missing-source-title": {
         "title": "Titel ohne Text in der Ausgangssprache",
-        "detail": "Der Titel des Handbuchs oder einer Gruppe ist je Sprache geschrieben, aber ohne Fassung in der Ausgangssprache, auf die alle anderen Sprachen zurückgreifen. Schreiben Sie ihn unter Handbücher."
+        "detail": "Der Titel der Anleitung oder einer Gruppe ist je Sprache geschrieben, aber ohne Fassung in der Ausgangssprache, auf die alle anderen Sprachen zurückgreifen. Schreiben Sie ihn unter Anleitungen."
       },
       "page-design-template-error": {
         "title": "Vorlage der Seitengestaltung fehlerhaft",
@@ -4752,7 +4754,7 @@
     "appearsRefused": "Korrigieren Sie die Bedingung, um die Builds mit diesem Block zu sehen.",
     "appearsFailed": "Die Builds konnten nicht gezählt werden.",
     "noBuilds": "In keinem Build",
-    "noBuildsHint": "Kein Handbuch führt eine Variante, für die diese Bedingung gilt.",
+    "noBuildsHint": "Keine Anleitung führt eine Variante, für die diese Bedingung gilt.",
     "chooseFirst": "Wählen Sie mindestens einen Wert oder geben Sie eine Bedingung ein.",
     "blockedUnreadable": "Die Bedingung ist nicht lesbar.",
     "blockedVersion": "Eine Version besteht aus Zahlen mit Punkten, z. B. 2.3.",
@@ -4837,7 +4839,7 @@
     "scope": {
       "label": "Was in der Vorschau zeigen",
       "module": "Dieses Modul",
-      "manual": "Ganzes Handbuch"
+      "manual": "Ganze Anleitung"
     },
     "language": "Sprache",
     "variant": "Variante",
@@ -4847,7 +4849,7 @@
       "pdf": "PDF"
     },
     "backToEditor": "Zurück zum Editor",
-    "backToManual": "Zurück zum Handbuch",
+    "backToManual": "Zurück zur Anleitung",
     "frame": "Vorschau von {title}",
     "noAccess": "Sie dürfen diesen Inhalt nicht lesen.",
     "loadFailed": "Die Vorschau konnte nicht geladen werden",
@@ -4855,11 +4857,11 @@
     "notFoundDescription": "Dieses Modul gibt es nicht, oder nicht in einer Sprache, die Sie lesen dürfen.",
     "empty": {
       "title": "Nichts für die Vorschau",
-      "description": "Öffnen Sie die Vorschau von einem Modul im Editor oder von einem Handbuch im Handbuch-Editor."
+      "description": "Öffnen Sie die Vorschau von einem Modul im Editor oder von einer Anleitung im Anleitungs-Editor."
     },
     "noVariants": {
       "title": "Keine Varianten für die Vorschau",
-      "description": "Dieses Handbuch ist noch in keiner Variante veröffentlicht und kann daher nicht erstellt werden."
+      "description": "Diese Anleitung ist noch in keiner Variante veröffentlicht und kann daher nicht erstellt werden."
     },
     "hidden": {
       "region": "Für diese Variante ausgeblendet",
@@ -4883,11 +4885,11 @@
     },
     "pdf": {
       "title": "PDF von „{title}“",
-      "text": "Erstellt für {variant} auf {language}, aus dem ganzen Handbuch. Es öffnet sich in einem neuen Tab.",
+      "text": "Erstellt für {variant} auf {language}, aus der ganzen Anleitung. Es öffnet sich in einem neuen Tab.",
       "noManual": "Kein PDF für dieses Modul",
-      "noManualText": "Ein PDF wird für ein Handbuch erstellt; dieses Modul ist in keinem, das Sie lesen dürfen.",
+      "noManualText": "Ein PDF wird für eine Anleitung erstellt; dieses Modul ist in keiner, die Sie lesen dürfen.",
       "open": "PDF erstellen und öffnen",
-      "blocked": "Ein PDF braucht ein Handbuch mit einer Variante.",
+      "blocked": "Ein PDF braucht eine Anleitung mit einer Variante.",
       "failed": "Das PDF von „{title}“ konnte nicht erstellt werden"
     },
     "unsaved": "Ungespeicherte Änderungen einbeziehen",
@@ -5199,8 +5201,8 @@
       "lockBreak": "{by} hat {count, plural, one {eine Ihrer Sperren} other {# Ihrer Sperren}} in „{title}“ aufgehoben",
       "imported": "Ihr Übersetzungsimport ist abgeschlossen",
       "importFailed": "Ihr Übersetzungsimport ist fehlgeschlagen",
-      "published": "Veröffentlichung {release} ist erschienen, mit {count, plural, one {# Handbuch, das Sie lesen} other {# Handbüchern, die Sie lesen}}",
-      "publishedUnnamed": "Eine Veröffentlichung ist erschienen, mit {count, plural, one {# Handbuch, das Sie lesen} other {# Handbüchern, die Sie lesen}}",
+      "published": "Veröffentlichung {release} ist erschienen, mit {count, plural, one {# Anleitung, die Sie lesen} other {# Anleitungen, die Sie lesen}}",
+      "publishedUnnamed": "Eine Veröffentlichung ist erschienen, mit {count, plural, one {# Anleitung, die Sie lesen} other {# Anleitungen, die Sie lesen}}",
       "outputFailed": "Ein PDF der Veröffentlichung {release} konnte nicht erstellt werden",
       "outputFailedUnnamed": "Ein PDF einer Veröffentlichung konnte nicht erstellt werden",
       "outputRecovered": "Ein PDF der Veröffentlichung {release} ist doch noch erstellt worden",
@@ -5233,7 +5235,7 @@
     "done": "Als veraltet gekennzeichnet. Das gilt, sobald die Überarbeitung zusammengeführt ist.",
     "undone": "Kennzeichnung als veraltet zurückgenommen.",
     "notSource": "Ein Modul wird in seiner Ausgangssprache als veraltet gekennzeichnet.",
-    "usedIn": "{count, plural, one {Dieses Handbuch enthält das veraltete Modul noch: Es bleibt darin, bis jemand es entfernt.} other {Diese # Handbücher enthalten das veraltete Modul noch: Es bleibt darin, bis jemand es entfernt.}}",
+    "usedIn": "{count, plural, one {Diese Anleitung enthält das veraltete Modul noch: Es bleibt darin, bis jemand es entfernt.} other {Diese # Anleitungen enthalten das veraltete Modul noch: Es bleibt darin, bis jemand es entfernt.}}",
     "notice": {
       "title": "Veraltet",
       "replacedBy": "Ersetzt durch"
@@ -5241,8 +5243,8 @@
     "filter": "Veraltete anzeigen",
     "dialog": {
       "title": "„{title}“ als veraltet kennzeichnen",
-      "moduleDescription": "Das Modul bleibt lesbar und bleibt in den Handbüchern, die es enthalten; sie werden gewarnt. Es gilt als veraltet, sobald diese Überarbeitung zusammengeführt ist.",
-      "manualDescription": "Das Handbuch bleibt lesbar und kann weiter freigegeben werden. Es gilt als veraltet, sobald diese Überarbeitung zusammengeführt ist.",
+      "moduleDescription": "Das Modul bleibt lesbar und bleibt in den Anleitungen, die es enthalten; sie werden gewarnt. Es gilt als veraltet, sobald diese Überarbeitung zusammengeführt ist.",
+      "manualDescription": "Die Anleitung bleibt lesbar und kann weiter freigegeben werden. Sie gilt als veraltet, sobald diese Überarbeitung zusammengeführt ist.",
       "reason": "Grund",
       "reasonHint": "Eine Zeile, angezeigt überall, wo es als veraltet erscheint.",
       "reasonMissing": "Geben Sie einen Grund an.",
@@ -5338,7 +5340,7 @@
       "title": "Änderungen",
       "label": "Änderungen",
       "since": "Seit {version}, der vorigen Veröffentlichung dieses Produkts.",
-      "first": "Die erste Veröffentlichung dieses Produkts: Jedes Handbuch ist neu.",
+      "first": "Die erste Veröffentlichung dieses Produkts: Jede Anleitung ist neu.",
       "modules": "{count, plural, one {# Modul} other {# Module}}",
       "openModule": "{module} wie veröffentlicht öffnen",
       "kind": {
@@ -5348,7 +5350,7 @@
       },
       "empty": {
         "title": "Nichts geändert",
-        "description": "Kein Handbuch, das Sie lesen dürfen, hat sich seit der vorigen Veröffentlichung geändert."
+        "description": "Keine Anleitung, die Sie lesen dürfen, hat sich seit der vorigen Veröffentlichung geändert."
       }
     },
     "files": {
@@ -5395,7 +5397,7 @@
       },
       "empty": {
         "title": "Keine Dateien",
-        "description": "Diese Veröffentlichung hat keine Dateien: An ihrem Stand gibt es keine Handbücher, oder keines, das Sie ganz lesen dürfen."
+        "description": "Diese Veröffentlichung hat keine Dateien: An ihrem Stand gibt es keine Anleitungen, oder keine, die Sie ganz lesen dürfen."
       },
       "progressLabel": "Fertige Dateien",
       "preparing": {
@@ -5480,13 +5482,13 @@
         "warningOne": "Warnung",
         "fix": "Beheben",
         "all": "Alle {count, number} Prüfungen ansehen",
-        "noManuals": "Es gibt keine Handbücher zum Veröffentlichen.",
+        "noManuals": "Es gibt keine Anleitungen zum Veröffentlichen.",
         "confirm": "Trotz {count, plural, one {# Warnung} other {# Warnungen}} veröffentlichen"
       },
       "outputs": {
-        "intro": "Jedes Handbuch wird als PDF in jeder seiner Varianten und jeder konfigurierten Sprache erzeugt. Ein Handbuch, das sich nicht ändert, behält die Datei der vorigen Veröffentlichung.",
+        "intro": "Jede Anleitung wird als PDF in jeder ihrer Varianten und jeder konfigurierten Sprache erzeugt. Eine Anleitung, die sich nicht ändert, behält die Datei der vorigen Veröffentlichung.",
         "languages": "Sprachen",
-        "manuals": "Handbücher",
+        "manuals": "Anleitungen",
         "source": "Ausgangssprache",
         "complete": "Vollständig",
         "fallsBack": "{count, plural, one {# Modul fällt} other {# Module fallen}} auf {language} zurück",
@@ -5504,7 +5506,7 @@
       },
       "major": {
         "label": "Wesentliche Änderung",
-        "hint": "Wer die geänderten Handbücher liest, wird benachrichtigt."
+        "hint": "Wer die geänderten Anleitungen liest, wird benachrichtigt."
       },
       "blocked": {
         "busy": "Die Veröffentlichung wird erstellt.",
@@ -5561,7 +5563,7 @@
       "title": "Downloads",
       "kind": {
         "attachment": "Anhang",
-        "manual": "Handbuch (PDF)"
+        "manual": "Anleitung (PDF)"
       },
       "state": {
         "current": "Aktuell",
@@ -5589,7 +5591,7 @@
       "versionName": "{name} ({version})",
       "empty": {
         "title": "Noch keine Downloads",
-        "description": "In Modulen angehängte Dateien und die PDFs der Handbücher stehen hier, sobald eine Veröffentlichung sie enthält.",
+        "description": "In Modulen angehängte Dateien und die PDFs der Anleitungen stehen hier, sobald eine Veröffentlichung sie enthält.",
         "filteredTitle": "Keine passenden Downloads",
         "filteredDescription": "Kein Download hat dieses Produkt, diese Sprache, diese Art oder diese Wörter. Wählen Sie einen anderen Filter."
       },
@@ -5641,7 +5643,7 @@
     "qrFailed": "Der QR-Code konnte nicht geladen werden."
   },
   "reports": {
-    "intro": "Wie vollständig jedes Handbuch in jeder Sprache ist und wo jedes Modul verwendet wird, auch welche Module in keinem Handbuch mehr vorkommen.",
+    "intro": "Wie vollständig jede Anleitung in jeder Sprache ist und wo jedes Modul verwendet wird, auch welche Module in keiner Anleitung mehr vorkommen.",
     "sections": "Berichte",
     "tabs": {
       "translations": "Übersetzungen",
@@ -5649,8 +5651,8 @@
     },
     "filter": {
       "label": "Filter",
-      "manual": "Handbuch",
-      "anyManual": "Alle Handbücher",
+      "manual": "Anleitung",
+      "anyManual": "Alle Anleitungen",
       "language": "Sprache",
       "anyLanguage": "Alle Sprachen",
       "type": "Typ",
@@ -5663,7 +5665,7 @@
     "translations": {
       "table": {
         "label": "Übersetzungsstand",
-        "manual": "Handbuch",
+        "manual": "Anleitung",
         "language": "Sprache",
         "upToDate": "Aktuell",
         "status": "Stand",
@@ -5677,10 +5679,10 @@
       "open": "In Übersetzungen öffnen",
       "openLabel": "{manual} auf {language} in Übersetzungen öffnen",
       "empty": {
-        "title": "Keine Handbücher für den Bericht",
-        "description": "Hier gibt es keine Handbücher, die Sie sehen dürfen, oder keine Zielsprachen.",
+        "title": "Keine Anleitungen für den Bericht",
+        "description": "Hier gibt es keine Anleitungen, die Sie sehen dürfen, oder keine Zielsprachen.",
         "filteredTitle": "Nichts passt zu diesen Filtern",
-        "filteredDescription": "Wählen Sie ein anderes Handbuch oder eine andere Sprache, oder setzen Sie die Filter zurück."
+        "filteredDescription": "Wählen Sie eine andere Anleitung oder eine andere Sprache, oder setzen Sie die Filter zurück."
       }
     },
     "usage": {
@@ -5688,7 +5690,7 @@
         "label": "Modulverwendung",
         "module": "Modul",
         "type": "Typ",
-        "manuals": "Handbücher",
+        "manuals": "Anleitungen",
         "modules": "Module",
         "usedIn": "Verwendet in"
       },
@@ -5706,8 +5708,8 @@
       },
       "unused": "Unbenutzt",
       "throughReference": "(über einen Modulverweis)",
-      "moreManuals": "und {count, plural, one {# weiteres Handbuch} other {# weitere Handbücher}}",
-      "inNoManual": "In keinem Handbuch",
+      "moreManuals": "und {count, plural, one {# weitere Anleitung} other {# weitere Anleitungen}}",
+      "inNoManual": "In keiner Anleitung",
       "referredBy": "Verwiesen von {modules}{more, plural, =0 {} one { und # weiteren Modul} other { und # weiteren Modulen}}",
       "empty": {
         "title": "Keine Module",
@@ -5715,7 +5717,7 @@
         "filteredTitle": "Nichts passt zu diesen Filtern",
         "filteredDescription": "Wählen Sie einen anderen Typ oder eine andere Ansicht, oder setzen Sie die Filter zurück.",
         "unusedTitle": "Alle Module werden verwendet",
-        "unusedDescription": "Jedes Modul, das Sie sehen dürfen, ist in einem Handbuch, direkt oder über einen Modulverweis."
+        "unusedDescription": "Jedes Modul, das Sie sehen dürfen, ist in einer Anleitung, direkt oder über einen Modulverweis."
       }
     }
   },
@@ -5737,11 +5739,11 @@
       "subject": "Was gesendet wird",
       "selection": "{count, plural, =0 {Ausgewählte Module} one {Das ausgewählte Modul} other {Die # ausgewählten Module}}",
       "selectionDesigns": "{count, plural, one {Die gewählte Seitengestaltung} other {Die # gewählten Seitengestaltungen}}",
-      "selectionManuals": "{count, plural, one {Die Texte des gewählten Handbuchs} other {Die Texte der # gewählten Handbücher}}",
+      "selectionManuals": "{count, plural, one {Die Texte der gewählten Anleitung} other {Die Texte der # gewählten Anleitungen}}",
       "selectionMixed": "{count, plural, one {Die gewählte Zeile} other {Die # gewählten Zeilen}}",
       "selectionHint": "Wählen Sie im Tab „Stand“ Zeilen aus, um nur diese zu senden.",
-      "manual": "Ein Handbuch",
-      "chooseManual": "Handbuch wählen",
+      "manual": "Eine Anleitung",
+      "chooseManual": "Anleitung wählen",
       "folder": "Ein Ordner",
       "chooseFolder": "Ordner wählen",
       "languages": "Nach",
@@ -5758,12 +5760,12 @@
       "confirm": "Exportieren und herunterladen",
       "done": "{units, plural, one {# Block} other {# Blöcke}} nach {languages} gesendet. Die Datei wird heruntergeladen.",
       "downloadFailed": "Der Export nach {languages} wurde erstellt, aber seine Datei konnte nicht heruntergeladen werden. Laden Sie sie unter „Aufträge“ erneut herunter.",
-      "mixedHint": "Seitengestaltungen, Texte von Handbüchern, die Projekt-Bezeichnungen und Module gehen in getrennte Exporte: Wählen Sie Zeilen einer Art.",
+      "mixedHint": "Seitengestaltungen, Texte von Anleitungen, die Projekt-Bezeichnungen und Module gehen in getrennte Exporte: Wählen Sie Zeilen einer Art.",
       "selectionConfig": "Die Projekt-Bezeichnungen"
     },
     "filter": {
       "label": "Filter",
-      "manual": "Handbuch",
+      "manual": "Anleitung",
       "folder": "Ordner",
       "language": "Sprache",
       "state": "Anzeigen",
@@ -5786,7 +5788,7 @@
     "selection": {
       "count": "{count, plural, =0 {Wählen Sie Zeilen, um nur diese zu exportieren} one {# Modul ausgewählt} other {# Module ausgewählt}}",
       "countDesigns": "{count, plural, one {# Seitengestaltung gewählt} other {# Seitengestaltungen gewählt}}",
-      "countManuals": "{count, plural, one {Texte von # Handbuch gewählt} other {Texte von # Handbüchern gewählt}}",
+      "countManuals": "{count, plural, one {Texte von # Anleitung gewählt} other {Texte von # Anleitungen gewählt}}",
       "countMixed": "{count, plural, one {# Zeile} other {# Zeilen}} verschiedener Arten gewählt",
       "clear": "Auswahl aufheben",
       "page": "Alle Module dieser Seite auswählen",
@@ -5800,7 +5802,7 @@
       "notShown": "Mit diesem Filter nicht angezeigt",
       "cellLabel": "{title} auf {language}: {state}",
       "design": "Seitengestaltung",
-      "manual": "Text des Handbuchs",
+      "manual": "Text der Anleitung",
       "configTitle": "Projekt-Bezeichnungen",
       "configHint": "Modularten, Zielgruppen, Facetten, Varianten und weitere Bezeichnungen der Projekteinstellungen"
     },
@@ -5808,7 +5810,7 @@
       "title": "Keine Module zu übersetzen",
       "description": "Hier gibt es keine Quellmodule, die Sie sehen dürfen, oder keine Zielsprachen.",
       "filteredTitle": "Nichts passt zu diesen Filtern",
-      "filteredDescription": "Wählen Sie ein anderes Handbuch, einen anderen Ordner, eine andere Sprache oder einen anderen Stand, oder setzen Sie die Filter zurück."
+      "filteredDescription": "Wählen Sie eine andere Anleitung, einen anderen Ordner, eine andere Sprache oder einen anderen Stand, oder setzen Sie die Filter zurück."
     },
     "panel": {
       "label": "Übersetzungsdetails",
@@ -5821,8 +5823,8 @@
       "nothingOpen": "Hier gibt es nichts zu übersetzen.",
       "noTranslation": "Noch nicht übersetzt",
       "openDesign": "Seitengestaltung öffnen",
-      "openManual": "Handbuch öffnen",
-      "coverDefault": "Titelbild des Handbuchs",
+      "openManual": "Anleitung öffnen",
+      "coverDefault": "Titelbild der Anleitung",
       "coverVariant": "Titelbild von {variant}",
       "openSettings": "Projekteinstellungen öffnen",
       "manualTitle": "Titel",
@@ -5863,7 +5865,7 @@
         "folder": "Delta-Export · Ordner {name}",
         "modules": "Delta-Export · {count, plural, one {# Modul} other {# Module}}",
         "designs": "Delta-Export · {count, plural, one {# Seitengestaltung} other {# Seitengestaltungen}}",
-        "manuals": "Delta-Export · Texte von {count, plural, one {# Handbuch} other {# Handbüchern}}",
+        "manuals": "Delta-Export · Texte von {count, plural, one {# Anleitung} other {# Anleitungen}}",
         "config": "Delta-Export · Projekt-Bezeichnungen"
       },
       "package": "COTI-Paket",
@@ -6020,7 +6022,7 @@
   "designInUse": {
     "label": "Gestaltung: {name}",
     "labelWith": "Gestaltung: {name}, {source}",
-    "own": "eigene dieses Handbuchs",
+    "own": "eigene dieser Anleitung",
     "project": "Projektstandard",
     "builtin": "Eingebaute Gestaltung",
     "missing": "nicht gefunden, daher wird die eingebaute Gestaltung verwendet"
@@ -6117,7 +6119,7 @@
       "anywhere": "Überall",
       "text": "Text schreiben",
       "blocks": "Blöcke",
-      "manuals": "Gliederung eines Handbuchs",
+      "manuals": "Gliederung einer Anleitung",
       "review": "Änderungen prüfen"
     },
     "palette": "Suchpalette öffnen oder schließen",
@@ -6176,7 +6178,7 @@
     "title": "Tastenkürzel",
     "description": "Alle Tastenkürzel des Editors, nach dem Ort, an dem sie wirken.",
     "or": "oder",
-    "inGuide": "Tastenkürzel im Benutzerhandbuch"
+    "inGuide": "Tastenkürzel in der Benutzeranleitung"
   },
   "help": {
     "menu": {
@@ -6191,7 +6193,7 @@
   "tips": {
     "newModule": {
       "title": "Ein Modul anlegen",
-      "body": "Ein Modul ist ein Thema, einmal geschrieben und in jedem Handbuch verwendbar. Neues Modul fragt nach Titel und Typ; Sie schreiben es in einer eigenen Überarbeitung."
+      "body": "Ein Modul ist ein Thema, einmal geschrieben und in jeder Anleitung verwendbar. Neues Modul fragt nach Titel und Typ; Sie schreiben es in einer eigenen Überarbeitung."
     },
     "preview": {
       "title": "So, wie es gedruckt wird",
@@ -6225,7 +6227,7 @@
     },
     "search": {
       "title": "Suche",
-      "body": "Drücken Sie {keys}, um überall ein Modul, ein Handbuch oder eine Seite des Benutzerhandbuchs zu finden, und /, um die Liste auf dem Bildschirm zu durchsuchen."
+      "body": "Drücken Sie {keys}, um überall ein Modul, eine Anleitung oder eine Seite der Benutzeranleitung zu finden, und /, um die Liste auf dem Bildschirm zu durchsuchen."
     }
   },
   "maintenance": {
@@ -6257,5 +6259,35 @@
     "otherLanguages": "Weitere Sprachen: {given} von {total} übersetzt",
     "sourceRequired": "Der Text auf {language} ist erforderlich.",
     "fallbackHint": "Ein leeres Feld übernimmt den Text auf {language}."
+  },
+  "sandbox": {
+    "banner": {
+      "label": "Sandbox",
+      "text": "Eine private Sandbox: Nur Sie sehen sie, und die Sandbox wird nach der Sitzung gelöscht.",
+      "timeLeft": "Noch {minutes} Min.",
+      "ended": "Die Sitzung ist abgelaufen"
+    },
+    "uploadsOff": "In dieser Sandbox sind Uploads ausgeschaltet.",
+    "uploadsOffPickImage": "In dieser Sandbox sind Uploads ausgeschaltet: Wählen Sie ein Bild aus der Medienbibliothek.",
+    "uploadsOffPickFile": "In dieser Sandbox sind Uploads ausgeschaltet: Wählen Sie eine Datei aus der Liste.",
+    "uploadsOffFonts": "In dieser Sandbox sind Uploads ausgeschaltet: Wählen Sie eine der aufgeführten Schriften.",
+    "templatesOff": "Vorlagen lassen sich in dieser Sandbox nicht ändern: Sie sehen sie so, wie sie sind.",
+    "importsOff": {
+      "title": "In dieser Sandbox gibt es keine Importe",
+      "description": "Eine öffentliche Sandbox nimmt keine Dateien von außen an. Schreiben und ändern Sie die Inhalte stattdessen im Editor.",
+      "translations": "Eine öffentliche Sandbox nimmt keine Dateien von außen an, auch keine Übersetzungen. Übersetzen Sie stattdessen im Editor."
+    },
+    "usersOff": "In dieser Sandbox können Sie keine Benutzer hinzufügen und keine Einladungen oder Zurücksetzen-Links erstellen: Die Sandbox gehört nur Ihnen.",
+    "serviceAccountsOff": "In dieser Sandbox gibt es keine Service-Accounts: Nichts von außen darf die Sandbox erreichen.",
+    "tokensOff": "In dieser Sandbox können Sie keine Tokens ausstellen: Nichts von außen darf die Sandbox erreichen.",
+    "webhooksOff": {
+      "title": "Webhooks sind in dieser Sandbox ausgeschaltet",
+      "description": "Eine öffentliche Sandbox sendet nichts nach außen: keine Webhooks, keine E-Mails, keine Aufrufe anderer Dienste."
+    },
+    "backupsOff": {
+      "title": "Backups sind in dieser Sandbox ausgeschaltet",
+      "description": "Die Sandbox wird nach der Sitzung gelöscht, es gibt also nichts aufzubewahren."
+    },
+    "mailOff": "E-Mail ist in dieser Sandbox ausgeschaltet: Nachrichten werden verworfen, keine wird gesendet."
   }
 }

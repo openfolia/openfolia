@@ -21,14 +21,14 @@ und einem Playground sowie das OpenAPI-Dokument zum Herunterladen.
 | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | `/config`, `/refs`                                                                   | Die Projektkonfiguration (Sprachen, Modultypen, Zielgruppen, Variantenmerkmale) und die Refs.                              |
 | `/modules`, `/modules/{lang}/{id}`                                                   | Einzelne Module, ihre Historie und Vergleiche.                                                                             |
-| `/manuals`, `/manuals/{id}`, `/manuals/{id}/variants/{variant}/{lang}`               | Handbücher und das aufgelöste Handbuch: eine Variante und Sprache, die Module in Lesereihenfolge.                          |
+| `/manuals`, `/manuals/{id}`, `/manuals/{id}/variants/{variant}/{lang}`               | Anleitungen und die aufgelöste Anleitung: eine Variante und Sprache, die Module in Lesereihenfolge.                        |
 | `…/html`, `…/pdf`, `/modules/{lang}/{id}/preview`                                    | Die Darstellung des Servers, als HTML-Seite oder PDF.                                                                      |
 | `/assets/{hash}`, `/symbols/{id}`                                                    | Bilder und Anhänge über ihren Hash, Sicherheitssymbole.                                                                    |
 | `/releases`, `/releases/{id}`, `/releases/{id}/changes`, `/changelog`                | Veröffentlichungen, was jede geändert hat, das Änderungsprotokoll.                                                         |
 | `/releases/{id}/outputs`, `…/outputs/archive`, `…/iirds-packages`, `…/dita-packages` | Die Dateien einer Veröffentlichung und ihre [iiRDS](/de/guide/releases/iirds)- und [DITA](/de/guide/releases/dita)-Pakete. |
 | `/search`, `/chunks`, `/changes`                                                     | Suche, Chunks für das Retrieval, der Änderungs-Feed.                                                                       |
 | `/terms`, `/terms/export`                                                            | Die Terminologie.                                                                                                          |
-| `/d/…`, `/stable-addresses`                                                          | Die stabilen Adressen der Handbücher und ihre QR-Codes.                                                                    |
+| `/d/…`, `/stable-addresses`                                                          | Die stabilen Adressen der Anleitungen und ihre QR-Codes.                                                                   |
 
 Lesen Sie `GET /config`, statt Sprachen, Modultypen oder Varianten anzunehmen: Sie sind
 Konfiguration.
@@ -48,7 +48,7 @@ Host des Editors (`https://docs.example.com/api`):
 
    Jede Veröffentlichung hat ihren Tag in `attributes.tag`.
 
-2. Lesen Sie ein Handbuch genau so, wie es veröffentlicht wurde, indem Sie diesen Tag als `ref`
+2. Lesen Sie eine Anleitung genau so, wie sie veröffentlicht wurde, indem Sie diesen Tag als `ref`
    übergeben:
 
    ```sh
@@ -57,10 +57,10 @@ Host des Editors (`https://docs.example.com/api`):
      -H 'Accept: application/vnd.api+json'
    ```
 
-   Das Handbuch nennt die Varianten, die es veröffentlicht, jede als Slug. Verwenden Sie den Slug
+   Die Anleitung nennt die Varianten, die sie veröffentlicht, jede als Slug. Verwenden Sie den Slug
    genau so, wie er angegeben ist.
 
-3. Lösen Sie es für eine Variante und eine Sprache auf:
+3. Lösen Sie die Anleitung für eine Variante und eine Sprache auf:
    `GET /manuals/operating/variants/{variant}/en?ref=<tag>`.
 
 Halten Sie das Token wie oben in einer Umgebungsvariable oder im Secret-Speicher Ihrer Plattform,

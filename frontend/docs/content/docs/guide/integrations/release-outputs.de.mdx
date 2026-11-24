@@ -4,9 +4,9 @@ description: 'Die PDFs einer Veröffentlichung einzeln oder als ZIP herunterlade
 articleId: 'guide.integrations.release-outputs'
 ---
 
-Eine Veröffentlichung erstellt im Hintergrund ein PDF je Handbuch, Variante und Sprache. Ein Portal
-oder eine App lädt diese Dateien herunter oder verlinkt auf die dauerhafte Adresse eines
-Handbuchs, die immer die neueste Veröffentlichung öffnet. Die Routen gehören zur
+Eine Veröffentlichung erstellt im Hintergrund ein PDF je Anleitung, Variante und Sprache. Ein Portal
+oder eine App lädt diese Dateien herunter oder verlinkt auf die dauerhafte Adresse einer
+Anleitung, die immer die neueste Veröffentlichung öffnet. Die Routen gehören zur
 [Delivery API](/de/api/delivery). Was der Editor davon zeigt, steht unter
 [Die Dateien herunterladen](/de/guide/releases/download) und
 [Dauerhafte Adressen](/de/guide/releases/stable-addresses).
@@ -36,27 +36,27 @@ Handbuchs, die immer die neueste Veröffentlichung öffnet. Die Routen gehören 
    Das Archiv enthält nur die PDFs, nie ein Offline-Paket.
 
 Die Bytes einer Datei ändern sich nie: Sie ist `private, max-age=31536000, immutable`, mit ihrem
-Hash als ETag. Ein Leser sieht eine Datei nur, wenn eine seiner Rollen ihr ganzes Handbuch abdeckt
-(seine Zielgruppe, die Sprache und die Ausgangssprache, jeden Modultyp und jede Facette); alle
+Hash als ETag. Ein Leser sieht eine Datei nur, wenn eine seiner Rollen ihre ganze Anleitung abdeckt
+(deren Zielgruppe, die Sprache und die Ausgangssprache, jeden Modultyp und jede Facette); alle
 anderen erhalten 404, wie für eine fehlende. Ein Leser mit engerem Leseumfang liest stattdessen die
-PDF-Route des Handbuchs, für seinen Leseumfang erstellt. Die Dateien einer zurückgezogenen
+PDF-Route der Anleitung, für seinen Leseumfang erstellt. Die Dateien einer zurückgezogenen
 Veröffentlichung bleiben lesbar, mit `meta.withdrawn: true`.
 
 ## Offline-Pakete
 
 Eine Veröffentlichung erhält außerdem ein Offline-Paket je konfigurierter Sprache und
-Zielgruppenstufe, bis zur höchsten Stufe, die eines ihrer Handbücher hat: ein ZIP, das sich ohne
+Zielgruppenstufe, bis zur höchsten Stufe, die eine ihrer Anleitungen hat: ein ZIP, das sich ohne
 Netzwerk aus dem Dateisystem öffnen lässt, am Computer oder auf dem Telefon. Es wird erstellt,
 sobald die PDFs der Veröffentlichung fertig sind, und mit ihren Dateien gelistet
 (`filter[kind]=offline-package`): `kind` `offline-package`, seine Stufe in `audience`, `manual` und
 `variant` null. Seine Dateiroute antwortet mit `application/zip`, benannt
 `offline_<audience>_<lang>_<revision>.zip`.
 
-Entpackt listet `index.html` die Handbücher, die diese Stufe liest, jede Variante als Seite neben
+Entpackt listet `index.html` die Anleitungen, die diese Stufe liest, jede Variante als Seite neben
 ihrem PDF, mit einer Suche über Titel und Überschriften. Ein Paket enthält nur, was seine Stufe
-liest: Ein Handbuch, Modul, Bild oder eine angehängte Datei darüber ist nicht darin.
+liest: Eine Anleitung, ein Modul, ein Bild oder eine angehängte Datei darüber ist nicht darin.
 `manifest.json` nennt Veröffentlichung, Produkt, Produktversion, Sprache und Stufe sowie jede Datei
-mit ihrer Größe und ihrem SHA-256; ein Handbuch, das sich am Tag der Veröffentlichung nicht lesen
+mit ihrer Größe und ihrem SHA-256; eine Anleitung, die sich am Tag der Veröffentlichung nicht lesen
 ließ, steht unter `leftOut`. Ein SVG-Bild oder -Symbol wird entschärft geschrieben, nur seine
 Zeichnung: kein Skript, kein Ereignis-Handler, keine eingebettete Seite, keine
 Animation (ein Stylesheet nur, wenn es nichts außerhalb lädt) und kein Verweis nach außen, sodass es auch einzeln geöffnet nichts ausführt. Eines, das
@@ -75,7 +75,7 @@ Die iiRDS- und DITA-Pakete einer Veröffentlichung werden auf Anfrage erstellt: 
 
 ## Auf die neueste Veröffentlichung verlinken
 
-Eine dauerhafte Adresse ist `/d/<product>/<manual>/<variant>/<lang>`: Sie öffnet das Handbuch als
+Eine dauerhafte Adresse ist `/d/<product>/<manual>/<variant>/<lang>`: Sie öffnet die Anleitung als
 Webseite in der neuesten nicht zurückgezogenen Veröffentlichung des Produkts. `…/pdf` ist das PDF
 dieser Veröffentlichung, `…/qr.svg` oder `…/qr.png` ein QR-Code der Adresse. `<lang>@<revision>`
 legt eine Veröffentlichung fest.
@@ -105,5 +105,5 @@ nach, und eine neue Veröffentlichung oder eine Rücknahme erreicht die Leser so
 Abfrageparameter wie `utm_*` werden dort übergangen (`CCMS_DELIVERY_IGNORED_QUERY`); jeder andere
 ist 400.
 
-Eine statische Website der veröffentlichten Handbücher, aus der API erstellt, ist das
+Eine statische Website der veröffentlichten Anleitungen, aus der API erstellt, ist das
 [Portal](/de/guide/portal).

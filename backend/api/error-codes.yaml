@@ -668,6 +668,12 @@ role-held-by-service-account:
 role-in-use:
   status: 409
   when: The role "…" is held by … user(s) or service account(s); take it from them first.
+sandbox-limit-reached:
+  status: 422
+  when: 'A public sandbox has reached one of its caps (`meta.limit`, at most `meta.max`): a module’s size, a comment’s length, the revisions, modules or manuals it makes, or the releases it cuts in an hour.'
+sandbox-not-allowed:
+  status: 403
+  when: 'A public sandbox never does this (`meta.refused`): add users, service accounts, tokens or invitations, take uploads or imports, change a template, or send webhooks, email or backups.'
 search-busy:
   status: 503
   when: Too many searches at once on this server; try again.

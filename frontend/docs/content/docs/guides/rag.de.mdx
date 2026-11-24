@@ -11,7 +11,7 @@ Dienstkontos, das nur freigegebene Inhalte lesen darf.
 
 `GET /chunks` liefert die freigegebenen Inhalte als fertige Retrieval-Chunks: einen je Modul und
 Sprache (und einen je FAQ-Eintrag), als Markdown, mit den Metadaten zum Filtern (Zielgruppe,
-Facetten, Schlüsselwörter, die Handbücher, die ihn enthalten) und einem Inhalts-Hash, sodass die
+Facetten, Schlüsselwörter, die Anleitungen, die ihn enthalten) und einem Inhalts-Hash, sodass die
 Pipeline einen Chunk nur neu einbettet, wenn sein Hash neu ist. Lesen Sie jede Seite beim Commit,
 den die erste nennt (`X-Ccms-Commit`); rückt `main` inzwischen weiter, antwortet eine spätere Seite
 404 `not-found`, da ein Leser freigegebener Inhalte einen Commit nur lesen darf, solange `main`

@@ -11,6 +11,7 @@ import { beginAccessChange, changeRoles } from '../access-changes.js';
 import type { Actor } from '../actor.js';
 import { ActorAction } from '../policy.js';
 import type { User } from '../user-directory.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export interface CreateUserInput {
   readonly actor: Actor;
@@ -41,11 +42,13 @@ export class CreateUserAction extends ActorAction<CreateUserInput, User> {
     private readonly admin: AccessAdmin,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
   protected run({ actor, user, roleIds }: CreateUserInput): Promise<User> {
+    this.sandbox.refuse('users');
     return runContended(
       this.unit,
       async (tx) => {

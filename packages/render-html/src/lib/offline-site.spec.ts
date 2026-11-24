@@ -274,7 +274,7 @@ describe('offlinePageHtml', () => {
       offlinePageHtml({
         lang: 'de',
         dir: 'ltr',
-        title: 'Handbuch · Klein',
+        title: 'Anleitung · Klein',
         root: '../../',
         fragment,
         pdf: 'pdf/m/de/v.pdf',
@@ -292,7 +292,7 @@ describe('offlinePageHtml', () => {
       '../../index.html',
     );
     expect(doc.querySelector('.of-offline__home')?.textContent).toBe(
-      'Alle Handbücher',
+      'Alle Anleitungen',
     );
     expect(doc.querySelector('.of-offline__pdf')?.getAttribute('href')).toBe(
       '../../pdf/m/de/v.pdf',

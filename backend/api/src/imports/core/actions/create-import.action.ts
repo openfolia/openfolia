@@ -18,6 +18,7 @@ import {
 import { ImportPipeline } from '../import-pipeline.js';
 import { ImportUploads } from '../import-uploads.js';
 import { type ImportFile, ImporterRegistry } from '../importer.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** What the upload form holds, read only once the actor may import. */
 export interface ImportForm {
@@ -72,11 +73,13 @@ export class CreateImportAction extends ActorAction<
     private readonly pipeline: ImportPipeline,
     private readonly uploads: ImportUploads,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
   protected async run({ actor, form }: CreateImportInput): Promise<ImportView> {
+    this.sandbox.refuse('imports');
     if (!allows(actor, 'content.edit', ANYWHERE)) {
       throw new ForbiddenError(IMPORT_NEEDS_EDIT);
     }

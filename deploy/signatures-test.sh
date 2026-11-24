@@ -53,7 +53,7 @@ sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasu
 mkdir -p "$work/served" "$work/tmp" "$work/install"
 i=0
 : >"$work/images.lock"
-for image in api backup editor embedder mcp portal; do
+for image in api backup editor embedder mcp portal sandbox; do
   i=$((i + 1))
   echo "$images/$image:$tag@sha256:$(printf "%064d" "$i")" >>"$work/images.lock"
 done
@@ -63,9 +63,9 @@ echo "the release's trust root" >"$work/served/trusted_root.json"
 bundle() {
   printf 'subject=%s\nidentity=%s\nissuer=%s\n' "$2" "${3:-$identity}" "${4:-$issuer}" >"$work/served/$1.sigstore.json"
 }
-for image in api backup editor embedder mcp portal; do bundle "$image" "$(digest_of "$image")"; done
+for image in api backup editor embedder mcp portal sandbox; do bundle "$image" "$(digest_of "$image")"; done
 sums() {
-  for file in trusted_root.json api.sigstore.json backup.sigstore.json editor.sigstore.json embedder.sigstore.json mcp.sigstore.json portal.sigstore.json; do
+  for file in trusted_root.json api.sigstore.json backup.sigstore.json editor.sigstore.json embedder.sigstore.json mcp.sigstore.json portal.sigstore.json sandbox.sigstore.json; do
     echo "$(sha "$work/served/$file")  $file"
   done
 }

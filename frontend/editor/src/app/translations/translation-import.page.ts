@@ -73,6 +73,8 @@ import { TranslationImportUpload } from './translation-import-upload';
 import { TranslationsSource } from './translations-source';
 import { jobSubjectText, type JobItem } from './translations-model';
 import { TranslationsChanges } from './translations-view';
+import { SandboxOffStateComponent } from '../sandbox/sandbox-off-state.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 
 /** The import screen's view in the address: the validated import, the state shown and the page. */
 export const IMPORT_PARAMS = {
@@ -104,6 +106,7 @@ type Phase = 'upload' | 'loading' | 'review' | 'expired' | 'done';
 @Component({
   selector: 'of-translation-import-page',
   imports: [
+    SandboxOffStateComponent,
     RouterLink,
     TranslocoPipe,
     NgIcon,
@@ -130,376 +133,399 @@ type Phase = 'upload' | 'loading' | 'review' | 'expired' | 'done';
     '(window:beforeunload)': 'beforeUnload($event)',
   },
   template: `
-    <of-page-header
-      [title]="'editor.translations.importScreen.title' | transloco"
-    />
-
-    <input
-      #fileInput
-      id="translation-import-file"
-      type="file"
-      class="sr-only"
-      tabindex="-1"
-      aria-hidden="true"
-      [accept]="accepted"
-      (change)="picked($event)"
-    />
-
-    @if (phase() === 'upload' && !validating()) {
-      <label
-        for="translation-import-file-zone"
-        class="border-border hover:bg-muted/40 has-[:focus-visible]:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 has-[:focus-visible]:ring-[3px] motion-reduce:transition-none animate-in fade-in-0 motion-reduce:animate-none"
-        [class.border-primary]="dragging()"
-        [class.bg-muted]="dragging()"
-        data-slot="drop-zone"
-        (dragenter)="dragOver($event)"
-        (dragover)="dragOver($event)"
-        (dragleave)="dragging.set(false)"
-        (drop)="dropped($event)"
-      >
-        <ng-icon
-          name="lucideUpload"
-          class="text-muted-foreground size-6"
-          aria-hidden="true"
-        />
-        <span class="font-medium">{{
-          'editor.translations.importScreen.upload.title' | transloco
-        }}</span>
-        <span class="text-muted-foreground text-sm">{{
-          'editor.translations.importScreen.upload.choose' | transloco
-        }}</span>
-        <span class="text-muted-foreground max-w-prose text-xs break-words">{{
-          'editor.translations.importScreen.upload.hint' | transloco
-        }}</span>
-        <input
-          id="translation-import-file-zone"
-          type="file"
-          class="sr-only"
-          [accept]="accepted"
-          (change)="picked($event)"
-        />
-      </label>
+    @if (sandbox.on()) {
+      <!-- A public sandbox imports nothing (issue 826): the screen says why. -->
+      <of-sandbox-off-state
+        [title]="'editor.sandbox.importsOff.title' | transloco"
+        [description]="'editor.sandbox.importsOff.translations' | transloco"
+      />
     } @else {
-      <section
-        class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
-        data-slot="file"
-        [attr.aria-busy]="validating() || null"
-        (dragenter)="dragOver($event)"
-        (dragover)="dragOver($event)"
-        (dragleave)="dragging.set(false)"
-        (drop)="dropped($event)"
-        [class.border-primary]="dragging()"
-      >
-        <ng-icon
-          [name]="validating() ? 'lucideLoaderCircle' : 'lucideFileText'"
-          class="text-muted-foreground size-5 shrink-0 motion-reduce:animate-none"
-          [class.animate-spin]="validating()"
-          aria-hidden="true"
-        />
-        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span class="font-medium break-words [overflow-wrap:anywhere]">{{
-            fileName() ??
-              ('editor.translations.importScreen.file.unnamed' | transloco)
+      <of-page-header
+        [title]="'editor.translations.importScreen.title' | transloco"
+      />
+
+      <input
+        #fileInput
+        id="translation-import-file"
+        type="file"
+        class="sr-only"
+        tabindex="-1"
+        aria-hidden="true"
+        [accept]="accepted"
+        (change)="picked($event)"
+      />
+
+      @if (phase() === 'upload' && !validating()) {
+        <label
+          for="translation-import-file-zone"
+          class="border-border hover:bg-muted/40 has-[:focus-visible]:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors duration-150 has-[:focus-visible]:ring-[3px] motion-reduce:transition-none animate-in fade-in-0 motion-reduce:animate-none"
+          [class.border-primary]="dragging()"
+          [class.bg-muted]="dragging()"
+          data-slot="drop-zone"
+          (dragenter)="dragOver($event)"
+          (dragover)="dragOver($event)"
+          (dragleave)="dragging.set(false)"
+          (drop)="dropped($event)"
+        >
+          <ng-icon
+            name="lucideUpload"
+            class="text-muted-foreground size-6"
+            aria-hidden="true"
+          />
+          <span class="font-medium">{{
+            'editor.translations.importScreen.upload.title' | transloco
           }}</span>
-          <span
-            class="text-muted-foreground text-sm break-words"
-            data-slot="file-meta"
-            role="status"
-          >
-            @if (validating()) {
-              {{ 'editor.translations.importScreen.file.checking' | transloco }}
-            } @else {
-              {{ fileMeta() }}
-            }
-          </span>
-        </div>
-        @if (phase() !== 'done') {
-          <button
-            z-button
-            zType="ghost"
-            type="button"
-            data-slot="replace"
-            [zDisabled]="validating() || applying() || loading()"
-            (click)="fileInput.click()"
-          >
-            {{ 'editor.translations.importScreen.file.replace' | transloco }}
-          </button>
-        }
-      </section>
-    }
-
-    @if (uploadError(); as err) {
-      <p
-        class="border-destructive/40 bg-destructive-muted text-foreground m-0 rounded-lg border px-4 py-3 text-sm break-words"
-        role="alert"
-        data-slot="upload-error"
-      >
-        {{ err | ofText }}
-      </p>
-    }
-
-    @if (phase() === 'expired') {
-      <div
-        class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
-        role="status"
-        data-slot="expired"
-      >
-        <ng-icon
-          name="lucideClock"
-          class="text-warning shrink-0"
-          aria-hidden="true"
-        />
-        <span class="min-w-0 flex-1 break-words">{{
-          (file()
-            ? 'editor.translations.importScreen.expired.withFile'
-            : 'editor.translations.importScreen.expired.withoutFile'
-          ) | transloco
-        }}</span>
-        <button
-          z-button
-          zType="outline"
-          zSize="sm"
-          type="button"
-          data-slot="revalidate"
-          [zDisabled]="validating()"
-          (click)="revalidate()"
-        >
-          {{
-            (file()
-              ? 'editor.translations.importScreen.expired.again'
-              : 'editor.translations.importScreen.expired.choose'
-            ) | transloco
-          }}
-        </button>
-      </div>
-    }
-
-    @if (doc(); as d) {
-      @if (phase() === 'done') {
+          <span class="text-muted-foreground text-sm">{{
+            'editor.translations.importScreen.upload.choose' | transloco
+          }}</span>
+          <span class="text-muted-foreground max-w-prose text-xs break-words">{{
+            'editor.translations.importScreen.upload.hint' | transloco
+          }}</span>
+          <input
+            id="translation-import-file-zone"
+            type="file"
+            class="sr-only"
+            [accept]="accepted"
+            (change)="picked($event)"
+          />
+        </label>
+      } @else {
         <section
-          class="border-success/40 bg-success-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
-          data-slot="done"
-          role="status"
+          class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
+          data-slot="file"
+          [attr.aria-busy]="validating() || null"
+          (dragenter)="dragOver($event)"
+          (dragover)="dragOver($event)"
+          (dragleave)="dragging.set(false)"
+          (drop)="dropped($event)"
+          [class.border-primary]="dragging()"
         >
-          <div class="flex min-w-0 items-start gap-3">
-            <ng-icon
-              name="lucideCircleCheck"
-              class="text-success mt-0.5 size-5 shrink-0"
-              aria-hidden="true"
-            />
-            <div class="flex min-w-0 flex-col gap-1">
-              <h2 class="m-0 text-base font-semibold">
-                {{ 'editor.translations.importScreen.done.title' | transloco }}
-              </h2>
-              <p class="m-0 text-sm break-words">
-                @if (imported() !== null) {
-                  {{
-                    'editor.translations.importScreen.done.counted'
-                      | transloco
-                        : {
-                            count: imported(),
-                            title: changeSetTitle() ?? fallbackTitle(),
-                          }
-                  }}
-                } @else {
-                  {{
-                    'editor.translations.importScreen.done.text'
-                      | transloco
-                        : { title: changeSetTitle() ?? fallbackTitle() }
-                  }}
-                }
-              </p>
-            </div>
+          <ng-icon
+            [name]="validating() ? 'lucideLoaderCircle' : 'lucideFileText'"
+            class="text-muted-foreground size-5 shrink-0 motion-reduce:animate-none"
+            [class.animate-spin]="validating()"
+            aria-hidden="true"
+          />
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span class="font-medium break-words [overflow-wrap:anywhere]">{{
+              fileName() ??
+                ('editor.translations.importScreen.file.unnamed' | transloco)
+            }}</span>
+            <span
+              class="text-muted-foreground text-sm break-words"
+              data-slot="file-meta"
+              role="status"
+            >
+              @if (validating()) {
+                {{
+                  'editor.translations.importScreen.file.checking' | transloco
+                }}
+              } @else {
+                {{ fileMeta() }}
+              }
+            </span>
           </div>
-          <div class="flex flex-wrap gap-2">
-            @if (changeSetId(); as cs) {
-              <a
-                z-button
-                data-slot="open-review"
-                [routerLink]="['/review']"
-                [queryParams]="{ cs }"
-                >{{
-                  'editor.translations.importScreen.done.openReview' | transloco
-                }}</a
-              >
-            }
+          @if (phase() !== 'done') {
             <button
               z-button
-              zType="outline"
+              zType="ghost"
               type="button"
-              data-slot="another"
-              (click)="another()"
+              data-slot="replace"
+              [zDisabled]="validating() || applying() || loading()"
+              (click)="fileInput.click()"
             >
-              {{ 'editor.translations.importScreen.done.another' | transloco }}
+              {{ 'editor.translations.importScreen.file.replace' | transloco }}
             </button>
-          </div>
-        </section>
-      } @else {
-        @let counts = d.data.meta.counts;
-        <div
-          class="grid min-w-0 gap-3 sm:grid-cols-3"
-          data-slot="counts"
-          [attr.aria-label]="
-            'editor.translations.importScreen.counts.label' | transloco
-          "
-          role="group"
-        >
-          <div
-            class="bg-success-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-            data-slot="count-ready"
-          >
-            <span class="text-success text-2xl font-semibold tabular-nums">{{
-              counts.ok
-            }}</span>
-            <span class="text-sm break-words">{{
-              'editor.translations.importScreen.counts.ready'
-                | transloco: { count: counts.ok }
-            }}</span>
-          </div>
-          <div
-            class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-            data-slot="count-decide"
-          >
-            <span class="text-warning text-2xl font-semibold tabular-nums">{{
-              counts.sourceChanged
-            }}</span>
-            <span class="text-sm break-words">{{
-              'editor.translations.importScreen.counts.decide'
-                | transloco: { count: counts.sourceChanged }
-            }}</span>
-          </div>
-          <div
-            class="bg-destructive-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-            data-slot="count-refused"
-          >
-            <span
-              class="text-destructive text-2xl font-semibold tabular-nums"
-              >{{ refused() }}</span
-            >
-            <span class="text-sm break-words">{{
-              'editor.translations.importScreen.counts.refused'
-                | transloco: { count: refused() }
-            }}</span>
-          </div>
-        </div>
-
-        <div
-          class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <of-segmented
-            data-slot="state-filter"
-            [options]="filterOptions()"
-            [value]="view.get('state')() ?? 'all'"
-            (valueChange)="filter($event)"
-            [label]="
-              'editor.translations.importScreen.filter.label' | transloco
-            "
-          />
-          @if (counts.sourceChanged > 0) {
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-muted-foreground text-sm" data-slot="skipped">{{
-                'editor.translations.importScreen.decide.skipped'
-                  | transloco: { count: skipped(), total: counts.sourceChanged }
-              }}</span>
-              <button
-                z-button
-                zType="outline"
-                zSize="sm"
-                type="button"
-                data-slot="keep-all"
-                [zDisabled]="applying() || allAre('keep')"
-                (click)="setAll('keep')"
-              >
-                {{
-                  'editor.translations.importScreen.decide.keepAll' | transloco
-                }}
-              </button>
-              <button
-                z-button
-                zType="outline"
-                zSize="sm"
-                type="button"
-                data-slot="skip-all"
-                [zDisabled]="applying() || allAre('skip')"
-                (click)="setAll('skip')"
-              >
-                {{
-                  'editor.translations.importScreen.decide.skipAll' | transloco
-                }}
-              </button>
-            </div>
           }
-        </div>
+        </section>
+      }
 
-        <of-import-report
-          [modules]="d.data.meta.report"
-          [page]="d.meta.page"
-          [loading]="loading()"
-          [error]="frameError()"
-          [filtered]="view.get('state')() !== undefined"
-          [decisions]="decisions()"
-          [sourceLang]="source.sourceLang()"
-          (pageChange)="turn({ page: $event })"
-          (pageSizeChange)="turn({ size: $event, page: 1 })"
-          (retry)="reload()"
-          (decide)="decideUnit($event)"
-        />
-
-        <div
-          class="flex flex-wrap items-center justify-end gap-2"
-          data-slot="actions"
+      @if (uploadError(); as err) {
+        <p
+          class="border-destructive/40 bg-destructive-muted text-foreground m-0 rounded-lg border px-4 py-3 text-sm break-words"
+          role="alert"
+          data-slot="upload-error"
         >
-          <a z-button zType="ghost" [routerLink]="['/translations']">{{
-            'editor.translations.importScreen.cancel' | transloco
-          }}</a>
+          {{ err | ofText }}
+        </p>
+      }
+
+      @if (phase() === 'expired') {
+        <div
+          class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
+          role="status"
+          data-slot="expired"
+        >
+          <ng-icon
+            name="lucideClock"
+            class="text-warning shrink-0"
+            aria-hidden="true"
+          />
+          <span class="min-w-0 flex-1 break-words">{{
+            (file()
+              ? 'editor.translations.importScreen.expired.withFile'
+              : 'editor.translations.importScreen.expired.withoutFile'
+            ) | transloco
+          }}</span>
           <button
             z-button
+            zType="outline"
+            zSize="sm"
             type="button"
-            data-slot="apply"
-            [zLoading]="applying()"
-            [ofGuard]="{
-              permission: 'translation.manage',
-              blockedReason: applyBlocked(),
-            }"
-            (click)="apply()"
+            data-slot="revalidate"
+            [zDisabled]="validating()"
+            (click)="revalidate()"
           >
             {{
-              'editor.translations.importScreen.apply'
-                | transloco: { count: toImport() }
+              (file()
+                ? 'editor.translations.importScreen.expired.again'
+                : 'editor.translations.importScreen.expired.choose'
+              ) | transloco
             }}
           </button>
         </div>
       }
-    } @else if (phase() === 'loading') {
-      <div
-        class="bg-muted h-24 animate-pulse rounded-lg motion-reduce:animate-none"
-        role="status"
-        [attr.aria-label]="
-          'editor.translations.importScreen.loading' | transloco
-        "
-      ></div>
-    } @else if (failure(); as f) {
-      <p
-        class="border-destructive/40 bg-destructive-muted m-0 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm"
-        role="alert"
-      >
-        <span class="min-w-0 flex-1 break-words">{{
-          failureText() | ofText
-        }}</span>
-        <button
-          z-button
-          zType="outline"
-          zSize="sm"
-          type="button"
-          (click)="reload()"
+
+      @if (doc(); as d) {
+        @if (phase() === 'done') {
+          <section
+            class="border-success/40 bg-success-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
+            data-slot="done"
+            role="status"
+          >
+            <div class="flex min-w-0 items-start gap-3">
+              <ng-icon
+                name="lucideCircleCheck"
+                class="text-success mt-0.5 size-5 shrink-0"
+                aria-hidden="true"
+              />
+              <div class="flex min-w-0 flex-col gap-1">
+                <h2 class="m-0 text-base font-semibold">
+                  {{
+                    'editor.translations.importScreen.done.title' | transloco
+                  }}
+                </h2>
+                <p class="m-0 text-sm break-words">
+                  @if (imported() !== null) {
+                    {{
+                      'editor.translations.importScreen.done.counted'
+                        | transloco
+                          : {
+                              count: imported(),
+                              title: changeSetTitle() ?? fallbackTitle(),
+                            }
+                    }}
+                  } @else {
+                    {{
+                      'editor.translations.importScreen.done.text'
+                        | transloco
+                          : { title: changeSetTitle() ?? fallbackTitle() }
+                    }}
+                  }
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              @if (changeSetId(); as cs) {
+                <a
+                  z-button
+                  data-slot="open-review"
+                  [routerLink]="['/review']"
+                  [queryParams]="{ cs }"
+                  >{{
+                    'editor.translations.importScreen.done.openReview'
+                      | transloco
+                  }}</a
+                >
+              }
+              <button
+                z-button
+                zType="outline"
+                type="button"
+                data-slot="another"
+                (click)="another()"
+              >
+                {{
+                  'editor.translations.importScreen.done.another' | transloco
+                }}
+              </button>
+            </div>
+          </section>
+        } @else {
+          @let counts = d.data.meta.counts;
+          <div
+            class="grid min-w-0 gap-3 sm:grid-cols-3"
+            data-slot="counts"
+            [attr.aria-label]="
+              'editor.translations.importScreen.counts.label' | transloco
+            "
+            role="group"
+          >
+            <div
+              class="bg-success-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+              data-slot="count-ready"
+            >
+              <span class="text-success text-2xl font-semibold tabular-nums">{{
+                counts.ok
+              }}</span>
+              <span class="text-sm break-words">{{
+                'editor.translations.importScreen.counts.ready'
+                  | transloco: { count: counts.ok }
+              }}</span>
+            </div>
+            <div
+              class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+              data-slot="count-decide"
+            >
+              <span class="text-warning text-2xl font-semibold tabular-nums">{{
+                counts.sourceChanged
+              }}</span>
+              <span class="text-sm break-words">{{
+                'editor.translations.importScreen.counts.decide'
+                  | transloco: { count: counts.sourceChanged }
+              }}</span>
+            </div>
+            <div
+              class="bg-destructive-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+              data-slot="count-refused"
+            >
+              <span
+                class="text-destructive text-2xl font-semibold tabular-nums"
+                >{{ refused() }}</span
+              >
+              <span class="text-sm break-words">{{
+                'editor.translations.importScreen.counts.refused'
+                  | transloco: { count: refused() }
+              }}</span>
+            </div>
+          </div>
+
+          <div
+            class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <of-segmented
+              data-slot="state-filter"
+              [options]="filterOptions()"
+              [value]="view.get('state')() ?? 'all'"
+              (valueChange)="filter($event)"
+              [label]="
+                'editor.translations.importScreen.filter.label' | transloco
+              "
+            />
+            @if (counts.sourceChanged > 0) {
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="text-muted-foreground text-sm"
+                  data-slot="skipped"
+                  >{{
+                    'editor.translations.importScreen.decide.skipped'
+                      | transloco
+                        : { count: skipped(), total: counts.sourceChanged }
+                  }}</span
+                >
+                <button
+                  z-button
+                  zType="outline"
+                  zSize="sm"
+                  type="button"
+                  data-slot="keep-all"
+                  [zDisabled]="applying() || allAre('keep')"
+                  (click)="setAll('keep')"
+                >
+                  {{
+                    'editor.translations.importScreen.decide.keepAll'
+                      | transloco
+                  }}
+                </button>
+                <button
+                  z-button
+                  zType="outline"
+                  zSize="sm"
+                  type="button"
+                  data-slot="skip-all"
+                  [zDisabled]="applying() || allAre('skip')"
+                  (click)="setAll('skip')"
+                >
+                  {{
+                    'editor.translations.importScreen.decide.skipAll'
+                      | transloco
+                  }}
+                </button>
+              </div>
+            }
+          </div>
+
+          <of-import-report
+            [modules]="d.data.meta.report"
+            [page]="d.meta.page"
+            [loading]="loading()"
+            [error]="frameError()"
+            [filtered]="view.get('state')() !== undefined"
+            [decisions]="decisions()"
+            [sourceLang]="source.sourceLang()"
+            (pageChange)="turn({ page: $event })"
+            (pageSizeChange)="turn({ size: $event, page: 1 })"
+            (retry)="reload()"
+            (decide)="decideUnit($event)"
+          />
+
+          <div
+            class="flex flex-wrap items-center justify-end gap-2"
+            data-slot="actions"
+          >
+            <a z-button zType="ghost" [routerLink]="['/translations']">{{
+              'editor.translations.importScreen.cancel' | transloco
+            }}</a>
+            <button
+              z-button
+              type="button"
+              data-slot="apply"
+              [zLoading]="applying()"
+              [ofGuard]="{
+                permission: 'translation.manage',
+                blockedReason: applyBlocked(),
+              }"
+              (click)="apply()"
+            >
+              {{
+                'editor.translations.importScreen.apply'
+                  | transloco: { count: toImport() }
+              }}
+            </button>
+          </div>
+        }
+      } @else if (phase() === 'loading') {
+        <div
+          class="bg-muted h-24 animate-pulse rounded-lg motion-reduce:animate-none"
+          role="status"
+          [attr.aria-label]="
+            'editor.translations.importScreen.loading' | transloco
+          "
+        ></div>
+      } @else if (failure(); as f) {
+        <p
+          class="border-destructive/40 bg-destructive-muted m-0 flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+          role="alert"
         >
-          {{ 'editor.translations.importScreen.retry' | transloco }}
-        </button>
-      </p>
+          <span class="min-w-0 flex-1 break-words">{{
+            failureText() | ofText
+          }}</span>
+          <button
+            z-button
+            zType="outline"
+            zSize="sm"
+            type="button"
+            (click)="reload()"
+          >
+            {{ 'editor.translations.importScreen.retry' | transloco }}
+          </button>
+        </p>
+      }
     }
   `,
 })
 export class TranslationImportPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly upload = inject(TranslationImportUpload);
   private readonly toast = inject(ToastService);

@@ -7,8 +7,10 @@
 //     [--compose deploy/compose.yaml] [--expect <file>]
 //
 // For each image (scripts/images-plan.mjs, IMAGES) it reads the digest the tag names now, with
-// `docker buildx imagetools inspect` (a read of that registry and nothing else), checks it against
-// the digest the build pushed when given one (`--expect`, lines `<image> <digest>`), and writes:
+// `docker buildx imagetools inspect` (a read of that registry and nothing else): the digest of a
+// multi-platform image index, which must hold an image for every platform of a release
+// (PLATFORMS: linux/amd64 and linux/arm64, #827). It checks it against the digest the build
+// pushed when given one (`--expect`, lines `<image> <digest>`), and writes:
 //
 // - `images.lock`: every image of the release, `<registry/path>/<image>:<tag>@sha256:<digest>`,
 //   one per line. It is also what the docs of the release are built with (DOCS_RELEASE_DIGESTS).
@@ -34,6 +36,15 @@ export const RELEASE_TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 /** A manifest's digest, as a registry names it. */
 export const DIGEST = /^sha256:[0-9a-f]{64}$/;
+
+/** The platforms every image of a release is built for, in one index (#827). */
+export const PLATFORMS = Object.freeze(['linux/amd64', 'linux/arm64']);
+
+/** The media types of an index: OCI's, and Docker's manifest list. */
+const INDEX_TYPES = [
+  'application/vnd.oci.image.index.v1+json',
+  'application/vnd.docker.distribution.manifest.list.v2+json',
+];
 
 /** How compose.yaml names an OpenFolia image: by the settings, the image's name between them. */
 const COMPOSE_IMAGE =
@@ -100,16 +111,45 @@ export function checkExpected(digests, expectedText) {
   }
 }
 
-/** The digest in `imagetools inspect --format '{{json .Manifest}}'`'s output; anything else throws. */
+/**
+ * The digest in `imagetools inspect --format '{{json .Manifest}}'`'s output: an image index's,
+ * with an image for each of PLATFORMS (attestations, which buildx adds to an index as manifests of
+ * the platform `unknown/unknown`, do not count). A single image, an index missing a platform, or
+ * anything else throws: a release never pins an image some of its servers cannot run.
+ */
 export function manifestDigest(output, ref) {
-  let digest;
+  let manifest;
   try {
-    digest = JSON.parse(output)?.digest;
+    manifest = JSON.parse(output);
   } catch {
-    digest = undefined;
+    manifest = undefined;
   }
+  const digest = manifest?.digest;
   if (typeof digest !== 'string' || !DIGEST.test(digest))
     throw new Error(`release-digests: no digest for ${ref}`);
+  if (
+    !INDEX_TYPES.includes(manifest.mediaType) ||
+    !Array.isArray(manifest.manifests)
+  )
+    throw new Error(
+      `release-digests: ${ref} is no multi-platform image index (${PLATFORMS.join(', ')})`,
+    );
+  const platforms = new Set(
+    manifest.manifests
+      .filter(
+        (entry) =>
+          entry?.annotations?.['vnd.docker.reference.type'] !==
+          'attestation-manifest',
+      )
+      .map(
+        (entry) => `${entry?.platform?.os}/${entry?.platform?.architecture}`,
+      ),
+  );
+  const missing = PLATFORMS.filter((platform) => !platforms.has(platform));
+  if (missing.length)
+    throw new Error(
+      `release-digests: ${ref} has no image for ${missing.join(', ')}`,
+    );
   return digest;
 }
 

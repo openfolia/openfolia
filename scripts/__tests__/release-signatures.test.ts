@@ -244,6 +244,31 @@ describe("release-sign's step, run with stand-ins for cosign, gh and docker (#74
     dir = undefined;
   });
 
+  /**
+   * What `imagetools inspect --format '{{json .Manifest}}'` prints for a digest: an index of an
+   * image per architecture and its attestation (#827); `amd64-only:<digest>`, an index of one.
+   */
+  const inspected = (value: string) => {
+    const [digest, platforms] = value.startsWith('amd64-only:')
+      ? [value.slice('amd64-only:'.length), ['amd64']]
+      : [value, ['amd64', 'arm64']];
+    return JSON.stringify({
+      mediaType: 'application/vnd.oci.image.index.v1+json',
+      digest,
+      manifests: platforms.flatMap((architecture) => [
+        {
+          digest: `sha256:${'a'.repeat(64)}`,
+          platform: { os: 'linux', architecture },
+        },
+        {
+          digest: `sha256:${'b'.repeat(64)}`,
+          platform: { os: 'unknown', architecture: 'unknown' },
+          annotations: { 'vnd.docker.reference.type': 'attestation-manifest' },
+        },
+      ]),
+    });
+  };
+
   /** Runs the step on these images.lock lines; the registry names `registry`'s digests. */
   const runStep = (
     lines: string[],
@@ -281,7 +306,7 @@ echo '{"certificateAuthorities":[{"uri":"fulcio.githubapp.com"}]}'`,
       `[ "$2" = version ] && exit 0\ncase "$4" in\n${Object.entries(registry)
         .map(
           ([image, digest]) =>
-            `  '${repository}/${image}:${tag}') echo '{"digest":"${digest}"}' ;;`,
+            `  '${repository}/${image}:${tag}') echo '${inspected(digest)}' ;;`,
         )
         .join('\n')}\n  *) exit 1 ;;\nesac`,
     );
@@ -380,6 +405,15 @@ echo '{"certificateAuthorities":[{"uri":"fulcio.githubapp.com"}]}'`,
           mcp: other,
         },
         /the registry names .* for mcp/,
+      ],
+      // The build's digest, the registry's too, but an image of one architecture alone.
+      [
+        lock,
+        {
+          ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
+          sandbox: `amd64-only:${digestOf('sandbox')}`,
+        },
+        /sandbox:v1.2.3 is no index of linux\/amd64 and linux\/arm64/,
       ],
       [
         replace(0, `${repository}/evil:${tag}@${digestOf('api')}`),

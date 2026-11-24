@@ -37,6 +37,7 @@ import {
   ReopenCommentAction,
   ResolveCommentAction,
 } from './resolve-comment.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const scoped = ProjectConfig.parse({
   ...config,
@@ -136,7 +137,7 @@ const charging: CommentSubject = {
 const secret: CommentSubject = { ...charging, moduleId: 'secret' };
 const fresh: CommentSubject = { type: 'module', lang: 'de', moduleId: 'fresh' };
 
-function setUp(over: Partial<ChangeSet> = {}) {
+function setUp(over: Partial<ChangeSet> = {}, sandbox: Sandbox = Sandbox.OFF) {
   const history = new FakeHistory(base);
   const changeSet = history.changeSet(author, head, over);
   const store = new FakeCommentStore();
@@ -149,10 +150,10 @@ function setUp(over: Partial<ChangeSet> = {}) {
     store,
   );
   const writes = [comments, store, history.store, auditLog, unit] as const;
-  const create = new CreateCommentAction(...writes);
+  const create = new CreateCommentAction(...writes, sandbox);
   const resolve = new ResolveCommentAction(...writes);
   const reopen = new ReopenCommentAction(...writes);
-  const edit = new EditCommentAction(...writes);
+  const edit = new EditCommentAction(...writes, sandbox);
   const remove = new DeleteCommentAction(...writes);
   const list = new ListCommentsAction(comments, store);
   const get = new GetCommentAction(comments);
@@ -651,5 +652,41 @@ describe('DeleteCommentAction', () => {
     await expect(remove(reviewer, more.id)).rejects.toMatchObject({
       code: 'invalid-state',
     });
+  });
+});
+
+describe('comments in a public sandbox (#826)', () => {
+  const sandbox = () =>
+    Sandbox.on({
+      limits: {
+        moduleBytes: 1_000,
+        commentLength: 10,
+        changeSets: 5,
+        modules: 5,
+        manuals: 5,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 1_000_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+
+  it('refuses a comment, a reply or an edit past CCMS_SANDBOX_MAX_COMMENT_LENGTH; nothing written', async () => {
+    const t = setUp({}, sandbox());
+    const { comment } = await t.on(reviewer, charging, 'intro', 'Ten chars!');
+    await expect(
+      t.on(reviewer, charging, 'intro', 'Eleven char'),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'commentLength', max: 10 },
+    });
+    await expect(
+      t.reply(reviewer, comment.id, 'x'.repeat(11)),
+    ).rejects.toMatchObject({ code: 'sandbox-limit-reached' });
+    await expect(
+      t.edit(reviewer, comment.id, 'x'.repeat(11)),
+    ).rejects.toMatchObject({ code: 'sandbox-limit-reached' });
+    expect(ids(await t.list(reviewer))).toEqual(['Ten chars!']);
+    expect(t.auditLog.events).toHaveLength(1);
   });
 });

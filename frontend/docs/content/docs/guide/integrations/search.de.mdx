@@ -1,10 +1,10 @@
 ---
 title: 'Such-API'
-description: 'Module, Handbücher und Begriffe über die API suchen: die Abfrage, die Filter, die Reihenfolge, das Hervorheben und die Grenzen.'
+description: 'Module, Anleitungen und Begriffe über die API suchen: die Abfrage, die Filter, die Reihenfolge, das Hervorheben und die Grenzen.'
 articleId: 'guide.integrations.search'
 ---
 
-`GET /search` findet Module, Handbücher und Begriffe unter dem, was der Leser sehen darf, bei
+`GET /search` findet Module, Anleitungen und Begriffe unter dem, was der Leser sehen darf, bei
 `?ref=` wie jeder Lesezugriff auf Inhalte. Die Route gehört zur [Delivery API](/de/api/delivery)
 und braucht `content.read`.
 
@@ -19,7 +19,7 @@ curl -gs -H "Authorization: Bearer $TOKEN" \
   Kleinschreibung und diakritische Zeichen spielen keine Rolle (`ä` ist `a`, `ß` ist `ss`), und
   jedes Wort muss passen.
 - **Wo gesucht wird:** im Titel, in den Schlagwörtern, den FAQ-Fragen und dem Text eines Moduls;
-  im Titel eines Handbuchs; in den bevorzugten, erlaubten und verbotenen Benennungen eines Begriffs
+  im Titel einer Anleitung; in den bevorzugten, erlaubten und verbotenen Benennungen eines Begriffs
   und in seiner Definition.
 - **Filter**, alle optional, und alle angegebenen müssen zutreffen: `filter[lang]`,
   `filter[resourceType]` (`Module`, `Manual` oder `Term`) und für Module `filter[type]` (ein

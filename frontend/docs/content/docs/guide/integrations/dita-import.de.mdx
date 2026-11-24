@@ -1,12 +1,12 @@
 ---
 title: 'DITA-Import'
-description: 'Ein DITA-1.3-Projekt als Module, Handbücher, Varianten, Übersetzungen und Dateien übernehmen und lesen, was kein Gegenstück hatte.'
+description: 'Ein DITA-1.3-Projekt als Module, Anleitungen, Varianten, Übersetzungen und Dateien übernehmen und lesen, was kein Gegenstück hatte.'
 articleId: 'guide.integrations.dita-import'
 ---
 
 Ein in DITA gepflegtes Projekt kommt über denselben Import wie das
 [Importformat](/de/guide/integrations/import-format), mit dem Importer `dita`: Ein ZIP eines
-DITA-1.3-Projekts wird zu Modulen, Handbüchern, Varianten, Übersetzungen und Dateien, in einer
+DITA-1.3-Projekts wird zu Modulen, Anleitungen, Varianten, Übersetzungen und Dateien, in einer
 neuen Überarbeitung zur Prüfung.
 
 ## Zuerst das Projekt abbilden
@@ -64,8 +64,8 @@ listet jeden Schlüssel.
 
 | DITA                                                         | Wird zu                                                                        |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| eine Root-Map oder Bookmap in der Ausgangssprache            | ein Handbuch                                                                   |
-| jede DITAVAL-Datei, die eine Root-Map nennt (`<ditavalref>`) | eine Variante dieses Handbuchs                                                 |
+| eine Root-Map oder Bookmap in der Ausgangssprache            | eine Anleitung                                                                 |
+| jede DITAVAL-Datei, die eine Root-Map nennt (`<ditavalref>`) | eine Variante dieser Anleitung                                                 |
 | ein Topic der obersten Ebene                                 | ein Modul, seine ID aus seinem Pfad (`topics/install.dita` → `topics-install`) |
 | ein Topic am selben Pfad in einem Sprachordner               | die Übersetzung dieses Moduls                                                  |
 | Filterattribute (`@product`, `@audience`, …)                 | Variantenblöcke, nach der Profiling-Abbildung                                  |

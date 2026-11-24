@@ -52,6 +52,7 @@ import { TranslationsModule } from './translations/translations.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { MailModule } from './mail/mail.module.js';
 
+import { SandboxModule } from './sandbox/sandbox.module.js';
 /**
  * Components follow a hexagonal layout: `api/` (controllers, JSON:API
  * resources) calls `core/` (actions: one use case each; ports as abstract
@@ -71,6 +72,8 @@ import { MailModule } from './mail/mail.module.js';
       skipProcessEnv: true,
     }),
     ServerRoleModule,
+    // The public sandbox (#826): before every module that asks it which adapter to take.
+    SandboxModule,
     DatabaseModule,
     SecretsModule,
     JobsModule,

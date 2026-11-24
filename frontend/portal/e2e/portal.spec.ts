@@ -261,7 +261,7 @@ test('the language switch opens the same page in German, with German texts', asy
   await expect(
     page
       .getByRole('navigation', { name: 'Hauptnavigation' })
-      .getByRole('link', { name: 'Handbücher' }),
+      .getByRole('link', { name: 'Anleitungen' }),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Glossar' })).toBeAttached();
 });

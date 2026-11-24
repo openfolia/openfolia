@@ -16,6 +16,7 @@ import {
   MailSettings,
   type MailState,
 } from '../mail-ports.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** Who sees email's settings and sends the test email: the administrators. */
 export const MANAGE_MAIL = 'admin.roles';
@@ -83,6 +84,7 @@ export class SendTestMailAction extends ActorAction<
     private readonly users: UserDirectory,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -94,6 +96,7 @@ export class SendTestMailAction extends ActorAction<
     actor: Actor;
     language?: string | null;
   }): Promise<QueuedTestMail> {
+    this.sandbox.refuse('mail');
     const state = this.settings.state;
     if (state !== 'on') {
       throw new NotConfiguredError(

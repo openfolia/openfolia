@@ -9,6 +9,7 @@ import { AccessModule } from '../access/access.module.js';
 import { AuditModule } from '../audit/audit.module.js';
 import { SecretSealer } from '../base/core/secret-sealer.js';
 import { BrandingModule } from '../branding/branding.module.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
 import type { Env } from '../config/env.js';
 import { MailController } from './api/mail.controller.js';
 import { SendMailJobHandler } from './api/send-mail.handler.js';
@@ -32,8 +33,8 @@ import { DrizzleMailStore } from './repos/drizzle-mail-store.js';
 import { EnvMailSettings } from './repos/env-mail-settings.js';
 import { SmtpMailer } from './repos/smtp-mailer.js';
 
-/** A `Mailer` for no server: never called, as nothing is queued while email is off. */
-class NoMailer extends Mailer {
+/** A `Mailer` for no server (and a public sandbox): never called, as nothing is queued while email is off. */
+export class NoMailer extends Mailer {
   send(): Promise<void> {
     return Promise.reject(new Error('Email is off.'));
   }
@@ -80,8 +81,10 @@ class MailStartup implements OnApplicationBootstrap {
     },
     {
       provide: Mailer,
-      inject: [MailSettings],
-      useFactory: (settings: MailSettings) => {
+      inject: [MailSettings, Sandbox],
+      // A public sandbox (#826) never connects to a mail server, whatever the settings say.
+      useFactory: (settings: MailSettings, sandbox: Sandbox) => {
+        if (sandbox.on) return new NoMailer();
         const smtp = (settings as EnvMailSettings).smtp;
         return smtp ? new SmtpMailer(smtp) : new NoMailer();
       },

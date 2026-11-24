@@ -58,6 +58,8 @@ import {
   rowName,
   type AttachmentItem,
 } from './attachment-model';
+import { SandboxSession } from '../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../sandbox/sandbox-note.component';
 
 /** Rows a page. */
 const PAGE_SIZE = 10;
@@ -119,6 +121,7 @@ interface RowFacts {
 @Component({
   selector: 'of-attach-file-dialog',
   imports: [
+    SandboxNoteComponent,
     ZardDialogImports,
     ZardButtonComponent,
     ZardInputComponent,
@@ -161,7 +164,13 @@ interface RowFacts {
             : 'editor.attachments.title'
           ) | transloco
         }}</z-dialog-title>
-        @if (changeSetId()) {
+        @if (sandbox.on()) {
+          <!-- A public sandbox takes no uploads (issue 826): picking from the list stays. -->
+          <of-sandbox-note
+            class="max-w-72"
+            [text]="'editor.sandbox.uploadsOffPickFile' | transloco"
+          />
+        } @else if (changeSetId()) {
           <button
             z-button
             zType="outline"
@@ -382,6 +391,7 @@ interface RowFacts {
   `,
 })
 export class AttachFileDialogComponent {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly toast = inject(ToastService);
   private readonly language = inject(LanguageService);
@@ -726,7 +736,7 @@ export class AttachFileDialogComponent {
    */
   protected upload(file: File): void {
     const changeSetId = this.changeSetId();
-    if (!changeSetId || !this.visible()) return;
+    if (!changeSetId || !this.visible() || this.sandbox.on()) return;
     const session = this.session;
     const key = (this.uploadKeys += 1);
     const upload: Upload = {

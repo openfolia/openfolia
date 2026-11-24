@@ -160,6 +160,9 @@ const CODES: Readonly<Record<string, string>> = {
   'content-unavailable': 'editor.apiErrors.codes.content-unavailable',
   'database-saturated': 'editor.apiErrors.codes.database-saturated',
   'search-busy': 'editor.apiErrors.codes.search-busy',
+  // A public sandbox (#826): what it refuses (`meta.refused`) and its caps (`meta.limit`, `max`).
+  'sandbox-not-allowed': 'editor.apiErrors.codes.sandbox-not-allowed',
+  'sandbox-limit-reached': 'editor.apiErrors.codes.sandbox-limit-reached',
   'branding-image-busy': 'editor.apiErrors.codes.branding-image-busy',
   'branding-image-in-use': 'editor.apiErrors.codes.branding-image-in-use',
   'invalid-branding': 'editor.apiErrors.codes.invalid-branding',
@@ -221,6 +224,16 @@ const KINDS: Readonly<Record<ApiErrorKind, string>> = {
 
 const PARAMETER_CODES = new Set(['invalid-parameter', 'unsupported-parameter']);
 
+/**
+ * A `meta` value a text selects on (`{refused, select, …}`) in the form an ICU key takes: ICU
+ * keys hold no hyphen, so `service-accounts` is selected as `serviceAccounts`.
+ */
+const SELECTED: Readonly<Record<string, string>> = {
+  'sandbox-not-allowed': 'refused',
+};
+const icuKey = (value: string) =>
+  value.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
 /** The error as a translatable text, for a toast (`toast.error(apiErrorText(e))`) or a state. */
 export function apiErrorText(
   error: Pick<
@@ -228,7 +241,11 @@ export function apiErrorText(
     'kind' | 'code' | 'parameter' | 'retryAfter' | 'errors'
   >,
 ): TranslatedText {
-  const meta = error.errors[0]?.meta ?? {};
+  const meta: Record<string, unknown> = { ...error.errors[0]?.meta };
+  const selected = SELECTED[error.code];
+  if (selected && typeof meta[selected] === 'string') {
+    meta[selected] = icuKey(meta[selected]);
+  }
   const params = {
     ...meta,
     parameter: error.parameter ?? '',

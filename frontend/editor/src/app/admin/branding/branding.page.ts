@@ -35,6 +35,8 @@ import {
 import { BrandingService } from '../../branding/branding.service';
 import { apiErrorText } from '../../i18n';
 import { brandingErrorText, fieldErrors, PAIR_TEXTS } from './branding-errors';
+import { SandboxSession } from '../../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../../sandbox/sandbox-note.component';
 
 /** What an image upload takes, as the API does: checked here first, to say so at once. */
 const IMAGE_TYPES = ['image/png', 'image/webp'];
@@ -99,6 +101,7 @@ const THEME_KEYS = {
 @Component({
   selector: 'of-branding-page',
   imports: [
+    SandboxNoteComponent,
     TranslocoPipe,
     NgIcon,
     ErrorStateComponent,
@@ -185,6 +188,13 @@ const THEME_KEYS = {
               <p class="text-muted-foreground m-0 text-xs break-words">
                 {{ 'editor.admin.branding.images.hint' | transloco }}
               </p>
+              @if (sandbox.on()) {
+                <!-- A public sandbox takes no uploads (issue 826): the images stay as they are. -->
+                <of-sandbox-note
+                  class="mt-1"
+                  [text]="'editor.sandbox.uploadsOff' | transloco"
+                />
+              }
             </div>
             <ul class="m-0 flex list-none flex-col divide-y p-0">
               @for (field of imageFields; track field) {
@@ -226,32 +236,34 @@ const THEME_KEYS = {
                     }
                   </div>
                   <div class="flex shrink-0 items-center gap-2">
-                    <input
-                      #file
-                      type="file"
-                      class="sr-only"
-                      tabindex="-1"
-                      accept="image/png,image/webp"
-                      [attr.data-upload]="field"
-                      [attr.aria-labelledby]="field + '-label'"
-                      (change)="pick(field, file)"
-                    />
-                    <button
-                      z-button
-                      zType="outline"
-                      zSize="sm"
-                      type="button"
-                      [zLoading]="busy() === field"
-                      (click)="file.click()"
-                    >
-                      <ng-icon name="lucideImageUp" aria-hidden="true" />
-                      {{
-                        (fields()[field]
-                          ? 'editor.admin.branding.images.replace'
-                          : 'editor.admin.branding.images.upload'
-                        ) | transloco
-                      }}
-                    </button>
+                    @if (!sandbox.on()) {
+                      <input
+                        #file
+                        type="file"
+                        class="sr-only"
+                        tabindex="-1"
+                        accept="image/png,image/webp"
+                        [attr.data-upload]="field"
+                        [attr.aria-labelledby]="field + '-label'"
+                        (change)="pick(field, file)"
+                      />
+                      <button
+                        z-button
+                        zType="outline"
+                        zSize="sm"
+                        type="button"
+                        [zLoading]="busy() === field"
+                        (click)="file.click()"
+                      >
+                        <ng-icon name="lucideImageUp" aria-hidden="true" />
+                        {{
+                          (fields()[field]
+                            ? 'editor.admin.branding.images.replace'
+                            : 'editor.admin.branding.images.upload'
+                          ) | transloco
+                        }}
+                      </button>
+                    }
                     @if (fields()[field]) {
                       <button
                         z-button
@@ -502,6 +514,7 @@ const THEME_KEYS = {
   `,
 })
 export class BrandingPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly base = inject(API_BASE_URL);
   private readonly service = inject(BrandingService);

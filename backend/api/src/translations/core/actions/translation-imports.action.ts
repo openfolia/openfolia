@@ -56,6 +56,7 @@ import {
 import { TranslationImportStore } from '../translation-import-store.js';
 import { mergeTranslation } from '../translation-merge.js';
 import { TranslationJobs } from '../translation-jobs.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** How many imports one server checks at once; more are 503 `import-busy`. */
 export const MAX_CONCURRENT_TRANSLATION_IMPORTS = 2;
@@ -129,6 +130,7 @@ export class ValidateTranslationImportAction extends ActorAction<
     private readonly check: TranslationImportCheck,
     private readonly store: TranslationImportStore,
     private readonly gate: TranslationImportGate,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -140,6 +142,7 @@ export class ValidateTranslationImportAction extends ActorAction<
     readonly actor: Actor;
     readonly form: () => Promise<TranslationImportForm>;
   }): Promise<TranslationImport> {
+    this.sandbox.refuse('imports');
     // The upload is read before a slot is taken: a slow one holds none.
     const { bytes, baseRef } = await form();
     return this.gate.run(async () => {
@@ -274,6 +277,7 @@ export class ApplyTranslationImportAction extends ActorAction<
     private readonly openSnapshot: OpenSnapshotAction,
     private readonly auditLog: AuditLog,
     private readonly events: TranslationEvents,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -281,6 +285,7 @@ export class ApplyTranslationImportAction extends ActorAction<
   protected async run(
     input: ApplyTranslationImportInput,
   ): Promise<TranslationImport> {
+    this.sandbox.refuse('imports');
     const { actor, id } = input;
     const found = ownImport((await this.store.find(id))?.import, actor, id);
     if (!allows(actor, 'content.edit', ANYWHERE)) {

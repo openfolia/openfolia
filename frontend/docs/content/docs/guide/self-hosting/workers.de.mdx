@@ -9,7 +9,7 @@ Einstellung `CCMS_ROLE` legt fest, was ein Prozess tut.
 
 | Rolle    | Was sie tut                                                                                                                                                                                                                                                                              |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api`    | Bedient die API und stellt Aufträge nur in die Warteschlange. Führt keine Hintergrundschleife aus. Hält einen kleinen PDF-Pool (standardmäßig 2) für Leseanfragen: das PDF eines Handbuchs, Seitenbilder, Prüfungen. Ihr `/health/ready` hängt nie von einem Worker ab.                  |
+| `api`    | Bedient die API und stellt Aufträge nur in die Warteschlange. Führt keine Hintergrundschleife aus. Hält einen kleinen PDF-Pool (standardmäßig 2) für Leseanfragen: das PDF einer Anleitung, Seitenbilder, Prüfungen. Ihr `/health/ready` hängt nie von einem Worker ab.                  |
 | `worker` | Arbeitet jeden Auftrag ab: Planung und Dateien von Veröffentlichungen, Importe, Webhook-Zustellungen, Benachrichtigungen. Führt die Bereinigungen und Neuzählungen aus. Bedient nur `GET /health` und `GET /health/ready`, mit den Zahlen der Warteschlange. Migriert die Datenbank nie. |
 | `all`    | Beides in einem Prozess. Der Standard außerhalb von `deploy/compose.yaml`.                                                                                                                                                                                                               |
 
@@ -52,8 +52,8 @@ doppelt so viele Dateien gleichzeitig wie einer.
 
 ## Vorschauen und PDFs, auf die jemand wartet
 
-Was ein Leser gerade anfordert, erzeugt die API in ihrem eigenen kleinen Pool: das PDF eines
-Handbuchs, Seitenbilder (die Vorschau im Editor), die Prüfungen. Sie stellt es nie in die
+Was ein Leser gerade anfordert, erzeugt die API in ihrem eigenen kleinen Pool: das PDF einer
+Anleitung, Seitenbilder (die Vorschau im Editor), die Prüfungen. Sie stellt es nie in die
 Warteschlange der Aufträge:
 
 - Ein Leser wartet nie hinter Dateien von Veröffentlichungen. Die PDF-Prozesse eines Workers sind

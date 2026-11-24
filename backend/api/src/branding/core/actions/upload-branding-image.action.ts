@@ -30,6 +30,7 @@ import {
   UNUSED_BRANDING_IMAGE_MS,
 } from '../branding.js';
 import { BrandingStore } from '../branding-store.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export interface UploadBrandingImageInput {
   readonly actor: Actor;
@@ -88,6 +89,7 @@ export class UploadBrandingImageAction extends ActorAction<
     private readonly unit: UnitOfWork,
     private readonly uploads: AssetUploads,
     private readonly quota: StorageQuota,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -99,6 +101,7 @@ export class UploadBrandingImageAction extends ActorAction<
     image: BrandingImage;
     created: boolean;
   }> {
+    this.sandbox.refuse('uploads');
     try {
       return await this.upload(input);
     } catch (error) {

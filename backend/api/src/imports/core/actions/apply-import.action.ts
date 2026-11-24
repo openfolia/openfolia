@@ -15,6 +15,7 @@ import { APPLY_IMPORT } from '../import-job.js';
 import { ImportStore } from '../import-store.js';
 import { IMPORT_NEEDS_EDIT } from './create-import.action.js';
 import { importedBy } from './get-import.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /**
  * Starts applying a stored import: `validated` → `applying`, and its job
@@ -41,6 +42,7 @@ export class ApplyImportAction extends ActorAction<
     private readonly store: ImportStore,
     private readonly jobs: JobQueue,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -54,6 +56,7 @@ export class ApplyImportAction extends ActorAction<
     id: string;
     skipRefused?: boolean;
   }) {
+    this.sandbox.refuse('imports');
     if (!allows(actor, 'content.edit', ANYWHERE)) {
       throw new ForbiddenError(IMPORT_NEEDS_EDIT);
     }

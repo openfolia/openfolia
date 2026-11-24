@@ -423,7 +423,7 @@ ersten Admins, Schritt 9), und eine für die Signaturen: in Schritt 5 geprüft, 
   `docker compose logs -f api`. Alles im Installationsordner.
 - **Sichern:** die Sicherungen im Editor einrichten (Verwaltung, Backups), dann sichert
   `docker compose run --rm backup now` sofort. Beide Volumes zählen. Die Inhalte (ihre Module,
-  Handbücher, Seitengestaltungen, Übersetzungen und die Einstellungsdatei des Projekts
+  Anleitungen, Seitengestaltungen, Übersetzungen und die Einstellungsdatei des Projekts
   `openfolia.yaml`) liegen im Inhaltsrepository auf `openfolia_data`, ihre Bilder und Anhänge daneben.
   Benutzer, Rollen, Kommentare, Sperren, der Workflow-Status und das Audit-Log liegen in der
   Datenbank auf `openfolia_postgres`. Was Inhalt ist und was nicht:
@@ -432,7 +432,7 @@ ersten Admins, Schritt 9), und eine für die Signaturen: in Schritt 5 geprüft, 
   aktualisieren“.
 - **Vor dem echten Einsatz:** ein Reverse Proxy mit TLS, die Sicherungen, und die Anmeldung über
   ihren Identitätsanbieter, wenn sie einen hat: [Selbst betreiben](/de/self-hosting).
-- **Die Doku:** `%%SITE_URL%%`, und das Benutzerhandbuch unter `%%SITE_URL%%/de/guide`.
+- **Die Doku:** `%%SITE_URL%%`, und die Benutzeranleitung unter `%%SITE_URL%%/de/guide`.
 
 ### 9. Optional: diesen Agenten verbinden
 
@@ -499,7 +499,7 @@ MCP-Server durchsuchen und lesen, mit einem Dienstkonto, das nur lesen darf.
    - Die Images nennen nun auch das des MCP-Servers, `:%%RELEASE%%@sha256:` und seinen Digest.
      Die Prüfung der Images aus Schritt 7, erneut ausgeführt, gibt auch `mcp: pinned` aus.
    - Es gibt `started` aus.
-   - Die Antwort listet die Handbücher (mit den Beispielinhalten deren Handbücher), keinen Fehler.
+   - Die Antwort listet die Anleitungen der Beispielinhalte, keinen Fehler.
    - Das Log des Servers warnt, dass er auf `0.0.0.0` hört und die API über einfaches HTTP
      erreicht. Beides liegt im eigenen Netzwerk der Container und ist erwartet: Sein Port ist nur
      auf `127.0.0.1` veröffentlicht.
@@ -580,5 +580,5 @@ Dies aktualisiert eine Installation auf die Version dieser Anleitung, `%%RELEASE
 Auf einer Instanz, die schon läuft, ist Schritt 9 der ganze Ablauf: im Installationsordner, mit
 Zustimmung der Person, die Rolle zum Lesen anlegen (zuerst fragen, wenn es `agent-reader` gibt,
 unter Verwaltung, Rollen), ihr Token und den MCP-Server, dann den Server in deine Konfiguration
-eintragen und die Handbücher listen. Die [Anleitung zum MCP-Server](/de/guides/mcp) beschreibt den
+eintragen und die Anleitungen listen. Der [Leitfaden zum MCP-Server](/de/guides/mcp) beschreibt den
 Server und die [Referenz der MCP-Werkzeuge](/de/reference/mcp-tools) seine Werkzeuge.

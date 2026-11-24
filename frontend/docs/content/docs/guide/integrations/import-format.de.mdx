@@ -132,7 +132,7 @@ rm cookies.txt
 
 2. **Zum Übernehmen hochladen.** Senden Sie dasselbe, mit `-b cookies.txt`, ohne `dryRun`. Die
    Antwort ist 201 mit dem Import, eine Stunde lang aufbewahrt (`attributes.expiresAt`). Mit
-   `updateExisting=true` werden vorhandene Module und Handbücher aktualisiert; ohne werden sie
+   `updateExisting=true` werden vorhandene Module und Anleitungen aktualisiert; ohne werden sie
    übersprungen. `baseRef` nennt einen anderen Zweig, gegen den geprüft wird (Standard: der
    Standardzweig des Servers).
 3. **Übernehmen.** Die Antwort ist 202; der Import wird im Hintergrund in eine neue Überarbeitung
@@ -148,7 +148,7 @@ rm cookies.txt
    als Inhalt (`-d '{"meta":{"skipRefused":true}}'`). Das geht bei jedem Importer, aber nur, wenn
    der Bericht `applicableWithoutRefused` meldet: Der Server hat das Paket ohne die abgewiesenen
    Elemente geprüft, und er entscheidet über jedes andere Element genau wie der Bericht. Es ist
-   falsch, wenn etwas anderes ein abgewiesenes Element braucht (ein Handbuch, das ein abgewiesenes
+   falsch, wenn etwas anderes ein abgewiesenes Element braucht (eine Anleitung, die ein abgewiesenes
    Modul nennt, ein Modul, das eine abgewiesene Datei zeigt). Ausgelassen werden genau die
    abgewiesenen Elemente. Die Beschreibung der Überarbeitung und jede Commit-Nachricht nennen sie
    mit Grund, und der Bericht des Imports behält sie.

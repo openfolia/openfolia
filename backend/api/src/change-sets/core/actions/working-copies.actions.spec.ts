@@ -51,6 +51,7 @@ import { AbandonChangeSetAction } from './abandon-change-set.action.js';
 import { DiscardWorkingCopyAction } from './discard-working-copy.action.js';
 import { GetWorkingCopyAction } from './get-working-copy.action.js';
 import { SaveWorkingCopyAction } from './save-working-copy.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const EDITING: Permission[] = [
   'content.read',
@@ -100,7 +101,13 @@ class FakeRepository extends ContentRepository {
  * `released`: the branch is still at `main`'s commit, as a new change
  * set's is, so it is read as released content (`content.read`).
  */
-function setUp(content: FakeContent = {}, { released = false } = {}) {
+function setUp(
+  content: FakeContent = {},
+  {
+    released = false,
+    sandbox = Sandbox.OFF,
+  }: { released?: boolean; sandbox?: Sandbox } = {},
+) {
   const id = newChangeSetId();
   const now = new Date();
   const mine: ChangeSet = {
@@ -160,6 +167,7 @@ function setUp(content: FakeContent = {}, { released = false } = {}) {
       assets,
       new ReadableAssets(assets),
       new FakeRefreshConflicts(),
+      sandbox,
     ),
     /** Records an upload of `sha256` into a change set `by` is the author of. */
     uploaded: (sha256: string, by: Actor = author, changeSetId = id) =>
@@ -1162,6 +1170,168 @@ describe('DiscardWorkingCopyAction and abandoning', () => {
     expect(t.audit.events[0]).toMatchObject({
       action: 'change-set.abandon',
       data: { from: 'draft', to: 'abandoned', workingCopies: 2 },
+    });
+  });
+});
+
+describe('SaveWorkingCopyAction in a public sandbox (#826)', () => {
+  const sandbox = () =>
+    Sandbox.on({
+      limits: {
+        moduleBytes: 2_000,
+        commentLength: 100,
+        changeSets: 5,
+        modules: 1,
+        manuals: 1,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 1_000_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+  const newModule = (id: string): LockSubject => ({
+    type: 'module',
+    lang: 'en',
+    moduleId: id,
+  });
+
+  it('counts the modules it makes: past the cap, 422 sandbox-limit-reached, nothing saved', async () => {
+    const box = sandbox();
+    const t = setUp({}, { sandbox: box });
+    for (const id of ['one', 'two']) t.lock(newModule(id));
+    await t.save.handle({
+      actor: author,
+      changeSetId: t.mine.id,
+      subject: newModule('one'),
+      content: module('one', 'en', 'First'),
+      version: 0,
+    });
+    await expect(
+      t.save.handle({
+        actor: author,
+        changeSetId: t.mine.id,
+        subject: newModule('two'),
+        content: module('two', 'en', 'Second'),
+        version: 0,
+      }),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'modules', max: 1 },
+    });
+    expect(await t.copies.find(t.mine.id, newModule('two'))).toBeUndefined();
+    expect(box.status()?.used.modules).toBe(1);
+  });
+
+  it('spends every save’s bytes, the same copy saved again included: past the budget, 422', async () => {
+    const box = Sandbox.on({
+      limits: { ...sandbox().limits!, writeBytes: 600 },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+    const t = setUp({ modules: [edited('Charging')] }, { sandbox: box });
+    t.lock(charging);
+    let version = 0;
+    const save = async (text: string) => {
+      const saved = await t.save.handle({
+        actor: author,
+        changeSetId: t.mine.id,
+        subject: charging,
+        content: edited(text),
+        version,
+      });
+      version = saved.version;
+    };
+    await save('One');
+    const spent = box.status()?.writtenBytes ?? 0;
+    expect(spent).toBeGreaterThan(0);
+    // Saves of the same copy until the next would pass the budget.
+    let saves = 1;
+    while ((saves + 1) * spent <= 600) {
+      await save('One');
+      saves += 1;
+    }
+    await expect(save('One')).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'writeBytes', max: 600 },
+    });
+    expect(box.status()?.writtenBytes).toBe(saves * spent);
+  });
+
+  it('does not count a module that has a file, nor a later save, nor a refused save', async () => {
+    const box = sandbox();
+    const t = setUp({ modules: [edited('Charging')] }, { sandbox: box });
+    t.lock(charging);
+    const first = await t.save.handle({
+      actor: author,
+      changeSetId: t.mine.id,
+      subject: charging,
+      content: edited('Changed'),
+      version: 0,
+    });
+    await t.save.handle({
+      actor: author,
+      changeSetId: t.mine.id,
+      subject: charging,
+      content: edited('Changed again'),
+      version: first.version,
+    });
+    // No lock on it: refused, so not made.
+    await expect(
+      t.save.handle({
+        actor: author,
+        changeSetId: t.mine.id,
+        subject: newModule('unlocked'),
+        content: module('unlocked', 'en', 'x'),
+        version: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'lock-required' });
+    expect(box.status()?.used.modules).toBe(0);
+  });
+
+  it('refuses a working copy past the size cap, before it is saved', async () => {
+    const t = setUp({ modules: [edited('Charging')] }, { sandbox: sandbox() });
+    t.lock(charging);
+    await expect(
+      t.save.handle({
+        actor: author,
+        changeSetId: t.mine.id,
+        subject: charging,
+        content: edited('x'.repeat(3_000)),
+        version: 0,
+      }),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'moduleBytes', max: 2_000 },
+    });
+    expect(await t.copies.find(t.mine.id, charging)).toBeUndefined();
+  });
+
+  it('counts the manuals it makes', async () => {
+    const box = sandbox();
+    const t = setUp({}, { sandbox: box });
+    const manualSubject = (id: string): LockSubject => ({
+      type: 'manual',
+      manualId: id,
+    });
+    t.lock(manualSubject('first'));
+    t.lock(manualSubject('second'));
+    await t.save.handle({
+      actor: author,
+      changeSetId: t.mine.id,
+      subject: manualSubject('first'),
+      content: manifest('first', ['charging']),
+      version: 0,
+    });
+    await expect(
+      t.save.handle({
+        actor: author,
+        changeSetId: t.mine.id,
+        subject: manualSubject('second'),
+        content: manifest('second', ['charging']),
+        version: 0,
+      }),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'manuals', max: 1 },
     });
   });
 });

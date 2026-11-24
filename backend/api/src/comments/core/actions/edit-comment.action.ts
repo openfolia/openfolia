@@ -13,6 +13,7 @@ import {
   checkOpen,
   checkOwnComment,
 } from '../change-set-comments.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 interface Input {
   readonly actor: Actor;
@@ -45,6 +46,7 @@ export class EditCommentAction extends ActorAction<Input, ReadComment> {
     private readonly changeSets: ChangeSetStore,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -56,6 +58,7 @@ export class EditCommentAction extends ActorAction<Input, ReadComment> {
     resourceId,
     body,
   }: Input): Promise<ReadComment> {
+    this.sandbox.checkCommentLength(body);
     if (resourceId !== undefined && resourceId !== commentId) {
       throw new ConflictError(
         'id-mismatch',

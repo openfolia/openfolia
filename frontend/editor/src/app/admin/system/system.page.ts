@@ -63,6 +63,7 @@ import {
   type StoredFileItem,
   UNUSED_FILES_LINK,
 } from './storage-model';
+import { SandboxSession } from '../../sandbox/sandbox-session';
 
 type FilesDoc = Response<'/storage-usage/files'>;
 type SecretKeyItem = Response<'/secret-key'>['data'];
@@ -714,6 +715,7 @@ const BELOW_FRAME_PX = 32;
   `,
 })
 export class SystemPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly language = inject(LanguageService);
   private readonly t = injectTranslate();
@@ -721,9 +723,13 @@ export class SystemPage {
   private readonly help = inject(HelpService);
   private readonly permissions = inject(PermissionService);
 
-  /** The backup status (#529), for those holding `admin.backups` only, as its route needs. */
+  /**
+   * The backup status (#529), for those holding `admin.backups` only, as its route needs; never
+   * in a public sandbox (#826), which keeps nothing to back up.
+   */
   protected readonly showsBackups = computed(
     () =>
+      !this.sandbox.on() &&
       this.permissions.state({ permission: 'admin.backups' }).kind !== 'hidden',
   );
   private readonly backupStatus = signal<BackupStatusMeta | null>(null);

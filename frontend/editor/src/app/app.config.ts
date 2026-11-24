@@ -15,6 +15,7 @@ import { TranslatedTitleStrategy } from './i18n';
 import { provideChangeSetUrl } from './session/change-set-url';
 import { provideSessionEnd } from './permissions/me';
 import { DemoSession } from './session/demo-session';
+import { SandboxSession } from './sandbox/sandbox-session';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,7 +35,10 @@ export const appConfig: ApplicationConfig = {
       // The branding (#169) is read meanwhile, and the first screen waits for it, so it shows
       // its name and colours without a flash of the defaults. A failed read keeps the defaults.
       const branding = inject(BrandingService).load();
-      return Promise.all([inject(DemoSession).start(), branding]).then(
+      // A public sandbox (#826) is known before the first screen too, so its banner is there
+      // at first paint and nothing moves (a normal instance answers 404 at once).
+      const sandbox = inject(SandboxSession).start();
+      return Promise.all([inject(DemoSession).start(), branding, sandbox]).then(
         () => undefined,
       );
     }),

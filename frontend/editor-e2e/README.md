@@ -48,6 +48,12 @@ cd frontend/editor-e2e && node run.ts -g "diff view"   # without Nx, on the last
    it whose proxy adds no token (`E2E_SIGN_IN_URL`), as a deployment with sign-in has it. They
    start beside the first API and editor, adding about two seconds to the stack's start: cheaper
    than a Playwright project of their own, which would need a second database and content.
+6. **for the public sandbox flows** (#826, `specs/sandbox.spec.ts`; the suite passes
+   `sandbox: true`): a third API with `CCMS_PUBLIC_SANDBOX=on` in demo mode, on a database,
+   content and blob folder of its own (a sandbox runs every role in one process, so its
+   background jobs must never take the other APIs'), its session a day long
+   (`SANDBOX_MINUTES`, so a long run never sees it end), and a third editor in front of it with
+   the token (`E2E_SANDBOX_URL`). Its database and content are made while the first API starts.
 
 **No fixed ports:** the operating system hands them out (never 3100 or 4310, the person's own
 servers), so a run in an agent slot and one in the main checkout never meet, and a running
@@ -60,6 +66,8 @@ servers), so a run in an agent slot and one in the main checkout never meet, and
 - `seedFile`: its own people and roles;
 - `ports`: fixed ports, refused if they are 3100, 4310 or 4320;
 - `signIn: false`: no provider, second API or second editor;
+- `sandbox: true`: the public sandbox's API and editor (6.); off unless asked for, so the demo
+  and the guide's screenshots go without;
 - `startPage: true`: the editor server answers `GET /__start?lang=&user=&theme=` with a page that
   sets those three in the browser's storage, each checked against a pattern, then opens the
   editor. The suite itself never sets it.
@@ -138,7 +146,10 @@ scroller)` waits until the scroller has loaded what it shows (nothing busy or a 
 - **The console:** a console error or an uncaught exception fails the test. A flow that provokes
   one on purpose (a refused request) allows it with `test.use({ consoleAllow: [/…/] })` in a
   describe of its own, matched against the whole line (text and URL); a known bug allowed this
-  way names its issue. The sandboxed preview frames' blocked-script messages are allowed always.
+  way names its issue. The sandboxed preview frames' blocked-script messages are allowed always;
+  the 404 a normal instance answers to the editor's `GET /api/sandbox` at start-up (#826) is
+  allowed in every editor but the public sandbox's (`E2E_SANDBOX_URL`), where that request must
+  succeed.
 - **A known bug** whose fix is not merged: `test.fail(true, '#<issue>: …')`, so the flow runs and
   says so once the fix lands (an expected failure that passes fails the run).
 - **Viewports:** `desktop` (1440×900) runs everything but the isolated flows; `narrow` (390×844) the `@narrow` describes; `isolated` (1440×900) the isolated flows, last.

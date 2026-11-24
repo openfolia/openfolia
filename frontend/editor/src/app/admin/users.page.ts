@@ -67,6 +67,7 @@ import {
   type ShownSignInLink,
   SignInLinkDialogComponent,
 } from './sign-in-link-dialog.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 
 type UserDoc = Response<'/users'>;
 
@@ -294,8 +295,9 @@ const BELOW_FRAME_PX = 96;
                           }}
                         </button>
                       }
-                      @if (!user.attributes.email) {
-                        <!-- No address to sign in with: no link to make (422 no-email-address). -->
+                      @if (!user.attributes.email || sandbox.on()) {
+                        <!-- No address to sign in with: no link to make (422 no-email-address);
+                             a public sandbox makes none at all (issue 826, the header says why). -->
                       } @else if (
                         signInOf(user) === 'password' ||
                         signInOf(user) === 'both'
@@ -420,6 +422,7 @@ const BELOW_FRAME_PX = 96;
   `,
 })
 export class UsersPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly me = inject(MeService);
   private readonly toast = inject(ToastService);

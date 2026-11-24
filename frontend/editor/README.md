@@ -414,6 +414,32 @@ the editor's texts say "revision" (German "Überarbeitung"), code and addresses 
   roles, users, service accounts, screens not built yet, the not-found and no-access pages) show as
   they are. Nothing recreates the branch.
 
+## Public sandbox (`src/app/sandbox/`)
+
+A public sandbox (#826, `CCMS_PUBLIC_SANDBOX=on`; `backend/api/README.md`, "Public sandbox") is
+one throwaway instance per visitor of a public demo. The UI follows what the API enforces; a
+refused call still answers 403 `sandbox-not-allowed` or 422 `sandbox-limit-reached`, both with
+texts of their own (`meta.refused`, `meta.limit`).
+
+- **`SandboxSession`** reads `GET /sandbox` in the app's initializer, beside the demo check and
+  the branding, so the mode is known before the first screen renders. 404 is a normal instance
+  (not asked again); no answer is off, asked again every minute. On, it reads the session's end
+  again every minute (the API moves it with every other request, not with this one) and counts
+  the time left down every 5 s, in the browser's clock (the response's `Date` header corrects a
+  device's clock that is off).
+- **The banner** (`sandbox-banner.component.ts`): a slim line in the info colours at the top of
+  the shell's page column and of the sign-in pages: that the sandbox is the visitor's alone and
+  goes with the session, and the time left in tabular figures. In its last five minutes the time
+  is heavier and its clock in the warning colour; only the end is announced (`role="status"`).
+  The shell's banner publishes its height, as wrapped, as `--of-sandbox-h` on the root, which the
+  lists capped at the viewport less a fixed offset subtract, so their pagination stays in view.
+- **What it leaves out, with why:** where a control stood, `of-sandbox-note` (one quiet line);
+  a whole screen, `of-sandbox-off-state`. Uploads (the media library, the image and attachment
+  pickers, where a dropped or pasted file gets the reason in a toast, branding images, page
+  design fonts and "Use the platform logo"), imports and translation imports, template changes
+  (the template editor is read-only with the reason), new users, invitation and reset links,
+  service accounts and their tokens, webhooks, the test email and backups.
+
 ## View state in the address (`src/app/view-state/`, `session/change-set-url.ts`)
 
 **Every screen keeps its view state (filters, search, sort, page, tab, selection) in the query

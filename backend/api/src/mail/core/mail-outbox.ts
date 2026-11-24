@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SecretSealer } from '../../base/core/secret-sealer.js';
 import type { Transaction } from '../../base/core/unit-of-work.js';
 import { JobQueue } from '../../jobs/core/job-queue.js';
+import { Sandbox } from '../../sandbox/core/sandbox.js';
 import {
   headerText,
   isMailAddress,
@@ -40,21 +41,26 @@ export interface QueuedMail {
  * sends it, with retries, and removes the row: the email's body is never stored.
  *
  * Answers null, queuing nothing, while email is off (no mail server, or no secret key): a
- * caller then offers what the email would have carried another way (a link to copy). Throws
- * for a malformed address or params (a bug in the caller, or input it did not check).
+ * caller then offers what the email would have carried another way (a link to copy). In a
+ * public sandbox (#826) email is always off: an email is dropped, and the log says which
+ * template (never to whom). Throws for a malformed address or params (a bug in the caller, or
+ * input it did not check).
  */
 @Injectable()
 export class MailOutbox {
+  private readonly logger = new Logger('Mail');
+
   constructor(
     private readonly settings: MailSettings,
     private readonly store: MailStore,
     private readonly sealer: SecretSealer,
     private readonly jobs: JobQueue,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {}
 
   /** Whether `queue` sends anything now. */
   get enabled(): boolean {
-    return this.settings.state === 'on';
+    return !this.sandbox.on && this.settings.state === 'on';
   }
 
   /**
@@ -75,6 +81,12 @@ export class MailOutbox {
     const params = MAIL_TEMPLATES[request.template].params.parse(
       request.params,
     );
+    if (this.sandbox.on) {
+      this.logger.log(
+        `Dropped an email (${request.template}): nothing leaves a public sandbox.`,
+      );
+      return null;
+    }
     if (!this.enabled) return null;
     const id = randomUUID();
     const language = mailLanguage(request.language, this.settings.language);

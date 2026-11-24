@@ -377,7 +377,7 @@ export class OptionListComponent {
   /** The rows sit in a card of their own (not inside another card). */
   readonly framed = input(true);
   /** The tallest the rows may be before they scroll, as a CSS length. */
-  readonly maxHeight = input('calc(100dvh - 18rem)');
+  readonly maxHeight = input('calc(100dvh - 18rem - var(--of-sandbox-h, 0px))');
   /** The rows keep their order: no grips (they still line up with a sortable list's). */
   readonly sortable = input(true);
   /** A badge every row carries (translated), e.g. "Built-in"; none when empty. */

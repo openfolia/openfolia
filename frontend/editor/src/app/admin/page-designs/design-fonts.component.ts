@@ -35,6 +35,8 @@ import {
   withFont,
 } from './design-fonts';
 import type { PageDesign } from './design-model';
+import { SandboxSession } from '../../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../../sandbox/sandbox-note.component';
 
 /** The value of "the standard font" in a role's picker: no family is empty. */
 const STANDARD = '';
@@ -72,7 +74,13 @@ interface RoleView {
  */
 @Component({
   selector: 'of-design-fonts',
-  imports: [TranslocoPipe, NgIcon, ZardButtonComponent, ZardSelectImports],
+  imports: [
+    SandboxNoteComponent,
+    TranslocoPipe,
+    NgIcon,
+    ZardButtonComponent,
+    ZardSelectImports,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   viewProviders: [provideIcons({ lucideTriangleAlert, lucideUpload })],
   host: { class: 'flex min-w-0 flex-col gap-3', 'data-slot': 'design-fonts' },
@@ -162,7 +170,10 @@ interface RoleView {
         {{ failed() }}
       </p>
     }
-    @if (changeSetId()) {
+    @if (sandbox.on()) {
+      <!-- A public sandbox takes no uploads (issue 826): the fonts listed stay to pick from. -->
+      <of-sandbox-note [text]="'editor.sandbox.uploadsOffFonts' | transloco" />
+    } @else if (changeSetId()) {
       <div class="flex min-w-0 flex-wrap items-center gap-2">
         <input
           #file
@@ -197,6 +208,7 @@ interface RoleView {
   `,
 })
 export class DesignFontsComponent {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly toast = inject(ToastService);
   private readonly t = injectTranslate();

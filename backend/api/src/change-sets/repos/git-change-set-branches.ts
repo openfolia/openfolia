@@ -10,6 +10,14 @@ import {
 } from '@openfolia/content-repo';
 import { ConflictError, UnprocessableError } from '../../base/core/errors.js';
 import type { Env } from '../../config/env.js';
+import { Sandbox } from '../../sandbox/core/sandbox.js';
+
+/** What a sandbox spends for a commit's root tree and commit object (#826). */
+const COMMIT_OVERHEAD_BYTES = 2 * 1024;
+/** A tree entry's bytes besides its name: the mode, a space, a NUL and the object ID. */
+const TREE_ENTRY_BYTES = 28;
+/** A carried author's trailer, at most (`Carried-author: <kind>:<id>`). */
+const TRAILER_BYTES = 256;
 import {
   BRANCH_PREFIX,
   type ChangeSetAuthor,
@@ -76,7 +84,10 @@ export class GitChangeSetBranches extends ChangeSetBranches {
   private readonly repo: GitRepo;
   private readonly defaultRef: string;
 
-  constructor(config: ConfigService<Env, true>) {
+  constructor(
+    config: ConfigService<Env, true>,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
+  ) {
     super();
     const dir = config.get('CCMS_CONTENT_DIR', { infer: true });
     const defaultRef = config.get('CCMS_DEFAULT_REF', { infer: true });
@@ -140,6 +151,12 @@ export class GitChangeSetBranches extends ChangeSetBranches {
     },
   ): Promise<{ tree: string }> {
     assertChangeSetBranch(name);
+    // A public sandbox (#826) spends what every commit writes, whichever action makes it (a
+    // save point, a rename, a revert, a carry, a translation marked current): the files' bytes
+    // and the trees and commit around them.
+    if (this.sandbox.on) {
+      this.sandbox.spend(await this.commitBytes(request));
+    }
     try {
       return await this.writer.prepareCommit({
         branch: name,
@@ -159,6 +176,44 @@ export class GitChangeSetBranches extends ChangeSetBranches {
       }
       throw error;
     }
+  }
+
+  /**
+   * What a commit of `changes` on `parent` writes, as a public sandbox spends it: the files'
+   * bytes, every tree object it rewrites (each folder a change is in, with all its entries at
+   * `parent`: about the name and 28 bytes each), the message and the trailers, and
+   * `COMMIT_OVERHEAD_BYTES` for the root tree and the rest of the commit. A flat folder of many files costs its full listing on every commit.
+   */
+  private async commitBytes(request: {
+    readonly parent: string;
+    readonly changes: readonly BranchChange[];
+    readonly message: string;
+    readonly carried?: readonly ChangeSetAuthor[];
+  }): Promise<number> {
+    // The message is the visitor's, up to 10,000 characters; each carried author a trailer.
+    let bytes =
+      COMMIT_OVERHEAD_BYTES +
+      Buffer.byteLength(request.message, 'utf8') +
+      (request.carried?.length ?? 0) * TRAILER_BYTES;
+    const folders = new Set<string>();
+    for (const change of request.changes) {
+      if (!('delete' in change))
+        bytes += Buffer.byteLength(change.content, 'utf8');
+      const parts = change.path.split('/');
+      for (let i = 1; i < parts.length; i++)
+        folders.add(parts.slice(0, i).join('/'));
+      // A new entry adds itself to its folder's tree.
+      bytes += TREE_ENTRY_BYTES + (parts.at(-1)?.length ?? 0);
+    }
+    for (const folder of folders) {
+      const entries = new Set(
+        (await this.repo.listFiles(request.parent, folder)).map(
+          (path) => path.slice(folder.length + 1).split('/')[0] ?? '',
+        ),
+      );
+      for (const entry of entries) bytes += TREE_ENTRY_BYTES + entry.length;
+    }
+    return bytes;
   }
 
   async commit(

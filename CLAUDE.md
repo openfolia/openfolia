@@ -17,20 +17,21 @@ pasted into a PR.
 
 Nx 24 + pnpm 11 monorepo, Node 24, TypeScript 6, ESM, Vitest. Frontend: Angular 22, Tailwind CSS v4.
 
-| Path                            | Nx project             | What                                                                              |
-| ------------------------------- | ---------------------- | --------------------------------------------------------------------------------- |
-| `packages/content-model`        | `content-model`        | the document model, manifests, variant resolution, validation                     |
-| `packages/content-repo`         | `content-repo`         | reads content from Git at any ref, without a working tree                         |
-| `packages/content-editor-model` | `content-editor-model` | the editor's ProseMirror schema and the converters to and from the content model  |
-| `packages/render-typst`         | `render-typst`         | resolved manual → PDF with Typst on a worker pool                                 |
-| `backend/api`                   | `api`                  | NestJS 12 JSON:API over the content (`backend/api/README.md`)                     |
-| `backend/mcp`                   | `mcp`                  | MCP server for agents over the released content, a client of the API              |
-| `frontend/theme`                | `theme`                | design tokens and fonts as plain CSS (`frontend/theme/README.md`)                 |
-| `frontend/ui`                   | `ui`                   | Angular component library: Zard UI + ours, Tailwind v4                            |
-| `frontend/editor`               | `editor`               | the editor, an Angular app built from `ui` components only                        |
-| `frontend/docs`                 | `docs`                 | the public docs site (Fumadocs, static export), references generated at build     |
-| `frontend/portal`               | `portal`               | the static portal per audience and language (Astro, Pagefind), built from the API |
-| `scripts/`                      | `workflow`             | planning and parallel-agent tooling; tests of `.claude/hooks/` too                |
+| Path                            | Nx project             | What                                                                                |
+| ------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| `packages/content-model`        | `content-model`        | the document model, manifests, variant resolution, validation                       |
+| `packages/content-repo`         | `content-repo`         | reads content from Git at any ref, without a working tree                           |
+| `packages/content-editor-model` | `content-editor-model` | the editor's ProseMirror schema and the converters to and from the content model    |
+| `packages/render-typst`         | `render-typst`         | resolved manual → PDF with Typst on a worker pool                                   |
+| `backend/api`                   | `api`                  | NestJS 12 JSON:API over the content (`backend/api/README.md`)                       |
+| `backend/mcp`                   | `mcp`                  | MCP server for agents over the released content, a client of the API                |
+| `backend/sandbox`               | `sandbox`              | the embedded database (PGlite on a port) of the sandbox image and the browser tests |
+| `frontend/theme`                | `theme`                | design tokens and fonts as plain CSS (`frontend/theme/README.md`)                   |
+| `frontend/ui`                   | `ui`                   | Angular component library: Zard UI + ours, Tailwind v4                              |
+| `frontend/editor`               | `editor`               | the editor, an Angular app built from `ui` components only                          |
+| `frontend/docs`                 | `docs`                 | the public docs site (Fumadocs, static export), references generated at build       |
+| `frontend/portal`               | `portal`               | the static portal per audience and language (Astro, Pagefind), built from the API   |
+| `scripts/`                      | `workflow`             | planning and parallel-agent tooling; tests of `.claude/hooks/` too                  |
 
 Each package's README describes its API; read it before changing the package.
 

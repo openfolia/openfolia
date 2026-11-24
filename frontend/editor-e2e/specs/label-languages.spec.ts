@@ -43,7 +43,7 @@ test.describe('labels and titles per language @area:admin @area:manuals @area:co
     const changeSet = await admin.createChangeSet(unique('Label languages'));
     const manualId = slug('label-languages');
     const title = unique('Label manual');
-    const german = unique('Handbuch der Bezeichnungen');
+    const german = unique('Anleitung der Bezeichnungen');
     const typeLabel = unique('Konzept');
     await admin.createManual(changeSet, manualId, {
       title,

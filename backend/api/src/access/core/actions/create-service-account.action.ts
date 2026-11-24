@@ -19,6 +19,7 @@ import {
   type ServiceAccount,
   ServiceAccountStore,
 } from '../service-accounts.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export interface CreateServiceAccountInput {
   readonly actor: Actor;
@@ -46,6 +47,7 @@ export class CreateServiceAccountAction extends ActorAction<
     private readonly store: ServiceAccountStore,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -55,6 +57,7 @@ export class CreateServiceAccountAction extends ActorAction<
     account,
     roleIds,
   }: CreateServiceAccountInput): Promise<ServiceAccount> {
+    this.sandbox.refuse('service-accounts');
     return runContended(
       this.unit,
       async (tx) => {

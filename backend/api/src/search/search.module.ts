@@ -21,6 +21,7 @@ import { HttpEmbedder } from './repos/http-embedder.js';
 import { InMemoryContentSearch } from './repos/in-memory-content-search.js';
 import { NoEmbedder } from './repos/no-embedder.js';
 import { PostgresContentSearch } from './repos/postgres-content-search.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
 
 /**
  * Search (#70, #54): `CCMS_SEARCH_ADAPTER` picks the Postgres index (the
@@ -58,8 +59,13 @@ import { PostgresContentSearch } from './repos/postgres-content-search.js';
     },
     {
       provide: Embedder,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService<Env, true>): Embedder => {
+      inject: [ConfigService, Sandbox],
+      useFactory: (
+        config: ConfigService<Env, true>,
+        sandbox: Sandbox,
+      ): Embedder => {
+        // A public sandbox (#826) sends nothing to an embeddings endpoint.
+        if (sandbox.on) return new NoEmbedder();
         const url = config.get('CCMS_EMBEDDER_URL', { infer: true });
         const model = config.get('CCMS_EMBEDDER_MODEL', { infer: true });
         const dimensions = config.get('CCMS_EMBEDDER_DIMENSIONS', {

@@ -42,6 +42,7 @@ import {
   ORPHAN_GRACE_MS,
   ReconcileChangeSetBranchesAction,
 } from './reconcile-change-set-branches.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const MAIN = 'a'.repeat(40);
 const RELEASE = 'b'.repeat(40);
@@ -62,7 +63,7 @@ class FakeRefs extends ContentRepository {
 const author = actorWith(['content.edit', 'content.read.draft']);
 const other: Actor = { ...author, id: 'someone-else' };
 
-function setUp() {
+function setUp(sandbox: Sandbox = Sandbox.OFF) {
   const refs = new FakeRefs();
   const branches = new FakeChangeSetBranches();
   const store = new FakeChangeSetStore();
@@ -87,6 +88,7 @@ function setUp() {
       audit,
       unit,
       lines,
+      sandbox,
     ),
     abandon: new AbandonChangeSetAction(
       store,
@@ -947,5 +949,38 @@ describe('ReconcileChangeSetBranchesAction', () => {
     branches.heads.set(changeSetBranch(newChangeSetId()), MAIN);
     store.existing = () => Promise.reject(new Error('not asked'));
     expect((await reconcile.handle({ now: Date.now() })).removed).toEqual([]);
+  });
+});
+
+describe('CreateChangeSetAction in a public sandbox (#826)', () => {
+  it('makes at most CCMS_SANDBOX_MAX_CHANGE_SETS; then 422 sandbox-limit-reached, no branch', async () => {
+    const sandbox = Sandbox.on({
+      limits: {
+        moduleBytes: 1_000,
+        commentLength: 100,
+        changeSets: 2,
+        modules: 5,
+        manuals: 5,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 1_000_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+    const { create, store, branches } = setUp(sandbox);
+    // One refused for its own reason counts nothing.
+    await expect(
+      create.handle({ actor: author, title: 'x', baseRef: 'nowhere' }),
+    ).rejects.toMatchObject({ code: 'invalid-base' });
+    await create.handle({ actor: author, title: 'one' });
+    await create.handle({ actor: author, title: 'two' });
+    await expect(
+      create.handle({ actor: author, title: 'three' }),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'changeSets', max: 2 },
+    });
+    expect((await store.list({}, { number: 1, size: 10 })).total).toBe(2);
+    expect(branches.heads.size).toBe(2);
   });
 });

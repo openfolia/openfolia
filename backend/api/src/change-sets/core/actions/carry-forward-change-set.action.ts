@@ -30,6 +30,7 @@ import { type LockSubject } from '../lock.js';
 import { isActor, readsChangeSets } from '../own-work.js';
 import { coversChanges } from '../review-scope.js';
 import { Workflow } from '../workflow.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export type { CarryConflict } from '../carry-change.js';
 
@@ -118,11 +119,17 @@ export class CarryForwardChangeSetAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly events: ChangeSetEvents,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
-  protected async run({
+  /** Counted against a public sandbox's cap (#826): past it, 422 `sandbox-limit-reached`. */
+  protected run(input: CarryForwardInput): Promise<CarryForwardOutcome> {
+    return this.sandbox.counted('change-sets', () => this.make(input));
+  }
+
+  private async make({
     actor,
     id,
   }: CarryForwardInput): Promise<CarryForwardOutcome> {

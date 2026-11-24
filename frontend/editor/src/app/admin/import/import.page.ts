@@ -94,6 +94,8 @@ import {
   valuesFrom,
   type OptionValues,
 } from './options-schema';
+import { SandboxOffStateComponent } from '../../sandbox/sandbox-off-state.component';
+import { SandboxSession } from '../../sandbox/sandbox-session';
 
 /** The screen's view in the address: the importer, the stored import, and the report's filter and page. */
 export const IMPORT_SCREEN_PARAMS = {
@@ -145,6 +147,7 @@ type Phase =
 @Component({
   selector: 'of-import-page',
   imports: [
+    SandboxOffStateComponent,
     RouterLink,
     TranslocoPipe,
     NgIcon,
@@ -180,781 +183,799 @@ type Phase =
     '(window:beforeunload)': 'beforeUnload($event)',
   },
   template: `
-    <input
-      #fileInput
-      id="import-file"
-      type="file"
-      class="sr-only"
-      tabindex="-1"
-      aria-hidden="true"
-      [accept]="accepted"
-      (change)="picked($event)"
-    />
+    @if (sandbox.on()) {
+      <!-- A public sandbox imports nothing (issue 826): the screen says why. -->
+      <of-sandbox-off-state
+        [title]="'editor.sandbox.importsOff.title' | transloco"
+        [description]="'editor.sandbox.importsOff.description' | transloco"
+      />
+    } @else {
+      <input
+        #fileInput
+        id="import-file"
+        type="file"
+        class="sr-only"
+        tabindex="-1"
+        aria-hidden="true"
+        [accept]="accepted"
+        (change)="picked($event)"
+      />
 
-    <of-collapse [open]="setupOpen()">
-      <div class="flex min-w-0 flex-col gap-4" data-slot="setup">
-        <!-- 1. The importer -->
-        <section
-          class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
-          data-slot="step-importer"
-          aria-labelledby="import-step-importer"
-        >
-          <h2 id="import-step-importer" class="m-0 text-base font-semibold">
-            {{ 'editor.admin.import.steps.importer' | transloco }}
-          </h2>
-          @if (importers(); as list) {
-            @if (list.length === 0) {
-              <p class="text-muted-foreground m-0 text-sm break-words">
-                {{ 'editor.admin.import.importer.none' | transloco }}
-              </p>
-            } @else {
-              <z-radio-group
-                ofFadeIn
-                class="flex flex-col gap-3"
-                [attr.aria-labelledby]="'import-step-importer'"
-                [value]="importerId()"
-                [zDisabled]="busy()"
-                (valueChange)="chooseImporter($any($event))"
-              >
-                @for (i of list; track i.id) {
-                  <label
-                    class="flex min-w-0 cursor-pointer items-start gap-3"
-                    [attr.data-importer]="i.id"
-                  >
-                    <z-radio
-                      class="mt-0.5"
-                      [value]="i.id"
-                      [zId]="'import-importer-' + i.id"
-                    />
-                    <span class="flex min-w-0 flex-col gap-0.5">
-                      <span class="text-sm font-medium break-words">{{
-                        i.attributes.label
-                      }}</span>
-                      <span class="text-muted-foreground text-xs break-words">{{
-                        i.attributes.description
-                      }}</span>
-                      @if (i.id === documented) {
-                        @if (formatLink(); as link) {
-                          <a
-                            class="text-primary focus-visible:ring-ring/50 inline-flex w-fit items-center gap-1 rounded-sm text-xs underline-offset-4 outline-none hover:underline focus-visible:ring-2"
-                            data-slot="format-link"
-                            target="_blank"
-                            rel="noopener"
-                            [href]="link.href"
-                            >{{
-                              'editor.admin.import.importer.formatLink'
-                                | transloco
-                            }}<ng-icon
-                              name="lucideExternalLink"
-                              class="size-3"
-                              aria-hidden="true"
-                            /><span class="sr-only">{{
-                              'editor.admin.import.importer.newTab' | transloco
-                            }}</span></a
-                          >
-                        }
-                      }
-                    </span>
-                  </label>
-                }
-              </z-radio-group>
-            }
-          } @else if (importersError(); as err) {
-            <of-error-state
-              [kind]="err.kind"
-              [message]="importersErrorText() | ofText"
-              (retry)="loadImporters()"
-            />
-          } @else {
-            <of-skeleton-rows
-              [count]="2"
-              [label]="'editor.admin.import.importer.loading' | transloco"
-            />
-          }
-        </section>
-
-        <!-- 2. The file -->
-        <section
-          class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
-          data-slot="step-file"
-          aria-labelledby="import-step-file"
-        >
-          <h2 id="import-step-file" class="m-0 text-base font-semibold">
-            {{ 'editor.admin.import.steps.file' | transloco }}
-          </h2>
-          @if (file(); as f) {
-            <div
-              class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
-              data-slot="file"
-              [class.border-primary]="dragging()"
-              (dragenter)="dragOver($event)"
-              (dragover)="dragOver($event)"
-              (dragleave)="dragging.set(false)"
-              (drop)="dropped($event)"
-            >
-              <ng-icon
-                name="lucideFileArchive"
-                class="text-muted-foreground size-5 shrink-0"
-                aria-hidden="true"
-              />
-              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span
-                  class="font-medium break-words [overflow-wrap:anywhere]"
-                  data-slot="file-name"
-                  >{{ f.name }}</span
+      <of-collapse [open]="setupOpen()">
+        <div class="flex min-w-0 flex-col gap-4" data-slot="setup">
+          <!-- 1. The importer -->
+          <section
+            class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
+            data-slot="step-importer"
+            aria-labelledby="import-step-importer"
+          >
+            <h2 id="import-step-importer" class="m-0 text-base font-semibold">
+              {{ 'editor.admin.import.steps.importer' | transloco }}
+            </h2>
+            @if (importers(); as list) {
+              @if (list.length === 0) {
+                <p class="text-muted-foreground m-0 text-sm break-words">
+                  {{ 'editor.admin.import.importer.none' | transloco }}
+                </p>
+              } @else {
+                <z-radio-group
+                  ofFadeIn
+                  class="flex flex-col gap-3"
+                  [attr.aria-labelledby]="'import-step-importer'"
+                  [value]="importerId()"
+                  [zDisabled]="busy()"
+                  (valueChange)="chooseImporter($any($event))"
                 >
-                <span class="text-muted-foreground text-sm">{{
-                  'editor.admin.import.file.size'
-                    | transloco: { size: sizeOf(f.size) }
-                }}</span>
+                  @for (i of list; track i.id) {
+                    <label
+                      class="flex min-w-0 cursor-pointer items-start gap-3"
+                      [attr.data-importer]="i.id"
+                    >
+                      <z-radio
+                        class="mt-0.5"
+                        [value]="i.id"
+                        [zId]="'import-importer-' + i.id"
+                      />
+                      <span class="flex min-w-0 flex-col gap-0.5">
+                        <span class="text-sm font-medium break-words">{{
+                          i.attributes.label
+                        }}</span>
+                        <span
+                          class="text-muted-foreground text-xs break-words"
+                          >{{ i.attributes.description }}</span
+                        >
+                        @if (i.id === documented) {
+                          @if (formatLink(); as link) {
+                            <a
+                              class="text-primary focus-visible:ring-ring/50 inline-flex w-fit items-center gap-1 rounded-sm text-xs underline-offset-4 outline-none hover:underline focus-visible:ring-2"
+                              data-slot="format-link"
+                              target="_blank"
+                              rel="noopener"
+                              [href]="link.href"
+                              >{{
+                                'editor.admin.import.importer.formatLink'
+                                  | transloco
+                              }}<ng-icon
+                                name="lucideExternalLink"
+                                class="size-3"
+                                aria-hidden="true"
+                              /><span class="sr-only">{{
+                                'editor.admin.import.importer.newTab'
+                                  | transloco
+                              }}</span></a
+                            >
+                          }
+                        }
+                      </span>
+                    </label>
+                  }
+                </z-radio-group>
+              }
+            } @else if (importersError(); as err) {
+              <of-error-state
+                [kind]="err.kind"
+                [message]="importersErrorText() | ofText"
+                (retry)="loadImporters()"
+              />
+            } @else {
+              <of-skeleton-rows
+                [count]="2"
+                [label]="'editor.admin.import.importer.loading' | transloco"
+              />
+            }
+          </section>
+
+          <!-- 2. The file -->
+          <section
+            class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
+            data-slot="step-file"
+            aria-labelledby="import-step-file"
+          >
+            <h2 id="import-step-file" class="m-0 text-base font-semibold">
+              {{ 'editor.admin.import.steps.file' | transloco }}
+            </h2>
+            @if (file(); as f) {
+              <div
+                class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
+                data-slot="file"
+                [class.border-primary]="dragging()"
+                (dragenter)="dragOver($event)"
+                (dragover)="dragOver($event)"
+                (dragleave)="dragging.set(false)"
+                (drop)="dropped($event)"
+              >
+                <ng-icon
+                  name="lucideFileArchive"
+                  class="text-muted-foreground size-5 shrink-0"
+                  aria-hidden="true"
+                />
+                <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span
+                    class="font-medium break-words [overflow-wrap:anywhere]"
+                    data-slot="file-name"
+                    >{{ f.name }}</span
+                  >
+                  <span class="text-muted-foreground text-sm">{{
+                    'editor.admin.import.file.size'
+                      | transloco: { size: sizeOf(f.size) }
+                  }}</span>
+                </div>
+                <button
+                  z-button
+                  zType="ghost"
+                  type="button"
+                  data-slot="replace"
+                  [zDisabled]="busy()"
+                  (click)="fileInput.click()"
+                >
+                  {{ 'editor.admin.import.file.replace' | transloco }}
+                </button>
               </div>
+            } @else {
+              <label
+                for="import-file-zone"
+                class="border-border hover:bg-muted/40 has-[:focus-visible]:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors duration-150 has-[:focus-visible]:ring-[3px] motion-reduce:transition-none"
+                [class.border-primary]="dragging()"
+                [class.bg-muted]="dragging()"
+                data-slot="drop-zone"
+                (dragenter)="dragOver($event)"
+                (dragover)="dragOver($event)"
+                (dragleave)="dragging.set(false)"
+                (drop)="dropped($event)"
+              >
+                <ng-icon
+                  name="lucideUpload"
+                  class="text-muted-foreground size-6"
+                  aria-hidden="true"
+                />
+                <span class="font-medium">{{
+                  'editor.admin.import.file.title' | transloco
+                }}</span>
+                <span class="text-muted-foreground text-sm">{{
+                  'editor.admin.import.file.choose' | transloco
+                }}</span>
+                <input
+                  id="import-file-zone"
+                  type="file"
+                  class="sr-only"
+                  aria-describedby="import-file-limit"
+                  [accept]="accepted"
+                  [disabled]="busy()"
+                  (change)="picked($event)"
+                />
+              </label>
+            }
+            <p
+              id="import-file-limit"
+              class="text-muted-foreground m-0 text-xs break-words"
+              data-slot="size-limit"
+            >
+              @if (importer(); as i) {
+                {{
+                  'editor.admin.import.file.limit'
+                    | transloco: { max: sizeOf(i.meta.maxBytes) }
+                }}
+              } @else {
+                {{ 'editor.admin.import.file.limitUnknown' | transloco }}
+              }
+            </p>
+            @if (fileError(); as err) {
+              <p
+                class="border-destructive/40 bg-destructive-muted text-foreground m-0 rounded-lg border px-4 py-3 text-sm break-words"
+                role="alert"
+                data-slot="file-error"
+              >
+                {{ err | ofText }}
+              </p>
+            }
+          </section>
+
+          <!-- 3. The options -->
+          <section
+            class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
+            data-slot="step-options"
+            aria-labelledby="import-step-options"
+          >
+            <h2 id="import-step-options" class="m-0 text-base font-semibold">
+              {{ 'editor.admin.import.steps.options' | transloco }}
+            </h2>
+            @if (fields().length === 0) {
+              <p class="text-muted-foreground m-0 text-sm break-words">
+                {{ 'editor.admin.import.options.none' | transloco }}
+              </p>
+            }
+            <of-import-options
+              [fields]="fields()"
+              [values]="values()"
+              [problems]="problems()"
+              [shown]="shownProblems()"
+              [updateExisting]="updateExisting()"
+              [disabled]="busy()"
+              (optionChange)="changeOption($event)"
+              (updateExistingChange)="updateExisting.set($event)"
+            />
+          </section>
+
+          <div
+            class="flex min-w-0 flex-wrap items-center justify-end gap-3"
+            data-slot="setup-actions"
+          >
+            @if (uploading()) {
+              <div
+                class="flex min-w-0 flex-1 flex-col gap-1"
+                data-slot="upload-progress"
+              >
+                <span class="text-muted-foreground text-sm" role="status">{{
+                  uploadPercent() === null
+                    ? ('editor.admin.import.upload.checking' | transloco)
+                    : ('editor.admin.import.upload.sending'
+                      | transloco: { percent: uploadPercent() })
+                }}</span>
+                <span
+                  class="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-valuenow]="uploadPercent() ?? 100"
+                  [attr.aria-label]="
+                    'editor.admin.import.upload.label' | transloco
+                  "
+                >
+                  <span
+                    class="bg-primary block h-full rounded-full transition-[width] duration-200 motion-reduce:transition-none"
+                    [class.animate-pulse]="uploadPercent() === null"
+                    [style.width.%]="uploadPercent() ?? 100"
+                  ></span>
+                </span>
+              </div>
+            }
+            @if (doc()) {
               <button
                 z-button
                 zType="ghost"
                 type="button"
-                data-slot="replace"
-                [zDisabled]="busy()"
-                (click)="fileInput.click()"
+                data-slot="back-to-report"
+                [zDisabled]="uploading()"
+                (click)="setupShown.set(false)"
               >
-                {{ 'editor.admin.import.file.replace' | transloco }}
+                {{ 'editor.admin.import.setup.back' | transloco }}
               </button>
+            }
+            <button
+              z-button
+              type="button"
+              data-slot="dry-run"
+              [zLoading]="uploading()"
+              [ofGuard]="{
+                permission: 'admin.roles',
+                blockedReason: dryRunBlocked(),
+              }"
+              (click)="dryRun()"
+            >
+              {{ 'editor.admin.import.setup.dryRun' | transloco }}
+            </button>
+          </div>
+        </div>
+      </of-collapse>
+
+      @if (!setupOpen()) {
+        @if (doc(); as d) {
+          @let a = d.data.attributes;
+          <section
+            class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
+            data-slot="summary"
+            [attr.aria-label]="'editor.admin.import.summary.label' | transloco"
+          >
+            <ng-icon
+              name="lucideFileArchive"
+              class="text-muted-foreground size-5 shrink-0"
+              aria-hidden="true"
+            />
+            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span class="font-medium break-words [overflow-wrap:anywhere]">{{
+                a.fileName ??
+                  ('editor.admin.import.summary.unnamed' | transloco)
+              }}</span>
+              <span
+                class="text-muted-foreground text-sm break-words"
+                data-slot="summary-meta"
+                >{{ summaryMeta() }}</span
+              >
             </div>
-          } @else {
-            <label
-              for="import-file-zone"
-              class="border-border hover:bg-muted/40 has-[:focus-visible]:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors duration-150 has-[:focus-visible]:ring-[3px] motion-reduce:transition-none"
-              [class.border-primary]="dragging()"
-              [class.bg-muted]="dragging()"
-              data-slot="drop-zone"
-              (dragenter)="dragOver($event)"
-              (dragover)="dragOver($event)"
-              (dragleave)="dragging.set(false)"
-              (drop)="dropped($event)"
+            @if (phase() === 'report' || phase() === 'expired') {
+              <button
+                z-button
+                zType="ghost"
+                type="button"
+                data-slot="change"
+                [zDisabled]="busy()"
+                (click)="changeSetup()"
+              >
+                {{ 'editor.admin.import.summary.change' | transloco }}
+              </button>
+            }
+          </section>
+        }
+      }
+
+      @if (!setupOpen()) {
+        @switch (phase()) {
+          @case ('loading') {
+            <div
+              class="bg-muted h-24 animate-pulse rounded-lg motion-reduce:animate-none"
+              ofFadeIn="delayed"
+              role="status"
+              [attr.aria-label]="'editor.admin.import.loading' | transloco"
+            ></div>
+          }
+          @case ('gone') {
+            <div
+              class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
+              role="status"
+              data-slot="gone"
             >
               <ng-icon
-                name="lucideUpload"
-                class="text-muted-foreground size-6"
+                name="lucideClock"
+                class="text-warning shrink-0"
                 aria-hidden="true"
               />
-              <span class="font-medium">{{
-                'editor.admin.import.file.title' | transloco
+              <span class="min-w-0 flex-1 break-words">{{
+                'editor.admin.import.gone' | transloco
               }}</span>
-              <span class="text-muted-foreground text-sm">{{
-                'editor.admin.import.file.choose' | transloco
-              }}</span>
-              <input
-                id="import-file-zone"
-                type="file"
-                class="sr-only"
-                aria-describedby="import-file-limit"
-                [accept]="accepted"
-                [disabled]="busy()"
-                (change)="picked($event)"
-              />
-            </label>
-          }
-          <p
-            id="import-file-limit"
-            class="text-muted-foreground m-0 text-xs break-words"
-            data-slot="size-limit"
-          >
-            @if (importer(); as i) {
-              {{
-                'editor.admin.import.file.limit'
-                  | transloco: { max: sizeOf(i.meta.maxBytes) }
-              }}
-            } @else {
-              {{ 'editor.admin.import.file.limitUnknown' | transloco }}
-            }
-          </p>
-          @if (fileError(); as err) {
-            <p
-              class="border-destructive/40 bg-destructive-muted text-foreground m-0 rounded-lg border px-4 py-3 text-sm break-words"
-              role="alert"
-              data-slot="file-error"
-            >
-              {{ err | ofText }}
-            </p>
-          }
-        </section>
-
-        <!-- 3. The options -->
-        <section
-          class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4"
-          data-slot="step-options"
-          aria-labelledby="import-step-options"
-        >
-          <h2 id="import-step-options" class="m-0 text-base font-semibold">
-            {{ 'editor.admin.import.steps.options' | transloco }}
-          </h2>
-          @if (fields().length === 0) {
-            <p class="text-muted-foreground m-0 text-sm break-words">
-              {{ 'editor.admin.import.options.none' | transloco }}
-            </p>
-          }
-          <of-import-options
-            [fields]="fields()"
-            [values]="values()"
-            [problems]="problems()"
-            [shown]="shownProblems()"
-            [updateExisting]="updateExisting()"
-            [disabled]="busy()"
-            (optionChange)="changeOption($event)"
-            (updateExistingChange)="updateExisting.set($event)"
-          />
-        </section>
-
-        <div
-          class="flex min-w-0 flex-wrap items-center justify-end gap-3"
-          data-slot="setup-actions"
-        >
-          @if (uploading()) {
-            <div
-              class="flex min-w-0 flex-1 flex-col gap-1"
-              data-slot="upload-progress"
-            >
-              <span class="text-muted-foreground text-sm" role="status">{{
-                uploadPercent() === null
-                  ? ('editor.admin.import.upload.checking' | transloco)
-                  : ('editor.admin.import.upload.sending'
-                    | transloco: { percent: uploadPercent() })
-              }}</span>
-              <span
-                class="bg-muted h-1.5 w-full overflow-hidden rounded-full"
-                role="progressbar"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                [attr.aria-valuenow]="uploadPercent() ?? 100"
-                [attr.aria-label]="
-                  'editor.admin.import.upload.label' | transloco
-                "
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                type="button"
+                (click)="startOver()"
               >
-                <span
-                  class="bg-primary block h-full rounded-full transition-[width] duration-200 motion-reduce:transition-none"
-                  [class.animate-pulse]="uploadPercent() === null"
-                  [style.width.%]="uploadPercent() ?? 100"
-                ></span>
-              </span>
+                {{ 'editor.admin.import.startOver' | transloco }}
+              </button>
             </div>
           }
-          @if (doc()) {
-            <button
-              z-button
-              zType="ghost"
-              type="button"
-              data-slot="back-to-report"
-              [zDisabled]="uploading()"
-              (click)="setupShown.set(false)"
-            >
-              {{ 'editor.admin.import.setup.back' | transloco }}
-            </button>
-          }
-          <button
-            z-button
-            type="button"
-            data-slot="dry-run"
-            [zLoading]="uploading()"
-            [ofGuard]="{
-              permission: 'admin.roles',
-              blockedReason: dryRunBlocked(),
-            }"
-            (click)="dryRun()"
-          >
-            {{ 'editor.admin.import.setup.dryRun' | transloco }}
-          </button>
-        </div>
-      </div>
-    </of-collapse>
-
-    @if (!setupOpen()) {
-      @if (doc(); as d) {
-        @let a = d.data.attributes;
-        <section
-          class="border-border flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-dashed px-4 py-3 animate-in fade-in-0 motion-reduce:animate-none"
-          data-slot="summary"
-          [attr.aria-label]="'editor.admin.import.summary.label' | transloco"
-        >
-          <ng-icon
-            name="lucideFileArchive"
-            class="text-muted-foreground size-5 shrink-0"
-            aria-hidden="true"
-          />
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span class="font-medium break-words [overflow-wrap:anywhere]">{{
-              a.fileName ?? ('editor.admin.import.summary.unnamed' | transloco)
-            }}</span>
-            <span
-              class="text-muted-foreground text-sm break-words"
-              data-slot="summary-meta"
-              >{{ summaryMeta() }}</span
-            >
-          </div>
-          @if (phase() === 'report' || phase() === 'expired') {
-            <button
-              z-button
-              zType="ghost"
-              type="button"
-              data-slot="change"
-              [zDisabled]="busy()"
-              (click)="changeSetup()"
-            >
-              {{ 'editor.admin.import.summary.change' | transloco }}
-            </button>
-          }
-        </section>
-      }
-    }
-
-    @if (!setupOpen()) {
-      @switch (phase()) {
-        @case ('loading') {
-          <div
-            class="bg-muted h-24 animate-pulse rounded-lg motion-reduce:animate-none"
-            ofFadeIn="delayed"
-            role="status"
-            [attr.aria-label]="'editor.admin.import.loading' | transloco"
-          ></div>
-        }
-        @case ('gone') {
-          <div
-            class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
-            role="status"
-            data-slot="gone"
-          >
-            <ng-icon
-              name="lucideClock"
-              class="text-warning shrink-0"
-              aria-hidden="true"
-            />
-            <span class="min-w-0 flex-1 break-words">{{
-              'editor.admin.import.gone' | transloco
-            }}</span>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              type="button"
-              (click)="startOver()"
-            >
-              {{ 'editor.admin.import.startOver' | transloco }}
-            </button>
-          </div>
-        }
-        @case ('expired') {
-          <div
-            class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
-            role="status"
-            data-slot="expired"
-          >
-            <ng-icon
-              name="lucideClock"
-              class="text-warning shrink-0"
-              aria-hidden="true"
-            />
-            <span class="min-w-0 flex-1 break-words">{{
-              (file()
-                ? 'editor.admin.import.expired.withFile'
-                : 'editor.admin.import.expired.withoutFile'
-              ) | transloco
-            }}</span>
-            <button
-              z-button
-              zType="outline"
-              zSize="sm"
-              type="button"
-              data-slot="run-again"
-              [zLoading]="uploading()"
-              (click)="runAgain()"
-            >
-              {{
-                (file()
-                  ? 'editor.admin.import.expired.again'
-                  : 'editor.admin.import.expired.choose'
-                ) | transloco
-              }}
-            </button>
-          </div>
-        }
-        @case ('applying') {
-          @if (doc(); as d) {
-            @let p = d.data.meta.progress;
-            <section
-              class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
-              data-slot="applying"
-              aria-labelledby="import-applying"
-              aria-busy="true"
-            >
-              <div class="flex min-w-0 items-center gap-2">
-                <ng-icon
-                  name="lucideLoaderCircle"
-                  class="text-muted-foreground size-5 shrink-0 animate-spin motion-reduce:animate-none"
-                  aria-hidden="true"
-                />
-                <h2 id="import-applying" class="m-0 text-base font-semibold">
-                  {{ 'editor.admin.import.progress.title' | transloco }}
-                </h2>
-              </div>
-              <p class="m-0 text-sm" role="status" data-slot="phase">
-                {{ phaseText[p.phase] | transloco }}
-              </p>
-              <span
-                class="bg-muted h-1.5 w-full overflow-hidden rounded-full"
-                role="progressbar"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                [attr.aria-valuenow]="applyPercentOf(p)"
-                [attr.aria-label]="
-                  'editor.admin.import.progress.label' | transloco
-                "
-              >
-                <span
-                  class="bg-primary block h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
-                  [style.width.%]="applyPercentOf(p)"
-                ></span>
-              </span>
-              <ul
-                class="text-muted-foreground m-0 flex list-none flex-col gap-0.5 p-0 text-sm"
-              >
-                <li data-slot="progress-assets">
-                  {{
-                    'editor.admin.import.progress.assets'
-                      | transloco
-                        : { done: p.assets.done, total: p.assets.total }
-                  }}
-                </li>
-                <li data-slot="progress-files">
-                  {{
-                    'editor.admin.import.progress.files'
-                      | transloco: { done: p.files.done, total: p.files.total }
-                  }}
-                </li>
-                <li data-slot="progress-commits">
-                  {{
-                    'editor.admin.import.progress.commits'
-                      | transloco: { count: p.commits.length }
-                  }}
-                </li>
-              </ul>
-            </section>
-          }
-        }
-        @case ('done') {
-          @if (doc(); as d) {
-            <section
-              class="border-success/40 bg-success-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
-              data-slot="done"
+          @case ('expired') {
+            <div
+              class="border-warning/40 bg-warning-muted flex min-w-0 flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm animate-in fade-in-0 motion-reduce:animate-none"
               role="status"
+              data-slot="expired"
             >
-              <div class="flex min-w-0 items-start gap-3">
-                <ng-icon
-                  name="lucideCircleCheck"
-                  class="text-success mt-0.5 size-5 shrink-0"
-                  aria-hidden="true"
-                />
-                <div class="flex min-w-0 flex-col gap-1">
-                  <h2 class="m-0 text-base font-semibold">
-                    {{ 'editor.admin.import.done.title' | transloco }}
-                  </h2>
-                  <p class="m-0 text-sm break-words">
-                    {{
-                      'editor.admin.import.done.text'
-                        | transloco
-                          : {
-                              count: written(),
-                              commits: d.data.meta.progress.commits.length,
-                              title: changeSetTitle() ?? fallbackTitle(),
-                            }
-                    }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                @if (changeSetId(); as cs) {
-                  <a
-                    z-button
-                    data-slot="open-review"
-                    [routerLink]="['/review']"
-                    [queryParams]="{ cs }"
-                    >{{ 'editor.admin.import.done.openReview' | transloco }}</a
-                  >
-                }
-                <button
-                  z-button
-                  zType="outline"
-                  type="button"
-                  data-slot="another"
-                  (click)="another()"
-                >
-                  {{ 'editor.admin.import.done.another' | transloco }}
-                </button>
-              </div>
-            </section>
+              <ng-icon
+                name="lucideClock"
+                class="text-warning shrink-0"
+                aria-hidden="true"
+              />
+              <span class="min-w-0 flex-1 break-words">{{
+                (file()
+                  ? 'editor.admin.import.expired.withFile'
+                  : 'editor.admin.import.expired.withoutFile'
+                ) | transloco
+              }}</span>
+              <button
+                z-button
+                zType="outline"
+                zSize="sm"
+                type="button"
+                data-slot="run-again"
+                [zLoading]="uploading()"
+                (click)="runAgain()"
+              >
+                {{
+                  (file()
+                    ? 'editor.admin.import.expired.again'
+                    : 'editor.admin.import.expired.choose'
+                  ) | transloco
+                }}
+              </button>
+            </div>
           }
-        }
-        @case ('failed') {
-          @if (doc(); as d) {
-            <section
-              class="border-destructive/40 bg-destructive-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
-              data-slot="failed"
-              role="alert"
-            >
-              <div class="flex min-w-0 items-start gap-3">
-                <ng-icon
-                  name="lucideCircleAlert"
-                  class="text-destructive mt-0.5 size-5 shrink-0"
-                  aria-hidden="true"
-                />
-                <div class="flex min-w-0 flex-col gap-1">
-                  <h2 class="m-0 text-base font-semibold">
-                    {{ 'editor.admin.import.failure.title' | transloco }}
+          @case ('applying') {
+            @if (doc(); as d) {
+              @let p = d.data.meta.progress;
+              <section
+                class="border-border bg-card flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
+                data-slot="applying"
+                aria-labelledby="import-applying"
+                aria-busy="true"
+              >
+                <div class="flex min-w-0 items-center gap-2">
+                  <ng-icon
+                    name="lucideLoaderCircle"
+                    class="text-muted-foreground size-5 shrink-0 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <h2 id="import-applying" class="m-0 text-base font-semibold">
+                    {{ 'editor.admin.import.progress.title' | transloco }}
                   </h2>
-                  <p class="m-0 text-sm break-words">
-                    {{ failureKey() | transloco }}
-                    @if (d.data.meta.failure; as f) {
-                      <code class="font-mono text-xs">({{ f.code }})</code>
-                    }
-                  </p>
                 </div>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                @if (changeSetId(); as cs) {
-                  <a
+                <p class="m-0 text-sm" role="status" data-slot="phase">
+                  {{ phaseText[p.phase] | transloco }}
+                </p>
+                <span
+                  class="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-valuenow]="applyPercentOf(p)"
+                  [attr.aria-label]="
+                    'editor.admin.import.progress.label' | transloco
+                  "
+                >
+                  <span
+                    class="bg-primary block h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+                    [style.width.%]="applyPercentOf(p)"
+                  ></span>
+                </span>
+                <ul
+                  class="text-muted-foreground m-0 flex list-none flex-col gap-0.5 p-0 text-sm"
+                >
+                  <li data-slot="progress-assets">
+                    {{
+                      'editor.admin.import.progress.assets'
+                        | transloco
+                          : { done: p.assets.done, total: p.assets.total }
+                    }}
+                  </li>
+                  <li data-slot="progress-files">
+                    {{
+                      'editor.admin.import.progress.files'
+                        | transloco
+                          : { done: p.files.done, total: p.files.total }
+                    }}
+                  </li>
+                  <li data-slot="progress-commits">
+                    {{
+                      'editor.admin.import.progress.commits'
+                        | transloco: { count: p.commits.length }
+                    }}
+                  </li>
+                </ul>
+              </section>
+            }
+          }
+          @case ('done') {
+            @if (doc(); as d) {
+              <section
+                class="border-success/40 bg-success-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
+                data-slot="done"
+                role="status"
+              >
+                <div class="flex min-w-0 items-start gap-3">
+                  <ng-icon
+                    name="lucideCircleCheck"
+                    class="text-success mt-0.5 size-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div class="flex min-w-0 flex-col gap-1">
+                    <h2 class="m-0 text-base font-semibold">
+                      {{ 'editor.admin.import.done.title' | transloco }}
+                    </h2>
+                    <p class="m-0 text-sm break-words">
+                      {{
+                        'editor.admin.import.done.text'
+                          | transloco
+                            : {
+                                count: written(),
+                                commits: d.data.meta.progress.commits.length,
+                                title: changeSetTitle() ?? fallbackTitle(),
+                              }
+                      }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  @if (changeSetId(); as cs) {
+                    <a
+                      z-button
+                      data-slot="open-review"
+                      [routerLink]="['/review']"
+                      [queryParams]="{ cs }"
+                      >{{
+                        'editor.admin.import.done.openReview' | transloco
+                      }}</a
+                    >
+                  }
+                  <button
                     z-button
                     zType="outline"
-                    [routerLink]="['/review']"
-                    [queryParams]="{ cs }"
-                    >{{ 'editor.admin.import.done.openReview' | transloco }}</a
+                    type="button"
+                    data-slot="another"
+                    (click)="another()"
                   >
-                }
+                    {{ 'editor.admin.import.done.another' | transloco }}
+                  </button>
+                </div>
+              </section>
+            }
+          }
+          @case ('failed') {
+            @if (doc(); as d) {
+              <section
+                class="border-destructive/40 bg-destructive-muted flex min-w-0 flex-col gap-3 rounded-lg border px-5 py-4 animate-in fade-in-0 motion-reduce:animate-none"
+                data-slot="failed"
+                role="alert"
+              >
+                <div class="flex min-w-0 items-start gap-3">
+                  <ng-icon
+                    name="lucideCircleAlert"
+                    class="text-destructive mt-0.5 size-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div class="flex min-w-0 flex-col gap-1">
+                    <h2 class="m-0 text-base font-semibold">
+                      {{ 'editor.admin.import.failure.title' | transloco }}
+                    </h2>
+                    <p class="m-0 text-sm break-words">
+                      {{ failureKey() | transloco }}
+                      @if (d.data.meta.failure; as f) {
+                        <code class="font-mono text-xs">({{ f.code }})</code>
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  @if (changeSetId(); as cs) {
+                    <a
+                      z-button
+                      zType="outline"
+                      [routerLink]="['/review']"
+                      [queryParams]="{ cs }"
+                      >{{
+                        'editor.admin.import.done.openReview' | transloco
+                      }}</a
+                    >
+                  }
+                  <button
+                    z-button
+                    type="button"
+                    data-slot="run-again"
+                    [zLoading]="uploading()"
+                    (click)="runAgain()"
+                  >
+                    {{
+                      (file()
+                        ? 'editor.admin.import.expired.again'
+                        : 'editor.admin.import.expired.choose'
+                      ) | transloco
+                    }}
+                  </button>
+                </div>
+              </section>
+            }
+          }
+        }
+
+        @if (phase() === 'report' || phase() === 'expired') {
+          @if (doc(); as d) {
+            @let report = d.data.meta.report;
+            @let counts = report.counts;
+            <div
+              class="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-5"
+              data-slot="counts"
+              role="group"
+              [attr.aria-label]="'editor.admin.import.counts.label' | transloco"
+            >
+              <div
+                class="bg-success-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+                data-slot="count-create"
+              >
+                <span
+                  class="text-success flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
+                  ><ng-icon
+                    name="lucideCirclePlus"
+                    class="size-4"
+                    aria-hidden="true"
+                  />{{ counts.create }}</span
+                >
+                <span class="text-sm break-words">{{
+                  'editor.admin.import.counts.create'
+                    | transloco: { count: counts.create }
+                }}</span>
+              </div>
+              <div
+                class="bg-info-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+                data-slot="count-update"
+              >
+                <span
+                  class="text-info flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
+                  ><ng-icon
+                    name="lucideRefreshCw"
+                    class="size-4"
+                    aria-hidden="true"
+                  />{{ counts.update }}</span
+                >
+                <span class="text-sm break-words">{{
+                  'editor.admin.import.counts.update'
+                    | transloco: { count: counts.update }
+                }}</span>
+              </div>
+              <div
+                class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+                data-slot="count-skip"
+              >
+                <span
+                  class="text-foreground flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
+                  ><ng-icon
+                    name="lucideCircleMinus"
+                    class="size-4"
+                    aria-hidden="true"
+                  />{{ counts.skip }}</span
+                >
+                <span class="text-sm break-words">{{
+                  'editor.admin.import.counts.skip'
+                    | transloco: { count: counts.skip }
+                }}</span>
+              </div>
+              <div
+                class="bg-destructive-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+                data-slot="count-refuse"
+              >
+                <span
+                  class="text-destructive flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
+                  ><ng-icon
+                    name="lucideBan"
+                    class="size-4"
+                    aria-hidden="true"
+                  />{{ counts.refuse }}</span
+                >
+                <span class="text-sm break-words">{{
+                  'editor.admin.import.counts.refuse'
+                    | transloco: { count: counts.refuse }
+                }}</span>
+              </div>
+              <div
+                class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
+                data-slot="count-passthrough"
+              >
+                <span
+                  class="text-foreground text-2xl font-semibold tabular-nums"
+                  >{{ counts.passthrough }}</span
+                >
+                <span class="text-sm break-words">{{
+                  'editor.admin.import.counts.passthrough'
+                    | transloco: { count: counts.passthrough }
+                }}</span>
+              </div>
+            </div>
+
+            @if (bundleFindings().length > 0) {
+              <section
+                class="border-border flex min-w-0 flex-col rounded-lg border"
+                data-slot="bundle-findings"
+              >
+                <button
+                  type="button"
+                  class="hover:bg-muted/50 focus-visible:ring-ring/50 flex min-w-0 items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-start text-sm font-medium transition-colors duration-150 outline-none focus-visible:ring-2 motion-reduce:transition-none"
+                  [attr.aria-expanded]="findingsOpen()"
+                  aria-controls="import-bundle-findings"
+                  (click)="findingsOpen.set(!findingsOpen())"
+                >
+                  <span class="min-w-0 break-words">{{
+                    'editor.admin.import.bundle.title'
+                      | transloco: { count: bundleFindings().length }
+                  }}</span>
+                  @if (hasBundleErrors()) {
+                    <span
+                      class="text-destructive flex shrink-0 items-center gap-1 text-xs"
+                    >
+                      <ng-icon name="lucideCircleAlert" aria-hidden="true" />{{
+                        'editor.admin.import.bundle.hasErrors' | transloco
+                      }}
+                    </span>
+                  }
+                </button>
+                <of-collapse [open]="findingsOpen()">
+                  <ul
+                    id="import-bundle-findings"
+                    class="border-border m-0 flex list-none flex-col gap-1.5 border-t px-4 py-3 text-sm"
+                  >
+                    @for (line of bundleFindings(); track $index) {
+                      <li class="min-w-0 break-words [overflow-wrap:anywhere]">
+                        <span
+                          class="font-medium"
+                          [class.text-destructive]="line.severity === 'error'"
+                          >{{ line.label | transloco }}:</span
+                        >
+                        {{ line.text }}
+                        @if (line.code) {
+                          <code class="text-muted-foreground font-mono text-xs"
+                            >({{ line.code }})</code
+                          >
+                        }
+                      </li>
+                    }
+                  </ul>
+                </of-collapse>
+              </section>
+            }
+
+            <of-import-items
+              [report]="report"
+              [result]="view.get('result')()"
+              [page]="view.get('page')()"
+              [size]="view.get('size')()"
+              (resultChange)="view.set({ result: $event, page: 1 })"
+              (pageChange)="view.set({ page: $event })"
+              (pageSizeChange)="view.set({ size: $event, page: 1 })"
+            />
+
+            <div
+              class="flex flex-wrap items-center justify-end gap-2"
+              data-slot="actions"
+            >
+              <button
+                z-button
+                zType="ghost"
+                type="button"
+                data-slot="start-over"
+                [zDisabled]="busy()"
+                (click)="startOver()"
+              >
+                {{ 'editor.admin.import.startOver' | transloco }}
+              </button>
+              @if (leaveOutOffered()) {
                 <button
                   z-button
                   type="button"
-                  data-slot="run-again"
-                  [zLoading]="uploading()"
-                  (click)="runAgain()"
+                  data-slot="import-rest"
+                  [zLoading]="applying()"
+                  [ofGuard]="{
+                    permission: 'admin.roles',
+                    blockedReason: leaveOutBlocked(),
+                  }"
+                  (click)="importRest()"
                 >
                   {{
-                    (file()
-                      ? 'editor.admin.import.expired.again'
-                      : 'editor.admin.import.expired.choose'
-                    ) | transloco
+                    'editor.admin.import.leaveOut.action'
+                      | transloco: { count: written() }
                   }}
                 </button>
-              </div>
-            </section>
-          }
-        }
-      }
-
-      @if (phase() === 'report' || phase() === 'expired') {
-        @if (doc(); as d) {
-          @let report = d.data.meta.report;
-          @let counts = report.counts;
-          <div
-            class="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-5"
-            data-slot="counts"
-            role="group"
-            [attr.aria-label]="'editor.admin.import.counts.label' | transloco"
-          >
-            <div
-              class="bg-success-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-              data-slot="count-create"
-            >
-              <span
-                class="text-success flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
-                ><ng-icon
-                  name="lucideCirclePlus"
-                  class="size-4"
-                  aria-hidden="true"
-                />{{ counts.create }}</span
-              >
-              <span class="text-sm break-words">{{
-                'editor.admin.import.counts.create'
-                  | transloco: { count: counts.create }
-              }}</span>
-            </div>
-            <div
-              class="bg-info-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-              data-slot="count-update"
-            >
-              <span
-                class="text-info flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
-                ><ng-icon
-                  name="lucideRefreshCw"
-                  class="size-4"
-                  aria-hidden="true"
-                />{{ counts.update }}</span
-              >
-              <span class="text-sm break-words">{{
-                'editor.admin.import.counts.update'
-                  | transloco: { count: counts.update }
-              }}</span>
-            </div>
-            <div
-              class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-              data-slot="count-skip"
-            >
-              <span
-                class="text-foreground flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
-                ><ng-icon
-                  name="lucideCircleMinus"
-                  class="size-4"
-                  aria-hidden="true"
-                />{{ counts.skip }}</span
-              >
-              <span class="text-sm break-words">{{
-                'editor.admin.import.counts.skip'
-                  | transloco: { count: counts.skip }
-              }}</span>
-            </div>
-            <div
-              class="bg-destructive-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-              data-slot="count-refuse"
-            >
-              <span
-                class="text-destructive flex items-center gap-1.5 text-2xl font-semibold tabular-nums"
-                ><ng-icon
-                  name="lucideBan"
-                  class="size-4"
-                  aria-hidden="true"
-                />{{ counts.refuse }}</span
-              >
-              <span class="text-sm break-words">{{
-                'editor.admin.import.counts.refuse'
-                  | transloco: { count: counts.refuse }
-              }}</span>
-            </div>
-            <div
-              class="bg-muted flex min-w-0 flex-col gap-0.5 rounded-lg px-4 py-3"
-              data-slot="count-passthrough"
-            >
-              <span
-                class="text-foreground text-2xl font-semibold tabular-nums"
-                >{{ counts.passthrough }}</span
-              >
-              <span class="text-sm break-words">{{
-                'editor.admin.import.counts.passthrough'
-                  | transloco: { count: counts.passthrough }
-              }}</span>
-            </div>
-          </div>
-
-          @if (bundleFindings().length > 0) {
-            <section
-              class="border-border flex min-w-0 flex-col rounded-lg border"
-              data-slot="bundle-findings"
-            >
-              <button
-                type="button"
-                class="hover:bg-muted/50 focus-visible:ring-ring/50 flex min-w-0 items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-start text-sm font-medium transition-colors duration-150 outline-none focus-visible:ring-2 motion-reduce:transition-none"
-                [attr.aria-expanded]="findingsOpen()"
-                aria-controls="import-bundle-findings"
-                (click)="findingsOpen.set(!findingsOpen())"
-              >
-                <span class="min-w-0 break-words">{{
-                  'editor.admin.import.bundle.title'
-                    | transloco: { count: bundleFindings().length }
-                }}</span>
-                @if (hasBundleErrors()) {
-                  <span
-                    class="text-destructive flex shrink-0 items-center gap-1 text-xs"
-                  >
-                    <ng-icon name="lucideCircleAlert" aria-hidden="true" />{{
-                      'editor.admin.import.bundle.hasErrors' | transloco
-                    }}
-                  </span>
-                }
-              </button>
-              <of-collapse [open]="findingsOpen()">
-                <ul
-                  id="import-bundle-findings"
-                  class="border-border m-0 flex list-none flex-col gap-1.5 border-t px-4 py-3 text-sm"
+              } @else {
+                <button
+                  z-button
+                  type="button"
+                  data-slot="apply"
+                  [zLoading]="applying()"
+                  [ofGuard]="{
+                    permission: 'admin.roles',
+                    blockedReason: applyBlocked(),
+                  }"
+                  (click)="apply()"
                 >
-                  @for (line of bundleFindings(); track $index) {
-                    <li class="min-w-0 break-words [overflow-wrap:anywhere]">
-                      <span
-                        class="font-medium"
-                        [class.text-destructive]="line.severity === 'error'"
-                        >{{ line.label | transloco }}:</span
-                      >
-                      {{ line.text }}
-                      @if (line.code) {
-                        <code class="text-muted-foreground font-mono text-xs"
-                          >({{ line.code }})</code
-                        >
-                      }
-                    </li>
-                  }
-                </ul>
-              </of-collapse>
-            </section>
+                  {{
+                    'editor.admin.import.apply'
+                      | transloco: { count: written() }
+                  }}
+                </button>
+              }
+            </div>
           }
-
-          <of-import-items
-            [report]="report"
-            [result]="view.get('result')()"
-            [page]="view.get('page')()"
-            [size]="view.get('size')()"
-            (resultChange)="view.set({ result: $event, page: 1 })"
-            (pageChange)="view.set({ page: $event })"
-            (pageSizeChange)="view.set({ size: $event, page: 1 })"
-          />
-
-          <div
-            class="flex flex-wrap items-center justify-end gap-2"
-            data-slot="actions"
-          >
-            <button
-              z-button
-              zType="ghost"
-              type="button"
-              data-slot="start-over"
-              [zDisabled]="busy()"
-              (click)="startOver()"
-            >
-              {{ 'editor.admin.import.startOver' | transloco }}
-            </button>
-            @if (leaveOutOffered()) {
-              <button
-                z-button
-                type="button"
-                data-slot="import-rest"
-                [zLoading]="applying()"
-                [ofGuard]="{
-                  permission: 'admin.roles',
-                  blockedReason: leaveOutBlocked(),
-                }"
-                (click)="importRest()"
-              >
-                {{
-                  'editor.admin.import.leaveOut.action'
-                    | transloco: { count: written() }
-                }}
-              </button>
-            } @else {
-              <button
-                z-button
-                type="button"
-                data-slot="apply"
-                [zLoading]="applying()"
-                [ofGuard]="{
-                  permission: 'admin.roles',
-                  blockedReason: applyBlocked(),
-                }"
-                (click)="apply()"
-              >
-                {{
-                  'editor.admin.import.apply' | transloco: { count: written() }
-                }}
-              </button>
-            }
-          </div>
         }
       }
     }
   `,
 })
 export class ImportPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly upload = inject(ImportUpload);
   private readonly toast = inject(ToastService);

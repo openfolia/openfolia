@@ -46,7 +46,7 @@ import {
       [doc]="doc()"
       [loading]="loading()"
       [error]="error()"
-      offset="20rem"
+      offset="calc(20rem + var(--of-sandbox-h, 0px))"
       [rowLink]="rowLink"
       [pageLink]="choosePage"
       [retry]="reload"

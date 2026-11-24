@@ -1,0 +1,94 @@
+---
+title: 'Public sandbox'
+description: 'One throwaway instance per visitor of a public demo: the sandbox mode, the sandbox image, what a launcher does, and how many fit on a host.'
+articleId: 'guide.self-hosting.sandbox'
+---
+
+A public demo lets strangers try OpenFolia without signing up. Each visitor gets an instance of
+their own, which nobody else reaches and which is deleted when they leave. OpenFolia provides
+two parts of this: the **sandbox mode** of the API, and the **sandbox image**, which runs one such
+instance in one container. The **launcher**, the service that starts a container per visitor
+and routes their browser to it, is yours.
+
+## The sandbox mode
+
+`CCMS_PUBLIC_SANDBOX=on` (with demo sign-in, `CCMS_AUTH_MODE=demo`) makes an instance a sandbox:
+
+- **Nothing leaves it.** No email, webhook, AI provider, audit sink or identity provider. The
+  server refuses to start with a setting that would reach outside, and names it.
+- **Nothing reaches other people.** Adding users, service accounts, tokens, invitations, uploads,
+  imports, template changes, webhooks and backups are refused (403 `sandbox-not-allowed`).
+- **What a visitor makes is capped:** the size of a module and a comment, the change sets, modules
+  and manuals made, the releases an hour, the PDFs rendered at once and the bytes written over
+  the session (422 `sandbox-limit-reached`). The `CCMS_SANDBOX_*` settings in `.env.example`
+  set them.
+- **The session ends** after `CCMS_SANDBOX_IDLE_MINUTES` without a request (default 30), at the
+  latest `CCMS_SANDBOX_MAX_MINUTES` after the start (default 90). The editor shows a banner with
+  the time left.
+
+`GET /sandbox` names the limits, what was used and `meta.endsAt`. A normal instance answers it
+with 404.
+
+## The sandbox image
+
+`ghcr.io/<owner>/openfolia/sandbox` holds the API in sandbox mode, the editor, an embedded
+database and the content repository, with the demo's finished state baked in: the sample manuals,
+two releases with their PDFs, a change set in review with comments, and the three demo people
+(an author, a reviewer, an admin). The state is there in English and in German. It is built for
+`linux/amd64` and `linux/arm64`.
+
+```sh
+docker network create --internal sandboxes
+docker run -d --name sandbox-<id> --network sandboxes --network-alias sandbox-<id> \
+  --read-only --tmpfs /tmp:rw,size=256m,mode=1777 \
+  --cap-drop ALL --security-opt no-new-privileges:true \
+  --memory 1g --memory-swap 1g --cpus 1 --pids-limit 256 \
+  --log-driver local --log-opt max-size=5m --log-opt max-file=2 \
+  -e CCMS_SANDBOX_LANG=en -e CCMS_EDITOR_HOSTS=sandbox-<id>.demo.example.org \
+  ghcr.io/<owner>/openfolia/sandbox:vX.Y.Z
+```
+
+- It is **ready in under 5 seconds**, and its health check passes then.
+- It serves **one port, 8080**: the editor, which proxies `/api` to the API inside. The API and the
+  database listen on the container's loopback only.
+- It runs as an unprivileged user on a read-only file system, needs **no outbound network** and
+  no volume. Everything a visitor makes lives in the tmpfs, so removing the container removes it.
+
+| Setting             | What it does                                                              |
+| ------------------- | ------------------------------------------------------------------------- |
+| `CCMS_SANDBOX_LANG` | `en` or `de` (default `en`): the baked state in English or in German.     |
+| `CCMS_EDITOR_HOSTS` | The host name the visitor's browser uses (default `localhost,127.0.0.1`). |
+| `CCMS_SANDBOX_*`    | The limits and the session length, as for any sandbox.                    |
+
+The image makes its own API token, database and secret key. It refuses to start with
+`CCMS_API_TOKEN`, `CCMS_DATABASE_URL`, `CCMS_SECRET_KEY`, `CCMS_WEBHOOKS_SECRET_KEY`,
+`CCMS_EDITOR_API_TOKEN` or `CCMS_EDITOR_API_URL` set.
+
+## What the launcher does
+
+- **Deletes the container when the session ends.** It reads `meta.endsAt` from `GET /api/sandbox`
+  through port 8080. The sandbox does not end itself.
+- **Caps disk, memory, CPU and processes** with the flags above: the database and the content
+  repository live in the tmpfs, so its size caps both. The log limit matters too: the container's
+  log is on the host's disk.
+- **Caps the rate of requests** in the proxy in front of the sandboxes.
+- **One container per visitor**, so one API process each. Never two visitors in one.
+- **Keeps the sandboxes apart:** an internal network per sandbox that only the launcher's proxy
+  joins (on one shared network they reach each other's port 8080).
+- **Never points a shared portal or MCP server at a sandbox.**
+
+## How many fit on a host
+
+Measured on an arm64 machine with one CPU per sandbox:
+
+| Phase                                    | Memory         |
+| ---------------------------------------- | -------------- |
+| Started, idle                            | 430 to 457 MiB |
+| Editing (a change reviewed and merged)   | 445 MiB        |
+| Rendering a release (24 PDFs, about 7 s) | 670 to 735 MiB |
+
+Memory stays at its peak after a release. Idle, a sandbox uses about 1 % of a core; a release keeps
+one core busy for about 7 seconds. Keep about 2 GB for the host, then plan **one sandbox per GB**
+of the rest: 14 on a 16 GB host, 60 on a 64 GB host. With fewer cores than that, renders wait for
+each other when many visitors cut releases at once. The full numbers and how to measure them on
+your own host (`deploy/sandbox-test.sh`) are in `deploy/README.md`, "The sandbox image".

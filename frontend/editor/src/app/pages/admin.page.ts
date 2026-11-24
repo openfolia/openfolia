@@ -27,6 +27,18 @@ import { GuardDirective } from '../permissions/guard.directive';
 import { PermissionService } from '../permissions/permission.service';
 import { ChangeSetUrl } from '../session/change-set-url';
 import { ADMIN_TABS, groupTabs, tabRule } from '../shell/nav';
+import { SandboxSession } from '../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../sandbox/sandbox-note.component';
+
+/**
+ * The admin pages whose primary action a public sandbox refuses (#826), with why; null: the
+ * page itself says why (Webhooks), so the header offers nothing.
+ */
+const SANDBOX_OFF: Readonly<Record<string, string | null>> = {
+  users: 'editor.sandbox.usersOff',
+  'service-accounts': 'editor.sandbox.serviceAccountsOff',
+  webhooks: null,
+};
 
 /**
  * Admin pages share a side rail (#591): the pages the role may open under their group headings
@@ -40,6 +52,7 @@ import { ADMIN_TABS, groupTabs, tabRule } from '../shell/nav';
 @Component({
   selector: 'of-admin',
   imports: [
+    SandboxNoteComponent,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -58,7 +71,13 @@ import { ADMIN_TABS, groupTabs, tabRule } from '../shell/nav';
   host: { class: 'flex min-w-0 flex-col gap-4' },
   template: `
     <of-page-header [title]="tab()?.title ?? 'editor.nav.admin' | transloco">
-      @if (tab()?.action; as action) {
+      @if (sandboxOff(); as reason) {
+        <!-- What a public sandbox refuses (issue 826) is not offered: the line says why. -->
+        <of-sandbox-note
+          class="max-w-80 self-center"
+          [text]="reason | transloco"
+        />
+      } @else if (!sandboxRefused() && tab()?.action; as action) {
         <button
           z-button
           type="button"
@@ -145,6 +164,7 @@ import { ADMIN_TABS, groupTabs, tabRule } from '../shell/nav';
   `,
 })
 export class AdminPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly permissions = inject(PermissionService);
   /** The pages the role may open (a webhook manager without `admin.roles`: Webhooks alone). */
   private readonly tabs = computed(() =>
@@ -184,6 +204,17 @@ export class AdminPage {
     ),
     { initialValue: undefined },
   );
+  /** Why a public sandbox offers no primary action here (a key), or null. */
+  protected readonly sandboxOff = computed((): string | null => {
+    const tab = this.tab();
+    if (!this.sandbox.on() || !tab?.action) return null;
+    return SANDBOX_OFF[tab.path] ?? null;
+  });
+  /** A public sandbox refuses this page's primary action (#826). */
+  protected readonly sandboxRefused = computed((): boolean => {
+    const tab = this.tab();
+    return this.sandbox.on() && !!tab && Object.hasOwn(SANDBOX_OFF, tab.path);
+  });
 
   /** The open page in the phone-width select; none on a page the role cannot open (no access). */
   protected readonly selected = computed(() => {

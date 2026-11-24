@@ -41,9 +41,9 @@ Jeder Eintrag ist ein `Change`: Seine `id` ist der Idempotenzschlüssel des Erei
 
 | Ereignis                                 | Was es meldet                                                                                                                                             |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `manual.released`, `module.released`     | Eine Veröffentlichung hat ein Handbuch oder ein Modul geändert, so wie Webhooks es senden.                                                                |
+| `manual.released`, `module.released`     | Eine Veröffentlichung hat eine Anleitung oder ein Modul geändert, so wie Webhooks es senden.                                                              |
 | `release.withdrawn`                      | Eine Veröffentlichung wurde zurückgezogen.                                                                                                                |
-| `module.deprecated`, `manual.deprecated` | Ein Modul oder Handbuch wurde als veraltet markiert, mit seinem Ersatz, wenn Sie diesen lesen dürfen.                                                     |
+| `module.deprecated`, `manual.deprecated` | Ein Modul oder eine Anleitung wurde als veraltet markiert, mit dem Ersatz, wenn Sie diesen lesen dürfen.                                                  |
 | `chunk.upserted`                         | Ein [Chunk](/de/guide/integrations/chunks) ist neu oder geändert: `chunkId`, `moduleId`, `lang`, `contentHash` und die `release`, in der er zu lesen ist. |
 | `chunk.removed`                          | Einen Chunk entfernen: dieselben IDs und ein `reason`.                                                                                                    |
 

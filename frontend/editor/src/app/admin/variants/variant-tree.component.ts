@@ -173,7 +173,7 @@ export class VariantTreeComponent {
   readonly editable = input(false);
   readonly counts = input<ReadonlyMap<string, UsageCount>>(new Map());
   /** The tallest the list may be, as a CSS length (the rest of the viewport). */
-  readonly maxHeight = input('calc(100dvh - 16rem)');
+  readonly maxHeight = input('calc(100dvh - 16rem - var(--of-sandbox-h, 0px))');
 
   readonly choose = output<VariantSelection>();
   readonly reorderAttributes = output<readonly string[]>();

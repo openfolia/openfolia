@@ -117,7 +117,7 @@ const translated = (
   );
 const toGerman = (_unit: string, source: string) =>
   source
-    .replace('Manual user-manual', 'Handbuch')
+    .replace('Manual user-manual', 'Anleitung')
     .replace('The vehicle', 'Das Fahrzeug')
     .replace('The large one', 'Das große');
 

@@ -26,7 +26,7 @@ Um einen Index dauerhaft aktuell zu halten, lesen Sie den
 
 Die `id` eines Chunks ist `<lang>/<moduleId>` (die eines FAQ-Eintrags
 `<lang>/<moduleId>/<blockId>`). Seine `attributes` enthalten `moduleId`, `lang`, `title`,
-`moduleType`, `audience`, `facets`, `keywords`, `manuals` (die Handbücher, die ihn einschließen),
+`moduleType`, `audience`, `facets`, `keywords`, `manuals` (die Anleitungen, die ihn einschließen),
 `conditions`, `text`, `sourceHash` und `contentHash` (der SHA-256 von `text`). `meta` enthält
 `commit`, `sources` und `release` (die neueste Veröffentlichung, die das Modul enthält). Ändert sich
 nur die Formatierung einer Datei, ändern sich weder `text` noch `contentHash`.
@@ -64,8 +64,8 @@ Leseumfangs des Lesers wird nie gelistet, gezählt oder eingefügt. Entwürfe (j
 ## Zu große Module werden ausgelassen
 
 Modulverweise, die sich vervielfachen, können ein Modul zu groß zum Zerlegen machen. Die Chunks
-eines Moduls, die seiner FAQ-Einträge eingeschlossen, unterliegen denselben Grenzen wie ein
-Handbuch: 500.000 Inhaltsknoten, 12.000.000 Zeichen, 1.000.000 Tabellenzellen (Zeilen × Spalten),
+eines Moduls, die seiner FAQ-Einträge eingeschlossen, unterliegen denselben Grenzen wie eine
+Anleitung: 500.000 Inhaltsknoten, 12.000.000 Zeichen, 1.000.000 Tabellenzellen (Zeilen × Spalten),
 100 Ebenen tief. Überschreitet es eine davon, wird nur dieses Modul ausgelassen:
 
 - es hat keinen Chunk, die anderen werden wie gewohnt geliefert;

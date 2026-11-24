@@ -89,7 +89,7 @@ type Facet = ProjectConfig['facets'][number];
       >
         <div
           class="min-h-0 overflow-y-auto p-2"
-          style="max-height: calc(100dvh - 20rem)"
+          style="max-height: calc(100dvh - 20rem - var(--of-sandbox-h, 0px))"
         >
           @if (rows().length === 0) {
             <p class="text-muted-foreground m-0 p-3 text-sm">
@@ -240,7 +240,7 @@ type Facet = ProjectConfig['facets'][number];
             <of-option-list
               usageKind="facetValue"
               [framed]="false"
-              maxHeight="calc(100dvh - 26rem)"
+              maxHeight="calc(100dvh - 26rem - var(--of-sandbox-h, 0px))"
               [items]="f.values"
               [label]="src(f.label)"
               [languages]="ctx.languages()"

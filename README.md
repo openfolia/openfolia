@@ -104,7 +104,7 @@ profile instead, rebuilt after each release: `deploy/self-host.sh --portal`
   with the [API reference](https://docs.openfolia.com/api).
 - **Working on the code:** [`CLAUDE.md`](CLAUDE.md) maps the projects in this monorepo, and each
   project's `README.md` describes its API:
-  - [API](backend/api/README.md) and [MCP server](backend/mcp/README.md);
+  - [API](backend/api/README.md), [MCP server](backend/mcp/README.md) and [sandbox database](backend/sandbox/README.md);
   - [content model](packages/content-model/README.md),
     [content repository](packages/content-repo/README.md),
     [editor model](packages/content-editor-model/README.md),

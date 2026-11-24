@@ -22,9 +22,10 @@ import { DrizzleAuditLog } from './repos/drizzle-audit-log.js';
 import { DrizzleAuditSinkCursor } from './repos/drizzle-audit-sink-cursor.js';
 import { HttpsAuditSink } from './repos/https-audit-sink.js';
 import { SyslogAuditSink } from './repos/syslog-audit-sink.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
 
 /** The sink while none is set: never called (the consumer asks `sinkEnabled` first). */
-class NoAuditSink extends AuditSink {
+export class NoAuditSink extends AuditSink {
   send(): Promise<SinkResult> {
     return Promise.resolve({ ok: false, error: 'connection' });
   }
@@ -58,11 +59,14 @@ class NoAuditSink extends AuditSink {
     },
     {
       provide: AuditSink,
-      inject: [ConfigService, ServerRole],
+      inject: [ConfigService, ServerRole, Sandbox],
       useFactory: (
         config: ConfigService<Env, true>,
         role: ServerRole,
+        sandbox: Sandbox,
       ): AuditSink => {
+        // A public sandbox (#826) delivers its audit log nowhere.
+        if (sandbox.on) return new NoAuditSink();
         const value = config.get('CCMS_AUDIT_SINK_URL', { infer: true });
         // Only a `worker` or `all` process sends (#527): an `api` one needs no CA file.
         if (value === undefined || !role.runsBackground)

@@ -27,11 +27,15 @@ import { UserDirectory } from './core/user-directory.js';
 import { FailedAuthentications } from './api/failed-authentications.js';
 import { DrizzleServiceAccountStore } from './repos/drizzle-service-accounts.js';
 import { DrizzleUserDirectory } from './repos/drizzle-user-directory.js';
+import { Sandbox } from '../sandbox/core/sandbox.js';
 
 /** The identity providers offered (#37): OpenID Connect when `CCMS_OIDC_ISSUER` is set. */
 function identityProviders(
   config: ConfigService<Env, true>,
+  sandbox: Sandbox,
 ): IdentityProviders {
+  // A public sandbox (#826) has the demo's people only: no provider, nothing fetched from one.
+  if (sandbox.on) return new StaticIdentityProviders([]);
   const issuer = config.get('CCMS_OIDC_ISSUER', { infer: true });
   const clientId = config.get('CCMS_OIDC_CLIENT_ID', { infer: true });
   const redirectUrl = config.get('CCMS_OIDC_REDIRECT_URL', { infer: true });
@@ -73,7 +77,7 @@ function identityProviders(
     { provide: SessionStore, useClass: DrizzleSessionStore },
     {
       provide: IdentityProviders,
-      inject: [ConfigService],
+      inject: [ConfigService, Sandbox],
       useFactory: identityProviders,
     },
     {

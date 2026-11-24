@@ -234,8 +234,8 @@ const HOLDING_PAGE = `<!doctype html>
 <h1>No manuals have been released yet</h1>
 <p>The manuals appear here once the first release is published. This page looks again every minute.</p>
 <div lang="de">
-<h2>Noch keine Handbücher veröffentlicht</h2>
-<p>Die Handbücher erscheinen hier, sobald die erste Version veröffentlicht ist. Diese Seite sieht jede Minute erneut nach.</p>
+<h2>Noch keine Anleitungen veröffentlicht</h2>
+<p>Die Anleitungen erscheinen hier, sobald die erste Version veröffentlicht ist. Diese Seite sieht jede Minute erneut nach.</p>
 </div>
 </main>
 </body>

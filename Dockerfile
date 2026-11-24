@@ -8,6 +8,9 @@
 #   docker build --target backup -t openfolia/backup:local .
 #   docker build --target embedder -t openfolia/embedder:local .
 #   docker build --target portal -t openfolia/portal:local .
+#   docker build --target sandbox -t openfolia/sandbox:local .
+#
+# Every image builds for linux/amd64 and linux/arm64 (the images workflow builds each natively).
 #
 # Base images are pinned by version and digest; update both together.
 
@@ -43,7 +46,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 # in-memory Postgres (drizzle-orm's PGlite driver, never loaded by the server) and TypeScript
 # (@nestjs/swagger's build plugin).
 FROM workspace AS build-api
-RUN pnpm nx run-many -t build -p api mcp --output-style=static
+# The sandbox's embedded database (backend/sandbox) too: build-sandbox, below, takes it from here.
+RUN pnpm nx run-many -t build -p api mcp sandbox --output-style=static
 RUN node -e "const fs = require('node:fs'); const p = JSON.parse(fs.readFileSync('package.json', 'utf8')); delete p.dependencies; fs.writeFileSync('package.json', JSON.stringify(p, null, 2))" \
  && pnpm --filter=@openfolia/api deploy --prod --legacy /out/api \
  && pnpm --filter=@openfolia/mcp deploy --prod --legacy /out/mcp \
@@ -98,6 +102,23 @@ RUN node -e "const fs = require('node:fs'); const p = JSON.parse(fs.readFileSync
  && ln -s /tmp/portal/astro .astro \
  && ln -s /tmp/portal/astro-cache node_modules/.astro \
  && ln -s /tmp/portal/vite-cache node_modules/.vite
+
+# The sandbox image's own parts (#827): its embedded database (backend/sandbox) with its
+# production dependencies, and the demo's finished state in each language, baked here
+# (scripts/demo/bake.mjs: the API of build-api in demo mode on loopback ports, the demo content,
+# the demo people, two releases with their PDFs, a change set in review), so a sandbox starts
+# from a copy of it in seconds instead of making it. git: the bake writes the content repository.
+FROM build-api AS build-sandbox
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git \
+ && rm -rf /var/lib/apt/lists/*
+RUN pnpm --filter=@openfolia/sandbox deploy --prod --legacy /out/sandbox \
+ && cd /out/sandbox \
+ && find . -mindepth 1 -maxdepth 1 ! -name package.json ! -name dist ! -name node_modules -exec rm -rf {} +
+# Read only for everyone: the sandbox runs as `node` and copies it (PGlite writes its files 0600).
+RUN node scripts/demo/bake.mjs --lang en --out /out/sandbox-state/en \
+ && node scripts/demo/bake.mjs --lang de --out /out/sandbox-state/de \
+ && chmod -R a=rX /out/sandbox-state
 
 # Caddy's binary, without the file capability its image gives it (as deploy/docker/docs/Dockerfile
 # does): port 8080 needs none, and a file capability stops it where capabilities are dropped.
@@ -249,6 +270,59 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=900s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:8080/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/openfolia-portal-entrypoint"]
 CMD ["node", "scripts/serve.ts", "--", "caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+
+# ---------------------------------------------------------------------------------------------
+# The public sandbox (#827; deploy/README.md, "The sandbox image"): one visitor's OpenFolia in one
+# container, the API in a public sandbox (CCMS_PUBLIC_SANDBOX=on, demo mode), its embedded
+# database and its content repository inside, and the editor (the editor image's nginx
+# configuration, one worker) on port 8080, the only port it serves. A start copies the baked
+# state of CCMS_SANDBOX_LANG (en, de) into /tmp, which the launcher makes a size-capped tmpfs on a
+# read-only root file system; it needs no network beyond its own loopback. Nothing outlives the
+# container: no volume.
+FROM node-runtime AS sandbox
+# git: the API reads and writes the content repository through it. nginx: Debian's, for the
+# editor.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git nginx \
+ && rm -rf /var/lib/apt/lists/* /etc/nginx/sites-enabled /etc/nginx/sites-available /etc/nginx/conf.d
+COPY --from=build-api /out/api /app/api
+COPY --from=build-sandbox /out/sandbox /app/sandbox
+COPY --from=build-sandbox /out/sandbox-state /opt/openfolia/sandbox
+COPY --from=build-editor /src/frontend/editor/dist/browser /usr/share/openfolia/editor
+# The editor image's configuration with one worker process (one visitor needs no more) and no
+# access log: a visitor's requests would otherwise fill the host's container log, outside every
+# limit of the container. Errors are still logged.
+COPY deploy/docker/editor/nginx.conf /etc/nginx/nginx.conf
+RUN sed -i -e 's/^worker_processes auto;$/worker_processes 1;/' \
+      -e 's|^\( *\)access_log /dev/stdout main;$|\1access_log off;|' /etc/nginx/nginx.conf \
+ && grep -qx 'worker_processes 1;' /etc/nginx/nginx.conf \
+ && grep -qx ' *access_log off;' /etc/nginx/nginx.conf
+COPY --chmod=0755 deploy/docker/editor/entrypoint.sh /usr/local/bin/openfolia-editor-entrypoint
+COPY --chmod=0755 deploy/docker/sandbox/entrypoint.sh /usr/local/bin/openfolia-sandbox
+COPY --chmod=0755 deploy/docker/sandbox/health.sh /usr/local/bin/openfolia-sandbox-health
+RUN install -d -o node -g node /opt/openfolia/node-cache
+USER node
+WORKDIR /app
+ENV CCMS_SANDBOX_LANG=en \
+    CCMS_EDITOR_PORT=8080 \
+    NODE_COMPILE_CACHE=/opt/openfolia/node-cache
+# One start at build time, stopped once it is healthy: it fills Node's compile cache, which every
+# start then reads (read only) instead of compiling the API's modules again, and it fails the
+# build when the image does not start. Nothing of it is kept but the cache.
+RUN /usr/bin/tini -s -g -- /usr/local/bin/openfolia-sandbox & tini=$! \
+ && for _ in $(seq 600); do /usr/local/bin/openfolia-sandbox-health && break; sleep 0.1; done \
+ && /usr/local/bin/openfolia-sandbox-health \
+ && kill -TERM "$tini" && wait "$tini"; \
+ status=$?; rm -rf /tmp/sandbox /tmp/openfolia /tmp/*_temp /tmp/nginx.pid; \
+ [ "$status" = 0 ] || [ "$status" = 143 ] || exit 1; \
+ [ -n "$(ls -A /opt/openfolia/node-cache)" ] \
+ && chmod -R a-w /opt/openfolia/node-cache
+EXPOSE 8080
+# Checked every second while it starts (a start takes a few), then every 10 s.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --start-interval=1s --retries=3 \
+  CMD ["/usr/local/bin/openfolia-sandbox-health"]
+# tini signals its whole process group (-g): the database, the API and nginx stop with it.
+ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/openfolia-sandbox"]
 
 # ---------------------------------------------------------------------------------------------
 # The editor (frontend/editor): the static build behind nginx, which proxies /api to the API

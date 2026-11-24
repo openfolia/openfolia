@@ -18,6 +18,7 @@ import { ChangeSetBranches } from '../change-set-branches.js';
 import { ChangeSetStore } from '../change-set-store.js';
 import type { MaintenanceLine } from '../../../releases/core/maintenance-line.js';
 import { MaintenanceLineStore } from '../../../releases/core/maintenance-line-store.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export interface CreateChangeSetInput {
   readonly actor: Actor;
@@ -68,11 +69,17 @@ export class CreateChangeSetAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
     private readonly lines: MaintenanceLineStore,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
-  protected async run({
+  /** Counted against a public sandbox's cap (#826): past it, 422 `sandbox-limit-reached`. */
+  protected run(input: CreateChangeSetInput): Promise<ChangeSet> {
+    return this.sandbox.counted('change-sets', () => this.make(input));
+  }
+
+  private async make({
     actor,
     title,
     description,

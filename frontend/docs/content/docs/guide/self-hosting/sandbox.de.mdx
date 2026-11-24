@@ -1,0 +1,98 @@
+---
+title: 'Öffentliche Sandbox'
+description: 'Eine Wegwerf-Instanz je Besucher einer öffentlichen Demo: der Sandbox-Modus, das Sandbox-Image, was ein Launcher tut und wie viele auf einen Server passen.'
+articleId: 'guide.self-hosting.sandbox'
+---
+
+Mit einer öffentlichen Demo probieren Fremde OpenFolia aus, ohne sich zu registrieren. Jeder
+Besucher bekommt eine eigene Instanz, die niemand sonst erreicht und die gelöscht wird, wenn er
+geht. OpenFolia liefert zwei Teile dafür: den **Sandbox-Modus** der API und das **Sandbox-Image**,
+das eine solche Instanz in einem Container ausführt. Den **Launcher**, den Dienst, der je
+Besucher einen Container startet und dessen Browser dorthin leitet, stellen Sie selbst.
+
+## Der Sandbox-Modus
+
+`CCMS_PUBLIC_SANDBOX=on` (mit Demo-Anmeldung, `CCMS_AUTH_MODE=demo`) macht eine Instanz zur
+Sandbox:
+
+- **Nichts verlässt sie.** Keine E-Mail, kein Webhook, kein KI-Anbieter, keine Audit-Senke und
+  kein Identitätsanbieter. Der Server startet nicht mit einer Einstellung, die nach außen reichen
+  würde, und nennt sie.
+- **Nichts erreicht andere Personen.** Benutzer, Dienstkonten, Tokens, Einladungen, Uploads,
+  Importe, Vorlagenänderungen, Webhooks und Backups werden abgelehnt (403 `sandbox-not-allowed`).
+- **Was ein Besucher anlegt, ist begrenzt:** die Größe eines Moduls und eines Kommentars, die
+  angelegten Überarbeitungen, Module und Anleitungen, die Veröffentlichungen je Stunde, die gleichzeitig
+  erzeugten PDFs und die über die Sitzung geschriebenen Bytes (422 `sandbox-limit-reached`). Die
+  Einstellungen `CCMS_SANDBOX_*` in `.env.example` legen sie fest.
+- **Die Sitzung endet** nach `CCMS_SANDBOX_IDLE_MINUTES` ohne Anfrage (Standard 30), spätestens
+  `CCMS_SANDBOX_MAX_MINUTES` nach dem Start (Standard 90). Der Editor zeigt ein Banner mit der
+  verbleibenden Zeit.
+
+`GET /sandbox` nennt die Grenzen, den Verbrauch und `meta.endsAt`. Eine normale Instanz
+antwortet darauf mit 404.
+
+## Das Sandbox-Image
+
+`ghcr.io/<owner>/openfolia/sandbox` enthält die API im Sandbox-Modus, den Editor, eine
+eingebettete Datenbank und das Inhalts-Repository, mit dem fertigen Stand der Demo: die
+Beispielanleitungen, zwei Veröffentlichungen mit ihren PDFs, eine Überarbeitung in Prüfung mit
+Kommentaren und die drei Demo-Personen (Autorin, Prüfer, Administratorin). Der Stand liegt auf Englisch und auf Deutsch
+vor. Das Image wird für `linux/amd64` und `linux/arm64` gebaut.
+
+```sh
+docker network create --internal sandboxes
+docker run -d --name sandbox-<id> --network sandboxes --network-alias sandbox-<id> \
+  --read-only --tmpfs /tmp:rw,size=256m,mode=1777 \
+  --cap-drop ALL --security-opt no-new-privileges:true \
+  --memory 1g --memory-swap 1g --cpus 1 --pids-limit 256 \
+  --log-driver local --log-opt max-size=5m --log-opt max-file=2 \
+  -e CCMS_SANDBOX_LANG=de -e CCMS_EDITOR_HOSTS=sandbox-<id>.demo.example.org \
+  ghcr.io/<owner>/openfolia/sandbox:vX.Y.Z
+```
+
+- Es ist **in unter 5 Sekunden bereit**, dann besteht auch seine Zustandsprüfung.
+- Es bedient **einen Port, 8080**: den Editor, der `/api` an die API im Container weiterleitet.
+  API und Datenbank lauschen nur auf dem Loopback des Containers.
+- Es läuft als unprivilegierter Benutzer auf einem schreibgeschützten Dateisystem und braucht
+  **kein ausgehendes Netz** und kein Volume. Alles, was ein Besucher anlegt, liegt im tmpfs: Wenn
+  Sie den Container entfernen, ist es weg.
+
+| Einstellung         | Was sie tut                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `CCMS_SANDBOX_LANG` | `en` oder `de` (Standard `en`): der vorbereitete Stand auf Englisch oder Deutsch.   |
+| `CCMS_EDITOR_HOSTS` | Der Hostname, den der Browser des Besuchers nutzt (Standard `localhost,127.0.0.1`). |
+| `CCMS_SANDBOX_*`    | Die Grenzen und die Sitzungsdauer, wie bei jeder Sandbox.                           |
+
+Das Image erzeugt sein eigenes API-Token, seine Datenbank und seinen geheimen Schlüssel. Es
+startet nicht, wenn `CCMS_API_TOKEN`, `CCMS_DATABASE_URL`, `CCMS_SECRET_KEY`,
+`CCMS_WEBHOOKS_SECRET_KEY`, `CCMS_EDITOR_API_TOKEN` oder `CCMS_EDITOR_API_URL` gesetzt ist.
+
+## Was der Launcher tut
+
+- **Löscht den Container, wenn die Sitzung endet.** Er liest `meta.endsAt` aus
+  `GET /api/sandbox` über Port 8080. Die Sandbox beendet sich nicht selbst.
+- **Begrenzt Festplatte, Speicher, CPU und Prozesse** mit den Optionen oben: Datenbank und
+  Inhalts-Repository liegen im tmpfs, seine Größe begrenzt also beide. Auch die Log-Grenze zählt:
+  Das Log des Containers liegt auf der Festplatte des Servers.
+- **Begrenzt die Anfragerate** im Proxy vor den Sandboxes.
+- **Ein Container je Besucher**, also je ein API-Prozess. Nie zwei Besucher in einer Sandbox.
+- **Hält die Sandboxes getrennt:** ein internes Netz je Sandbox, dem nur der Proxy des Launchers
+  beitritt (in einem gemeinsamen Netz erreichen sie gegenseitig ihren Port 8080).
+- **Richtet nie ein gemeinsames Portal oder einen MCP-Server auf eine Sandbox.**
+
+## Wie viele auf einen Server passen
+
+Gemessen auf einem arm64-Rechner mit einer CPU je Sandbox:
+
+| Phase                                          | Speicher        |
+| ---------------------------------------------- | --------------- |
+| Gestartet, im Leerlauf                         | 430 bis 457 MiB |
+| Bearbeiten (eine Änderung geprüft und gemergt) | 445 MiB         |
+| Eine Veröffentlichung (24 PDFs, etwa 7 s)      | 670 bis 735 MiB |
+
+Nach einer Veröffentlichung bleibt der Speicher auf seinem Höchststand. Im Leerlauf braucht eine Sandbox
+etwa 1 % eines Kerns; eine Veröffentlichung hält einen Kern etwa 7 Sekunden lang beschäftigt. Halten Sie
+etwa 2 GB für den Server frei und planen Sie dann **eine Sandbox je GB** des Rests: 14 auf einem
+Server mit 16 GB, 60 auf einem mit 64 GB. Mit weniger Kernen warten die PDFs aufeinander, wenn
+viele Besucher gleichzeitig veröffentlichen. Die vollständigen Zahlen und wie Sie sie auf Ihrem
+eigenen Server messen (`deploy/sandbox-test.sh`) stehen in `deploy/README.md`, „The sandbox image".

@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/sandbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The public sandbox
+         * @description Public sandbox only (`CCMS_PUBLIC_SANDBOX=on`): its caps (`attributes.limits`, past one 422 `sandbox-limit-reached`), what is used of them and when it ends (`meta.endsAt`, the earlier of `idleMinutes` after the last request that did something and `maxMinutes` after it started), for a banner. In a sandbox nothing leaves the instance and nothing reaches other people: users, service accounts, tokens, invitations, uploads, imports, template changes, webhooks, test email and backups are 403 `sandbox-not-allowed`. Reading this does not count as activity. Any actor with the token.
+         */
+        get: operations["Sandbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/secret-key": {
         parameters: {
             query?: never;
@@ -4228,29 +4248,63 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        SecretKeyDocument: {
-            data: components["schemas"]["SecretKeyResource"];
+        SandboxDocument: {
+            data: components["schemas"]["SandboxResource"];
         };
-        /** @description `id` is always `instance`. Never the key itself. */
-        SecretKeyResource: {
+        /** @description `id` is always `current`. */
+        SandboxResource: {
             /** @enum {string} */
-            type: "SecretKey";
+            type: "Sandbox";
             id: string;
             attributes: {
+                /** @description The caps; past one, 422 `sandbox-limit-reached`. */
+                limits: {
+                    /** @description The largest module (or other working copy), in bytes of its JSON (`CCMS_SANDBOX_MAX_MODULE_BYTES`). */
+                    moduleBytes: number;
+                    /** @description The longest comment, in characters (`CCMS_SANDBOX_MAX_COMMENT_LENGTH`). */
+                    commentLength: number;
+                    /** @description The most revisions (change sets) made (`CCMS_SANDBOX_MAX_CHANGE_SETS`). */
+                    changeSets: number;
+                    /** @description The most modules made (`CCMS_SANDBOX_MAX_MODULES`). */
+                    modules: number;
+                    /** @description The most manuals made (`CCMS_SANDBOX_MAX_MANUALS`). */
+                    manuals: number;
+                    /** @description The most releases cut in any hour (`CCMS_SANDBOX_RELEASES_PER_HOUR`). */
+                    releasesPerHour: number;
+                    /** @description The most PDFs rendered at once (`CCMS_SANDBOX_RENDER_JOBS`). */
+                    renderJobs: number;
+                    /** @description The most bytes written over the session: every working copy saved, comment, commit and stored file (`CCMS_SANDBOX_MAX_WRITE_BYTES`). */
+                    writeBytes: number;
+                };
+                /** @description It ends this many minutes after the last request that did something (`CCMS_SANDBOX_IDLE_MINUTES`). */
+                idleMinutes: number;
+                /** @description It ends this many minutes after it started, however busy (`CCMS_SANDBOX_MAX_MINUTES`). */
+                maxMinutes: number;
+            };
+            meta: {
+                /** @description What is used of the counted caps. */
+                used: {
+                    /** @description Revisions made so far. */
+                    changeSets: number;
+                    /** @description Modules made so far. */
+                    modules: number;
+                    /** @description Manuals made so far. */
+                    manuals: number;
+                    /** @description Releases cut in the last hour. */
+                    releasesLastHour: number;
+                    /** @description Bytes written so far, of `writeBytes`. */
+                    writtenBytes: number;
+                };
                 /**
-                 * @description Where the instance secret key comes from: `file`, the key file (made by the server on its first start, or put there by the operator); `environment`, a variable the operator set; `none`, no key (generation turned off and none set): webhooks are off.
-                 * @enum {string}
+                 * Format: date-time
+                 * @description When the sandbox started.
                  */
-                origin: "file" | "environment" | "none";
-                /** @description The key file’s path on the server, for `file` (back it up: without it, stored secrets cannot be read); else null. */
-                file: string | null;
+                startedAt: string;
                 /**
-                 * @description The variable that sets the key, for `environment` (`CCMS_WEBHOOKS_SECRET_KEY` is its old name, deprecated); else null.
-                 * @enum {string|null}
+                 * Format: date-time
+                 * @description When it ends: the earlier of its idle end and its hard end. Everything in it is deleted then.
                  */
-                variable: "CCMS_SECRET_KEY" | "CCMS_WEBHOOKS_SECRET_KEY" | null;
-                /** @description Whether the server makes the key file on its first start when there is none (`CCMS_SECRET_KEY_GENERATE`). */
-                generate: boolean;
+                endsAt: string;
             };
         };
         ErrorDocument: {
@@ -4276,6 +4330,31 @@ export interface components {
             /** @description Details, e.g. `path` (the repository file at fault), `retryAfter` (seconds) or `diagnostics` (PDF compiler messages). */
             meta?: {
                 [key: string]: unknown;
+            };
+        };
+        SecretKeyDocument: {
+            data: components["schemas"]["SecretKeyResource"];
+        };
+        /** @description `id` is always `instance`. Never the key itself. */
+        SecretKeyResource: {
+            /** @enum {string} */
+            type: "SecretKey";
+            id: string;
+            attributes: {
+                /**
+                 * @description Where the instance secret key comes from: `file`, the key file (made by the server on its first start, or put there by the operator); `environment`, a variable the operator set; `none`, no key (generation turned off and none set): webhooks are off.
+                 * @enum {string}
+                 */
+                origin: "file" | "environment" | "none";
+                /** @description The key file’s path on the server, for `file` (back it up: without it, stored secrets cannot be read); else null. */
+                file: string | null;
+                /**
+                 * @description The variable that sets the key, for `environment` (`CCMS_WEBHOOKS_SECRET_KEY` is its old name, deprecated); else null.
+                 * @enum {string|null}
+                 */
+                variable: "CCMS_SECRET_KEY" | "CCMS_WEBHOOKS_SECRET_KEY" | null;
+                /** @description Whether the server makes the key file on its first start when there is none (`CCMS_SECRET_KEY_GENERATE`). */
+                generate: boolean;
             };
         };
         JobsStatusDocument: {
@@ -12555,6 +12634,73 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    Sandbox_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SandboxDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `not-configured`: this instance is no public sandbox, which is how a client learns it is not. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
     SecretKey_get: {
         parameters: {
             query?: never;

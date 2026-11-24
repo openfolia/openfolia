@@ -3,8 +3,9 @@
 OpenFolia runs as four containers and Postgres, from one Compose file: `deploy/compose.yaml`.
 This guide covers the one command that starts it all ("Quick start"), what to set, the content
 repository, signing in (with a provider you host yourself as the example), backups, upgrades, a
-reverse proxy with TLS, Coolify as a worked example, how the images are built and tested, and
-the image of the public docs site ("The docs site").
+reverse proxy with TLS, Coolify as a worked example, the sandbox image for a public demo ("The
+sandbox image"), how the images are built and tested, and the image of the public docs site ("The
+docs site").
 
 The other `compose.yaml`, at the repository root, is for development only (Postgres and S3 for
 `pnpm nx run api:serve-local`). Don't use it for a deployment.
@@ -25,7 +26,8 @@ file system. It has no Linux capabilities and can't gain privileges (`no-new-pri
 `/tmp` (a tmpfs) and the data volume can be written. Each image has a health check: the API's
 is `GET /health/ready` (the database and the blob store answer), the editor's is `GET /healthz`,
 the backup service's is a heartbeat that reached the database within the last 45 seconds.
-Base images are pinned by version and digest.
+Base images are pinned by version and digest. Every image is built for `linux/amd64` and
+`linux/arm64` under one tag, so the same `OPENFOLIA_VERSION` runs on an x86 or an ARM host.
 
 Three volumes hold everything that persists:
 
@@ -1269,6 +1271,121 @@ docker compose --profile mcp up -d --wait
 The endpoint is `http://127.0.0.1:3200/mcp`. Put TLS in front of it as you do for the editor.
 `backend/mcp/README.md` describes its settings.
 
+## The sandbox image
+
+`ghcr.io/<owner>/openfolia/sandbox` is one throwaway OpenFolia for one visitor of a public demo
+(#827): the API in sandbox mode (`CCMS_PUBLIC_SANDBOX=on`, backend/api/README.md, "Public
+sandbox"), the editor, an embedded database and the content repository, all in one container.
+The demo's finished state is baked in when the image is built (`scripts/demo/bake.mjs`), in
+English and in German: the sample manuals, two releases with their PDFs, the change set in review
+with its comments, and the demo people (author, reviewer, admin; demo sign-in, no passwords).
+
+A launcher (your own service in front of it, not part of OpenFolia) starts one container per
+visitor and routes the visitor's browser to its port:
+
+```sh
+docker network create --internal sandboxes          # once: no route out
+docker run -d --name sandbox-<id> --network sandboxes --network-alias sandbox-<id> \
+  --read-only --tmpfs /tmp:rw,size=256m,mode=1777 \
+  --cap-drop ALL --security-opt no-new-privileges:true \
+  --memory 1g --memory-swap 1g --cpus 1 --pids-limit 256 \
+  --log-driver local --log-opt max-size=5m --log-opt max-file=2 \
+  -e CCMS_SANDBOX_LANG=en -e CCMS_EDITOR_HOSTS=sandbox-<id>.demo.example.org \
+  ghcr.io/<owner>/openfolia/sandbox:vX.Y.Z
+```
+
+- **What it runs:** the database (PGlite, Postgres compiled to WebAssembly, `backend/sandbox`)
+  and the API listen on the container's loopback only; the editor's nginx on port 8080
+  (`CCMS_EDITOR_PORT`) is the one port it serves. nginx adds the API token only to requests from
+  the editor's own page and refuses any host name but `CCMS_EDITOR_HOSTS` (421). Every process
+  runs as `node` (uid 1000) under `tini`; if one ends, the container ends.
+- **Ready in under 5 seconds:** at start the baked state is copied into `/tmp/sandbox` (the files
+  rendered into the blob store are linked, not copied), a fresh API token and secret key are made,
+  and the three processes start. The Node compile cache is filled when the image is built. The
+  health check (`/usr/local/bin/openfolia-sandbox-health`) passes once the API is ready and the
+  editor answers.
+- **Nothing kept:** everything a visitor makes is in `/tmp`, the tmpfs, so removing the container
+  removes it. The image needs no volume and no outbound network.
+- **Settings:** `CCMS_SANDBOX_LANG` (`en` or `de`, default `en`): which baked state, the
+  content in English or in German. `CCMS_EDITOR_HOSTS` (default `localhost,127.0.0.1`): the host names the
+  visitor's browser uses for this container. The sandbox limits (`CCMS_SANDBOX_*`,
+  `.env.example`) can be set as for any instance. The image makes its own token, database URL
+  and secret key, and refuses to start when any of `CCMS_API_TOKEN`, `CCMS_DATABASE_URL`,
+  `CCMS_SECRET_KEY`, `CCMS_WEBHOOKS_SECRET_KEY`, `CCMS_EDITOR_API_TOKEN` or
+  `CCMS_EDITOR_API_URL` (or their `_FILE` forms) is set.
+
+**What the launcher does.** The sandbox caps what a visitor makes inside it; the launcher caps the
+rest:
+
+- It deletes the container when the session ends: `GET /api/sandbox` (through port 8080, as the
+  editor asks) names `meta.endsAt`, the last request plus `CCMS_SANDBOX_IDLE_MINUTES`, at most
+  the start plus `CCMS_SANDBOX_MAX_MINUTES`. The API does not end itself.
+- It caps each sandbox's disk and database with the tmpfs size (both live there), its memory,
+  CPU and processes with the flags above, and the rate of its requests (in the proxy in front of
+  the sandboxes: the sandbox doesn't count rows that grow with each request, such as the audit log).
+  It caps the container's log too (`--log-opt max-size`): that file is on the host's disk, outside
+  the container's limits. The image writes no access log, but errors still go there.
+- One container, so one API process, per visitor. Never two visitors in one sandbox.
+- It keeps the sandboxes apart: on one shared network they can reach each other's port 8080. Give
+  each sandbox an internal network of its own that only the launcher's proxy joins, or create the
+  shared one with `-o com.docker.network.bridge.enable_icc=false`.
+- It never points a shared portal or MCP server at a sandbox's API: the sandbox has neither, and
+  its API is reachable only through its editor port.
+- A normal instance answers `GET /sandbox` with 404: a launcher can tell a sandbox from it.
+
+**The sandbox test.** `deploy/sandbox-test.sh` builds the image (or takes `SANDBOX_IMAGE`) and
+starts it as above on an internal network of its own. It checks: ready within 5 seconds
+(`SANDBOX_READY_SECONDS`); not root, a read-only root file system, `/tmp` a tmpfs, no volume; no
+outbound connection or name lookup from inside, and from the network only port 8080. Then, from a
+client container (`deploy/sandbox-client.mjs`): each demo person signed in, the baked state, the
+proxy's refusals (another site, no origin, another host) and an upload refused; a change made,
+submitted, commented, approved and merged, and 30 autosaves of a visitor typing; a release cut, its
+PDFs and offline packages made, and a PDF downloaded. It also starts the German state, prints the
+memory and CPU per phase, and checks that nothing is left after removal. CI runs it on both
+architectures for every change to the image.
+
+### Sizing the sandboxes
+
+Measured with `deploy/sandbox-test.sh` (`--memory 1g --cpus 1`, then `--cpus 2`) on an arm64
+machine (Apple silicon, Docker in a Linux VM), with other work running (load average 30 to 40),
+so the times are on the slow side. Memory is the container's cgroup as `docker stats` counts it;
+CPU is the cgroup's CPU time.
+
+| Phase                                                  | Memory         | CPU time                         |
+| ------------------------------------------------------ | -------------- | -------------------------------- |
+| Started (copy, database, API, editor)                  | 430 MiB        | 2.5 s                            |
+| Idle                                                   | 435 to 457 MiB | 0.8 s a minute (1.3 % of a core) |
+| The demo people signed in, browsing                    | 440 MiB        | 0.1 to 0.6 s                     |
+| Editing (a change reviewed and merged, 30 autosaves)   | 445 MiB        | 1.3 s                            |
+| Rendering a release (24 PDFs, 6 offline packages, 7 s) | 670 to 735 MiB | 2.8 s                            |
+| After the release                                      | 670 to 735 MiB | idle again                       |
+
+- **Ready:** 2.7 to 3.1 seconds from `docker run` with one CPU, 2.7 seconds with two; four
+  started at once were each ready in 2.7 to 2.8 seconds.
+- **Peak:** 684 to 939 MiB (`memory.peak`, page cache included, which the kernel drops before it reaches the limit). Memory stays at the peak after a
+  release (Node keeps its heap), so plan for it.
+- **Disk:** the tmpfs holds 38 MiB at start and 58 MiB after a release. A session writes at most
+  `CCMS_SANDBOX_MAX_WRITE_BYTES` (64 MiB) more, so 256 MiB leaves room.
+
+**Recommended limits per sandbox:** `--memory 1g --memory-swap 1g` (the peak plus headroom; a
+sandbox over it is killed, never the host), `--cpus 1`, `--tmpfs /tmp:size=256m`,
+`--pids-limit 256`. On the host, count the tmpfs as memory too.
+
+**How many per host:** keep about 2 GB for the system and the launcher, then allow **one sandbox
+per GB** of the rest. Each one's limit then fits even if every visitor renders at once. CPU is no
+limit at idle, but a release keeps one core busy for about 7 seconds, and a start takes about
+2.5 CPU seconds. Releases are capped at `CCMS_SANDBOX_RELEASES_PER_HOUR` (4) per sandbox.
+
+| Host                | Sandboxes at once | CPU                                                    |
+| ------------------- | ----------------- | ------------------------------------------------------ |
+| 16 GB, 8 ARM vCores | 14                | about 2 sandboxes per core: renders rarely wait        |
+| 64 GB, 6 x86 cores  | 60                | 10 per core: renders wait for each other at busy times |
+
+The x86 numbers are expected to be close to these (the same Node and WebAssembly code). The
+ARM VPS fits a demo with up to about 14 visitors at once; for more, the 64 GB host holds about
+four times as many, with renders queuing when many visitors cut releases at the same moment.
+Measure again on the chosen host with `deploy/sandbox-test.sh`.
+
 ## Building the images
 
 There is one `Dockerfile` at the repository root, with one target per image. The build context
@@ -1282,7 +1399,11 @@ docker build --target mcp    -t openfolia/mcp:local .
 docker build --target backup -t openfolia/backup:local .   # the API image plus the Postgres client
 docker build --target embedder -t openfolia/embedder:local .   # the local embedding worker (no model inside)
 docker build --target portal -t openfolia/portal:local .   # the reader portal (Caddy and the portal's build)
+docker build --target sandbox -t openfolia/sandbox:local .   # one public demo sandbox ("The sandbox image")
 ```
+
+`docker build` builds for the machine's own architecture. For the other one, pass
+`--platform linux/amd64` or `--platform linux/arm64` (with emulation, much slower).
 
 - **Stages:** the dependencies are fetched from the lockfile alone, so a source change doesn't
   download them again. The projects are built with Nx. `pnpm deploy` then copies each Node
@@ -1291,9 +1412,15 @@ docker build --target portal -t openfolia/portal:local .   # the reader portal (
   glibc binaries. npm, npx, corepack and yarn are removed from them.
 - **One set of images:** every image is built from the one codebase, all of it under
   AGPL-3.0-only.
+- **Two architectures** (#827): every image is built for `linux/amd64` and `linux/arm64`, each
+  on a runner of its own architecture (`ubuntu-24.04` and `ubuntu-24.04-arm`), never emulated.
+  Each leg is pushed by its digest alone, then one job joins the two into a multi-platform image
+  index (`docker buildx imagetools create`) and checks that it holds both. The tags (`main`, the
+  SHA, `vX.Y.Z`) name the index, so `docker pull` fetches the host's own image.
 - **CI** (`.github/workflows/images.yml`):
-  - On a pull request, CI builds the affected images and runs the smoke test and the self-host
-    test below. Nothing is pushed.
+  - On a pull request, CI builds the affected images on both architectures, and runs the smoke
+    test on both, the self-host test, and the sandbox test (below) for the sandbox image.
+    Nothing is pushed.
   - On a merge to `main`, CI also pushes the affected images to
     `ghcr.io/<owner>/openfolia/<image>`. They are tagged with the commit SHA and `main`, each
     with an SBOM and provenance attestations. "Affected" is measured from the last successful
@@ -1304,12 +1431,14 @@ docker build --target portal -t openfolia/portal:local .   # the reader portal (
     calls the deploy webhook, but only for a tag on a commit of `main`.
 
   GitHub creates a new container package as private: make each of `openfolia/api`,
-  `openfolia/editor`, `openfolia/mcp`, `openfolia/backup`, `openfolia/embedder` and `openfolia/portal` public once (the package's
+  `openfolia/editor`, `openfolia/mcp`, `openfolia/backup`, `openfolia/embedder`, `openfolia/portal` and `openfolia/sandbox` public once (the package's
   settings, after its first push), so anyone can pull them without signing in.
 
   "Affected" (`scripts/images-plan.mjs`) follows Nx: a change in `packages/content-model`
   rebuilds the API, the MCP server, the editor and the portal. The backup image is the API image plus the
-  Postgres client, so whatever rebuilds the API rebuilds it too. A change to the `Dockerfile`,
+  Postgres client, so whatever rebuilds the API rebuilds it too. The sandbox image holds the API,
+  the editor and the demo's baked state, so whatever rebuilds either rebuilds it, and so does a
+  change to `scripts/demo/`. A change to the `Dockerfile`,
   `deploy/`, the lockfile or the workflow rebuilds every image.
 
 ### Images pinned by digest
@@ -1321,7 +1450,9 @@ image's digest from the registry (`docker buildx imagetools inspect`, nothing el
 against the digest the build job itself pushed (a tag moved since the push fails the release),
 and writes:
 
-- `images.lock`: every image of the release, `ghcr.io/<owner>/openfolia/<image>:vX.Y.Z@sha256:…`;
+- `images.lock`: every image of the release, `ghcr.io/<owner>/openfolia/<image>:vX.Y.Z@sha256:…`,
+  the digest of its image index (both architectures; a tag that names a single image, or an index
+  without one of them, fails the release);
 - `compose.digests.yaml`: a Compose override giving every service of `compose.yaml` that runs an
   OpenFolia image that image by tag and digest.
 
@@ -1364,7 +1495,8 @@ pushed them (#745). Signing is **off by default**: it runs only with the reposit
 images workflow and a release's files are exactly as above.
 
 With it on, the job `release-sign` (once `release-files` has written `images.lock`) signs each
-image of the release by its digest with cosign, keyless: GitHub gives the job an OIDC token
+image of the release by its digest (the image index's, once the job has checked that it holds
+`linux/amd64` and `linux/arm64`) with cosign, keyless: GitHub gives the job an OIDC token
 (`id-token: write`, that job only), Sigstore's certificate authority issues a short-lived
 certificate for the workflow's identity, and the signature is recorded in Sigstore's public
 transparency log. The job runs no code of this repository: cosign, downloaded and checked
@@ -1453,7 +1585,8 @@ content, with random secrets. It checks:
   container;
 - the secret key file on the data volume.
 
-Then it removes the containers and volumes again. It reads no settings file. The ports are
+CI runs it on both architectures, each with the images built on that runner. Then it removes the
+containers and volumes again. It reads no settings file. The ports are
 `SMOKE_API_PORT`, `SMOKE_EDITOR_PORT`, `SMOKE_MCP_PORT` and `SMOKE_PORTAL_PORT` (default 3103,
 4303, 3203 and 8193). With `SMOKE_BUILD=0` it
 skips the build and uses the images as they are; with `SMOKE_KEEP=1` it leaves the stack

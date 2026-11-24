@@ -53,6 +53,8 @@ import {
   type TokenLifetime,
   tokenState,
 } from './service-accounts-model';
+import { SandboxSession } from '../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../sandbox/sandbox-note.component';
 
 type TokenDoc = Response<'/service-accounts/{serviceAccountId}/tokens'>;
 
@@ -76,6 +78,7 @@ interface Issued {
 @Component({
   selector: 'of-service-tokens-sheet',
   imports: [
+    SandboxNoteComponent,
     TranslocoPipe,
     NgIcon,
     CollapseComponent,
@@ -178,29 +181,34 @@ interface Issued {
           </section>
         }
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            z-button
-            zType="outline"
-            type="button"
-            [zDisabled]="!!deactivated() || formOpen()"
-            [attr.aria-describedby]="
-              deactivated() ? 'issue-blocked-reason' : null
-            "
-            (click)="openForm()"
-          >
-            {{ 'editor.admin.serviceAccounts.tokens.issue' | transloco }}
-          </button>
-          @if (deactivated()) {
-            <span
-              id="issue-blocked-reason"
-              class="text-muted-foreground text-xs break-words"
-              >{{
-                'editor.admin.serviceAccounts.tokens.deactivated' | transloco
-              }}</span
+        @if (sandbox.on()) {
+          <!-- A public sandbox issues no tokens (issue 826): nothing outside may reach it. -->
+          <of-sandbox-note [text]="'editor.sandbox.tokensOff' | transloco" />
+        } @else {
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              z-button
+              zType="outline"
+              type="button"
+              [zDisabled]="!!deactivated() || formOpen()"
+              [attr.aria-describedby]="
+                deactivated() ? 'issue-blocked-reason' : null
+              "
+              (click)="openForm()"
             >
-          }
-        </div>
+              {{ 'editor.admin.serviceAccounts.tokens.issue' | transloco }}
+            </button>
+            @if (deactivated()) {
+              <span
+                id="issue-blocked-reason"
+                class="text-muted-foreground text-xs break-words"
+                >{{
+                  'editor.admin.serviceAccounts.tokens.deactivated' | transloco
+                }}</span
+              >
+            }
+          </div>
+        }
 
         <of-collapse [open]="formOpen()">
           <form
@@ -389,6 +397,7 @@ interface Issued {
   `,
 })
 export class ServiceTokensSheetComponent {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly toast = inject(ToastService);
   private readonly dialogs = inject(ZardAlertDialogService);

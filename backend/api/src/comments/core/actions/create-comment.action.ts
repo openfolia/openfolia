@@ -20,6 +20,7 @@ import {
 } from '../comment.js';
 import { CommentStore } from '../comment-store.js';
 import { ChangeSetComments, checkOpen } from '../change-set-comments.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** What a new comment is on: a block (a new thread), or a thread it replies to. */
 export type NewCommentAnchor =
@@ -59,6 +60,7 @@ export class CreateCommentAction extends ActorAction<Input, ReadComment> {
     private readonly changeSets: ChangeSetStore,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -69,6 +71,7 @@ export class CreateCommentAction extends ActorAction<Input, ReadComment> {
     body,
     anchor,
   }: Input): Promise<ReadComment> {
+    this.sandbox.checkCommentLength(body);
     const opened = await this.comments.open(actor, changeSetId);
     const { changeSet, anchors } = opened;
     let subject: CommentSubject;

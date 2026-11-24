@@ -28,7 +28,7 @@ const compose = readFileSync(
 );
 /** A release's images.lock (#739): every image by a digest of its own. */
 const lockOf = (images: string, tag: string) =>
-  ['api', 'backup', 'editor', 'embedder', 'mcp', 'portal']
+  ['api', 'backup', 'editor', 'embedder', 'mcp', 'portal', 'sandbox']
     .map(
       (image, i) =>
         `${images}/${image}:${tag}@sha256:${String(i + 1).repeat(64)}`,
@@ -413,10 +413,11 @@ const signatureSums = [
   'embedder',
   'mcp',
   'portal',
+  'sandbox',
 ]
   .map(
     (file, i) =>
-      `${'abcdef0'[i]!.repeat(64)}  ${file === 'trusted_root' ? 'trusted_root.json' : `${file}.sigstore.json`}`,
+      `${'abcdef01'[i]!.repeat(64)}  ${file === 'trusted_root' ? 'trusted_root.json' : `${file}.sigstore.json`}`,
   )
   .join('\n');
 const signedRelease = {
@@ -618,6 +619,7 @@ describe('the release settings, signatures (#745)', () => {
         embedder: 'e'.repeat(64),
         mcp: 'f'.repeat(64),
         portal: '0'.repeat(64),
+        sandbox: '1'.repeat(64),
       },
       identity:
         'https://github.com/openfolia/openfolia/.github/workflows/images.yml@refs/tags/v1.2.3',

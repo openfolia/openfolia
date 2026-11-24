@@ -2,7 +2,8 @@
 # A release's images pinned by their digests (#739), end to end on a registry of its own, then
 # removed again (the registry, its volume, the images and the containers it made):
 #
-# - images pushed to the registry under a release tag, and scripts/release-digests.mjs recording
+# - images pushed to the registry under a release tag, each an index of linux/amd64 and
+#   linux/arm64 (#827), and scripts/release-digests.mjs recording
 #   their digests (images.lock, compose.digests.yaml), as the release workflow does;
 # - the install guide for coding agents rendered for that release (DOCS_RELEASE_DIGESTS = the
 #   lock): it names the SHA-256 of the very override the release wrote;
@@ -32,7 +33,7 @@ registry_image=registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58
 base_image=$(sed -n 's/^ *image: \(postgres:[^ ]*@sha256:[0-9a-f]\{64\}\)$/\1/p' "$here/compose.yaml")
 repo="localhost:$port/digests-test/openfolia"
 tag=v9.9.9
-images="api backup editor embedder mcp portal"
+images="api backup editor embedder mcp portal sandbox"
 work=$(mktemp -d)
 own_registry=
 
@@ -88,15 +89,22 @@ until curl -fsS -o /dev/null "http://127.0.0.1:$port/v2/"; do
 done
 
 # The release's images, one variant: each image only a label apart, so each has a digest of its own.
+# Each is an index of a linux/amd64 and a linux/arm64 image, as the workflow's merge job makes it
+# (#827; release-digests refuses anything else). Neither build runs a command, so building for the
+# other architecture needs no emulation.
 publish() {
   variant=$1
   for image in $images; do
-    printf 'FROM %s\nLABEL org.openfolia.digests-test.image=%s org.openfolia.digests-test.variant=%s\nENTRYPOINT []\nCMD ["sleep", "3600"]\n' \
-      "$base_image" "$image" "$variant" |
-      docker build -q -t "$repo/$image:$tag" - >>"$work/ids"
-    docker push -q "$repo/$image:$tag" >/dev/null
-    # The installations pull from the registry, as on a server, never from this build.
-    docker rmi "$repo/$image:$tag" >/dev/null
+    for arch in amd64 arm64; do
+      printf 'FROM %s\nLABEL org.openfolia.digests-test.image=%s org.openfolia.digests-test.variant=%s\nENTRYPOINT []\nCMD ["sleep", "3600"]\n' \
+        "$base_image" "$image" "$variant" |
+        docker build -q --platform "linux/$arch" -t "$repo/$image:$tag-$arch" - >>"$work/ids"
+      docker push -q "$repo/$image:$tag-$arch" >/dev/null
+      # The installations pull from the registry, as on a server, never from this build.
+      docker rmi "$repo/$image:$tag-$arch" >/dev/null
+    done
+    docker buildx imagetools create --tag "$repo/$image:$tag" "$repo/$image:$tag-amd64" "$repo/$image:$tag-arm64" >/dev/null 2>&1 ||
+      fail "no index of both architectures for $image"
   done
 }
 

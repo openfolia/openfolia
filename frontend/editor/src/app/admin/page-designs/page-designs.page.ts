@@ -207,7 +207,7 @@ const PRESET_NAMES: Readonly<Record<string, string>> = {
 
     <of-list-frame
       class="min-h-48 max-w-4xl min-w-0"
-      offset="20rem"
+      offset="calc(20rem + var(--of-sandbox-h, 0px))"
       [label]="'editor.admin.pageDesigns.list.label' | transloco"
       [items]="rows()"
       [page]="shownPage()"
@@ -308,7 +308,7 @@ const PRESET_NAMES: Readonly<Record<string, string>> = {
       </div>
       <of-list-frame
         class="min-h-32 min-w-0"
-        offset="22rem"
+        offset="calc(22rem + var(--of-sandbox-h, 0px))"
         [label]="'editor.admin.pageDesigns.templates.list.label' | transloco"
         [items]="templateRows()"
         [page]="templatePage()"

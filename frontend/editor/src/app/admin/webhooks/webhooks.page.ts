@@ -86,6 +86,8 @@ import {
   webhookState,
   webhookErrorText,
 } from './webhooks-model';
+import { SandboxOffStateComponent } from '../../sandbox/sandbox-off-state.component';
+import { SandboxSession } from '../../sandbox/sandbox-session';
 
 type WebhookDoc = Response<'/webhooks'>;
 
@@ -114,6 +116,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 @Component({
   selector: 'of-webhooks-page',
   imports: [
+    SandboxOffStateComponent,
     TranslocoPipe,
     NgIcon,
     ListFrameComponent,
@@ -139,241 +142,250 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   ],
   host: { class: 'flex min-w-0 flex-col gap-4' },
   template: `
-    <div
-      class="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start"
-    >
-      <of-list-frame
-        #frame
-        cards
-        class="min-h-64 min-w-0"
-        [label]="'editor.admin.webhooks.list.label' | transloco"
-        [items]="items()"
-        [page]="doc()?.meta?.page ?? null"
-        [loading]="loading()"
-        [error]="frameError()"
-        [offset]="offset()"
-        [skeletonRows]="3"
-        [pageSizes]="pageSizes"
-        [emptyTitle]="'editor.admin.webhooks.list.empty' | transloco"
-        [emptyDescription]="
-          'editor.admin.webhooks.list.emptyDescription' | transloco
-        "
-        (pageChange)="view.set({ page: $event })"
-        (pageSizeChange)="view.set({ size: $event, page: 1 })"
-        (retry)="reload()"
+    @if (sandbox.on()) {
+      <!-- A public sandbox sends nothing out and keeps nothing (issue 826): the screen says why. -->
+      <of-sandbox-off-state
+        [title]="'editor.sandbox.webhooksOff.title' | transloco"
+        [description]="'editor.sandbox.webhooksOff.description' | transloco"
+      />
+    } @else {
+      <div
+        class="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start"
       >
-        <ng-template ofListRow let-item>
-          @let w = asWebhook(item);
-          @let state = stateOf(w);
-          @let chosen = selected()?.id === w.id;
-          <article
-            data-slot="webhook-card"
-            class="bg-card relative flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors duration-150 motion-reduce:transition-none"
-            [class.border-foreground]="chosen"
-            [class.border-border]="!chosen"
-            [attr.aria-current]="chosen ? 'true' : null"
-          >
-            <div class="flex min-w-0 items-start gap-2">
-              <h3 class="m-0 min-w-0 flex-1 text-sm leading-6 font-medium">
-                <button
-                  type="button"
-                  class="focus-visible:ring-ring/50 max-w-full rounded-sm text-start break-words outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:ring-[3px]"
-                  (click)="select(w.id)"
-                >
-                  {{ nameOf(w) }}
-                </button>
-              </h3>
-              @switch (state) {
-                @case ('failing') {
-                  <z-badge zType="destructive" class="shrink-0">{{
-                    'editor.admin.webhooks.state.failing' | transloco
-                  }}</z-badge>
-                }
-                @case ('paused') {
-                  <z-badge zType="secondary" class="shrink-0">{{
-                    'editor.admin.webhooks.state.paused' | transloco
-                  }}</z-badge>
-                }
-                @default {
-                  <z-badge zType="success" class="shrink-0">{{
-                    'editor.admin.webhooks.state.active' | transloco
-                  }}</z-badge>
-                }
-              }
-              <button
-                z-button
-                zType="ghost"
-                zSize="icon-sm"
-                type="button"
-                class="relative z-10 -my-1 shrink-0"
-                z-dropdown
-                [zDropdownMenu]="menu"
-                [attr.aria-label]="
-                  'editor.admin.webhooks.actions.menu'
-                    | transloco: { name: nameOf(w) }
-                "
-              >
-                <ng-icon name="lucideEllipsis" aria-hidden="true" />
-              </button>
-              <z-dropdown-menu-content #menu class="w-56">
-                <z-dropdown-menu-item data-action="edit" (click)="edit(w)">
-                  <ng-icon name="lucidePencil" aria-hidden="true" />
-                  {{ 'editor.admin.webhooks.actions.edit' | transloco }}
-                </z-dropdown-menu-item>
-                @if (state === 'active') {
-                  <z-dropdown-menu-item
-                    data-action="pause"
-                    (click)="setActive(w, false)"
-                  >
-                    <ng-icon name="lucidePause" aria-hidden="true" />
-                    {{ 'editor.admin.webhooks.actions.pause' | transloco }}
-                  </z-dropdown-menu-item>
-                } @else {
-                  <z-dropdown-menu-item
-                    data-action="resume"
-                    (click)="setActive(w, true)"
-                  >
-                    <ng-icon name="lucidePlay" aria-hidden="true" />
-                    {{
-                      (state === 'failing'
-                        ? 'editor.admin.webhooks.actions.reenable'
-                        : 'editor.admin.webhooks.actions.resume'
-                      ) | transloco
-                    }}
-                  </z-dropdown-menu-item>
-                }
-                @if (rotates(w)) {
-                  <z-dropdown-menu-item
-                    data-action="rotate"
-                    (click)="rotate(w)"
-                  >
-                    <ng-icon name="lucideKeyRound" aria-hidden="true" />
-                    {{ 'editor.admin.webhooks.actions.rotate' | transloco }}
-                  </z-dropdown-menu-item>
-                }
-                <z-dropdown-menu-item
-                  data-action="delete"
-                  class="text-destructive"
-                  (click)="remove(w)"
-                >
-                  <ng-icon name="lucideTrash2" aria-hidden="true" />
-                  {{ 'editor.admin.webhooks.actions.delete' | transloco }}
-                </z-dropdown-menu-item>
-              </z-dropdown-menu-content>
-            </div>
-            <p
-              class="text-muted-foreground m-0 font-mono text-xs [overflow-wrap:anywhere]"
+        <of-list-frame
+          #frame
+          cards
+          class="min-h-64 min-w-0"
+          [label]="'editor.admin.webhooks.list.label' | transloco"
+          [items]="items()"
+          [page]="doc()?.meta?.page ?? null"
+          [loading]="loading()"
+          [error]="frameError()"
+          [offset]="offset()"
+          [skeletonRows]="3"
+          [pageSizes]="pageSizes"
+          [emptyTitle]="'editor.admin.webhooks.list.empty' | transloco"
+          [emptyDescription]="
+            'editor.admin.webhooks.list.emptyDescription' | transloco
+          "
+          (pageChange)="view.set({ page: $event })"
+          (pageSizeChange)="view.set({ size: $event, page: 1 })"
+          (retry)="reload()"
+        >
+          <ng-template ofListRow let-item>
+            @let w = asWebhook(item);
+            @let state = stateOf(w);
+            @let chosen = selected()?.id === w.id;
+            <article
+              data-slot="webhook-card"
+              class="bg-card relative flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors duration-150 motion-reduce:transition-none"
+              [class.border-foreground]="chosen"
+              [class.border-border]="!chosen"
+              [attr.aria-current]="chosen ? 'true' : null"
             >
-              {{ w.attributes.url }}
-            </p>
-            <ul class="m-0 flex list-none flex-wrap gap-1.5 p-0">
-              @for (e of w.attributes.events; track e) {
-                <li>
-                  <z-badge zType="secondary" class="font-normal">{{
-                    e
-                  }}</z-badge>
-                </li>
-              }
-            </ul>
-            <p class="text-muted-foreground m-0 text-xs break-words">
-              {{
-                'editor.admin.webhooks.list.audience'
-                  | transloco: { levels: audienceText(w) }
-              }}
-            </p>
-            @if (w.meta.lastDelivery; as last) {
-              <p
-                data-slot="webhook-last"
-                class="text-muted-foreground m-0 flex min-w-0 items-center gap-1.5 text-xs break-words"
-              >
-                <span
-                  class="size-2 shrink-0 rounded-full"
-                  [class.bg-success]="toneOf(last) === 'success'"
-                  [class.bg-warning]="toneOf(last) === 'warning'"
-                  [class.bg-destructive]="toneOf(last) === 'destructive'"
-                  [class.bg-muted-foreground]="toneOf(last) === 'muted'"
-                  aria-hidden="true"
-                ></span>
-                <span class="min-w-0">
-                  {{
-                    'editor.admin.webhooks.list.last'
-                      | transloco
-                        : {
-                            event: last.event,
-                            status: statusText[last.status] | transloco,
-                            code: last.lastStatusCode ?? '-',
-                            when: last.createdAt | ofRelativeTime,
-                          }
-                  }}
-                </span>
-              </p>
-            } @else {
-              <p class="text-muted-foreground m-0 text-xs">
-                {{ 'editor.admin.webhooks.list.noDeliveries' | transloco }}
-              </p>
-            }
-            @if (state === 'failing') {
-              <div
-                class="border-destructive/30 bg-destructive-muted relative z-10 flex min-w-0 flex-wrap items-center gap-2 rounded-md px-3 py-2"
-              >
-                <p class="m-0 min-w-0 flex-1 text-xs break-words">
-                  {{
-                    'editor.admin.webhooks.list.failingNote'
-                      | transloco: { count: w.meta.consecutiveFailures }
-                  }}
-                </p>
+              <div class="flex min-w-0 items-start gap-2">
+                <h3 class="m-0 min-w-0 flex-1 text-sm leading-6 font-medium">
+                  <button
+                    type="button"
+                    class="focus-visible:ring-ring/50 max-w-full rounded-sm text-start break-words outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:ring-[3px]"
+                    (click)="select(w.id)"
+                  >
+                    {{ nameOf(w) }}
+                  </button>
+                </h3>
+                @switch (state) {
+                  @case ('failing') {
+                    <z-badge zType="destructive" class="shrink-0">{{
+                      'editor.admin.webhooks.state.failing' | transloco
+                    }}</z-badge>
+                  }
+                  @case ('paused') {
+                    <z-badge zType="secondary" class="shrink-0">{{
+                      'editor.admin.webhooks.state.paused' | transloco
+                    }}</z-badge>
+                  }
+                  @default {
+                    <z-badge zType="success" class="shrink-0">{{
+                      'editor.admin.webhooks.state.active' | transloco
+                    }}</z-badge>
+                  }
+                }
                 <button
                   z-button
-                  zType="outline"
-                  zSize="sm"
+                  zType="ghost"
+                  zSize="icon-sm"
                   type="button"
-                  data-slot="webhook-reenable"
-                  [zLoading]="acting() === w.id"
-                  [zDisabled]="acting() !== null"
-                  (click)="setActive(w, true)"
+                  class="relative z-10 -my-1 shrink-0"
+                  z-dropdown
+                  [zDropdownMenu]="menu"
+                  [attr.aria-label]="
+                    'editor.admin.webhooks.actions.menu'
+                      | transloco: { name: nameOf(w) }
+                  "
                 >
-                  {{ 'editor.admin.webhooks.actions.reenable' | transloco }}
+                  <ng-icon name="lucideEllipsis" aria-hidden="true" />
                 </button>
+                <z-dropdown-menu-content #menu class="w-56">
+                  <z-dropdown-menu-item data-action="edit" (click)="edit(w)">
+                    <ng-icon name="lucidePencil" aria-hidden="true" />
+                    {{ 'editor.admin.webhooks.actions.edit' | transloco }}
+                  </z-dropdown-menu-item>
+                  @if (state === 'active') {
+                    <z-dropdown-menu-item
+                      data-action="pause"
+                      (click)="setActive(w, false)"
+                    >
+                      <ng-icon name="lucidePause" aria-hidden="true" />
+                      {{ 'editor.admin.webhooks.actions.pause' | transloco }}
+                    </z-dropdown-menu-item>
+                  } @else {
+                    <z-dropdown-menu-item
+                      data-action="resume"
+                      (click)="setActive(w, true)"
+                    >
+                      <ng-icon name="lucidePlay" aria-hidden="true" />
+                      {{
+                        (state === 'failing'
+                          ? 'editor.admin.webhooks.actions.reenable'
+                          : 'editor.admin.webhooks.actions.resume'
+                        ) | transloco
+                      }}
+                    </z-dropdown-menu-item>
+                  }
+                  @if (rotates(w)) {
+                    <z-dropdown-menu-item
+                      data-action="rotate"
+                      (click)="rotate(w)"
+                    >
+                      <ng-icon name="lucideKeyRound" aria-hidden="true" />
+                      {{ 'editor.admin.webhooks.actions.rotate' | transloco }}
+                    </z-dropdown-menu-item>
+                  }
+                  <z-dropdown-menu-item
+                    data-action="delete"
+                    class="text-destructive"
+                    (click)="remove(w)"
+                  >
+                    <ng-icon name="lucideTrash2" aria-hidden="true" />
+                    {{ 'editor.admin.webhooks.actions.delete' | transloco }}
+                  </z-dropdown-menu-item>
+                </z-dropdown-menu-content>
               </div>
-            }
-          </article>
-        </ng-template>
-      </of-list-frame>
+              <p
+                class="text-muted-foreground m-0 font-mono text-xs [overflow-wrap:anywhere]"
+              >
+                {{ w.attributes.url }}
+              </p>
+              <ul class="m-0 flex list-none flex-wrap gap-1.5 p-0">
+                @for (e of w.attributes.events; track e) {
+                  <li>
+                    <z-badge zType="secondary" class="font-normal">{{
+                      e
+                    }}</z-badge>
+                  </li>
+                }
+              </ul>
+              <p class="text-muted-foreground m-0 text-xs break-words">
+                {{
+                  'editor.admin.webhooks.list.audience'
+                    | transloco: { levels: audienceText(w) }
+                }}
+              </p>
+              @if (w.meta.lastDelivery; as last) {
+                <p
+                  data-slot="webhook-last"
+                  class="text-muted-foreground m-0 flex min-w-0 items-center gap-1.5 text-xs break-words"
+                >
+                  <span
+                    class="size-2 shrink-0 rounded-full"
+                    [class.bg-success]="toneOf(last) === 'success'"
+                    [class.bg-warning]="toneOf(last) === 'warning'"
+                    [class.bg-destructive]="toneOf(last) === 'destructive'"
+                    [class.bg-muted-foreground]="toneOf(last) === 'muted'"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="min-w-0">
+                    {{
+                      'editor.admin.webhooks.list.last'
+                        | transloco
+                          : {
+                              event: last.event,
+                              status: statusText[last.status] | transloco,
+                              code: last.lastStatusCode ?? '-',
+                              when: last.createdAt | ofRelativeTime,
+                            }
+                    }}
+                  </span>
+                </p>
+              } @else {
+                <p class="text-muted-foreground m-0 text-xs">
+                  {{ 'editor.admin.webhooks.list.noDeliveries' | transloco }}
+                </p>
+              }
+              @if (state === 'failing') {
+                <div
+                  class="border-destructive/30 bg-destructive-muted relative z-10 flex min-w-0 flex-wrap items-center gap-2 rounded-md px-3 py-2"
+                >
+                  <p class="m-0 min-w-0 flex-1 text-xs break-words">
+                    {{
+                      'editor.admin.webhooks.list.failingNote'
+                        | transloco: { count: w.meta.consecutiveFailures }
+                    }}
+                  </p>
+                  <button
+                    z-button
+                    zType="outline"
+                    zSize="sm"
+                    type="button"
+                    data-slot="webhook-reenable"
+                    [zLoading]="acting() === w.id"
+                    [zDisabled]="acting() !== null"
+                    (click)="setActive(w, true)"
+                  >
+                    {{ 'editor.admin.webhooks.actions.reenable' | transloco }}
+                  </button>
+                </div>
+              }
+            </article>
+          </ng-template>
+        </of-list-frame>
 
-      @if (selected(); as w) {
-        <of-webhook-deliveries
-          class="animate-in fade-in-0 duration-200 motion-reduce:animate-none"
-          [webhook]="w"
-          [name]="nameOf(w)"
-          [view]="logView()"
-          [offset]="logOffset()"
-          (viewChange)="setLog($event)"
-          (changed)="reload()"
-        />
-      }
-    </div>
+        @if (selected(); as w) {
+          <of-webhook-deliveries
+            class="animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+            [webhook]="w"
+            [name]="nameOf(w)"
+            [view]="logView()"
+            [offset]="logOffset()"
+            (viewChange)="setLog($event)"
+            (changed)="reload()"
+          />
+        }
+      </div>
 
-    <p class="text-muted-foreground m-0 text-xs break-words">
-      {{ 'editor.admin.webhooks.note' | transloco }}
-    </p>
+      <p class="text-muted-foreground m-0 text-xs break-words">
+        {{ 'editor.admin.webhooks.note' | transloco }}
+      </p>
 
-    <of-webhook-dialog
-      [(open)]="dialogOpen"
-      [webhook]="editing()"
-      [owned]="editingOwned()"
-      [reshape]="editingReshape()"
-      [editHeaders]="editingHeaders()"
-      [audiences]="audiences()"
-      [busy]="saving()"
-      [error]="saveError()"
-      [headerErrors]="saveHeaderErrors()"
-      (save)="save($event)"
-    />
+      <of-webhook-dialog
+        [(open)]="dialogOpen"
+        [webhook]="editing()"
+        [owned]="editingOwned()"
+        [reshape]="editingReshape()"
+        [editHeaders]="editingHeaders()"
+        [audiences]="audiences()"
+        [busy]="saving()"
+        [error]="saveError()"
+        [headerErrors]="saveHeaderErrors()"
+        (save)="save($event)"
+      />
 
-    <of-webhook-secret-dialog [(open)]="secretOpen" [shown]="secret()" />
+      <of-webhook-secret-dialog [(open)]="secretOpen" [shown]="secret()" />
+    }
   `,
 })
 export class WebhooksPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly toast = inject(ToastService);
   private readonly dialogs = inject(ZardAlertDialogService);

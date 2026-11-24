@@ -20,6 +20,7 @@
     "audit-log",
     "semantic-search",
     "sizing",
+    "sandbox",
     "upgrades",
     "smoke-test",
     "licence"

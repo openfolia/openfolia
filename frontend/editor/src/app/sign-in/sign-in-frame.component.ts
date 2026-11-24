@@ -12,6 +12,8 @@ import { ToasterComponent } from '@openfolia/ui/toast';
 
 import { AboutLinksComponent } from '../about/about-links.component';
 import { BrandingService } from '../branding/branding.service';
+import { SandboxBannerComponent } from '../sandbox/sandbox-banner.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 
 /**
  * The branded frame of the pages before signing in (#610: "Forgot password", the page a
@@ -26,6 +28,7 @@ import { BrandingService } from '../branding/branding.service';
     LanguageChoiceComponent,
     ToasterComponent,
     AboutLinksComponent,
+    SandboxBannerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
@@ -34,6 +37,9 @@ import { BrandingService } from '../branding/branding.service';
       class="bg-background text-foreground flex min-h-dvh justify-center overflow-x-hidden px-4 py-10 sm:items-center"
     >
       <div class="flex w-full max-w-md min-w-0 flex-col gap-6">
+        @if (sandbox.on()) {
+          <of-sandbox-banner />
+        }
         <div class="flex justify-center">
           <of-logo
             variant="full"
@@ -79,4 +85,5 @@ export class SignInFrameComponent {
   readonly intro = input('');
   readonly busy = input(false);
   protected readonly brand = inject(BrandingService).branding;
+  protected readonly sandbox = inject(SandboxSession);
 }

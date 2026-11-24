@@ -35,6 +35,8 @@ export const EDITOR_AREAS: Readonly<Record<string, string>> = {
   translations: 'translations',
   reports: 'translations',
   media: 'media',
+  // The public sandbox's banner and notes (#826), mounted in the shell and on every screen.
+  sandbox: 'shell',
   terminology: 'terminology',
   admin: 'admin',
   permissions: 'admin',

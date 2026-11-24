@@ -182,6 +182,7 @@ describe('OpenAPI document', () => {
       '/reports/translations/csv',
       '/roles',
       '/roles/{roleId}',
+      '/sandbox',
       '/search',
       '/secret-key',
       '/service-accounts',

@@ -61,6 +61,7 @@ import {
   type ServiceAccountStatus,
 } from './service-accounts-model';
 import { ServiceTokensSheetComponent } from './service-tokens-sheet.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 
 type AccountDoc = Response<'/service-accounts'>;
 
@@ -154,7 +155,9 @@ const BELOW_FRAME_PX = 72;
       [emptyDescription]="
         (filtered()
           ? 'editor.admin.serviceAccounts.empty.filteredDescription'
-          : 'editor.admin.serviceAccounts.empty.description'
+          : sandbox.on()
+            ? 'editor.sandbox.serviceAccountsOff'
+            : 'editor.admin.serviceAccounts.empty.description'
         ) | transloco
       "
       (pageChange)="view.set({ page: $event })"
@@ -337,6 +340,7 @@ const BELOW_FRAME_PX = 72;
   `,
 })
 export class ServiceAccountsPage {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly toast = inject(ToastService);
   private readonly dialogs = inject(ZardAlertDialogService);

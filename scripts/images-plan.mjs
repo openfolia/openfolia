@@ -13,20 +13,32 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 /**
- * Every image the workflow builds and pushes, with the Nx project it is built from. `backup` is
- * the API image plus the Postgres client (the Dockerfile, target `backup`), so whatever rebuilds
- * the API rebuilds it; its own part of the build lives in the Dockerfile and deploy/, which
- * REBUILD_ALL covers. `embedder` is the local embedding worker
+ * Every image the workflow builds and pushes, with the Nx projects it is built from: it is affected
+ * when any of them is. `backup` is the API image plus the Postgres client (the Dockerfile, target
+ * `backup`), so whatever rebuilds the API rebuilds it; its own part of the build lives in the
+ * Dockerfile and deploy/, which REBUILD_ALL covers. `embedder` is the local embedding worker
  * (deploy/compose.embedder.yaml, #532); `portal` the reader portal (#819), which also renders
- * with render-html and content-model, so Nx rebuilds it with them.
+ * with render-html and content-model, so Nx rebuilds it with them; `sandbox` the public sandbox
+ * (#827): the API, the editor and the embedded database in one image, with the demo's state baked
+ * in (scripts/demo/, IMAGE_FILES).
  */
 export const IMAGE_PROJECTS = Object.freeze({
-  api: 'api',
-  backup: 'api',
-  editor: 'editor',
-  embedder: 'embedder',
-  mcp: 'mcp',
-  portal: 'portal',
+  api: ['api'],
+  backup: ['api'],
+  editor: ['editor'],
+  embedder: ['embedder'],
+  mcp: ['mcp'],
+  portal: ['portal'],
+  sandbox: ['api', 'editor', 'sandbox'],
+});
+
+/**
+ * Files of no image's Nx project that one image is built from: a change to one rebuilds that
+ * image. The sandbox bakes the demo's state with scripts/demo/ (the workflow project, which no
+ * other image needs).
+ */
+export const IMAGE_FILES = Object.freeze({
+  sandbox: /^scripts\/demo\//,
 });
 
 export const IMAGES = Object.freeze(Object.keys(IMAGE_PROJECTS));
@@ -48,8 +60,15 @@ export function planImages({ changedFiles, affectedProjects }) {
   if (changedFiles === null || changedFiles.some((f) => REBUILD_ALL.test(f))) {
     images = [...IMAGES];
   } else {
-    const projects = new Set(affectedProjects());
-    images = IMAGES.filter((image) => projects.has(IMAGE_PROJECTS[image]));
+    const byFiles = (image) =>
+      IMAGE_FILES[image] !== undefined &&
+      changedFiles.some((f) => IMAGE_FILES[image].test(f));
+    let projects;
+    images = IMAGES.filter((image) => {
+      if (byFiles(image)) return true;
+      projects ??= new Set(affectedProjects());
+      return IMAGE_PROJECTS[image].some((project) => projects.has(project));
+    });
   }
   return {
     images,

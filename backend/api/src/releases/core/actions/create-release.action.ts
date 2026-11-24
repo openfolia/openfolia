@@ -32,6 +32,7 @@ import { type StoredRelease, ReleaseStore } from '../release-store.js';
 import { ReleaseTags } from '../release-tags.js';
 import { ReleaseChangeReader } from './release-changes.action.js';
 import { MaintenanceLineStore } from '../maintenance-line-store.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 export interface CreateReleaseInput {
   readonly actor: Actor;
@@ -119,11 +120,17 @@ export class CreateReleaseAction extends ActorAction<
     private readonly changes: ReleaseChangeReader,
     private readonly jobs: JobQueue,
     private readonly lines: MaintenanceLineStore,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
-  protected async run({
+  /** Counted against a public sandbox's cap (#826): past it, 422 `sandbox-limit-reached`. */
+  protected run(input: CreateReleaseInput): Promise<Release> {
+    return this.sandbox.counted('releases', () => this.make(input));
+  }
+
+  private async make({
     actor,
     product,
     revision,

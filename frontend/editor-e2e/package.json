@@ -13,7 +13,8 @@
     ],
     "implicitDependencies": [
       "editor",
-      "api"
+      "api",
+      "sandbox"
     ],
     "targets": {
       "browsers": {

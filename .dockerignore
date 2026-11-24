@@ -16,6 +16,8 @@ backend/api/.cache
 .review
 .factory-tmp
 .impeccable
+# The demo's takes, films and stills (scripts/demo/): the sandbox image bakes its own state.
+.demo
 .idea
 **/.DS_Store
 **/*.log

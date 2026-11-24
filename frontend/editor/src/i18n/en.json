@@ -2387,7 +2387,9 @@
       "already-carried-forward": "It was carried forward already.",
       "not-on-maintenance-line": "It was not merged into a maintenance line, so there is nothing to carry forward.",
       "maintenance-line-exists": "This release has a maintenance line already.",
-      "invalid-maintenance-branch": "The maintenance line's branch name cannot be made for this release. An administrator can change the pattern."
+      "invalid-maintenance-branch": "The maintenance line's branch name cannot be made for this release. An administrator can change the pattern.",
+      "sandbox-not-allowed": "{refused, select, uploads {Uploads are off in this sandbox.} imports {Imports are off in this sandbox.} templates {Templates cannot be changed in this sandbox.} users {Adding users is off in this sandbox: it is yours alone.} invitations {Invitation and reset links are off in this sandbox: it is yours alone.} serviceAccounts {Service accounts are off in this sandbox: nothing outside may reach it.} tokens {Issuing tokens is off in this sandbox: nothing outside may reach it.} webhooks {Webhooks are off in this sandbox: nothing leaves it.} mail {Email is off in this sandbox: nothing leaves it.} backups {Backups are off in this sandbox.} other {This is off in a public sandbox.}}",
+      "sandbox-limit-reached": "{limit, select, moduleBytes {This is larger than a sandbox saves. Make it shorter or split it.} commentLength {A comment in a sandbox has at most {max, number} characters.} changeSets {This sandbox has made as many revisions as it may ({max, number}).} modules {This sandbox has made as many modules as it may ({max, number}).} manuals {This sandbox has made as many manuals as it may ({max, number}).} releasesPerHour {This sandbox has cut as many releases this hour as it may ({max, number}). Try again later.} writeBytes {This sandbox has written as much as it may over its session.} other {This sandbox has reached one of its limits.}}"
     }
   },
   "theme": {
@@ -6257,5 +6259,35 @@
     "otherLanguages": "Other languages: {given} of {total} translated",
     "sourceRequired": "The text in {language} is required.",
     "fallbackHint": "An empty field falls back to the text in {language}."
+  },
+  "sandbox": {
+    "banner": {
+      "label": "Sandbox",
+      "text": "A private sandbox: only you see it, and it is deleted after the session.",
+      "timeLeft": "{minutes} min left",
+      "ended": "The session has ended"
+    },
+    "uploadsOff": "Uploads are off in this sandbox.",
+    "uploadsOffPickImage": "Uploads are off in this sandbox: pick an image from the media library.",
+    "uploadsOffPickFile": "Uploads are off in this sandbox: pick a file from the list.",
+    "uploadsOffFonts": "Uploads are off in this sandbox: pick one of the fonts listed.",
+    "templatesOff": "Templates cannot be changed in this sandbox: you see them as they are.",
+    "importsOff": {
+      "title": "Imports are off in this sandbox",
+      "description": "A public sandbox takes no files from outside. Write and change the content in the editor instead.",
+      "translations": "A public sandbox takes no files from outside, translations included. Translate in the editor instead."
+    },
+    "usersOff": "Adding users and sign-in links are off in this sandbox: it is yours alone.",
+    "serviceAccountsOff": "Service accounts are off in this sandbox: nothing outside may reach it.",
+    "tokensOff": "Issuing tokens is off in this sandbox: nothing outside may reach it.",
+    "webhooksOff": {
+      "title": "Webhooks are off in this sandbox",
+      "description": "A public sandbox sends nothing out: no webhooks, no email, no calls to other services."
+    },
+    "backupsOff": {
+      "title": "Backups are off in this sandbox",
+      "description": "It is deleted after the session, so there is nothing to keep."
+    },
+    "mailOff": "Email is off in this sandbox: every message is dropped, none is sent."
   }
 }

@@ -380,7 +380,7 @@ which name other things too: a text attribute, an approval) and the "du" pronoun
 | revision              | Überarbeitung                                 |                             |
 | product version       | Produktversion                                |                             |
 | module                | Modul                                         |                             |
-| manual                | Handbuch                                      |                             |
+| manual                | Anleitung                                     |                             |
 | variant               | Variante                                      |                             |
 | variant attribute     | Variantenmerkmal (short: Merkmal)             | Variantenattribut, Attribut |
 | text attribute        | Textattribut                                  |                             |

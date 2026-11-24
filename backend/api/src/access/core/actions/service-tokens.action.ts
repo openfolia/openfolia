@@ -30,6 +30,7 @@ import {
   mintServiceToken,
   SERVICE_TOKEN_ID_PATTERN,
 } from '../service-token.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** One page of a service account's tokens, newest first: never a token or its hash. Needs `admin.roles`. */
 @Injectable()
@@ -98,6 +99,7 @@ export class IssueServiceTokenAction extends ActorAction<
     private readonly store: ServiceAccountStore,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -108,6 +110,7 @@ export class IssueServiceTokenAction extends ActorAction<
     name,
     expiresAt,
   }: IssueServiceTokenInput): Promise<IssuedServiceToken> {
+    this.sandbox.refuse('tokens');
     return runContended(
       this.unit,
       async (tx) => {

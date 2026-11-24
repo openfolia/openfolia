@@ -47,6 +47,7 @@ import {
 } from '../effective-settings.js';
 import { cronOf, nextRuns, scheduleProblem } from '../schedule.js';
 import { endpointProblem, reportedAllowPrivate } from '../backup-endpoint.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** Everything about backups needs this (#529): a global permission. */
 export const MANAGE_BACKUPS = 'admin.backups' satisfies Permission;
@@ -243,6 +244,7 @@ export class UpdateBackupSettingsAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
     private readonly clock: BackupClock,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -254,6 +256,7 @@ export class UpdateBackupSettingsAction extends ActorAction<
     actor: Actor;
     changes: BackupSettingsChanges;
   }): Promise<BackupSettingsView> {
+    this.sandbox.refuse('backups');
     const env = await overridesOf(this.store, this.clock.now());
     checkChanges(changes, env.allowPrivate);
     await this.unit.run(async (tx) => {
@@ -591,6 +594,7 @@ export class CreateBackupKeyAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
     private readonly clock: BackupClock,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -602,6 +606,7 @@ export class CreateBackupKeyAction extends ActorAction<
     actor: Actor;
     rotate: boolean;
   }): Promise<MadeBackupKey> {
+    this.sandbox.refuse('backups');
     const env = await overridesOf(this.store, this.clock.now());
     if (env.overrides.key) {
       throw new ConflictError(
@@ -723,6 +728,7 @@ export class RequestBackupAction extends ActorAction<
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
     private readonly clock: BackupClock,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -734,6 +740,7 @@ export class RequestBackupAction extends ActorAction<
     actor: Actor;
     kind: BackupRequestKind;
   }): Promise<BackupRequest> {
+    this.sandbox.refuse('backups');
     const now = this.clock.now();
     const state = await this.store.service();
     if (!serviceView(state?.lastSeenAt ?? null, now).running) {

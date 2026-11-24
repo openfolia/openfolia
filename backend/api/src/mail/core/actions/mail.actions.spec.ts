@@ -30,10 +30,11 @@ import {
   SendMailAction,
   STALE_AFTER_MS,
 } from './send-mail.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const ADMIN = actorWith(['admin.roles']);
 
-function setUp() {
+function setUp(sandbox: Sandbox = Sandbox.OFF) {
   const settings = new FakeMailSettings();
   const store = new FakeMailStore();
   const sealer = fakeSealer(1);
@@ -44,7 +45,7 @@ function setUp() {
   const mailer = new FakeMailer();
   const users = new FakeUserDirectory([ADMIN], { [ADMIN.id]: 'Ada Admin' });
   users.emails.set(ADMIN.id, 'ada@example.com');
-  const outbox = new MailOutbox(settings, store, sealer, jobs);
+  const outbox = new MailOutbox(settings, store, sealer, jobs, sandbox);
   const fail = new FailMailAction(store, audit, unit);
   const send = new SendMailAction(
     store,
@@ -457,5 +458,32 @@ describe('GetMailSettingsAction', () => {
       senderName: 'Docs',
       language: 'en',
     });
+  });
+});
+
+describe('MailOutbox in a public sandbox (#826)', () => {
+  it('drops every email, even with email set up: no row, no job, nothing sent', async () => {
+    const t = setUp(
+      Sandbox.on({
+        limits: {
+          moduleBytes: 1_000,
+          commentLength: 100,
+          changeSets: 5,
+          modules: 5,
+          manuals: 5,
+          releasesPerHour: 5,
+          renderJobs: 1,
+          writeBytes: 1_000_000,
+        },
+        lifetime: { idleMinutes: 30, maxMinutes: 90 },
+      }),
+    );
+    expect(t.settings.state).toBe('on');
+    expect(t.outbox.enabled).toBe(false);
+    expect(t.outbox.linksEnabled).toBe(false);
+    expect(await t.queue('en')).toBeNull();
+    expect(t.jobs.jobs).toEqual([]);
+    expect(t.store.rows.size).toBe(0);
+    expect(t.mailer.sent).toEqual([]);
   });
 });

@@ -263,7 +263,7 @@ interface DesignChoice {
         >
           <of-list-frame
             class="min-h-40 min-w-0"
-            offset="16rem"
+            offset="calc(16rem + var(--of-sandbox-h, 0px))"
             data-slot="template-files"
             [label]="
               'editor.admin.pageDesigns.templates.files.label' | transloco
@@ -435,7 +435,7 @@ interface DesignChoice {
                 <div class="relative min-w-0">
                   <of-code-editor
                     #code
-                    class="h-[max(20rem,calc(100dvh-29rem))]"
+                    class="h-[max(20rem,calc(100dvh_-_29rem_-_var(--of-sandbox-h,0px)))]"
                     describedBy="template-code-hint template-code-problems"
                     [class.opacity-60]="draft.fileStatus() === 'loading'"
                     [path]="draft.path() ?? ''"

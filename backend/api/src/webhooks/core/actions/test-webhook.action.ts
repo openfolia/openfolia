@@ -30,6 +30,7 @@ import {
   sameOwner,
   seesPayload,
 } from './manage-webhooks.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 /** Why a delivery cannot be retried (`meta.reason` of 409 `not-retryable`). */
 export type NotRetryableReason =
@@ -82,6 +83,7 @@ export class TestWebhookAction extends ActorAction<
     private readonly deliver: DeliverWebhookAction,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -93,6 +95,7 @@ export class TestWebhookAction extends ActorAction<
     actor: Actor;
     id: string;
   }): Promise<LoggedDelivery> {
+    this.sandbox.refuse('webhooks');
     configured(this.settings);
     const webhook = await existing(this.store, id, actor);
     const claim = await this.store.claimSend(
@@ -190,6 +193,7 @@ export class RetryWebhookDeliveryAction extends ActorAction<
     private readonly jobs: JobQueue,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -203,6 +207,7 @@ export class RetryWebhookDeliveryAction extends ActorAction<
     id: string;
     deliveryId: string;
   }): Promise<LoggedDelivery> {
+    this.sandbox.refuse('webhooks');
     configured(this.settings);
     // Read before the transaction (one connection may serve both); the
     // compare-and-swap below finds it still failed, or refuses.

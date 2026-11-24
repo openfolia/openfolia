@@ -14,6 +14,7 @@ import { parse } from 'yaml';
 
 import { IMAGES } from '@/scripts/images-plan.mjs';
 import {
+  PLATFORMS,
   lockText,
   manifestDigest,
   overrideText,
@@ -34,6 +35,47 @@ const digestOf = (image: string) =>
 const digests = Object.fromEntries(
   IMAGES.map((image) => [image, digestOf(image)]),
 );
+
+/**
+ * What `imagetools inspect --format '{{json .Manifest}}'` prints for an index the workflow's merge
+ * job made (#827): an image per platform and, for each, its attestation manifest (buildx's SBOM
+ * and provenance), whose platform is `unknown/unknown`.
+ */
+const indexOf = (
+  digest: string,
+  platforms: readonly string[] = PLATFORMS,
+  mediaType = 'application/vnd.oci.image.index.v1+json',
+) => {
+  const manifests = platforms.flatMap((platform, n) => {
+    const [os, architecture] = platform.split('/');
+    const image = `sha256:${String(n + 1).repeat(64)}`;
+    return [
+      {
+        mediaType: 'application/vnd.oci.image.manifest.v1+json',
+        digest: image,
+        size: 1000,
+        platform: { architecture, os },
+      },
+      {
+        mediaType: 'application/vnd.oci.image.manifest.v1+json',
+        digest: `sha256:${String(n + 5).repeat(64)}`,
+        size: 800,
+        annotations: {
+          'vnd.docker.reference.digest': image,
+          'vnd.docker.reference.type': 'attestation-manifest',
+        },
+        platform: { architecture: 'unknown', os: 'unknown' },
+      },
+    ];
+  });
+  return JSON.stringify({
+    schemaVersion: 2,
+    mediaType,
+    digest,
+    size: 1600,
+    manifests,
+  });
+};
 
 describe('release-digests (#739)', () => {
   it("pins every service of compose.yaml that runs an OpenFolia image, the backup's anchor included", () => {
@@ -150,11 +192,18 @@ describe('release-digests (#739)', () => {
       );
   });
 
-  it("reads the digest from imagetools' manifest, and nothing else", () => {
+  it("reads the index's digest from imagetools' manifest, and nothing else", () => {
     const digest = digestOf('mcp');
+    expect(PLATFORMS).toEqual(['linux/amd64', 'linux/arm64']);
+    expect(manifestDigest(indexOf(digest), 'ref')).toBe(digest);
+    // Docker's manifest list is an index too, and an arm64 image of a variant counts as arm64.
     expect(
       manifestDigest(
-        JSON.stringify({ mediaType: 'x', digest, size: 1 }),
+        indexOf(
+          digest,
+          PLATFORMS,
+          'application/vnd.docker.distribution.manifest.list.v2+json',
+        ),
         'ref',
       ),
     ).toBe(digest);
@@ -168,6 +217,43 @@ describe('release-digests (#739)', () => {
       expect(() => manifestDigest(output, 'the/ref')).toThrow(
         'no digest for the/ref',
       );
+  });
+
+  it('refuses a single image and an index without every platform: a release runs on both (#827)', () => {
+    const digest = digestOf('api');
+    // One platform's image, as the workflow pushed them before #827.
+    expect(() =>
+      manifestDigest(
+        JSON.stringify({
+          schemaVersion: 2,
+          mediaType: 'application/vnd.oci.image.manifest.v1+json',
+          digest,
+          size: 1000,
+        }),
+        'the/ref',
+      ),
+    ).toThrow('the/ref is no multi-platform image index');
+    expect(() =>
+      manifestDigest(
+        JSON.stringify({
+          mediaType: 'application/vnd.oci.image.index.v1+json',
+          digest,
+        }),
+        'the/ref',
+      ),
+    ).toThrow('no multi-platform image index');
+    expect(() =>
+      manifestDigest(indexOf(digest, ['linux/amd64']), 'the/ref'),
+    ).toThrow('the/ref has no image for linux/arm64');
+    expect(() =>
+      manifestDigest(indexOf(digest, ['linux/arm64', 'linux/ppc64le']), 'r'),
+    ).toThrow('r has no image for linux/amd64');
+    // An attestation that names linux/amd64 as its platform is still no image.
+    const forged = JSON.parse(indexOf(digest, ['linux/arm64']));
+    forged.manifests[1].platform = { os: 'linux', architecture: 'amd64' };
+    expect(() => manifestDigest(JSON.stringify(forged), 'r')).toThrow(
+      'r has no image for linux/amd64',
+    );
   });
 
   it('takes only the arguments it knows, each checked', () => {
@@ -241,7 +327,7 @@ describe('release-digests, run as the workflow runs it', () => {
       Object.fromEntries(
         IMAGES.map((image) => [
           `${images}/${image}:${tag}`,
-          JSON.stringify({ digest: digestOf(image) }),
+          indexOf(digestOf(image)),
         ]),
       ),
     );
@@ -263,7 +349,7 @@ describe('release-digests, run as the workflow runs it', () => {
 
   it('fails, and writes nothing, when an image of the tag is missing', () => {
     const bin = fakeDocker({
-      [`${images}/api:${tag}`]: JSON.stringify({ digest: digestOf('api') }),
+      [`${images}/api:${tag}`]: indexOf(digestOf('api')),
     });
     const out = join(bin, 'out');
     expect(() => run(bin, out)).toThrow();
@@ -278,7 +364,7 @@ describe('the workflows (#739)', () => {
   it('records the digests once every image of a release tag is pushed, and attaches the files once', () => {
     const images = workflow('images.yml');
     const job = images.jobs['release-files'];
-    expect(job.needs).toEqual(['plan', 'build']);
+    expect(job.needs).toEqual(['plan', 'merge']);
     expect(job.if).toContain("github.ref_type == 'tag'");
     const run = job.steps.map((s: { run?: string }) => s.run ?? '').join('\n');
     // The repository the build job pushes to, lowercased as the metadata action does.
@@ -304,12 +390,83 @@ describe('the workflows (#739)', () => {
     expect(upload.steps.at(-1).run).toMatch(
       /gh release upload "\$TAG"[^\n]*--clobber/,
     );
-    // Each build leg records the digest it pushed, for --expect.
+    // Each build leg records the digest it pushed for the merge, and the merge the index's, for
+    // --expect.
     expect(JSON.stringify(images.jobs.build.steps)).toContain(
       'steps.push.outputs.digest',
+    );
+    expect(JSON.stringify(images.jobs.merge.steps)).toContain(
+      'steps.index.outputs.digest',
     );
     // Only this job writes SHA256SUMS: release.yml no longer uploads one that could replace it.
     expect(JSON.stringify(workflow('release.yml'))).not.toContain('SHA256SUMS');
     expect(images.jobs.digests.steps.at(-1).run).toBe('deploy/digests-test.sh');
+  });
+});
+
+describe('the images for both architectures (#827)', () => {
+  const images = parse(
+    readFileSync(join(root, '.github', 'workflows', 'images.yml'), 'utf8'),
+  );
+  type Step = {
+    id?: string;
+    uses?: string;
+    run?: string;
+    with?: Record<string, string>;
+  };
+
+  it('builds every image natively on a runner of each architecture, and pushes each by digest', () => {
+    const build = images.jobs.build;
+    expect(build['runs-on']).toBe('${{ matrix.runner }}');
+    expect(build.strategy.matrix.arch).toEqual(['amd64', 'arm64']);
+    expect(build.strategy.matrix.include).toEqual([
+      { arch: 'amd64', runner: 'ubuntu-24.04' },
+      { arch: 'arm64', runner: 'ubuntu-24.04-arm' },
+    ]);
+    const builds = build.steps.filter((s: Step) =>
+      s.uses?.startsWith('docker/build-push-action'),
+    );
+    expect(builds).toHaveLength(2);
+    for (const step of builds)
+      expect(step.with.platforms).toBe('linux/${{ matrix.arch }}');
+    const push = build.steps.find((s: Step) => s.id === 'push');
+    expect(push.with.outputs).toContain('push-by-digest=true');
+    expect(push.with.tags).toBeUndefined();
+    expect(push.with.sbom).toBe(true);
+    expect(push.with.provenance).toBe('mode=max');
+  });
+
+  it('tags one index of both, checked, and the release pins and signs that index', () => {
+    const merge = images.jobs.merge;
+    expect(merge.needs).toEqual(['plan', 'build']);
+    const index = merge.steps.find((s: Step) => s.id === 'index').run;
+    expect(index).toContain(
+      'docker buildx imagetools create "${tags[@]}" "${sources[@]}"',
+    );
+    expect(index).toContain('for arch in amd64 arm64');
+    expect(index).toContain(
+      '(index("linux/amd64") != null) and (index("linux/arm64") != null)',
+    );
+    expect(images.jobs.retag.needs).toEqual(['plan', 'merge']);
+    expect(images.jobs.deploy.needs).toContain('merge');
+    // Signing takes every image of a release, the sandbox too, each an index of both.
+    const sign = images.jobs['release-sign'].steps
+      .map((s: Step) => s.run ?? '')
+      .join('\n');
+    const named = /release_images="([^"]+)"/.exec(sign)?.[1]?.split(' ');
+    expect(named).toEqual([...IMAGES]);
+    expect(sign).toContain('is no index of linux/amd64 and linux/arm64');
+  });
+
+  it('runs the compose smoke test on both architectures, and the sandbox test on each leg', () => {
+    expect(images.jobs.smoke['runs-on']).toBe('${{ matrix.runner }}');
+    expect(images.jobs.smoke.strategy.matrix.include).toEqual([
+      { arch: 'amd64', runner: 'ubuntu-24.04' },
+      { arch: 'arm64', runner: 'ubuntu-24.04-arm' },
+    ]);
+    const test = images.jobs.build.steps.find(
+      (s: Step) => s.run === 'deploy/sandbox-test.sh',
+    );
+    expect(test.if).toBe("matrix.image == 'sandbox'");
   });
 });

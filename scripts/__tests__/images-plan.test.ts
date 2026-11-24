@@ -17,7 +17,7 @@ const never = () => {
 };
 
 describe('images-plan', () => {
-  it('names every image compose.yaml and compose.embedder.yaml run, the backup image included', () => {
+  it('names every image compose.yaml and compose.embedder.yaml run, the backup image included, and the sandbox', () => {
     expect(IMAGES).toEqual([
       'api',
       'backup',
@@ -25,6 +25,7 @@ describe('images-plan', () => {
       'embedder',
       'mcp',
       'portal',
+      'sandbox',
     ]);
     const compose = ['compose.yaml', 'compose.embedder.yaml']
       .map((file) => readFileSync(join(root, 'deploy', file), 'utf8'))
@@ -34,7 +35,12 @@ describe('images-plan', () => {
         (m) => m[1],
       ),
     );
-    expect([...used].sort()).toEqual([...IMAGES].sort());
+    // The sandbox runs on its own, one container per visitor (deploy/README.md), never in compose.
+    expect([...used, 'sandbox'].sort()).toEqual([...IMAGES].sort());
+    // Every image is a target of the Dockerfile.
+    const dockerfile = readFileSync(join(root, 'Dockerfile'), 'utf8');
+    for (const image of IMAGES)
+      expect(dockerfile).toMatch(new RegExp(`^FROM \\S+ AS ${image}$`, 'm'));
   });
 
   it('builds every image with nothing to compare with', () => {
@@ -51,7 +57,7 @@ describe('images-plan', () => {
         affectedProjects,
       }),
     ).toEqual({
-      images: ['api', 'backup'],
+      images: ['api', 'backup', 'sandbox'],
       unaffected: ['editor', 'embedder', 'mcp', 'portal'],
     });
     expect(affectedProjects).toHaveBeenCalledTimes(1);
@@ -91,12 +97,12 @@ describe('images-plan', () => {
         affectedProjects: () => ['editor', 'ui'],
       }),
     ).toEqual({
-      images: ['editor'],
+      images: ['editor', 'sandbox'],
       unaffected: ['api', 'backup', 'embedder', 'mcp', 'portal'],
     });
   });
 
-  it('follows Nx through the dependencies: a shared package rebuilds all five', () => {
+  it('follows Nx through the dependencies: a shared package rebuilds all six', () => {
     expect(
       planImages({
         changedFiles: ['packages/content-model/src/index.ts'],
@@ -108,7 +114,7 @@ describe('images-plan', () => {
           'portal',
         ],
       }).images,
-    ).toEqual(['api', 'backup', 'editor', 'mcp', 'portal']);
+    ).toEqual(['api', 'backup', 'editor', 'mcp', 'portal', 'sandbox']);
   });
 
   it('rebuilds only the portal image for a portal-only change', () => {
@@ -118,6 +124,31 @@ describe('images-plan', () => {
         affectedProjects: () => ['portal'],
       }).images,
     ).toEqual(['portal']);
+  });
+
+  it('rebuilds the sandbox, and only it, for its embedded database and the demo it bakes', () => {
+    expect(
+      planImages({
+        changedFiles: ['backend/sandbox/src/database.ts'],
+        affectedProjects: () => ['sandbox', 'editor-e2e'],
+      }).images,
+    ).toEqual(['sandbox']);
+    // scripts/demo/ is the workflow project's, which no image is built from: the files decide.
+    expect(
+      planImages({
+        changedFiles: ['scripts/demo/populate.mjs'],
+        affectedProjects: () => ['workflow'],
+      }),
+    ).toEqual({
+      images: ['sandbox'],
+      unaffected: ['api', 'backup', 'editor', 'embedder', 'mcp', 'portal'],
+    });
+    expect(
+      planImages({
+        changedFiles: ['scripts/board.mjs'],
+        affectedProjects: () => ['workflow'],
+      }).images,
+    ).toEqual([]);
   });
 
   it('builds nothing when no image project is affected', () => {

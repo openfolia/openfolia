@@ -19,7 +19,7 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 
 ## Packages
 
-724 packages.
+732 packages.
 
 | Package | Version | Licence | Homepage |
 | --- | --- | --- | --- |
@@ -82,6 +82,14 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 | @clack/core | 1.6.0 | MIT | <https://github.com/bombshell-dev/clack/tree/main/packages/core#readme> |
 | @clack/prompts | 1.9.0 | MIT | <https://github.com/bombshell-dev/clack/tree/main/packages/prompts#readme> |
 | @electric-sql/pglite | 0.5.14 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-age | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pg_hashids | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pg_ivm | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pg_textsearch | 0.0.16 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pg_uuidv7 | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pgtap | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-pgvector | 0.0.15 | Apache-2.0 | <https://pglite.dev> |
+| @electric-sql/pglite-socket | 0.2.17 | Apache-2.0 | <https://pglite.dev> |
 | @esbuild/darwin-arm64 | 0.28.2 | MIT | <https://github.com/evanw/esbuild#readme> |
 | @floating-ui/core | 1.8.0 | MIT | <https://floating-ui.com> |
 | @floating-ui/dom | 1.8.0 | MIT | <https://floating-ui.com> |

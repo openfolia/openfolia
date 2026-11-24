@@ -98,18 +98,18 @@ Format steht in der [Referenz der Einstellungen](/de/reference/settings).
 
 ## Stabile Adressen für Lesende
 
-Der Editor liefert `/d/`, die stabile Adresse jedes Handbuchs mit PDF und QR-Codes
+Der Editor liefert `/d/`, die stabile Adresse jeder Anleitung mit PDF und QR-Codes
 ([Stabile Adressen](/de/guide/releases/stable-addresses)), ohne jede Anmeldedaten von der API aus:
 Lesende erhalten nur, was `delivery.access` in `openfolia.yaml` ohne Anmeldung erlaubt. Clients mit
 Token verwenden `/api/d/`.
 
-| Einstellung                    | Was sie bewirkt                                                                                                                                                                                                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CCMS_DELIVERY_MAX_ACCESS`     | Das Höchste, was `delivery.access` eines Projekts öffnen darf: `public` (Standard, keine Grenze), `signed-in` oder `off`. Ein Projekt, das mehr verlangt, wird auf der Grenze ausgeliefert, und die Prüfungen seiner Handbücher melden `delivery-access-capped`. |
-| `CCMS_DELIVERY_PER_MINUTE`     | Seiten, PDFs und QR-Codes, die ein Client pro Minute abrufen darf (Standard 60, `0` ohne Grenze); danach 429 mit `Retry-After`. Erhöhen Sie es, wo viele Lesende eine Adresse teilen.                                                                            |
-| `CCMS_DELIVERY_IGNORED_QUERY`  | Parameter, die `/d/` ignoriert, damit geteilte Links mit Tracking-Parametern sich öffnen (Standard `utm_*`). Jeder andere wird abgelehnt (400).                                                                                                                  |
-| `CCMS_DELIVERY_SHARED_MAX_AGE` | Wie lange ein gemeinsamer Cache das Bild einer öffentlichen Seite behalten darf, in Sekunden (Standard 300).                                                                                                                                                     |
-| `CCMS_BUILD_ID`                | Derselbe Wert auf jedem Server eines Builds, ein neuer mit jedem Build, damit die ETags ihrer Seiten übereinstimmen.                                                                                                                                             |
+| Einstellung                    | Was sie bewirkt                                                                                                                                                                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_DELIVERY_MAX_ACCESS`     | Das Höchste, was `delivery.access` eines Projekts öffnen darf: `public` (Standard, keine Grenze), `signed-in` oder `off`. Ein Projekt, das mehr verlangt, wird auf der Grenze ausgeliefert, und die Prüfungen seiner Anleitungen melden `delivery-access-capped`. |
+| `CCMS_DELIVERY_PER_MINUTE`     | Seiten, PDFs und QR-Codes, die ein Client pro Minute abrufen darf (Standard 60, `0` ohne Grenze); danach 429 mit `Retry-After`. Erhöhen Sie es, wo viele Lesende eine Adresse teilen.                                                                             |
+| `CCMS_DELIVERY_IGNORED_QUERY`  | Parameter, die `/d/` ignoriert, damit geteilte Links mit Tracking-Parametern sich öffnen (Standard `utm_*`). Jeder andere wird abgelehnt (400).                                                                                                                   |
+| `CCMS_DELIVERY_SHARED_MAX_AGE` | Wie lange ein gemeinsamer Cache das Bild einer öffentlichen Seite behalten darf, in Sekunden (Standard 300).                                                                                                                                                      |
+| `CCMS_BUILD_ID`                | Derselbe Wert auf jedem Server eines Builds, ein neuer mit jedem Build, damit die ETags ihrer Seiten übereinstimmen.                                                                                                                                              |
 
 Setzen Sie `CCMS_DELIVERY_MAX_ACCESS=signed-in`, wo kein Projekt ohne Anmeldung lesbar sein darf;
 so kann eine einzelne geprüfte Änderung an `openfolia.yaml` keines öffentlich machen.

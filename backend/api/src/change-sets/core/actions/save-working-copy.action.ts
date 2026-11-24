@@ -45,6 +45,7 @@ import {
   refuseTemplatePastCaps,
 } from '../subject-kinds.js';
 import { LOCKING_STATES } from './acquire-lock.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 import { changeSetRecordBases, keyOf } from '../save-point.js';
 import {
   holdsRecord,
@@ -124,6 +125,7 @@ export class SaveWorkingCopyAction extends ActorAction<
     private readonly assets: AssetUploads,
     private readonly readable: ReadableAssets,
     private readonly reported: RefreshConflictStore,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -137,14 +139,19 @@ export class SaveWorkingCopyAction extends ActorAction<
     baseCommit: requested,
   }: SaveWorkingCopyInput): Promise<WorkingCopyView> {
     const subject = workingCopySubject(named);
+    // A template is code the renderer runs: a public sandbox (#826) keeps the demo's.
+    if (subject.type === 'template') this.sandbox.refuse('templates');
     checkSubject(subject, content);
-    if (workingCopyBytes(content) > MAX_WORKING_COPY_BYTES) {
+    const bytes = workingCopyBytes(content);
+    if (bytes > MAX_WORKING_COPY_BYTES) {
       throw new UnprocessableError(
         'too-large',
         `A working copy holds at most ${MAX_WORKING_COPY_BYTES} bytes of JSON.`,
         { max: MAX_WORKING_COPY_BYTES },
       );
     }
+    this.sandbox.checkBytes(bytes);
+    this.sandbox.spend(bytes);
     const changeSet = await authorsChangeSet(
       this.changeSets,
       actor,
@@ -220,96 +227,113 @@ export class SaveWorkingCopyAction extends ActorAction<
       files,
       workingCopyFilePlaces(this.openSnapshot, actor, changeSet, snapshot),
     );
-    const saved = await this.unit.run(async (tx) => {
-      // Locked to the end: it cannot be abandoned (which drops its working
-      // copies) while this is written.
-      const current = await this.changeSets.lock(tx, changeSetId);
-      if (!current) throw new NotFoundError(`No change set "${changeSetId}".`);
-      if (!LOCKING_STATES.includes(current.state)) {
-        throw new ConflictError(
-          'invalid-state',
-          `The change set is ${current.state}; only a draft is edited.`,
-          { state: current.state },
-        );
-      }
-      // Under each named file's lock, which deleting an unused file takes:
-      // a file marked deleted is never named by a new save (#255).
-      await this.assets.lockHashes(tx, files);
-      const deleted = await this.assets.deletedAmong(tx, files);
-      if (deleted.length > 0) {
-        throw new ConflictError(
-          'asset-deleted',
-          'The working copy names a file that was deleted as unused; upload it again.',
-          { assets: deleted.map((hash) => `sha256:${hash}`) },
-        );
-      }
-      const lock = await this.locks.hold(tx, subject);
-      if (lock?.changeSetId !== changeSetId) {
-        throw new ConflictError(
-          'lock-required',
-          'Take the lock on it for this change set first.',
-        );
-      }
-      // The base was chosen against the copy read above: one replaced since
-      // at the same version (discarded and saved again) is a conflict too.
-      if (version > 0) {
-        const now = await this.workingCopies.get(tx, changeSetId, subject);
-        if (now?.version === version && now.baseCommit !== stored) {
+    // A first save of a module or manual with no file on the branch makes one: a public
+    // sandbox (#826) counts it against its cap (once saved; a refused save counts nothing).
+    const made =
+      version === 0 &&
+      (subject.type === 'module' || subject.type === 'manual') &&
+      this.sandbox.on &&
+      !(await kindOf(subject).exists(snapshot, subject))
+        ? subject.type === 'module'
+          ? 'modules'
+          : 'manuals'
+        : undefined;
+    const save = () =>
+      this.unit.run(async (tx) => {
+        // Locked to the end: it cannot be abandoned (which drops its working
+        // copies) while this is written.
+        const current = await this.changeSets.lock(tx, changeSetId);
+        if (!current)
+          throw new NotFoundError(`No change set "${changeSetId}".`);
+        if (!LOCKING_STATES.includes(current.state)) {
           throw new ConflictError(
-            'version-conflict',
-            'The working copy was replaced meanwhile; read it again.',
-            { version },
+            'invalid-state',
+            `The change set is ${current.state}; only a draft is edited.`,
+            { state: current.state },
           );
         }
-      }
-      // Counted under the change set's row lock: saves of one change set
-      // run one after the other.
-      if (
-        version === 0 &&
-        (await this.workingCopies.countOf(tx, changeSetId)) >=
-          MAX_WORKING_COPIES_PER_CHANGE_SET
-      ) {
-        throw new ConflictError(
-          'too-many-working-copies',
-          `A change set holds at most ${MAX_WORKING_COPIES_PER_CHANGE_SET} working copies; commit or discard some first.`,
-          { max: MAX_WORKING_COPIES_PER_CHANGE_SET },
+        // Under each named file's lock, which deleting an unused file takes:
+        // a file marked deleted is never named by a new save (#255).
+        await this.assets.lockHashes(tx, files);
+        const deleted = await this.assets.deletedAmong(tx, files);
+        if (deleted.length > 0) {
+          throw new ConflictError(
+            'asset-deleted',
+            'The working copy names a file that was deleted as unused; upload it again.',
+            { assets: deleted.map((hash) => `sha256:${hash}`) },
+          );
+        }
+        const lock = await this.locks.hold(tx, subject);
+        if (lock?.changeSetId !== changeSetId) {
+          throw new ConflictError(
+            'lock-required',
+            'Take the lock on it for this change set first.',
+          );
+        }
+        // The base was chosen against the copy read above: one replaced since
+        // at the same version (discarded and saved again) is a conflict too.
+        if (version > 0) {
+          const now = await this.workingCopies.get(tx, changeSetId, subject);
+          if (now?.version === version && now.baseCommit !== stored) {
+            throw new ConflictError(
+              'version-conflict',
+              'The working copy was replaced meanwhile; read it again.',
+              { version },
+            );
+          }
+        }
+        // Counted under the change set's row lock: saves of one change set
+        // run one after the other.
+        if (
+          version === 0 &&
+          (await this.workingCopies.countOf(tx, changeSetId)) >=
+            MAX_WORKING_COPIES_PER_CHANGE_SET
+        ) {
+          throw new ConflictError(
+            'too-many-working-copies',
+            `A change set holds at most ${MAX_WORKING_COPIES_PER_CHANGE_SET} working copies; commit or discard some first.`,
+            { max: MAX_WORKING_COPIES_PER_CHANGE_SET },
+          );
+        }
+        // The template's folder within the caps once saved (#803): counted under the change set's
+        // row lock, as the copies, so two saves never both take it past them.
+        if (subject.type === 'template' && templateListing) {
+          refuseTemplatePastCaps(
+            templateListing,
+            await this.workingCopies.sizesOf(tx, changeSetId),
+            subject,
+            (content as TemplateFileContent).text,
+          );
+        }
+        const result = await this.workingCopies.save(
+          tx,
+          {
+            changeSetId,
+            subject,
+            content,
+            baseCommit,
+            updatedBy: { kind: actor.kind, id: actor.id },
+          },
+          version,
         );
-      }
-      // The template's folder within the caps once saved (#803): counted under the change set's
-      // row lock, as the copies, so two saves never both take it past them.
-      if (subject.type === 'template' && templateListing) {
-        refuseTemplatePastCaps(
-          templateListing,
-          await this.workingCopies.sizesOf(tx, changeSetId),
-          subject,
-          (content as TemplateFileContent).text,
-        );
-      }
-      const result = await this.workingCopies.save(
-        tx,
-        {
-          changeSetId,
-          subject,
-          content,
-          baseCommit,
-          updatedBy: { kind: actor.kind, id: actor.id },
-        },
-        version,
-      );
-      if ('conflict' in result) {
-        throw new ConflictError(
-          'version-conflict',
-          result.conflict === 0
-            ? `There is no saved working copy (version ${version} was given); save it as version 0.`
-            : `The working copy is at version ${result.conflict}, not ${version}; read it again.`,
-          { version: result.conflict },
-        );
-      }
-      // Saved after an update reported it conflicting: "Update again" may
-      // keep it now (#437).
-      await this.reported.markSaved(tx, changeSetId, subject);
-      return result;
-    });
+        if ('conflict' in result) {
+          throw new ConflictError(
+            'version-conflict',
+            result.conflict === 0
+              ? `There is no saved working copy (version ${version} was given); save it as version 0.`
+              : `The working copy is at version ${result.conflict}, not ${version}; read it again.`,
+            { version: result.conflict },
+          );
+        }
+        // Saved after an update reported it conflicting: "Update again" may
+        // keep it now (#437).
+        await this.reported.markSaved(tx, changeSetId, subject);
+        return result;
+      });
+    const saved =
+      made === undefined
+        ? await save()
+        : await this.sandbox.counted(made, save);
     return {
       changeSetId,
       subject,

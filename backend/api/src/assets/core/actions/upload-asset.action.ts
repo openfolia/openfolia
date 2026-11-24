@@ -47,6 +47,7 @@ import {
 } from '../attachment-types.js';
 import { HeldBlobs } from '../held-blobs.js';
 import { FONT_MEDIA_TYPES, inspectFont } from '../font-file.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const logger = new Logger('Assets');
 
@@ -129,11 +130,13 @@ export class UploadAssetAction extends ActorAction<
     private readonly quota: StorageQuota,
     private readonly archived: ArchivedFiles,
     private readonly held: HeldBlobs,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
   protected async run(input: UploadAssetInput): Promise<UploadAssetResult> {
+    this.sandbox.refuse('uploads');
     try {
       return await this.upload(input);
     } catch (error) {

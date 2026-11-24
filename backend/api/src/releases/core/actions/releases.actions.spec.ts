@@ -29,6 +29,7 @@ import {
   ListReleasesAction,
 } from './read-releases.action.js';
 import { ReleaseChangeReader } from './release-changes.action.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const config = ProjectConfig.parse({
   ...baseConfig,
@@ -59,7 +60,7 @@ const publisher = {
   id: 'sample-publisher',
 };
 
-function setup(content = { config }) {
+function setup(content = { config }, sandbox: Sandbox = Sandbox.OFF) {
   const open = fakeOpenSnapshot(content);
   const tags = new FakeReleaseTags();
   const store = new FakeReleaseStore();
@@ -85,6 +86,7 @@ function setup(content = { config }) {
     reader,
     jobs,
     lines,
+    sandbox,
   );
   const cut = (over: Partial<CreateReleaseInput> = {}) =>
     create.handle({
@@ -385,5 +387,39 @@ describe('ListReleasesAction and GetReleaseAction', () => {
     await expect(
       t.list.handle({ actor: actorWith([]), filter: {}, page }),
     ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+describe('CreateReleaseAction in a public sandbox (#826)', () => {
+  it('cuts at most CCMS_SANDBOX_RELEASES_PER_HOUR in an hour; then 422 sandbox-limit-reached, no tag', async () => {
+    const t = setup(
+      { config },
+      Sandbox.on({
+        limits: {
+          moduleBytes: 1_000,
+          commentLength: 100,
+          changeSets: 5,
+          modules: 5,
+          manuals: 5,
+          releasesPerHour: 1,
+          renderJobs: 1,
+          writeBytes: 1_000_000,
+        },
+        lifetime: { idleMinutes: 30, maxMinutes: 90 },
+      }),
+    );
+    await t.cut({ revision: '2.1' });
+    expect(await codeOf(t.cut({ revision: '2.2' }))).toBe(
+      'sandbox-limit-reached',
+    );
+    expect(
+      (
+        await t.list.handle({
+          actor: publisher,
+          filter: {},
+          page: { number: 1, size: 10 },
+        })
+      ).total,
+    ).toBe(1);
   });
 });

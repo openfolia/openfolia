@@ -9,7 +9,11 @@
 // 5. for the sign-in flows (#37): a local OpenID Connect provider (`backend/api/scripts/mock-oidc.ts`),
 //    a second API on the same database with sign-in on (`CCMS_ROLE=api`: no background work of
 //    its own), and a second editor in front of it whose proxy adds no token, as a deployment
-//    with sign-in has it.
+//    with sign-in has it;
+// 6. for the public sandbox flows (#826), when asked for (`sandbox: true`): a third API in a
+//    public sandbox (`CCMS_PUBLIC_SANDBOX=on`, demo mode), with a database, content and blob
+//    folder of its own, as a sandbox runs every role in one process (its background jobs must
+//    never take the other APIs'), and a third editor in front of it, with the token.
 //
 // Ports come from the operating system, so a run in an agent slot and one in the main checkout
 // never meet, and the person's own servers (3100, 4310, 4320) are never used. The demo set-up
@@ -26,6 +30,8 @@ import { pathToFileURL } from 'node:url';
 export const ROOT = join(import.meta.dirname, '..', '..', '..');
 /** This checkout's folder for the suite: runs, results, report (`.local/` is git-ignored). */
 export const E2E_DIR = join(ROOT, '.local', 'editor-e2e');
+/** The sandbox API's idle and longest session (6. below), in minutes: longer than any run. */
+export const SANDBOX_MINUTES = 1440;
 const API_DIST = join(ROOT, 'backend/api/dist');
 const MOCK_OIDC = join(ROOT, 'backend/api/scripts/mock-oidc.ts');
 const EDITOR_DIST = join(ROOT, 'frontend/editor/dist/browser');
@@ -189,6 +195,11 @@ export interface Stack {
    */
   readonly signInEditorUrl: string;
   /**
+   * The editor in front of an API in a public sandbox (#826): demo mode, uploads, imports and
+   * outbound refused. Empty when the stack was started without it (`sandbox: false`).
+   */
+  readonly sandboxEditorUrl: string;
+  /**
    * The database, for the few states no route makes (`src/database.ts`): a refused planning of
    * a release's files (#477).
    */
@@ -228,6 +239,11 @@ export interface StackOptions {
    * default on. The demo, which signs in in demo mode only, leaves them out.
    */
   readonly signIn?: boolean;
+  /**
+   * The third API and editor, in a public sandbox (6. above); default off: the suite turns them
+   * on, the demo and the guide's screenshots do without.
+   */
+  readonly sandbox?: boolean;
   /**
    * The editor's `/__start` page (`editor-server.mjs`), which stores the interface language,
    * the demo user and the theme, then opens the editor: the demo's. Default off.
@@ -272,40 +288,48 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
       NODE_ENV: 'production',
     };
 
-    // 1. The database.
-    const db = await startNode(
-      join(import.meta.dirname, 'db.mjs'),
-      base,
-      log('db'),
-    );
-    children.push(db.child);
-    const databaseUrl = `postgres://postgres@127.0.0.1:${db.port}/postgres`;
+    // 1. The database: migrated and seeded.
+    const startDatabase = async (name: string) => {
+      const db = await startNode(
+        join(import.meta.dirname, 'db.mjs'),
+        base,
+        log(name),
+      );
+      children.push(db.child);
+      const url = `postgres://postgres@127.0.0.1:${db.port}/postgres`;
+      const env = { ...base, CCMS_DATABASE_URL: url };
+      await runNode(join(API_DIST, 'database/migrate.main.js'), [], env);
+      await runNode(
+        join(API_DIST, 'database/seed.main.js'),
+        [options.seedFile ?? '--example'],
+        env,
+      );
+      return url;
+    };
+    const databaseUrl = await startDatabase('db');
     const dbEnv = { ...base, CCMS_DATABASE_URL: databaseUrl };
-    await runNode(join(API_DIST, 'database/migrate.main.js'), [], dbEnv);
-    await runNode(
-      join(API_DIST, 'database/seed.main.js'),
-      [options.seedFile ?? '--example'],
-      dbEnv,
-    );
 
     // 2. The content, as setup-local makes it.
-    if (options.repository) {
-      await options.repository(contentDir);
-    } else {
+    const makeContent = async (dir: string) => {
+      if (options.repository) {
+        await options.repository(dir);
+        return;
+      }
       const testing = await import(
         pathToFileURL(join(ROOT, 'packages/content-repo/dist/testing.js')).href
       );
-      testing.createBareSampleRepo(contentDir);
-      await testing.addSampleSnippets(contentDir);
-      await testing.addSampleTerms(contentDir);
-      await testing.addSampleRtlLanguages(contentDir);
+      testing.createBareSampleRepo(dir);
+      await testing.addSampleSnippets(dir);
+      await testing.addSampleTerms(dir);
+      await testing.addSampleRtlLanguages(dir);
       // The example template and a broken one (#396): read only, so no flow changes them.
       const typst = await import(
         pathToFileURL(join(ROOT, 'packages/render-typst/dist/index.js')).href
       );
-      testing.addSampleTemplates(contentDir, typst.SAMPLE_TEMPLATES);
-      await options.content?.(contentDir, testing);
-    }
+      testing.addSampleTemplates(dir, typst.SAMPLE_TEMPLATES);
+      await options.content?.(dir, testing);
+    };
+    await makeContent(contentDir);
 
     // 3. The APIs: the demo one, and the one with sign-in on (5.), started side by side.
     const token = randomBytes(32).toString('hex');
@@ -352,6 +376,34 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
         CCMS_PDF_WORKERS: '2',
       }),
     ];
+    // 6. The public sandbox (#826): every role in one process (its caps and clock are one
+    // process's), so a database, content and blobs of its own: its jobs never take the others'.
+    const sandbox = options.sandbox ?? false;
+    const sandboxApiPort = sandbox ? await freePort() : 0;
+    const sandboxApiUrl = sandbox ? `http://127.0.0.1:${sandboxApiPort}` : '';
+    if (sandbox) {
+      const sandboxDir = join(runDir, 'sandbox');
+      const sandboxBlobs = join(sandboxDir, 'blobs');
+      mkdirSync(sandboxBlobs, { recursive: true });
+      const sandboxContent = join(sandboxDir, 'content.git');
+      const [sandboxDatabase] = await Promise.all([
+        startDatabase('db-sandbox'),
+        makeContent(sandboxContent),
+      ]);
+      const started = startApi('api-sandbox', sandboxApiUrl, {
+        PORT: String(sandboxApiPort),
+        CCMS_DATABASE_URL: sandboxDatabase,
+        CCMS_CONTENT_DIR: sandboxContent,
+        CCMS_BLOB_FS_ROOT: sandboxBlobs,
+        CCMS_AUTH_MODE: 'demo',
+        CCMS_PUBLIC_SANDBOX: 'on',
+        // A day, so a long suite never sees the session end (`SANDBOX_MINUTES`).
+        CCMS_SANDBOX_IDLE_MINUTES: String(SANDBOX_MINUTES),
+        CCMS_SANDBOX_MAX_MINUTES: String(SANDBOX_MINUTES),
+      });
+      started.catch(() => undefined);
+      apis.push(started);
+    }
     // Awaited below with the sign-in API; until then a failure must not go unhandled (it would end
     // the process before `stop()` cleans up).
     apis[0]?.catch(() => undefined);
@@ -410,12 +462,22 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
         : []),
     ]);
     const editorUrl = `http://127.0.0.1:${editor.port}`;
+    const sandboxEditor = sandbox
+      ? await startEditor('editor-sandbox', await freePort(), {
+          E2E_API_URL: sandboxApiUrl,
+          E2E_API_TOKEN: token,
+        })
+      : null;
+    const sandboxEditorUrl = sandboxEditor
+      ? `http://127.0.0.1:${sandboxEditor.port}`
+      : '';
 
     return {
       apiUrl,
       editorUrl,
       token,
       signInEditorUrl,
+      sandboxEditorUrl,
       databaseUrl,
       runDir,
       stop,

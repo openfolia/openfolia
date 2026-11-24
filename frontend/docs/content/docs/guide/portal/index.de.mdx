@@ -1,10 +1,10 @@
 ---
 title: 'Das Portal'
-description: 'Ein Leseportal für Ihre veröffentlichten Handbücher: eine statische Website je Zielgruppe und Sprache mit Filtern, Suche und PDF-Download.'
+description: 'Ein Leseportal für Ihre veröffentlichten Anleitungen: eine statische Website je Zielgruppe und Sprache mit Filtern, Suche und PDF-Download.'
 articleId: 'guide.portal'
 ---
 
-Im Portal finden Ihre Leser die veröffentlichten Handbücher. Es ist eine statische Website, die aus
+Im Portal finden Ihre Leser die veröffentlichten Anleitungen. Es ist eine statische Website, die aus
 einer Veröffentlichung erstellt wird, im Branding Ihrer Organisation. Ist sie erstellt, braucht sie
 weder den Editor noch die API: Jeder Webserver, der Dateien ausliefert, kann sie bereitstellen.
 
@@ -15,14 +15,14 @@ Veröffentlichung neu erstellt ([Mit Docker Compose](/de/guide/portal/compose)).
 
 ## Was Leser sehen
 
-- **Die Startseite** beginnt mit einem Suchfeld und listet die Handbücher jedes Produkts.
-- **Alle Handbücher** listet jedes Handbuch, mit Filtern für das Produkt, jedes Variantenmerkmal
+- **Die Startseite** beginnt mit einem Suchfeld und listet die Anleitungen jedes Produkts.
+- **Alle Anleitungen** listet jede Anleitung, mit Filtern für das Produkt, jedes Variantenmerkmal
   und den Titel.
-- **Ein Handbuch** ist zum Lesen gesetzt. Das Inhaltsverzeichnis neben dem Text markiert den
+- **Eine Anleitung** ist zum Lesen gesetzt. Das Inhaltsverzeichnis neben dem Text markiert den
   Abschnitt im Blick. Ein Umschalter je Variantenmerkmal (Karosserie, Markt und so weiter) öffnet
-  dasselbe Handbuch in einer anderen Variante. Ein Link lädt das PDF der Veröffentlichung für diese
+  dieselbe Anleitung in einer anderen Variante. Ein Link lädt das PDF der Veröffentlichung für diese
   Variante und Sprache, wenn es eines gibt.
-- **Die Suche** läuft im Browser und findet Abschnitte ebenso wie Handbücher, gefiltert nach
+- **Die Suche** läuft im Browser und findet Abschnitte ebenso wie Anleitungen, gefiltert nach
   Produkt und Variante.
 - **Sprachen und Aussehen**: eine Website je Sprache, standardmäßig Deutsch und Englisch, hell und
   dunkel, mit Ihrem Namen, Ihren Logos und Ihren Farben. Siehe [Branding](/de/guide/portal/branding).
@@ -36,7 +36,7 @@ Portale und stellen jedes dort bereit, wo sich seine Leser anmelden.
 
 ## Wann ein Portal sinnvoll ist
 
-Ein Portal ist sinnvoll, wenn Leser die Handbücher ohne Konto im Editor durchsuchen und lesen
+Ein Portal ist sinnvoll, wenn Leser die Anleitungen ohne Konto im Editor durchsuchen und lesen
 sollen und das PDF allein nicht genügt. Soll eine eigene App oder ein eigener Suchindex den Inhalt
 lesen, liefert ihn die [Delivery API](/de/guide/integrations/delivery-api) als Daten. Ein Portal
 wird aus derselben API erstellt, beide stimmen also immer überein.

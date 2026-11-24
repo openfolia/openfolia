@@ -37,6 +37,16 @@ const ALWAYS_ALLOWED: readonly RegExp[] = [
 ];
 
 /**
+ * Off the public sandbox's editor only (`E2E_SANDBOX_URL`): the editor asks at start-up whether
+ * the API is a public sandbox (#826), a normal instance answers 404, and Chromium logs that
+ * answer. In front of the sandbox the same request must succeed, so there it is not allowed.
+ */
+const NOT_A_SANDBOX: readonly RegExp[] = [
+  /status of 404 \(Not Found\) \(http:\/\/127\.0\.0\.1:\d+\/api\/sandbox(?::\d+)?\)/,
+];
+const SANDBOX_URL = process.env['E2E_SANDBOX_URL'] ?? '';
+
+/**
  * The page's requests to the API not answered yet: what the editor sent eagerly while the flow
  * went on. Reads count as well as writes: a read is often what the editor sends a write after
  * (a reload takes the module's lock again once it has read it, #516), so a quiet window that
@@ -102,14 +112,20 @@ export const test = base.extend<Fixtures>({
   },
 
   page: async (
-    { page, consoleAllow, consoleLog, pageRequests, tips },
+    { page, baseURL, consoleAllow, consoleLog, pageRequests, tips },
     use,
     testInfo,
   ) => {
     pageRequests.watch(page);
     if (!tips) await tipsOff(page);
     const unexpected: string[] = [];
-    const allowed = [...ALWAYS_ALLOWED, ...consoleAllow];
+    // The editor this test opens (`test.use({ baseURL })`): the sandbox's, or a normal one.
+    const sandbox = SANDBOX_URL !== '' && baseURL === SANDBOX_URL;
+    const allowed = [
+      ...ALWAYS_ALLOWED,
+      ...(sandbox ? [] : NOT_A_SANDBOX),
+      ...consoleAllow,
+    ];
     const note = (kind: string, text: string, location = '') => {
       const line = `[${kind}] ${text}${location ? ` (${location})` : ''}`;
       consoleLog.push(line);

@@ -102,7 +102,7 @@ import type { SettingsTopicPage } from './settings-topics';
         @if (targets().length > 0) {
           <div
             class="border-border bg-card min-w-0 overflow-y-auto rounded-xl border px-2 py-1.5"
-            style="max-height: calc(100dvh - 26rem)"
+            style="max-height: calc(100dvh - 26rem - var(--of-sandbox-h, 0px))"
           >
             <of-sortable-list
               [items]="targets()"

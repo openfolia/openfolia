@@ -1,20 +1,20 @@
 ---
 title: 'HTML-Vorschau-Routen'
-description: 'Ein Modul oder ein Handbuch aus der API als Webseite anzeigen: die Routen, ihre Parameter, das Design und die Header, die die Seite sicher halten.'
+description: 'Ein Modul oder eine Anleitung aus der API als Webseite anzeigen: die Routen, ihre Parameter, das Design und die Header, die die Seite sicher halten.'
 articleId: 'guide.integrations.html-preview'
 ---
 
 Zwei Routen antworten mit einer vollständigen HTML-Seite, um Inhalte in einem Portal, einer App
 oder einem Frame anzuzeigen:
 
-| Route                                              | Was                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------ |
-| `GET /modules/<lang>/<id>/preview`                 | ein Modul, für sich allein                                         |
-| `GET /manuals/<id>/variants/<variant>/<lang>/html` | ein Handbuch in einer Variante und Sprache, aufgelöst wie sein PDF |
+| Route                                              | Was                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /modules/<lang>/<id>/preview`                 | ein Modul, für sich allein                                          |
+| `GET /manuals/<id>/variants/<variant>/<lang>/html` | eine Anleitung in einer Variante und Sprache, aufgelöst wie ihr PDF |
 
 Beide gehören zur [Delivery API](/de/api/delivery), brauchen `content.read` und lesen nur, was der
-Leser sehen darf. Ein Modul oder Handbuch, das der Leser nicht sehen darf, antwortet mit 404, genau
-wie ein fehlendes.
+Leser sehen darf. Ein Modul oder eine Anleitung, die der Leser nicht sehen darf, antwortet mit 404, genau
+wie ein fehlendes Element.
 
 ## Eine Seite abrufen
 
@@ -28,7 +28,7 @@ curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: text/html" \
 | `ref`     | Ein Zweig, Tag oder Commit (Standard: der Standardzweig des Servers). Für veröffentlichte Inhalte beim Tag einer Veröffentlichung lesen.                  |
 | `theme`   | `auto` (Standard: folgt der hellen oder dunklen Einstellung des Betrachters, ohne Skript), `light` oder `dark`, für eine Umgebung mit eigenem Umschalter. |
 | `variant` | Nur bei der Modulroute: ein Varianten-Slug wie `model=large`. Ohne ihn trifft keine Bedingung auf ein Variantenmerkmal zu.                                |
-| `view`    | Nur bei der Handbuchroute: `reader` (Standard), das HTML für Lesende, oder `editor`, das zusätzlich jeden Seitenumbruch des PDFs markiert.                |
+| `view`    | Nur bei der Anleitungsroute: `reader` (Standard), das HTML für Lesende, oder `editor`, das zusätzlich jeden Seitenumbruch des PDFs markiert.              |
 
 Jeder andere Parameter ist 400 `unsupported-parameter`; ein `Accept`, das `text/html` ausschließt,
 ist 406. Nur ein Erfolg ist HTML: Jeder Fehler ist ein JSON:API-Fehlerdokument.
@@ -53,6 +53,6 @@ ist sie `private, no-cache` mit einem ETag, und `If-None-Match` erhält ein gün
 
 Text wird vom Renderer maskiert, sodass kein Inhalt zu Markup wird. Was die Variantenbedingungen aus
 einer Seite auslassen, listen `GET /modules/<lang>/<id>/hidden-content` und
-`GET /manuals/<id>/variants/<variant>/<lang>/hidden-content`. Für ein Handbuch unter seiner
+`GET /manuals/<id>/variants/<variant>/<lang>/hidden-content`. Für eine Anleitung unter ihrer
 veröffentlichten Adresse siehe [Veröffentlichte Dateien für
 Portale](/de/guide/integrations/release-outputs).

@@ -42,6 +42,8 @@ import {
   signInErrorOf,
 } from '../session/sign-in-session';
 import { PasswordSession } from '../session/password-session';
+import { SandboxBannerComponent } from '../sandbox/sandbox-banner.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 import { PasswordFormComponent } from './password-form.component';
 import { RETURN_PARAM, safeReturnUrl } from './sign-in.guards';
 
@@ -76,6 +78,7 @@ type View =
 @Component({
   selector: 'of-sign-in-page',
   imports: [
+    SandboxBannerComponent,
     TranslocoPipe,
     NgIcon,
     LogoComponent,
@@ -107,6 +110,9 @@ type View =
       class="bg-background text-foreground flex min-h-dvh justify-center overflow-x-hidden px-4 py-10 sm:items-center"
     >
       <div class="flex w-full max-w-md min-w-0 flex-col gap-6">
+        @if (sandbox.on()) {
+          <of-sandbox-banner />
+        }
         <div class="flex justify-center">
           <of-logo
             variant="full"
@@ -384,6 +390,7 @@ type View =
 export class SignInPage {
   protected readonly brand = inject(BrandingService).branding;
   protected readonly demo = inject(DemoSession);
+  protected readonly sandbox = inject(SandboxSession);
   protected readonly oidc = inject(SignInSession);
   protected readonly passwords = inject(PasswordSession);
   /** Asked once, beside the providers: null until it answered (or when it could not). */

@@ -59,6 +59,8 @@ import {
 } from './image-model';
 import { ImageSources } from './image-sources';
 import { ImageThumbComponent } from './image-thumb.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
+import { SandboxNoteComponent } from '../sandbox/sandbox-note.component';
 
 /** Tiles a page: three rows of three, and some. */
 const PAGE_SIZE = 12;
@@ -103,6 +105,7 @@ interface Chosen {
 @Component({
   selector: 'of-insert-image-dialog',
   imports: [
+    SandboxNoteComponent,
     ZardDialogImports,
     ZardButtonComponent,
     ZardInputComponent,
@@ -135,7 +138,13 @@ interface Chosen {
               : 'editor.images.title'
           ) | transloco
         }}</z-dialog-title>
-        @if (changeSetId()) {
+        @if (sandbox.on()) {
+          <!-- A public sandbox takes no uploads (issue 826): picking from the list stays. -->
+          <of-sandbox-note
+            class="max-w-72"
+            [text]="'editor.sandbox.uploadsOffPickImage' | transloco"
+          />
+        } @else if (changeSetId()) {
           <button
             z-button
             zType="outline"
@@ -406,6 +415,7 @@ interface Chosen {
   `,
 })
 export class InsertImageDialogComponent {
+  protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
   private readonly sources = inject(ImageSources);
   private readonly me = inject(MeService).me;
@@ -779,6 +789,11 @@ export class InsertImageDialogComponent {
   protected upload(file: File): void {
     const changeSetId = this.changeSetId();
     if (!changeSetId || !this.visible()) return;
+    // A file dropped or pasted in a public sandbox (#826): the dialog says why, nothing is sent.
+    if (this.sandbox.on()) {
+      this.toast.error(translated('editor.sandbox.uploadsOffPickImage'));
+      return;
+    }
     // `accept` is only a hint: anything else is refused here, before it is shown or sent.
     if (!UPLOAD_TYPES.includes(file.type)) {
       this.toast.error(translated('editor.images.notAnImage'));

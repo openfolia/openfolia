@@ -77,6 +77,8 @@ import { NotificationsSheetComponent } from '../notifications/notifications-shee
 import { NAV_ITEMS } from './nav';
 import { breadcrumbsOf, sidebarModeOf } from './breadcrumbs';
 import { ShellState } from './shell-state';
+import { SandboxBannerComponent } from '../sandbox/sandbox-banner.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 import { signInTree } from '../sign-in/sign-in.guards';
 
 /** Whether the active screen reads at the session's change set (`ShellLayout.readsChangeSet`). */
@@ -105,6 +107,7 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
 @Component({
   selector: 'of-shell',
   imports: [
+    SandboxBannerComponent,
     CdkScrollable,
     RouterOutlet,
     RouteFadeDirective,
@@ -401,6 +404,10 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
         class="min-w-0 overflow-y-auto p-4 md:pt-6 md:pr-6 md:pb-6 md:pl-2 md:peer-data-[state=collapsed]:pt-5 md:peer-data-[state=collapsed]:pr-5 md:peer-data-[state=collapsed]:pl-1"
         tabindex="-1"
       >
+        <!-- A public sandbox's banner (issue 826): the page column's first line, nothing otherwise. -->
+        @if (sandbox.on()) {
+          <of-sandbox-banner class="mb-3" [measure]="true" />
+        }
         @if (provider.sidebarService.isMobile()) {
           <button
             z-sidebar-trigger
@@ -488,6 +495,7 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
 })
 export class ShellLayout {
   protected readonly state = inject(ShellState);
+  protected readonly sandbox = inject(SandboxSession);
   protected readonly brand = inject(BrandingService).branding;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);

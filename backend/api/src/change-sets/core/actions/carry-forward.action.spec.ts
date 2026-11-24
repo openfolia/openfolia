@@ -1,6 +1,7 @@
 import { ChangeSetAuthors } from '../change-set-authors.js';
 import { FakeChangeSetSupersessions } from '../../../../tests/fakes/fake-supersessions.js';
 import { printModule } from '@openfolia/content-model';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 import { actorWith } from '../../../../tests/fakes/actors.js';
 import { FakeApprovalStore } from '../../../../tests/fakes/fake-approval-store.js';
 import { FakeAssetUploads } from '../../../../tests/fakes/fake-asset-uploads.js';
@@ -98,6 +99,8 @@ function setUp(
     alsoSafety?: boolean;
     /** What the change set makes of `charging`, in place of the fix. */
     chargingAs?: string;
+    /** A public sandbox (#826); off by default. */
+    sandbox?: Sandbox;
   } = {},
 ) {
   const branches = new FakeChangeSetBranches();
@@ -270,6 +273,7 @@ function setUp(
     audit,
     events,
     unit,
+    options.sandbox,
   );
   return {
     assets,
@@ -578,5 +582,52 @@ describe('CarryForwardChangeSetAction', () => {
       { kind: 'user', id: author.id },
       { kind: 'user', id: 'first-writer' },
     ]);
+  });
+});
+
+describe('CarryForwardChangeSetAction in a public sandbox (#826)', () => {
+  it('counts the change set it makes against CCMS_SANDBOX_MAX_CHANGE_SETS', async () => {
+    const sandbox = Sandbox.on({
+      limits: {
+        moduleBytes: 100_000,
+        commentLength: 100,
+        changeSets: 1,
+        modules: 5,
+        manuals: 5,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 1_000_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+    // The cap already taken: the carry is refused, nothing made.
+    await sandbox.counted('change-sets', () => Promise.resolve());
+    const t = setUp({ sandbox });
+    const before = t.branches.heads.size;
+    await expect(t.carry()).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'changeSets', max: 1 },
+    });
+    expect(t.branches.heads.size).toBe(before);
+    expect(t.carries.links).toEqual([]);
+  });
+
+  it('counts a carried one: the next change set is past the cap', async () => {
+    const sandbox = Sandbox.on({
+      limits: {
+        moduleBytes: 100_000,
+        commentLength: 100,
+        changeSets: 1,
+        modules: 5,
+        manuals: 5,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 1_000_000,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+    const t = setUp({ sandbox });
+    await t.carry();
+    expect(sandbox.status()?.used['change-sets']).toBe(1);
   });
 });

@@ -29,7 +29,7 @@ Das Skript:
    standardmäßig `http://127.0.0.1:8090/`.
 
 Bevor die erste Veröffentlichung herausgegeben ist, zeigt das Portal eine Seite, die das sagt, und
-sieht jede Minute erneut nach. Sobald eine Veröffentlichung vorliegt, erscheinen ihre Handbücher.
+sieht jede Minute erneut nach. Sobald eine Veröffentlichung vorliegt, erscheinen ihre Anleitungen.
 
 Sie können das Skript jederzeit erneut ausführen: Es behält das Token. `--no-portal` überspringt
 die Frage; ein zuvor eingerichtetes Portal läuft weiter (`COMPOSE_PROFILES=portal` in
@@ -66,7 +66,7 @@ zurückgezogen oder sind ihre PDFs fertig gerendert, erstellt es sich neu. Leser
 gelungenen Stand, während ein neuer entsteht, und auch dann, wenn eine Erstellung fehlschlägt. Die
 eine Ausnahme ist eine zurückgezogene Veröffentlichung: Schlägt die Erstellung ohne sie fehl,
 zeigt das Portal die Seite, die sagt, dass noch nichts veröffentlicht ist, statt der
-zurückgezogenen Handbücher. Das Log des Containers sagt, warum eine Erstellung fehlschlug; das
+zurückgezogenen Anleitungen. Das Log des Containers sagt, warum eine Erstellung fehlschlug; das
 Portal versucht es nach einer Weile erneut und sofort nach der nächsten Veröffentlichung. Das
 Portal prüft die Veröffentlichungen selbst und braucht keinen Webhook.
 
@@ -83,7 +83,7 @@ eigenen Hostnamen wie beim Editor ([Reverse Proxy mit TLS](/de/guide/self-hostin
 Container sendet die Header aus [Das Portal bereitstellen](/de/guide/portal/hosting) bereits
 selbst.
 
-Das Portal ist öffentlich: Wer es erreicht, liest jedes Handbuch, das es zeigt. **Ein Portal für
+Das Portal ist öffentlich: Wer es erreicht, liest jede Anleitung, die es zeigt. **Ein Portal für
 eine Zielgruppe, die nicht öffentlich ist, braucht eine Anmeldung davor**, die Ihres Proxys, wie
 [Das Portal bereitstellen](/de/guide/portal/hosting) beschreibt.
 

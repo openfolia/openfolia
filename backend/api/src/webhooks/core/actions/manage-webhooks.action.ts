@@ -45,6 +45,7 @@ import { WebhookSecrets, WebhookSettings } from '../webhook-ports.js';
 import { mintWebhookSecret } from '../webhook-signature.js';
 import { WebhookStore, type WebhookVisibility } from '../webhook-store.js';
 import { checkWebhookUrl } from '../webhook-url.js';
+import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
 const notFound = (id: string) => new NotFoundError(`No webhook "${id}".`);
 
@@ -245,11 +246,13 @@ export class CreateWebhookAction extends ActorAction<
     private readonly settings: WebhookSettings,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
 
   protected async run(input: CreateWebhookInput): Promise<WithSecret> {
+    this.sandbox.refuse('webhooks');
     configured(this.settings);
     const url = checkedUrl(this.settings, input.url);
     const events = normalEvents(input.events);
@@ -362,6 +365,7 @@ export class UpdateWebhookAction extends ActorAction<
     private readonly settings: WebhookSettings,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -373,6 +377,7 @@ export class UpdateWebhookAction extends ActorAction<
     changes,
     headers: headerInput,
   }: UpdateWebhookInput): Promise<Webhook> {
+    this.sandbox.refuse('webhooks');
     if (bodyId !== undefined && bodyId !== id) {
       throw new ConflictError(
         'id-mismatch',
@@ -619,6 +624,7 @@ export class RotateWebhookSecretAction extends ActorAction<
     private readonly settings: WebhookSettings,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
   }
@@ -630,6 +636,7 @@ export class RotateWebhookSecretAction extends ActorAction<
     actor: Actor;
     id: string;
   }): Promise<WithSecret> {
+    this.sandbox.refuse('webhooks');
     configured(this.settings);
     const secret = this.mint();
     const sealed = this.secrets.seal(secret, id);

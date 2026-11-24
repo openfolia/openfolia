@@ -6,6 +6,7 @@ import { createBareSampleRepo } from '@openfolia/content-repo/testing';
 import { ConflictError } from '../../base/core/errors.js';
 import type { Env } from '../../config/env.js';
 import { changeSetBranch, newChangeSetId } from '../core/change-set.js';
+import { Sandbox } from '../../sandbox/core/sandbox.js';
 import { GitChangeSetBranches } from './git-change-set-branches.js';
 
 describe('GitChangeSetBranches', () => {
@@ -112,6 +113,77 @@ describe('GitChangeSetBranches', () => {
     const sibling = changeSetBranch(newChangeSetId());
     await branches.create(sibling, commit);
     expect(await branches.hasOwnCommits(own, commit)).toBe(true);
+  });
+
+  it('in a public sandbox, spends what each commit writes, whatever action makes it (#826)', async () => {
+    const sandbox = Sandbox.on({
+      limits: {
+        moduleBytes: 1_000,
+        commentLength: 10,
+        changeSets: 5,
+        modules: 5,
+        manuals: 5,
+        releasesPerHour: 5,
+        renderJobs: 1,
+        writeBytes: 16 * 1024,
+      },
+      lifetime: { idleMinutes: 30, maxMinutes: 90 },
+    });
+    const boxed = new GitChangeSetBranches(
+      {
+        get: (key: keyof Env) =>
+          ({ CCMS_CONTENT_DIR: sample.dir, CCMS_DEFAULT_REF: 'main' })[
+            key as 'CCMS_DEFAULT_REF'
+          ],
+      } as unknown as ConfigService<Env, true>,
+      sandbox,
+    );
+    const id = newChangeSetId();
+    const name = changeSetBranch(id);
+    await boxed.create(name, sample.commits.main);
+    const request = {
+      parent: sample.commits.main,
+      message: 'Update',
+      author: { kind: 'user' as const, id: 'sample-author' },
+      changeSetId: id,
+    };
+    await boxed.prepare(name, {
+      ...request,
+      changes: [{ path: 'modules/en/new.adoc', content: 'ü'.repeat(100) }],
+    });
+    // Each tree it rewrites, whole: its entries at the parent, 28 bytes and the name each.
+    const tree = (folder: string) =>
+      git('ls-tree', '--name-only', sample.commits.main, `${folder}/`)
+        .split('\n')
+        .filter(Boolean)
+        .reduce(
+          (sum, path) => sum + 28 + (path.split('/').at(-1) ?? '').length,
+          0,
+        );
+    const trees = tree('modules') + tree('modules/en');
+    // The file's bytes, its new entry, the trees, the message, and 2 KiB for the root tree and
+    // the commit.
+    const message = 'Update'.length;
+    const first = 200 + 28 + 'new.adoc'.length + trees + message + 2 * 1024;
+    expect(sandbox.status()?.writtenBytes).toBe(first);
+    await boxed.prepare(name, {
+      ...request,
+      changes: [{ path: 'modules/en/internals.adoc', delete: true }],
+    });
+    expect(sandbox.status()?.writtenBytes).toBe(
+      first + 28 + 'internals.adoc'.length + trees + message + 2 * 1024,
+    );
+    await expect(
+      boxed.prepare(name, {
+        ...request,
+        changes: [
+          { path: 'modules/en/other.adoc', content: 'x'.repeat(16 * 1024) },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'sandbox-limit-reached',
+      meta: { limit: 'writeBytes' },
+    });
   });
 
   it('prepares a tree, then commits it by compare-and-swap with trailers', async () => {

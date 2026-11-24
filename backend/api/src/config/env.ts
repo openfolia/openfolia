@@ -10,7 +10,12 @@ import {
 } from './attachment-type-rules.js';
 import { editorOrigins } from './editor-origins.js';
 import { field, flag, text, wholeNumber } from './fields.js';
-import { pdfWorkersFor, runsBackground, RoleEnv } from './role.js';
+import {
+  defaultRenderConcurrencyFor,
+  pdfWorkersFor,
+  runsBackground,
+  RoleEnv,
+} from './role.js';
 import { DEFAULT_DOCS_URL, docsUrl } from './docs-url.js';
 import { checkSecretKeyEnv, SecretKeyEnv } from './secret-key-env.js';
 import { checkSignInEnv, SignInEnv } from './sign-in-env.js';
@@ -30,6 +35,7 @@ import { checkStyleReviewEnv, StyleReviewEnv } from './style-review-env.js';
 import { checkMailEnv, MailEnv } from './mail-env.js';
 import { AuditEnv, checkAuditEnv } from './audit-env.js';
 import { WebhooksEnv } from './webhooks-env.js';
+import { checkSandboxEnv, SandboxEnv } from './sandbox-env.js';
 import {
   DEFAULT_RELEASE_TAG,
   isReleaseTagPattern,
@@ -357,6 +363,7 @@ export const Env = z
     ...SecretKeyEnv.shape,
     ...SignInEnv.shape,
     ...AuditEnv.shape,
+    ...SandboxEnv.shape,
   })
   .superRefine(checkBlobEnv)
   .superRefine(checkStyleReviewEnv)
@@ -366,6 +373,7 @@ export const Env = z
   .superRefine(checkMailEnv)
   .superRefine(checkAuditEnv)
   .superRefine(checkPackageSendEnv)
+  .superRefine(checkSandboxEnv)
   .superRefine((env, ctx) => {
     // Rendering past the PDF workers would only queue in their pool, ahead of
     // nothing and in the way of readers' PDFs. Only where release files render
@@ -417,5 +425,40 @@ export function validateEnv(raw: Record<string, unknown>): Env {
       `Invalid settings (see .env.example):\n${z.prettifyError(result.error)}`,
     );
   }
-  return result.data;
+  return inSandbox(result.data);
+}
+
+/** The most outputs a sandbox's release plans (#826): a demo's manuals, not thousands. */
+export const SANDBOX_MAX_RELEASE_OUTPUTS = 50;
+
+/**
+ * The settings as a public sandbox (#826) runs them: at most `CCMS_SANDBOX_RENDER_JOBS` PDF
+ * workers and release files rendering at once, and stable addresses (and their QR codes) that
+ * open only for whoever is signed in to this instance, never for anyone on the internet; a
+ * release plans at most `SANDBOX_MAX_RELEASE_OUTPUTS` files. Unchanged when the sandbox is off.
+ */
+export function inSandbox(env: Env): Env {
+  if (env.CCMS_PUBLIC_SANDBOX !== 'on') return env;
+  const jobs = env.CCMS_SANDBOX_RENDER_JOBS;
+  const workers = Math.min(
+    pdfWorkersFor(env.CCMS_ROLE, env.CCMS_PDF_WORKERS, defaultPoolSize()),
+    jobs,
+  );
+  return {
+    ...env,
+    CCMS_PDF_WORKERS: workers,
+    CCMS_RENDER_CONCURRENCY: Math.min(
+      env.CCMS_RENDER_CONCURRENCY ??
+        defaultRenderConcurrencyFor(env.CCMS_ROLE, workers),
+      workers,
+    ),
+    CCMS_RELEASE_MAX_OUTPUTS: Math.min(
+      env.CCMS_RELEASE_MAX_OUTPUTS,
+      SANDBOX_MAX_RELEASE_OUTPUTS,
+    ),
+    CCMS_DELIVERY_MAX_ACCESS:
+      env.CCMS_DELIVERY_MAX_ACCESS === 'public'
+        ? 'signed-in'
+        : env.CCMS_DELIVERY_MAX_ACCESS,
+  };
 }

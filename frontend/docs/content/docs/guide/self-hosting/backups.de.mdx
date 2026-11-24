@@ -14,12 +14,12 @@ den Speicherort. Diese Seite beschreibt die Seite des Servers.
 Das Inhaltsrepository hält fast alles, was Menschen anlegen; die Datenbank hält den Zustand des
 Betriebs. Siehe [Fast alles ist Inhalt](/de/guide/getting-started/content).
 
-| Was                                                              | Wo                                        |
-| ---------------------------------------------------------------- | ----------------------------------------- |
-| Inhalte: Module, Handbücher, Überarbeitungen, Veröffentlichungen | `/data/content.git` auf dem Volume `data` |
-| Benutzer, Rollen, Kommentare, Workflow, das Audit-Log, Jobs      | das Volume `postgres`                     |
-| Bilder, Anhänge, archivierte PDFs der Veröffentlichungen         | `/data/blobs` auf dem Volume `data`       |
-| Der [Instanzschlüssel](/de/guide/self-hosting/secret-key)        | `/data/ccms-secret.key`                   |
+| Was                                                               | Wo                                        |
+| ----------------------------------------------------------------- | ----------------------------------------- |
+| Inhalte: Module, Anleitungen, Überarbeitungen, Veröffentlichungen | `/data/content.git` auf dem Volume `data` |
+| Benutzer, Rollen, Kommentare, Workflow, das Audit-Log, Jobs       | das Volume `postgres`                     |
+| Bilder, Anhänge, archivierte PDFs der Veröffentlichungen          | `/data/blobs` auf dem Volume `data`       |
+| Der [Instanzschlüssel](/de/guide/self-hosting/secret-key)         | `/data/ccms-secret.key`                   |
 
 Mit dem S3-Blob-Speicher (`CCMS_BLOB_DRIVER=s3`) bleiben die Blobs in ihrem Bucket und sind nicht
 Teil des Backups: Schalten Sie für diesen Bucket die Versionierung ein. Bewahren Sie auch
@@ -125,7 +125,7 @@ S3-Speicherort oder eine Kopie des Volumes `backups`.
 ## Eine Wiederherstellungsübung
 
 Stellen Sie einmal im Quartal das neueste Backup auf einer zweiten Maschine wieder her (oder mit
-einem anderen `COMPOSE_PROJECT_NAME`): Melden Sie sich an, öffnen Sie ein Handbuch, erzeugen Sie
+einem anderen `COMPOSE_PROJECT_NAME`): Melden Sie sich an, öffnen Sie eine Anleitung, erzeugen Sie
 ein PDF und entfernen Sie den Stack danach. Damit die Übung nichts an Ihre Systeme sendet, lassen
 Sie dort `CCMS_AUDIT_SINK_URL` leer, lassen den Schritt „Nach einer Wiederherstellung“ aus und
 schalten die Webhooks ab (`UPDATE webhooks SET active = false`).

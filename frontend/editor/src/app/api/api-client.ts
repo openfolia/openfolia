@@ -120,6 +120,24 @@ export class ApiClient {
   }
 
   /**
+   * `GET` a route with the whole response, for what its headers say (the server's `Date`, to
+   * turn a time it names into one of the browser's clock). No `ref`: for routes without one.
+   */
+  getResponse<P extends JsonGetPath>(
+    path: P,
+    ...[options]: [PathParams<P>] extends [never]
+      ? [options?: RequestOptions<P>]
+      : [options: RequestOptions<P>]
+  ): Observable<HttpResponse<Response<P>>> {
+    const url = `${this.base}${fillPath(path, options?.path as Record<string, string> | undefined)}`;
+    return this.http.get<Response<P>>(url, {
+      params: paramsOf({ ...options?.query }),
+      headers: { Accept: JSON_API },
+      observe: 'response',
+    });
+  }
+
+  /**
    * `POST` a JSON:API document to a route that creates something (`201`; some answer `200` when
    * there was nothing to create, with their own document). Path parameters go in `options.path`.
    */

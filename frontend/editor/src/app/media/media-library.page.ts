@@ -98,6 +98,8 @@ import {
   type TypeFilter,
 } from './media-model';
 import { MediaUploads } from './media-uploads';
+import { SandboxNoteComponent } from '../sandbox/sandbox-note.component';
+import { SandboxSession } from '../sandbox/sandbox-session';
 import { UnusedLocator } from './media-unused';
 import { MediaUsageReader } from './media-usage';
 
@@ -135,6 +137,7 @@ const TYPE_LABELS: Readonly<Record<TypeFilter, string>> = {
 @Component({
   selector: 'of-media-library',
   imports: [
+    SandboxNoteComponent,
     TranslocoPipe,
     NgIcon,
     FadeInDirective,
@@ -174,32 +177,40 @@ const TYPE_LABELS: Readonly<Record<TypeFilter, string>> = {
   host: { class: 'flex min-w-0 flex-col gap-4' },
   template: `
     <of-page-header [title]="'editor.media.title' | transloco">
-      <button
-        z-button
-        type="button"
-        [ofGuard]="{
-          permission: 'content.edit',
-          blockedReason: uploadBlocked(),
-        }"
-        (click)="fileInput.click()"
-      >
-        <ng-icon
-          name="lucideUpload"
-          data-icon="inline-start"
-          strokeWidth="1.5"
-          aria-hidden="true"
+      @if (sandbox.on()) {
+        <!-- A public sandbox takes no uploads (issue 826): the line says why instead. -->
+        <of-sandbox-note
+          class="max-w-80 self-center"
+          [text]="'editor.sandbox.uploadsOff' | transloco"
         />
-        {{ 'editor.media.upload.open' | transloco }}
-      </button>
-      <input
-        #fileInput
-        type="file"
-        multiple
-        class="hidden"
-        tabindex="-1"
-        aria-hidden="true"
-        (change)="picked($event)"
-      />
+      } @else {
+        <button
+          z-button
+          type="button"
+          [ofGuard]="{
+            permission: 'content.edit',
+            blockedReason: uploadBlocked(),
+          }"
+          (click)="fileInput.click()"
+        >
+          <ng-icon
+            name="lucideUpload"
+            data-icon="inline-start"
+            strokeWidth="1.5"
+            aria-hidden="true"
+          />
+          {{ 'editor.media.upload.open' | transloco }}
+        </button>
+        <input
+          #fileInput
+          type="file"
+          multiple
+          class="hidden"
+          tabindex="-1"
+          aria-hidden="true"
+          (change)="picked($event)"
+        />
+      }
     </of-page-header>
 
     <!-- The view switch and the search have a column of their own and Reset filters a place kept
@@ -598,6 +609,7 @@ export class MediaLibraryPage {
   private readonly changeSets = inject(ChangeSetSession);
   private readonly deletion = inject(MediaDeletion);
   protected readonly uploads = inject(MediaUploads);
+  protected readonly sandbox = inject(SandboxSession);
   protected readonly draftBlocked = injectDraftBlocked();
   private readonly t = injectTranslate();
 
@@ -663,6 +675,7 @@ export class MediaLibraryPage {
 
   /** Why Upload is blocked now (a key), or null: uploads go into a draft change set of one's own. */
   protected readonly uploadBlocked = computed((): string | null => {
+    if (this.sandbox.on()) return 'editor.sandbox.uploadsOff';
     const blocked = this.draftBlocked();
     if (blocked) return blocked;
     return this.ownChangeSet() ? null : 'editor.media.upload.notOwn';

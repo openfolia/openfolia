@@ -106,6 +106,7 @@ import { RegionTextsComponent } from './region-texts.component';
 import { asDesignRegions, type Regions } from './region-text';
 import { RunningRegionComponent } from './running-region.component';
 import { issueText } from './design-issues';
+import { SandboxSession } from '../../sandbox/sandbox-session';
 
 type Margin = keyof PageDesign['page']['margins'];
 const MARGINS: readonly Margin[] = ['top', 'right', 'bottom', 'left'];
@@ -648,7 +649,8 @@ interface PreviewManual {
                           />
                           {{ 'editor.admin.pageDesigns.logo.pick' | transloco }}
                         </button>
-                        @if (slot === 'light') {
+                        <!-- Copying the platform logo is an upload: not in a public sandbox (issue 826). -->
+                        @if (slot === 'light' && !sandbox.on()) {
                           <button
                             z-button
                             zType="ghost"
@@ -1608,6 +1610,7 @@ interface PreviewManual {
   `,
 })
 export class PageDesignEditorPage {
+  protected readonly sandbox = inject(SandboxSession);
   protected readonly draft = inject(DesignDraft);
   protected readonly changeSets = inject(ChangeSetSession);
   private readonly csLink = inject(ChangeSetUrl);
