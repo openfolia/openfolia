@@ -1,0 +1,91 @@
+{
+  "version": "v0.0.3",
+  "date": "2026-11-24",
+  "repository": "https://github.com/openfolia/openfolia",
+  "previous": "v0.0.2",
+  "summary": {
+    "en": "OpenFolia now runs on Arm servers, and it can be tried without installing it: a public sandbox\nmode gives every visitor of a demo an OpenFolia of their own, deleted after the session. The\nreader portal gets a search that answers as you type and a variant switch that says what it does.\n\n- Images: every image is built for both amd64 and arm64, natively on each, as one multi-platform\n  image. The same compose.yaml runs on an x86 server, an Arm server or an Apple silicon Mac.\n- Sandbox: a public sandbox mode (CCMS_PUBLIC_SANDBOX=on) for a throwaway instance open to\n  anyone: no outbound connections, no users or tokens, no uploads, caps on what can be written,\n  and a banner with the time left. The sandbox image runs it with a finished demo baked in,\n  ready in a few seconds.\n- Demo: the sandbox launcher starts one sandbox per visitor behind a start page, with a\n  proof-of-work, per-address limits and a cap, each sandbox on its own network with no route\n  out. A visitor can end their sandbox from its banner; when it ends or expires, the start page\n  thanks them and can offer to book a demo. deploy/compose.demo.yaml runs the launcher, its\n  agent, a shared read-only demo portal and TLS on one host.\n- Portal: a typeahead on the search fields shows the best passages as you type, with full\n  keyboard support. The search page and the typeahead share one search.\n- Portal: when a manual isn't published in every combination of its variant attributes, the\n  variant switch says so before the click (\"only as Electric\") and, after it, which other\n  setting changed. Switching between variants no longer blanks the page.\n- Portal: search excerpts no longer run a glossary term into its definition.\n- Editor: a revision with no changes against its base shows that, without an empty diff's view\n  switch and legend.\n- MCP: the editor serves the MCP server at /mcp on its own address, so an assistant connects\n  to https://<your address>/mcp with the instance's MCP token. The MCP server believes a\n  forwarded client address only from the proxies named in CCMS_MCP_HTTP_PROXY_ADDRESSES.\n- Docs: a full MCP page (address, token, client setups, tools and resources, troubleshooting),\n  and the docs now start from using an OpenFolia someone runs for you, with running it\n  yourself as the second path. The API reference's server is https://{host}/api with the\n  host editable, never localhost.\n- German: the interface says Anleitung, the glossary term, throughout.\n- Security: SECURITY.md now states which versions get security fixes: the latest release and\n  main.\n\nTo upgrade from v0.0.2, follow \"Upgrades\" in deploy/README.md. An installation that runs the\nMCP service becomes reachable at the editor's address plus /mcp, behind the same token; the\nsandbox mode and the demo are separate deployments.",
+    "de": "OpenFolia läuft jetzt auf Arm-Servern, und man kann es ausprobieren, ohne es zu installieren:\nEin öffentlicher Sandbox-Modus gibt jeder Besucherin und jedem Besucher einer Demo ein eigenes\nOpenFolia, das nach der Sitzung gelöscht wird. Das Leserportal bekommt eine Suche, die schon\nbeim Tippen antwortet, und eine Variantenauswahl, die sagt, was sie tut.\n\n- Images: Jedes Image wird für amd64 und arm64 gebaut, jeweils nativ, als ein Image für beide\n  Plattformen. Dieselbe compose.yaml läuft auf einem x86-Server, einem Arm-Server oder einem Mac\n  mit Apple-Chip.\n- Sandbox: ein öffentlicher Sandbox-Modus (CCMS_PUBLIC_SANDBOX=on) für eine Wegwerf-Instanz, die\n  allen offensteht: keine Verbindungen nach außen, keine Benutzer oder Tokens, keine Uploads,\n  Grenzen für das, was geschrieben werden kann, und ein Banner mit der verbleibenden Zeit. Das\n  Sandbox-Image betreibt ihn mit einer fertigen Demo und ist nach wenigen Sekunden bereit.\n- Demo: Der Sandbox-Launcher startet hinter einer Startseite eine Sandbox pro Besucher, mit\n  Proof-of-Work, Grenzen pro Adresse und einer Obergrenze, jede Sandbox in einem eigenen Netz\n  ohne Weg nach außen. Besucher können ihre Sandbox im Banner beenden; endet sie oder läuft sie\n  ab, bedankt sich die Startseite und kann anbieten, eine Demo zu buchen. deploy/compose.demo.yaml\n  betreibt den Launcher, seinen Agenten, ein gemeinsames, schreibgeschütztes Demo-Portal und TLS\n  auf einem Host.\n- Portal: Eine Vorschlagsliste an den Suchfeldern zeigt schon beim Tippen die besten Stellen,\n  vollständig mit der Tastatur bedienbar. Suchseite und Vorschlagsliste nutzen dieselbe Suche.\n- Portal: Ist eine Anleitung nicht in jeder Kombination ihrer Variantenmerkmale veröffentlicht,\n  sagt die Variantenauswahl das vor dem Klick („nur als Elektro“) und danach, welche andere\n  Einstellung sich geändert hat. Der Wechsel zwischen Varianten lässt die Seite nicht mehr\n  aufblitzen.\n- Portal: Suchauszüge hängen die Erklärung eines Glossarbegriffs nicht mehr an den Begriff.\n- Editor: Eine Überarbeitung ohne Unterschied zu ihrer Basis zeigt genau das, ohne Ansichtswahl\n  und Legende eines leeren Vergleichs.\n- MCP: Der Editor stellt den MCP-Server unter /mcp auf seiner eigenen Adresse bereit; ein\n  Assistent verbindet sich mit https://<Ihre Adresse>/mcp und dem MCP-Token der Instanz. Der\n  MCP-Server glaubt eine weitergereichte Clientadresse nur den Proxys, die\n  CCMS_MCP_HTTP_PROXY_ADDRESSES nennt.\n- Dokumentation: eine vollständige MCP-Seite (Adresse, Token, Einrichtung der Clients, Tools und\n  Ressourcen, Fehlerbehebung), und die Dokumentation beginnt jetzt bei einem OpenFolia, das\n  jemand für Sie betreibt; der Eigenbetrieb ist der zweite Weg. Der Server der API-Referenz ist\n  https://{host}/api mit änderbarem Host, nie localhost.\n- Deutsch: Die Oberfläche sagt durchgehend Anleitung, den Begriff aus dem Glossar.\n- Sicherheit: SECURITY.md nennt jetzt, welche Versionen Sicherheitskorrekturen bekommen: die\n  neueste Veröffentlichung und main.\n\nFür das Upgrade von v0.0.2 folgen Sie „Upgrades“ in deploy/README.md. Eine Installation, die den\nMCP-Dienst betreibt, ist danach unter der Adresse des Editors plus /mcp erreichbar, hinter demselben\nToken; Sandbox-Modus und Demo sind eigene Installationen."
+  },
+  "groups": [
+    {
+      "title": "Docs",
+      "items": [
+        {
+          "number": 1,
+          "scope": null,
+          "text": "The changelog of v0.0.2"
+        }
+      ]
+    }
+  ],
+  "upgrade": {
+    "breaking": [],
+    "migrations": [],
+    "settings": {
+      "added": [
+        "CCMS_PUBLIC_SANDBOX",
+        "CCMS_SANDBOX_IDLE_MINUTES",
+        "CCMS_SANDBOX_MAX_MINUTES",
+        "CCMS_SANDBOX_MAX_MODULE_BYTES",
+        "CCMS_SANDBOX_MAX_COMMENT_LENGTH",
+        "CCMS_SANDBOX_MAX_CHANGE_SETS",
+        "CCMS_SANDBOX_MAX_MODULES",
+        "CCMS_SANDBOX_MAX_MANUALS",
+        "CCMS_SANDBOX_RELEASES_PER_HOUR",
+        "CCMS_SANDBOX_RENDER_JOBS",
+        "CCMS_SANDBOX_MAX_WRITE_BYTES",
+        "CCMS_SANDBOX_PORTAL_URL",
+        "CCMS_SANDBOX_END_URL",
+        "CCMS_SANDBOX_LANG",
+        "CCMS_LAUNCHER_PUBLIC_URL",
+        "CCMS_LAUNCHER_AGENT_TOKEN",
+        "CCMS_LAUNCHER_AGENT_URL",
+        "CCMS_LAUNCHER_HOST",
+        "CCMS_LAUNCHER_PORT",
+        "CCMS_LAUNCHER_TRUST_PROXY",
+        "CCMS_LAUNCHER_PROXY_ADDRESSES",
+        "CCMS_LAUNCHER_ADDRESS_SECRET",
+        "CCMS_LAUNCHER_MAX_SANDBOXES",
+        "CCMS_LAUNCHER_IDLE_MINUTES",
+        "CCMS_LAUNCHER_MAX_MINUTES",
+        "CCMS_LAUNCHER_PER_ADDRESS",
+        "CCMS_LAUNCHER_PER_ADDRESS_DAILY",
+        "CCMS_LAUNCHER_POW_BITS",
+        "CCMS_LAUNCHER_RATE",
+        "CCMS_LAUNCHER_START_TIMEOUT",
+        "CCMS_LAUNCHER_HOMEPAGE_URL",
+        "CCMS_LAUNCHER_DOCS_URL",
+        "CCMS_LAUNCHER_IMPRINT_URL",
+        "CCMS_LAUNCHER_PRIVACY_URL",
+        "CCMS_LAUNCHER_PORTAL_URL",
+        "CCMS_LAUNCHER_BOOKING_URL",
+        "CCMS_LAUNCHER_ABUSE_CONTACT",
+        "CCMS_LAUNCHER_FILMS_DIR",
+        "CCMS_LAUNCHER_AGENT_HOST",
+        "CCMS_LAUNCHER_AGENT_PORT",
+        "CCMS_LAUNCHER_DOCKER_SOCKET",
+        "CCMS_LAUNCHER_SANDBOX_IMAGE",
+        "CCMS_LAUNCHER_CONTAINER",
+        "CCMS_LAUNCHER_INSTANCE",
+        "CCMS_LAUNCHER_SANDBOX_MEMORY",
+        "CCMS_LAUNCHER_SANDBOX_CPUS",
+        "CCMS_LAUNCHER_SANDBOX_TMPFS",
+        "CCMS_LAUNCHER_SANDBOX_PIDS",
+        "CCMS_MCP_HTTP_TRUST_PROXY",
+        "CCMS_MCP_HTTP_PROXY_ADDRESSES",
+        "OPENFOLIA_DEMO_HOST",
+        "OPENFOLIA_DEMO_PORTAL_HOST",
+        "OPENFOLIA_DEMO_DOCKER_GID",
+        "CCMS_EDITOR_MCP_URL"
+      ],
+      "changed": [
+        "CCMS_EDITOR_PORT"
+      ],
+      "removed": [
+        "DOCS_API_BASE_URL"
+      ]
+    },
+    "notes": []
+  }
+}

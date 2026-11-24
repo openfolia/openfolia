@@ -4,6 +4,40 @@ Every release, newest first: what is new, improved and fixed, the security fixes
 when you upgrade. `scripts/release.mjs` writes this file on each release tag, with the same notes
 as the release on GitHub (CONTRIBUTING.md, "Releases"); don't edit it by hand.
 
+<!-- release v0.0.3 2026-11-24 -->
+## [v0.0.3](https://github.com/openfolia/openfolia/releases/tag/v0.0.3) (2026-11-24)
+
+OpenFolia now runs on Arm servers, and it can be tried without installing it: a public sandbox mode gives every visitor of a demo an OpenFolia of their own, deleted after the session. The reader portal gets a search that answers as you type and a variant switch that says what it does.
+
+- Images: every image is built for both amd64 and arm64, natively on each, as one multi-platform image. The same compose.yaml runs on an x86 server, an Arm server or an Apple silicon Mac.
+- Sandbox: a public sandbox mode (CCMS\_PUBLIC\_SANDBOX=on) for a throwaway instance open to anyone: no outbound connections, no users or tokens, no uploads, caps on what can be written, and a banner with the time left. The sandbox image runs it with a finished demo baked in, ready in a few seconds.
+- Demo: the sandbox launcher starts one sandbox per visitor behind a start page, with a proof-of-work, per-address limits and a cap, each sandbox on its own network with no route out. A visitor can end their sandbox from its banner; when it ends or expires, the start page thanks them and can offer to book a demo. [deploy/compose.demo.yaml](https://github.com/openfolia/openfolia/blob/v0.0.3/deploy/compose.demo.yaml) runs the launcher, its agent, a shared read-only demo portal and TLS on one host.
+- Portal: a typeahead on the search fields shows the best passages as you type, with full keyboard support. The search page and the typeahead share one search.
+- Portal: when a manual isn't published in every combination of its variant attributes, the variant switch says so before the click ("only as Electric") and, after it, which other setting changed. Switching between variants no longer blanks the page.
+- Portal: search excerpts no longer run a glossary term into its definition.
+- Editor: a revision with no changes against its base shows that, without an empty diff's view switch and legend.
+- MCP: the editor serves the MCP server at /mcp on its own address, so an assistant connects to https\://&lt;your address&gt;/mcp with the instance's MCP token. The MCP server believes a forwarded client address only from the proxies named in CCMS\_MCP\_HTTP\_PROXY\_ADDRESSES.
+- Docs: a full MCP page (address, token, client setups, tools and resources, troubleshooting), and the docs now start from using an OpenFolia someone runs for you, with running it yourself as the second path. The API reference's server is [https://{host}/api](https://{host}/api) with the host editable, never localhost.
+- German: the interface says Anleitung, the glossary term, throughout.
+- Security: [SECURITY.md](https://github.com/openfolia/openfolia/blob/v0.0.3/SECURITY.md) now states which versions get security fixes: the latest release and main.
+
+To upgrade from v0.0.2, follow "Upgrades" in [deploy/README.md](https://github.com/openfolia/openfolia/blob/v0.0.3/deploy/README.md). An installation that runs the MCP service becomes reachable at the editor's address plus /mcp, behind the same token; the sandbox mode and the demo are separate deployments.
+
+### Docs
+
+- The changelog of v0.0.2 ([#1](https://github.com/openfolia/openfolia/pull/1))
+
+### Upgrade notes
+
+From v0.0.2: take a backup first and follow [Upgrades](https://github.com/openfolia/openfolia/blob/v0.0.3/deploy/README.md#upgrades) in deploy/README.md.
+
+**Settings** (see [.env.example](https://github.com/openfolia/openfolia/blob/v0.0.3/.env.example)):
+
+- New: `CCMS_PUBLIC_SANDBOX`, `CCMS_SANDBOX_IDLE_MINUTES`, `CCMS_SANDBOX_MAX_MINUTES`, `CCMS_SANDBOX_MAX_MODULE_BYTES`, `CCMS_SANDBOX_MAX_COMMENT_LENGTH`, `CCMS_SANDBOX_MAX_CHANGE_SETS`, `CCMS_SANDBOX_MAX_MODULES`, `CCMS_SANDBOX_MAX_MANUALS`, `CCMS_SANDBOX_RELEASES_PER_HOUR`, `CCMS_SANDBOX_RENDER_JOBS`, `CCMS_SANDBOX_MAX_WRITE_BYTES`, `CCMS_SANDBOX_PORTAL_URL`, `CCMS_SANDBOX_END_URL`, `CCMS_SANDBOX_LANG`, `CCMS_LAUNCHER_PUBLIC_URL`, `CCMS_LAUNCHER_AGENT_TOKEN`, `CCMS_LAUNCHER_AGENT_URL`, `CCMS_LAUNCHER_HOST`, `CCMS_LAUNCHER_PORT`, `CCMS_LAUNCHER_TRUST_PROXY`, `CCMS_LAUNCHER_PROXY_ADDRESSES`, `CCMS_LAUNCHER_ADDRESS_SECRET`, `CCMS_LAUNCHER_MAX_SANDBOXES`, `CCMS_LAUNCHER_IDLE_MINUTES`, `CCMS_LAUNCHER_MAX_MINUTES`, `CCMS_LAUNCHER_PER_ADDRESS`, `CCMS_LAUNCHER_PER_ADDRESS_DAILY`, `CCMS_LAUNCHER_POW_BITS`, `CCMS_LAUNCHER_RATE`, `CCMS_LAUNCHER_START_TIMEOUT`, `CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_DOCS_URL`, `CCMS_LAUNCHER_IMPRINT_URL`, `CCMS_LAUNCHER_PRIVACY_URL`, `CCMS_LAUNCHER_PORTAL_URL`, `CCMS_LAUNCHER_BOOKING_URL`, `CCMS_LAUNCHER_ABUSE_CONTACT`, `CCMS_LAUNCHER_FILMS_DIR`, `CCMS_LAUNCHER_AGENT_HOST`, `CCMS_LAUNCHER_AGENT_PORT`, `CCMS_LAUNCHER_DOCKER_SOCKET`, `CCMS_LAUNCHER_SANDBOX_IMAGE`, `CCMS_LAUNCHER_CONTAINER`, `CCMS_LAUNCHER_INSTANCE`, `CCMS_LAUNCHER_SANDBOX_MEMORY`, `CCMS_LAUNCHER_SANDBOX_CPUS`, `CCMS_LAUNCHER_SANDBOX_TMPFS`, `CCMS_LAUNCHER_SANDBOX_PIDS`, `CCMS_MCP_HTTP_TRUST_PROXY`, `CCMS_MCP_HTTP_PROXY_ADDRESSES`, `OPENFOLIA_DEMO_HOST`, `OPENFOLIA_DEMO_PORTAL_HOST`, `OPENFOLIA_DEMO_DOCKER_GID`, `CCMS_EDITOR_MCP_URL`
+- Changed description or example: `CCMS_EDITOR_PORT`
+- Removed: `DOCS_API_BASE_URL`
+<!-- /release v0.0.3 -->
+
 <!-- release v0.0.2 2026-11-24 -->
 ## [v0.0.2](https://github.com/openfolia/openfolia/releases/tag/v0.0.2) (2026-11-24)
 
