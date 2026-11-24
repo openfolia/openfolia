@@ -9,7 +9,7 @@ Report it privately through GitHub's private vulnerability reporting: on the rep
 becomes a draft security advisory where we can talk it through with you, fix it in a private
 fork and credit you when the advisory is published.
 
-If you can't use GitHub, write to `[Security contact]`.
+If you can't use GitHub, write to `info@openfolia.com`.
 
 A useful report says:
 
