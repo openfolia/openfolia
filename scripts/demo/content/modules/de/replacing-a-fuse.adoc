@@ -16,6 +16,9 @@ module::switch-off[]
 .Sicherung wechseln
 . [[step-open]]Öffnen Sie die Abdeckung des Sicherungskastens an der rechten Seite der Armaturentafel.
 . [[step-pull]]Ziehen Sie die Sicherung mit der Kunststoffzange heraus, die in der Abdeckung steckt.
++
+[#img-puller]
+image::demo-image:fuse-puller["Kunststoffzange, die eine Sicherung aus dem Sicherungskasten zieht",width=45%]
 . [[step-check]]Eine Sicherung mit durchgebranntem Draht ist defekt. Ersetzen Sie sie durch eine Sicherung mit derselben Stärke.
 . [[step-close]]Schließen Sie die Abdeckung.
 

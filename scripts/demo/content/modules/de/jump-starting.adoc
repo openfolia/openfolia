@@ -25,5 +25,8 @@ Auch das Elektromodell hat eine 12-V-Batterie: Sie schaltet das Hochvoltsystem e
 .Starthilfe geben
 . [[step-red]]Klemmen Sie das rote Kabel an den Pluspol oder Starthilfepunkt Ihres Fahrzeugs, dann an den Pluspol der anderen Batterie.
 . [[step-black]]Klemmen Sie das schwarze Kabel an den Minuspol der anderen Batterie, dann an den Minus-Starthilfepunkt oder an blankes Metall Ihres Fahrzeugs, entfernt von der Batterie.
++
+[#img-leads]
+image::demo-image:jump-leads["Zwei Batterien, verbunden mit einem roten Kabel zwischen den Pluspolen und einem schwarzen zwischen den Minuspolen",width=45%]
 . [[step-start]]Starten Sie zuerst das andere Fahrzeug, dann Ihres.
 . [[step-remove]]Nehmen Sie die Kabel in umgekehrter Reihenfolge ab.

@@ -14,4 +14,7 @@ Isolate the high-voltage system before any work on high-voltage parts, and befor
 . [[step-off]]Switch the vehicle off and keep the key at least 5 m away.
 . [[step-12v]]Disconnect the negative terminal of the 12 V battery.
 . [[step-plug]]Pull the orange service plug under the rear seat and lock it away.
++
+[#img-service-plug]
+image::demo-image:service-plug["Orange service plug pulled up out of its socket",width=45%]
 . [[step-wait]]Wait 5 minutes, then check with a two-pole tester that the system is free of voltage.

@@ -1,0 +1,21 @@
+# The public demo's proxy (deploy/compose.demo.yaml): TLS for the demo's and the portal's host names,
+# certificates from Let's Encrypt. The launcher sets the demo's headers itself, the portal its own.
+# Caddy replaces any X-Forwarded-For a client sends with the client's address, the one the launcher
+# reads (CCMS_LAUNCHER_TRUST_PROXY=1, CCMS_LAUNCHER_PROXY_ADDRESSES: this container's).
+{
+	admin off
+}
+
+{$OPENFOLIA_DEMO_HOST} {
+	reverse_proxy 172.30.0.10:8080 {
+		# A start waits for the sandbox (CCMS_LAUNCHER_START_TIMEOUT, at most 300 s), and a PDF for
+		# its render: as long as the launcher waits for a sandbox.
+		transport http {
+			response_header_timeout 310s
+		}
+	}
+}
+
+{$OPENFOLIA_DEMO_PORTAL_HOST} {
+	reverse_proxy portal:8080
+}

@@ -70,7 +70,8 @@ jobs:
         # The images and their "affected" rule are in scripts/images-plan.mjs (tested in
         # scripts/__tests__/images-plan.test.ts): api, backup (the API image plus the Postgres
         # client, so whatever rebuilds the API rebuilds it), editor, embedder (the local embedding
-        # worker, #532), mcp, portal (#819) and sandbox (the public sandbox, #827).
+        # worker, #532), mcp, portal (#819), sandbox (the public sandbox, #827), and the public
+        # demo's sandbox-launcher and demo-portal (#828).
         run: |
           if [ "$EVENT" = pull_request ]; then
             base=$PR_BASE
@@ -150,6 +151,13 @@ jobs:
           SANDBOX_IMAGE: openfolia-ci/sandbox:check
           SANDBOX_READY_SECONDS: 10
         run: deploy/sandbox-test.sh
+      # The launcher on a real container runtime (#828): two visitors, a sandbox each, neither
+      # reaching the other; the cap; every sandbox gone when it stops. It builds the sandbox image.
+      - name: deploy/launcher-test.sh
+        if: matrix.image == 'sandbox-launcher'
+        env:
+          LAUNCHER_IMAGE: openfolia-ci/sandbox-launcher:check
+        run: deploy/launcher-test.sh
       - if: github.event_name == 'push'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
@@ -500,7 +508,7 @@ jobs:
           # its tag, and the digest its build leg pushed and the registry names for the tag now.
           # Anything else, and an image missing or named twice, signs nothing.
           repository="$REGISTRY/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/openfolia"
-          release_images="api backup editor embedder mcp portal sandbox"
+          release_images="api backup editor embedder mcp portal sandbox sandbox-launcher demo-portal"
           targets="$RUNNER_TEMP/targets"
           : >"$targets"
           while read -r line; do

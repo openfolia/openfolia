@@ -25,5 +25,8 @@ Le modèle électrique possède lui aussi une batterie 12 V : elle met le systè
 .Démarrer le véhicule avec des câbles
 . [[step-red]]Branchez le câble rouge sur la borne positive ou le point de démarrage de votre véhicule, puis sur la borne positive de l'autre batterie.
 . [[step-black]]Branchez le câble noir sur la borne négative de l'autre batterie, puis sur le point de démarrage négatif ou sur une partie métallique nue de votre véhicule, à l'écart de la batterie.
++
+[#img-leads]
+image::demo-image:jump-leads["Deux batteries reliées par un câble rouge entre les bornes positives et un câble noir entre les bornes négatives",width=45%]
 . [[step-start]]Démarrez l'autre véhicule, puis le vôtre.
 . [[step-remove]]Retirez les câbles dans l'ordre inverse.

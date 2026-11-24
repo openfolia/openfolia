@@ -1,14 +1,14 @@
 ---
 title: 'Public sandbox'
-description: 'One throwaway instance per visitor of a public demo: the sandbox mode, the sandbox image, what a launcher does, and how many fit on a host.'
+description: 'One throwaway instance per visitor of a public demo: the sandbox mode, the sandbox image, the launcher in front of them, what the demo stores, and how many fit on a host.'
 articleId: 'guide.self-hosting.sandbox'
 ---
 
 A public demo lets strangers try OpenFolia without signing up. Each visitor gets an instance of
 their own, which nobody else reaches and which is deleted when they leave. OpenFolia provides
-two parts of this: the **sandbox mode** of the API, and the **sandbox image**, which runs one such
-instance in one container. The **launcher**, the service that starts a container per visitor
-and routes their browser to it, is yours.
+three parts of this: the **sandbox mode** of the API, the **sandbox image**, which runs one such
+instance in one container, and the **launcher**, which starts a container per visitor and routes
+their browser to it.
 
 ## The sandbox mode
 
@@ -64,18 +64,48 @@ The image makes its own API token, database and secret key. It refuses to start 
 `CCMS_API_TOKEN`, `CCMS_DATABASE_URL`, `CCMS_SECRET_KEY`, `CCMS_WEBHOOKS_SECRET_KEY`,
 `CCMS_EDITOR_API_TOKEN` or `CCMS_EDITOR_API_URL` set.
 
-## What the launcher does
+## The launcher
 
-- **Deletes the container when the session ends.** It reads `meta.endsAt` from `GET /api/sandbox`
-  through port 8080. The sandbox does not end itself.
-- **Caps disk, memory, CPU and processes** with the flags above: the database and the content
-  repository live in the tmpfs, so its size caps both. The log limit matters too: the container's
-  log is on the host's disk.
-- **Caps the rate of requests** in the proxy in front of the sandboxes.
-- **One container per visitor**, so one API process each. Never two visitors in one.
-- **Keeps the sandboxes apart:** an internal network per sandbox that only the launcher's proxy
-  joins (on one shared network they reach each other's port 8080).
-- **Never points a shared portal or MCP server at a sandbox.**
+The launcher is the demo's front door (`ghcr.io/<owner>/openfolia/sandbox-launcher`). Its start
+page, in English and German, says what the demo is and starts a sandbox at a button. Then the
+visitor's browser is in the editor of their own sandbox, at the demo's own address.
+
+- **Proof of work instead of a captcha.** Before a start the browser solves a small puzzle (about
+  a second on a phone), so starting sandboxes in bulk costs real work.
+- **One cookie binds a browser to its sandbox.** It is random, `HttpOnly`, `Secure` and
+  `SameSite=Strict`. The same address in another browser shows the start page, never the sandbox.
+- **Limits:** at most `CCMS_LAUNCHER_MAX_SANDBOXES` at once (default 5, for 8 GB), one at a time
+  and three a day per address, a sandbox ends after 30 minutes without activity and after 90 at
+  the latest, and every address and sandbox has a request rate. When all are taken, the start
+  page shows the demo's films and tries again by itself.
+- **Clean-up:** a sandbox is removed when its time is up, every sandbox when the launcher stops,
+  and any it does not know when it starts.
+- **Kept apart:** each sandbox has an internal network of its own, which only the launcher joins.
+  Only the launcher's **agent** talks to the container runtime, over a private network and with a
+  token; the launcher itself never has the runtime's socket.
+- **A shared portal**, built once from a normal instance with the demo's released manuals
+  (`ghcr.io/<owner>/openfolia/demo-portal`), never from a sandbox: a sandbox's demo sign-in is an
+  admin.
+
+`deploy/compose.demo.yaml` runs the launcher, its agent, the portal and a TLS proxy on one host.
+The settings (`CCMS_LAUNCHER_*`) are in `.env.example`; the steps are in `deploy/README.md`, "The
+public demo".
+
+### What the demo stores
+
+The launcher's page `/_demo/data` says this to visitors, in English and German, so your privacy
+policy can link to it:
+
+- **One cookie, strictly necessary:** a random key that ties the browser to its sandbox. It needs
+  no consent and expires with the sandbox.
+- **The IP address only as a keyed hash** (HMAC-SHA-256 with a secret of the deployment,
+  `CCMS_LAUNCHER_ADDRESS_SECRET`), for the per-address limits, in memory for 24 hours at most.
+  The address itself is never stored, logged or passed to the sandbox.
+- **The sandbox until it ends**, then nothing: what a visitor writes is deleted with it.
+- **Logs without addresses or content:** when sandboxes start, end or are refused, and why.
+
+The header's logo and the footer link your homepage, imprint and privacy policy when you set
+`CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` and `CCMS_LAUNCHER_PRIVACY_URL`.
 
 ## How many fit on a host
 

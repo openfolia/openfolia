@@ -16,6 +16,9 @@ module::switch-off[]
 .Replace a fuse
 . [[step-open]]Open the cover of the fuse box at the right end of the dashboard.
 . [[step-pull]]Pull the fuse out with the plastic puller clipped inside the cover.
++
+[#img-puller]
+image::demo-image:fuse-puller["Plastic puller lifting a fuse out of the fuse box",width=45%]
 . [[step-check]]A fuse with a broken wire has blown. Replace it with a fuse of the same rating.
 . [[step-close]]Close the cover.
 

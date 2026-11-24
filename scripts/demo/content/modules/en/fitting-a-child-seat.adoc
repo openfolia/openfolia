@@ -13,5 +13,8 @@ Fit child seats on the rear outer seats. Read the safety notices on child seats 
 .Fit a child seat to the anchorage
 . [[step-find]]Find the two anchorage points between the seat cushion and the backrest of a rear outer seat.
 . [[step-click]]Push the child seat's locking arms onto the anchorage points until both click.
++
+[#img-anchorage]
+image::demo-image:child-seat-anchorage["Child seat with its locking arm pushed onto the anchorage between seat cushion and backrest",width=45%]
 . [[step-tether]]Fasten the top tether to the ring behind the backrest and tighten it.
 . [[step-check]]Pull the child seat firmly: it must not come loose.

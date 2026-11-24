@@ -13,5 +13,8 @@ Bauen Sie Kindersitze auf den äußeren Rücksitzen ein. Lesen Sie vorher die Si
 .Kindersitz an der Verankerung befestigen
 . [[step-find]]Suchen Sie die beiden Verankerungspunkte zwischen Sitzfläche und Rückenlehne eines äußeren Rücksitzes.
 . [[step-click]]Schieben Sie die Rastarme des Kindersitzes auf die Verankerungspunkte, bis beide hörbar einrasten.
++
+[#img-anchorage]
+image::demo-image:child-seat-anchorage["Kindersitz, dessen Rastarm auf die Verankerung zwischen Sitzfläche und Rückenlehne geschoben wird",width=45%]
 . [[step-tether]]Haken Sie den oberen Haltegurt in die Öse hinter der Rückenlehne ein und straffen Sie ihn.
 . [[step-check]]Ziehen Sie kräftig am Kindersitz: Er darf sich nicht lösen.

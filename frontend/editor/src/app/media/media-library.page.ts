@@ -1036,8 +1036,9 @@ export class MediaLibraryPage {
     return inUse(item, this.unusedList());
   }
 
+  /** A file's name: the module title in the chosen language, else in the interface language. */
   protected name(item: MediaItem): string {
-    return displayName(item, this.view.get('lang')() ?? '');
+    return displayName(item, this.view.get('lang')() || this.language.locale());
   }
 
   /**

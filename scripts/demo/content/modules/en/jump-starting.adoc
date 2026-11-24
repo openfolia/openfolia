@@ -25,5 +25,8 @@ The electric model has a 12 V battery too: it switches the high-voltage system o
 .Jump-start the vehicle
 . [[step-red]]Connect the red lead to the positive terminal or jump-start point of your vehicle, then to the positive terminal of the other battery.
 . [[step-black]]Connect the black lead to the negative terminal of the other battery, then to the negative jump-start point or to bare metal of your vehicle, away from the battery.
++
+[#img-leads]
+image::demo-image:jump-leads["Two batteries joined by a red lead between the positive terminals and a black lead between the negative ones",width=45%]
 . [[step-start]]Start the other vehicle, then yours.
 . [[step-remove]]Remove the leads in the reverse order.

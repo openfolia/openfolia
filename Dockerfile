@@ -9,6 +9,8 @@
 #   docker build --target embedder -t openfolia/embedder:local .
 #   docker build --target portal -t openfolia/portal:local .
 #   docker build --target sandbox -t openfolia/sandbox:local .
+#   docker build --target sandbox-launcher -t openfolia/sandbox-launcher:local .
+#   docker build --target demo-portal -t openfolia/demo-portal:local .
 #
 # Every image builds for linux/amd64 and linux/arm64 (the images workflow builds each natively).
 #
@@ -119,6 +121,30 @@ RUN pnpm --filter=@openfolia/sandbox deploy --prod --legacy /out/sandbox \
 RUN node scripts/demo/bake.mjs --lang en --out /out/sandbox-state/en \
  && node scripts/demo/bake.mjs --lang de --out /out/sandbox-state/de \
  && chmod -R a=rX /out/sandbox-state
+
+# The public demo's launcher and its agent (#828, backend/sandbox-launcher): its build, its start
+# page (page/) and its production dependencies (the theme's fonts and logos).
+FROM workspace AS build-launcher
+RUN pnpm nx build sandbox-launcher --output-style=static
+RUN node -e "const fs = require('node:fs'); const p = JSON.parse(fs.readFileSync('package.json', 'utf8')); delete p.dependencies; fs.writeFileSync('package.json', JSON.stringify(p, null, 2))" \
+ && pnpm --filter=@openfolia/sandbox-launcher deploy --prod --legacy /out/launcher \
+ && cd /out/launcher \
+ && find . -mindepth 1 -maxdepth 1 ! -name package.json ! -name dist ! -name page ! -name node_modules -exec rm -rf {} +
+
+# The public demo's shared portal (#828): the released manuals of the demo's English state, built
+# once by scripts/demo/portal.mjs from a normal instance of the API on loopback ports (never a
+# sandbox's: a sandbox's demo sign-in is an admin), read with a token of a read-only role up to the
+# owners' audience. A static site: nothing of the instance outlives the build.
+FROM build-sandbox AS build-demo-portal
+COPY --from=build-portal /out/portal /out/portal-app
+# Its caches in the app's own folder (the portal image links them into /tmp, a tmpfs at run time):
+# Astro's prerendered chunks then find the app's node_modules.
+RUN cd /out/portal-app \
+ && rm .astro node_modules/.astro node_modules/.vite \
+ && mkdir .astro node_modules/.astro node_modules/.vite \
+ && cd /src \
+ && node scripts/demo/portal.mjs --state /out/sandbox-state/en --portal /out/portal-app --out /out/demo-portal \
+ && test -f /out/demo-portal/index.html
 
 # Caddy's binary, without the file capability its image gives it (as deploy/docker/docs/Dockerfile
 # does): port 8080 needs none, and a file capability stops it where capabilities are dropped.
@@ -323,6 +349,41 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --start-interval=1s -
   CMD ["/usr/local/bin/openfolia-sandbox-health"]
 # tini signals its whole process group (-g): the database, the API and nginx stop with it.
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/openfolia-sandbox"]
+
+# ---------------------------------------------------------------------------------------------
+# The public demo's launcher (#828; deploy/README.md, "The public demo"): the start page, the
+# proof of work, the limits and the routing to each visitor's sandbox, on CCMS_LAUNCHER_PORT
+# (8080). The same image runs the agent, the only process that talks to the container runtime:
+# `node dist/agent-main.js` (deploy/compose.demo.yaml). Neither needs a writable file system.
+FROM node-runtime AS sandbox-launcher
+COPY --from=build-launcher /out/launcher /app/launcher
+USER node
+WORKDIR /app/launcher
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["node", "-e", "fetch('http://' + (process.env.CCMS_LAUNCHER_HOST || '127.0.0.1') + ':' + (process.env.CCMS_LAUNCHER_PORT || '8080') + '/_demo/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+# Its secrets: CCMS_LAUNCHER_AGENT_TOKEN_FILE and CCMS_LAUNCHER_ADDRESS_SECRET_FILE, read by itself.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["node", "dist/main.js"]
+
+# ---------------------------------------------------------------------------------------------
+# The public demo's shared portal (#828): the static site build-demo-portal made, behind the
+# portal image's Caddy configuration on port 8080, as an unprivileged user. Read only; no API.
+FROM ${CADDY_IMAGE} AS demo-portal
+RUN setcap -r /usr/bin/caddy \
+ && apk del --no-cache libcap \
+ && addgroup -S -g 10001 portal \
+ && adduser -S -D -H -u 10001 -G portal -s /sbin/nologin portal
+COPY LICENSE THIRD-PARTY-NOTICES.md /usr/share/openfolia/
+COPY deploy/docker/portal/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build-demo-portal /out/demo-portal /app/portal/out/site
+USER 10001:10001
+ENV XDG_CONFIG_HOME=/tmp/caddy/config \
+    XDG_DATA_HOME=/tmp/caddy/data
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 
 # ---------------------------------------------------------------------------------------------
 # The editor (frontend/editor): the static build behind nginx, which proxies /api to the API

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <rect width="600" height="400" fill="#f3f4f6"/>
+  <rect x="40" y="200" width="520" height="170" rx="20" fill="#2f3a45"/>
+  <g stroke="#1f262e" stroke-width="3">
+    <rect x="90" y="240" width="44" height="80" rx="8" fill="#f2b632"/>
+    <rect x="170" y="240" width="44" height="80" rx="8" fill="#5b7fa6"/>
+    <rect x="410" y="240" width="44" height="80" rx="8" fill="#e9ecef"/>
+    <rect x="490" y="240" width="44" height="80" rx="8" fill="#c58bd6"/>
+  </g>
+  <rect x="270" y="250" width="56" height="70" rx="10" fill="#1f262e"/>
+  <rect x="276" y="110" width="44" height="80" rx="8" fill="#d9534f" stroke="#1f262e" stroke-width="3"/>
+  <path d="M288 190 v20 M308 190 v20" stroke="#c8ced6" stroke-width="5"/>
+  <path d="M262 30 V150 Q262 160 272 160 H280 M334 30 V150 Q334 160 324 160 H316" fill="none" stroke="#e9ecef" stroke-width="14" stroke-linecap="round"/>
+  <path d="M262 30 V150 M334 30 V150" fill="none" stroke="#2f3a45" stroke-width="3"/>
+  <path d="M420 150 V70" stroke="#e9573f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M420 70 l-12 16 M420 70 l12 16" fill="none" stroke="#e9573f" stroke-width="6" stroke-linecap="round"/>
+</svg>

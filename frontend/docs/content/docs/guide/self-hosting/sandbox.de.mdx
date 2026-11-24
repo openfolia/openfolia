@@ -1,14 +1,14 @@
 ---
 title: 'Öffentliche Sandbox'
-description: 'Eine Wegwerf-Instanz je Besucher einer öffentlichen Demo: der Sandbox-Modus, das Sandbox-Image, was ein Launcher tut und wie viele auf einen Server passen.'
+description: 'Eine Wegwerf-Instanz je Besucher einer öffentlichen Demo: der Sandbox-Modus, das Sandbox-Image, der Launcher davor, was die Demo speichert und wie viele auf einen Server passen.'
 articleId: 'guide.self-hosting.sandbox'
 ---
 
 Mit einer öffentlichen Demo probieren Fremde OpenFolia aus, ohne sich zu registrieren. Jeder
 Besucher bekommt eine eigene Instanz, die niemand sonst erreicht und die gelöscht wird, wenn er
-geht. OpenFolia liefert zwei Teile dafür: den **Sandbox-Modus** der API und das **Sandbox-Image**,
-das eine solche Instanz in einem Container ausführt. Den **Launcher**, den Dienst, der je
-Besucher einen Container startet und dessen Browser dorthin leitet, stellen Sie selbst.
+geht. OpenFolia liefert drei Teile dafür: den **Sandbox-Modus** der API, das **Sandbox-Image**,
+das eine solche Instanz in einem Container ausführt, und den **Launcher**, der je Besucher einen
+Container startet und dessen Browser dorthin leitet.
 
 ## Der Sandbox-Modus
 
@@ -67,18 +67,52 @@ Das Image erzeugt sein eigenes API-Token, seine Datenbank und seinen geheimen Sc
 startet nicht, wenn `CCMS_API_TOKEN`, `CCMS_DATABASE_URL`, `CCMS_SECRET_KEY`,
 `CCMS_WEBHOOKS_SECRET_KEY`, `CCMS_EDITOR_API_TOKEN` oder `CCMS_EDITOR_API_URL` gesetzt ist.
 
-## Was der Launcher tut
+## Der Launcher
 
-- **Löscht den Container, wenn die Sitzung endet.** Er liest `meta.endsAt` aus
-  `GET /api/sandbox` über Port 8080. Die Sandbox beendet sich nicht selbst.
-- **Begrenzt Festplatte, Speicher, CPU und Prozesse** mit den Optionen oben: Datenbank und
-  Inhalts-Repository liegen im tmpfs, seine Größe begrenzt also beide. Auch die Log-Grenze zählt:
-  Das Log des Containers liegt auf der Festplatte des Servers.
-- **Begrenzt die Anfragerate** im Proxy vor den Sandboxes.
-- **Ein Container je Besucher**, also je ein API-Prozess. Nie zwei Besucher in einer Sandbox.
-- **Hält die Sandboxes getrennt:** ein internes Netz je Sandbox, dem nur der Proxy des Launchers
-  beitritt (in einem gemeinsamen Netz erreichen sie gegenseitig ihren Port 8080).
-- **Richtet nie ein gemeinsames Portal oder einen MCP-Server auf eine Sandbox.**
+Der Launcher ist der Eingang der Demo (`ghcr.io/<owner>/openfolia/sandbox-launcher`). Seine
+Startseite auf Englisch und Deutsch sagt, was die Demo ist, und startet per Schaltfläche eine
+Sandbox. Danach ist der Browser des Besuchers im Editor seiner eigenen Sandbox, unter der Adresse
+der Demo.
+
+- **Rechenaufgabe statt Captcha.** Vor einem Start löst der Browser eine kleine Aufgabe (etwa eine
+  Sekunde auf einem Smartphone), sodass massenhaftes Starten echte Arbeit kostet.
+- **Ein Cookie bindet einen Browser an seine Sandbox.** Es ist zufällig, `HttpOnly`, `Secure` und
+  `SameSite=Strict`. Dieselbe Adresse in einem anderen Browser zeigt die Startseite, nie die
+  Sandbox.
+- **Grenzen:** höchstens `CCMS_LAUNCHER_MAX_SANDBOXES` gleichzeitig (Standard 5, für 8 GB), je
+  Adresse eine gleichzeitig und drei am Tag; eine Sandbox endet nach 30 Minuten ohne Aktivität
+  und spätestens nach 90; jede Adresse und jede Sandbox hat eine Anfragerate. Sind alle belegt,
+  zeigt die Startseite die Filme der Demo und versucht es selbst erneut.
+- **Aufräumen:** Eine Sandbox wird entfernt, wenn ihre Zeit um ist, alle, wenn der Launcher
+  stoppt, und jede unbekannte, wenn er startet.
+- **Getrennt gehalten:** Jede Sandbox hat ein eigenes internes Netz, dem nur der Launcher
+  beitritt. Nur der **Agent** des Launchers spricht mit der Container-Laufzeit, über ein privates
+  Netz und mit einem Token; der Launcher selbst hat nie den Socket der Laufzeit.
+- **Ein gemeinsames Portal**, einmal aus einer normalen Instanz mit den veröffentlichten
+  Anleitungen der Demo gebaut (`ghcr.io/<owner>/openfolia/demo-portal`), nie aus einer Sandbox:
+  Die Demo-Anmeldung einer Sandbox ist ein Admin.
+
+`deploy/compose.demo.yaml` führt den Launcher, seinen Agenten, das Portal und einen TLS-Proxy auf
+einem Server aus. Die Einstellungen (`CCMS_LAUNCHER_*`) stehen in `.env.example`, die Schritte in
+`deploy/README.md`, „The public demo“.
+
+### Was die Demo speichert
+
+Die Seite `/_demo/data` des Launchers sagt das den Besuchern auf Englisch und Deutsch, sodass Ihre
+Datenschutzerklärung darauf verweisen kann:
+
+- **Ein Cookie, technisch notwendig:** ein zufälliger Schlüssel, der den Browser mit seiner
+  Sandbox verbindet. Es braucht keine Einwilligung und läuft mit der Sandbox ab.
+- **Die IP-Adresse nur als Hash mit geheimem Schlüssel** (HMAC-SHA-256 mit einem Schlüssel der
+  Installation, `CCMS_LAUNCHER_ADDRESS_SECRET`), für die Grenzen je Adresse, höchstens 24 Stunden
+  im Arbeitsspeicher. Die Adresse selbst wird nie gespeichert, protokolliert oder an die Sandbox
+  weitergegeben.
+- **Die Sandbox, bis sie endet**, danach nichts: Was ein Besucher schreibt, wird mit ihr gelöscht.
+- **Protokolle ohne Adressen und Inhalte:** wann Sandboxen starten, enden oder abgelehnt werden,
+  und warum.
+
+Logo und Fußzeile verlinken Ihre Startseite, Ihr Impressum und Ihre Datenschutzerklärung, wenn Sie
+`CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` und `CCMS_LAUNCHER_PRIVACY_URL` setzen.
 
 ## Wie viele auf einen Server passen
 

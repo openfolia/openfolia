@@ -19,4 +19,7 @@ Tow the electric model only with all four wheels off the ground, on a transporte
 .Fit the towing eye
 . [[step-cover]]Press the cover in the bumper at its mark until it comes out.
 . [[step-screw]]Screw the towing eye in anticlockwise, as far as it goes.
++
+[#img-towing-eye]
+image::demo-image:towing-eye["Towing eye screwed into the bumper, turned anticlockwise",width=45%]
 . [[step-neutral]]Switch the vehicle on and select [.ui]##N##.

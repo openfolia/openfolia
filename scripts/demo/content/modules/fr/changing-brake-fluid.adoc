@@ -13,5 +13,8 @@ Le liquide de frein absorbe l'humidité avec le temps, ce qui abaisse son point 
 .Remplacer le liquide de frein
 . [[step-reservoir]]Aspirez l'ancien liquide de frein du réservoir situé sous le capot.
 . [[step-fill]]Remplissez le réservoir de liquide de frein DOT 4 neuf jusqu'au repère MAX.
++
+[#img-reservoir]
+image::demo-image:brake-fluid-reservoir["Réservoir de liquide de frein rempli jusqu'au repère MAX",width=45%]
 . [[step-bleed]]Purgez chaque frein de roue l'un après l'autre, en commençant par l'arrière droit, jusqu'à ce que le liquide sorte clair et sans bulles.
 . [[step-check]]Complétez jusqu'au repère MAX et contrôlez la course de la pédale avant l'essai sur route.

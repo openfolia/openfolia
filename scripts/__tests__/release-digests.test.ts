@@ -468,5 +468,9 @@ describe('the images for both architectures (#827)', () => {
       (s: Step) => s.run === 'deploy/sandbox-test.sh',
     );
     expect(test.if).toBe("matrix.image == 'sandbox'");
+    const launcher = images.jobs.build.steps.find(
+      (s: Step) => s.run === 'deploy/launcher-test.sh',
+    );
+    expect(launcher.if).toBe("matrix.image == 'sandbox-launcher'");
   });
 });

@@ -167,6 +167,33 @@ describe('the media library', () => {
     expect(tiles[1]?.innerHTML).toContain('[overflow-wrap:anywhere]');
   });
 
+  it('names a file by the module title in the interface language when no language is chosen', async () => {
+    const { el, settle, list } = await render();
+    const shared = asset(USED);
+    list().flush(
+      page([
+        {
+          ...shared,
+          meta: {
+            ...shared.meta,
+            usedIn: [
+              { moduleId: 'charging', lang: 'de', title: 'Laden' },
+              { moduleId: 'charging', lang: 'en', title: 'Charging' },
+            ],
+            usedInCount: 2,
+            languages: ['de', 'en'],
+          },
+        },
+      ]),
+    );
+    await settle();
+    const tile = el.querySelector(
+      '[data-slot="list-scroller"] [role="option"]',
+    )!;
+    expect(tile.textContent).toContain('Charging');
+    expect(tile.textContent).not.toContain('Laden');
+  });
+
   it('switches to the table, kept in the address', async () => {
     const { el, settle, list, router, http } = await render();
     list().flush(page([asset(USED, { title: 'Pump' })]));

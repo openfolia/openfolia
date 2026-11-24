@@ -45,8 +45,14 @@ export type TileLabel =
   | { readonly kind: 'unused'; readonly hash: string };
 
 export function tileLabel(item: AssetItem, lang = ''): TileLabel {
+  // The module in that language, else one in the same base language (`de-AT` for `de`), else the first.
+  const base = lang.split('-')[0];
   const first =
-    item.meta.usedIn.find((use) => use.lang === lang) ?? item.meta.usedIn[0];
+    item.meta.usedIn.find((use) => use.lang === lang) ??
+    (base
+      ? item.meta.usedIn.find((use) => use.lang.split('-')[0] === base)
+      : undefined) ??
+    item.meta.usedIn[0];
   if (first)
     return {
       kind: 'module',

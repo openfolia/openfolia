@@ -19,4 +19,7 @@ Schleppen Sie das Elektromodell nur mit allen vier Rädern auf einem Transporter
 .Abschleppöse anbringen
 . [[step-cover]]Drücken Sie die Abdeckung im Stoßfänger an ihrer Markierung, bis sie herausspringt.
 . [[step-screw]]Drehen Sie die Abschleppöse gegen den Uhrzeigersinn bis zum Anschlag ein.
++
+[#img-towing-eye]
+image::demo-image:towing-eye["Abschleppöse im Stoßfänger, gegen den Uhrzeigersinn eingedreht",width=45%]
 . [[step-neutral]]Schalten Sie das Fahrzeug ein und wählen Sie [.ui]##N##.

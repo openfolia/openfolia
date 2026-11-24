@@ -14,4 +14,7 @@ Schalten Sie das Hochvoltsystem vor allen Arbeiten an Hochvoltbauteilen spannung
 . [[step-off]]Schalten Sie das Fahrzeug aus und legen Sie den Schlüssel mindestens 5 m entfernt ab.
 . [[step-12v]]Klemmen Sie den Minuspol der 12-V-Batterie ab.
 . [[step-plug]]Ziehen Sie den orangefarbenen Servicestecker unter der Rücksitzbank ab und bewahren Sie ihn verschlossen auf.
++
+[#img-service-plug]
+image::demo-image:service-plug["Orangefarbener Servicestecker, nach oben aus seiner Buchse gezogen",width=45%]
 . [[step-wait]]Warten Sie 5 Minuten und prüfen Sie dann mit einem zweipoligen Spannungsprüfer, dass das System spannungsfrei ist.

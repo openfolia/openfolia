@@ -19,4 +19,7 @@ Ne remorquez le modèle électrique que sur un plateau, les quatre roues décoll
 .Monter l'anneau de remorquage
 . [[step-cover]]Appuyez sur le cache du pare-chocs au niveau de son repère jusqu'à ce qu'il se dégage.
 . [[step-screw]]Vissez l'anneau de remorquage à fond, dans le sens inverse des aiguilles d'une montre.
++
+[#img-towing-eye]
+image::demo-image:towing-eye["Anneau de remorquage vissé dans le pare-chocs, dans le sens inverse des aiguilles d'une montre",width=45%]
 . [[step-neutral]]Mettez le véhicule en marche et sélectionnez [.ui]##N##.

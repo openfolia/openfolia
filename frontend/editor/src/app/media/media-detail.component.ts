@@ -521,7 +521,7 @@ export class MediaDetailComponent {
   readonly label = input<string | null>(null);
 
   protected readonly name = computed(
-    () => this.label() ?? displayName(this.item()),
+    () => this.label() ?? displayName(this.item(), this.language.locale()),
   );
   /**
    * Whether the API serves the file: not one nobody uses (unless it is the person's own

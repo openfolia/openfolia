@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <rect width="600" height="400" fill="#f3f4f6"/>
+  <rect x="40" y="300" width="520" height="70" rx="12" fill="#2f3a45"/>
+  <rect x="200" y="110" width="200" height="200" rx="22" fill="#f6f1d0" stroke="#2f3a45" stroke-width="6"/>
+  <rect x="206" y="160" width="188" height="144" rx="16" fill="#f2b632" opacity="0.85"/>
+  <rect x="250" y="76" width="100" height="38" rx="10" fill="#1f262e"/>
+  <g stroke="#2f3a45" stroke-width="5" stroke-linecap="round">
+    <path d="M370 160 H392"/><path d="M370 250 H392"/>
+  </g>
+  <g font-family="sans-serif" font-size="22" font-weight="700" fill="#2f3a45">
+    <text x="410" y="168">MAX</text><text x="410" y="258">MIN</text>
+  </g>
+  <path d="M300 14 Q284 40 284 50 A16 16 0 0 0 316 50 Q316 40 300 14 Z" fill="#f2b632" stroke="#2f3a45" stroke-width="4"/>
+  <path d="M120 160 H190" stroke="#e9573f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M190 160 l-16 -12 M190 160 l-16 12" fill="none" stroke="#e9573f" stroke-width="6" stroke-linecap="round"/>
+</svg>

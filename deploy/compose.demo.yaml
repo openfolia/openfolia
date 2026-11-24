@@ -1,0 +1,134 @@
+# The public demo (#828; deploy/README.md, "The public demo"): the launcher, its agent, the shared
+# portal and a TLS proxy in front, on one host. Each visitor gets a sandbox of their own (the
+# sandbox image, #827), which the agent starts on a network of its own.
+#
+#   cd deploy
+#   docker compose -f compose.demo.yaml up -d
+#
+# Settings: deploy/.env (OPENFOLIA_DEMO_*, OPENFOLIA_IMAGES, OPENFOLIA_VERSION; .env.example,
+# "Container deployment") and deploy/demo.env, the launcher's CCMS_LAUNCHER_* settings (.env.example,
+# "The sandbox launcher"); the secrets in deploy/secrets/ (README). Only the proxy publishes ports.
+#
+# The networks:
+# - edge: the proxy, the launcher and the portal. The launcher listens on its fixed address here
+#   only, and reads X-Forwarded-For only from the proxy's (CCMS_LAUNCHER_PROXY_ADDRESSES).
+# - control (internal): the launcher and the agent. Only the agent mounts the container runtime's
+#   socket; the launcher asks it over this network, with a token.
+# - one internal network per sandbox, which the agent makes and joins the launcher to: no route
+#   out, no other sandbox.
+name: openfolia-demo
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  restart: unless-stopped
+
+services:
+  proxy:
+    <<: *hardening
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    # Ports 80 and 443 for a process without root: the one capability it needs.
+    cap_add: [NET_BIND_SERVICE]
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      OPENFOLIA_DEMO_HOST: ${OPENFOLIA_DEMO_HOST:?the demo's host name, e.g. demo.example.org}
+      OPENFOLIA_DEMO_PORTAL_HOST: ${OPENFOLIA_DEMO_PORTAL_HOST:?the shared portal's host name, e.g. manuals.demo.example.org}
+    volumes:
+      - ./docker/demo/Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy-data:/data
+      - proxy-config:/config
+    tmpfs: [/tmp]
+    networks:
+      edge:
+        ipv4_address: 172.30.0.2
+
+  launcher:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/sandbox-launcher:${OPENFOLIA_VERSION:-local}
+    # The agent joins this container to each sandbox's network by this name.
+    container_name: openfolia-demo-launcher
+    depends_on: [agent]
+    env_file:
+      - path: ./demo.env
+        required: false
+    environment:
+      CCMS_LAUNCHER_PUBLIC_URL: https://${OPENFOLIA_DEMO_HOST}
+      CCMS_LAUNCHER_PORTAL_URL: https://${OPENFOLIA_DEMO_PORTAL_HOST}/
+      CCMS_LAUNCHER_HOST: 172.30.0.10
+      CCMS_LAUNCHER_PORT: '8080'
+      CCMS_LAUNCHER_TRUST_PROXY: '1'
+      CCMS_LAUNCHER_PROXY_ADDRESSES: 172.30.0.2
+      CCMS_LAUNCHER_AGENT_URL: http://agent:8081
+      CCMS_LAUNCHER_AGENT_TOKEN_FILE: /run/secrets/launcher_agent_token
+      CCMS_LAUNCHER_ADDRESS_SECRET_FILE: /run/secrets/launcher_address_secret
+    secrets: [launcher_agent_token, launcher_address_secret]
+    # The films shown when all sandboxes are taken: mount their folder and set
+    # CCMS_LAUNCHER_FILMS_DIR=/films in demo.env, e.g.
+    # volumes: ['./films:/films:ro']
+    networks:
+      edge:
+        ipv4_address: 172.30.0.10
+      control: {}
+
+  agent:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/sandbox-launcher:${OPENFOLIA_VERSION:-local}
+    command: ['node', 'dist/agent-main.js']
+    # The socket's group, so `node` may use it (stat -c %g /var/run/docker.sock).
+    group_add:
+      [
+        '${OPENFOLIA_DEMO_DOCKER_GID:?the docker socket group ID: stat -c %g /var/run/docker.sock}',
+      ]
+    env_file:
+      - path: ./demo.env
+        required: false
+    environment:
+      CCMS_LAUNCHER_PUBLIC_URL: https://${OPENFOLIA_DEMO_HOST}
+      CCMS_LAUNCHER_AGENT_HOST: 0.0.0.0
+      CCMS_LAUNCHER_AGENT_PORT: '8081'
+      CCMS_LAUNCHER_AGENT_TOKEN_FILE: /run/secrets/launcher_agent_token
+      CCMS_LAUNCHER_SANDBOX_IMAGE: ${OPENFOLIA_IMAGES:-openfolia}/sandbox:${OPENFOLIA_VERSION:-local}
+      CCMS_LAUNCHER_CONTAINER: openfolia-demo-launcher
+    secrets: [launcher_agent_token]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('node:net').connect(8081, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks: [control]
+
+  portal:
+    <<: *hardening
+    image: ${OPENFOLIA_IMAGES:-openfolia}/demo-portal:${OPENFOLIA_VERSION:-local}
+    tmpfs: [/tmp]
+    networks: [edge]
+
+secrets:
+  launcher_agent_token:
+    file: ./secrets/launcher-agent-token
+  launcher_address_secret:
+    file: ./secrets/launcher-address-secret
+
+volumes:
+  proxy-data:
+  proxy-config:
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  control:
+    internal: true

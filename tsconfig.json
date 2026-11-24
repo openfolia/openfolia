@@ -47,6 +47,9 @@
     },
     {
       "path": "./backend/sandbox"
+    },
+    {
+      "path": "./backend/sandbox-launcher"
     }
   ]
 }

@@ -45,6 +45,24 @@ function makePng(width: number, height: number, [r, g, b]: number[]): Buffer {
 
 // The media library (`/media`): upload, the unused filter, delete with undo.
 test.describe('media library @area:media @api:assets @api:blobs', () => {
+  test('names a file by its module in the interface language, whatever language comes first', async ({
+    page,
+  }) => {
+    // The sample's picture is in the English module "Charging" and its German translation
+    // "Laden", which the API lists first: an English screen without a language filter shows the
+    // English title (a German one in the English demo was the bug).
+    await signIn(page, USERS.author);
+    await page.goto('/media');
+    const files = page.getByRole('region', { name: 'Files' });
+    await expect(files.getByRole('option', { name: 'Charging' })).toBeVisible();
+    await expect(files.getByRole('option', { name: 'Laden' })).toHaveCount(0);
+    await files.getByRole('option', { name: 'Charging' }).click();
+    const details = page.getByRole('complementary', { name: 'File details' });
+    await expect(
+      details.getByRole('heading', { level: 2, name: 'Charging' }),
+    ).toBeVisible();
+  });
+
   test('uploads an image into a revision; a fresh upload is neither unused nor deletable yet', async ({
     page,
     api,

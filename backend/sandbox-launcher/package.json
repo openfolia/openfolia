@@ -1,0 +1,52 @@
+{
+  "name": "@openfolia/sandbox-launcher",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "The public demo's launcher: a sandbox of their own for each visitor, its start page, limits and routing, and the agent that alone talks to the container runtime (README.md).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@openfolia/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "name": "sandbox-launcher",
+    "targets": {
+      "e2e": {
+        "executor": "nx:run-commands",
+        "dependsOn": [
+          {
+            "projects": [
+              "editor-e2e"
+            ],
+            "target": "browsers"
+          }
+        ],
+        "cache": true,
+        "inputs": [
+          "default",
+          "^production"
+        ],
+        "outputs": [],
+        "options": {
+          "cwd": "{projectRoot}",
+          "command": "node node_modules/@playwright/test/cli.js test --config e2e/playwright.config.ts"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@openfolia/theme": "workspace:*",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

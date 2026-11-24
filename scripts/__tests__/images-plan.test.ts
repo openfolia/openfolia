@@ -17,7 +17,7 @@ const never = () => {
 };
 
 describe('images-plan', () => {
-  it('names every image compose.yaml and compose.embedder.yaml run, the backup image included, and the sandbox', () => {
+  it('names every image the compose files run, the backup image included, and the sandbox', () => {
     expect(IMAGES).toEqual([
       'api',
       'backup',
@@ -26,8 +26,14 @@ describe('images-plan', () => {
       'mcp',
       'portal',
       'sandbox',
+      'sandbox-launcher',
+      'demo-portal',
     ]);
-    const compose = ['compose.yaml', 'compose.embedder.yaml']
+    const compose = [
+      'compose.yaml',
+      'compose.embedder.yaml',
+      'compose.demo.yaml',
+    ]
       .map((file) => readFileSync(join(root, 'deploy', file), 'utf8'))
       .join('\n');
     const used = new Set(
@@ -35,8 +41,9 @@ describe('images-plan', () => {
         (m) => m[1],
       ),
     );
-    // The sandbox runs on its own, one container per visitor (deploy/README.md), never in compose.
-    expect([...used, 'sandbox'].sort()).toEqual([...IMAGES].sort());
+    // The sandbox runs on its own, one container per visitor the launcher's agent starts (#828):
+    // compose.demo.yaml names it as the agent's CCMS_LAUNCHER_SANDBOX_IMAGE.
+    expect([...used].sort()).toEqual([...IMAGES].sort());
     // Every image is a target of the Dockerfile.
     const dockerfile = readFileSync(join(root, 'Dockerfile'), 'utf8');
     for (const image of IMAGES)
@@ -57,8 +64,8 @@ describe('images-plan', () => {
         affectedProjects,
       }),
     ).toEqual({
-      images: ['api', 'backup', 'sandbox'],
-      unaffected: ['editor', 'embedder', 'mcp', 'portal'],
+      images: ['api', 'backup', 'sandbox', 'demo-portal'],
+      unaffected: ['editor', 'embedder', 'mcp', 'portal', 'sandbox-launcher'],
     });
     expect(affectedProjects).toHaveBeenCalledTimes(1);
   });
@@ -98,11 +105,19 @@ describe('images-plan', () => {
       }),
     ).toEqual({
       images: ['editor', 'sandbox'],
-      unaffected: ['api', 'backup', 'embedder', 'mcp', 'portal'],
+      unaffected: [
+        'api',
+        'backup',
+        'embedder',
+        'mcp',
+        'portal',
+        'sandbox-launcher',
+        'demo-portal',
+      ],
     });
   });
 
-  it('follows Nx through the dependencies: a shared package rebuilds all six', () => {
+  it('follows Nx through the dependencies: a shared package rebuilds all that use it', () => {
     expect(
       planImages({
         changedFiles: ['packages/content-model/src/index.ts'],
@@ -114,25 +129,33 @@ describe('images-plan', () => {
           'portal',
         ],
       }).images,
-    ).toEqual(['api', 'backup', 'editor', 'mcp', 'portal', 'sandbox']);
+    ).toEqual([
+      'api',
+      'backup',
+      'editor',
+      'mcp',
+      'portal',
+      'sandbox',
+      'demo-portal',
+    ]);
   });
 
-  it('rebuilds only the portal image for a portal-only change', () => {
+  it('rebuilds the portal images, and only them, for a portal-only change', () => {
     expect(
       planImages({
         changedFiles: ['frontend/portal/build/refresh.ts'],
         affectedProjects: () => ['portal'],
       }).images,
-    ).toEqual(['portal']);
+    ).toEqual(['portal', 'demo-portal']);
   });
 
-  it('rebuilds the sandbox, and only it, for its embedded database and the demo it bakes', () => {
+  it('rebuilds the sandbox and the demo portal, and only them, for the database and the demo it bakes', () => {
     expect(
       planImages({
         changedFiles: ['backend/sandbox/src/database.ts'],
         affectedProjects: () => ['sandbox', 'editor-e2e'],
       }).images,
-    ).toEqual(['sandbox']);
+    ).toEqual(['sandbox', 'demo-portal']);
     // scripts/demo/ is the workflow project's, which no image is built from: the files decide.
     expect(
       planImages({
@@ -140,8 +163,16 @@ describe('images-plan', () => {
         affectedProjects: () => ['workflow'],
       }),
     ).toEqual({
-      images: ['sandbox'],
-      unaffected: ['api', 'backup', 'editor', 'embedder', 'mcp', 'portal'],
+      images: ['sandbox', 'demo-portal'],
+      unaffected: [
+        'api',
+        'backup',
+        'editor',
+        'embedder',
+        'mcp',
+        'portal',
+        'sandbox-launcher',
+      ],
     });
     expect(
       planImages({
@@ -149,6 +180,15 @@ describe('images-plan', () => {
         affectedProjects: () => ['workflow'],
       }).images,
     ).toEqual([]);
+  });
+
+  it('rebuilds the launcher for its own changes alone', () => {
+    expect(
+      planImages({
+        changedFiles: ['backend/sandbox-launcher/src/server.ts'],
+        affectedProjects: () => ['sandbox-launcher'],
+      }).images,
+    ).toEqual(['sandbox-launcher']);
   });
 
   it('builds nothing when no image project is affected', () => {

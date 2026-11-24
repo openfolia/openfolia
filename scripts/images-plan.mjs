@@ -20,7 +20,8 @@ import { pathToFileURL } from 'node:url';
  * (deploy/compose.embedder.yaml, #532); `portal` the reader portal (#819), which also renders
  * with render-html and content-model, so Nx rebuilds it with them; `sandbox` the public sandbox
  * (#827): the API, the editor and the embedded database in one image, with the demo's state baked
- * in (scripts/demo/, IMAGE_FILES).
+ * in (scripts/demo/, IMAGE_FILES); `sandbox-launcher` the public demo's launcher and agent (#828);
+ * `demo-portal` the demo's shared portal, built from the baked state with the portal (#828).
  */
 export const IMAGE_PROJECTS = Object.freeze({
   api: ['api'],
@@ -30,15 +31,18 @@ export const IMAGE_PROJECTS = Object.freeze({
   mcp: ['mcp'],
   portal: ['portal'],
   sandbox: ['api', 'editor', 'sandbox'],
+  'sandbox-launcher': ['sandbox-launcher'],
+  'demo-portal': ['api', 'sandbox', 'portal'],
 });
 
 /**
  * Files of no image's Nx project that one image is built from: a change to one rebuilds that
  * image. The sandbox bakes the demo's state with scripts/demo/ (the workflow project, which no
- * other image needs).
+ * other image needs), and the demo portal is built from it (scripts/demo/portal.mjs).
  */
 export const IMAGE_FILES = Object.freeze({
   sandbox: /^scripts\/demo\//,
+  'demo-portal': /^scripts\/demo\//,
 });
 
 export const IMAGES = Object.freeze(Object.keys(IMAGE_PROJECTS));

@@ -32,8 +32,8 @@ import { ROOT } from './paths.mjs';
 import { DEMO_PEOPLE, demoSeed } from './people.mjs';
 import { Client, populate } from './populate.mjs';
 
-const API_DIST = join(ROOT, 'backend/api/dist');
-const DB_SERVER = join(ROOT, 'backend/sandbox/dist/db-server.js');
+export const API_DIST = join(ROOT, 'backend/api/dist');
+export const DB_SERVER = join(ROOT, 'backend/sandbox/dist/db-server.js');
 const LANGS = ['en', 'de'];
 
 const log = (text) => console.log(`[bake] ${text}`);
@@ -53,7 +53,7 @@ export function bakeArgs(argv) {
   return { lang: values.lang, out };
 }
 
-const freePort = () =>
+export const freePort = () =>
   new Promise((done, fail) => {
     const server = createServer();
     server.on('error', fail);
@@ -64,7 +64,7 @@ const freePort = () =>
   });
 
 /** A child process whose output is kept for the error message; `ready` waits for a line. */
-function start(script, args, env, readyLine) {
+export function start(script, args, env, readyLine) {
   const child = spawn(process.execPath, [script, ...args], {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -92,14 +92,14 @@ function start(script, args, env, readyLine) {
   return { child, ready, ended, stop, output: () => output };
 }
 
-const run = (script, args, env) =>
+export const run = (script, args, env) =>
   execFileSync(process.execPath, [script, ...args], {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
   });
 
-async function waitForReady(url, api, timeoutMs = 120_000) {
+export async function waitForReady(url, api, timeoutMs = 120_000) {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
     if (api.child.exitCode !== null)

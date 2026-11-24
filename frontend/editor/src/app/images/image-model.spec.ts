@@ -66,6 +66,8 @@ describe('image model', () => {
       title: 'Charging',
       more: 1,
     });
+    // A regional interface language finds the module in its base language.
+    expect(tileLabel(shown, 'en-GB')).toMatchObject({ title: 'Charging' });
     expect(tileLabel(shown, 'fr')).toEqual({
       kind: 'module',
       title: 'Laden',

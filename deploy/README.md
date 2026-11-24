@@ -1280,8 +1280,8 @@ The demo's finished state is baked in when the image is built (`scripts/demo/bak
 English and in German: the sample manuals, two releases with their PDFs, the change set in review
 with its comments, and the demo people (author, reviewer, admin; demo sign-in, no passwords).
 
-A launcher (your own service in front of it, not part of OpenFolia) starts one container per
-visitor and routes the visitor's browser to its port:
+A launcher (OpenFolia's is in "The public demo", below) starts one container per visitor and
+routes the visitor's browser to its port, as here:
 
 ```sh
 docker network create --internal sandboxes          # once: no route out
@@ -1385,6 +1385,63 @@ The x86 numbers are expected to be close to these (the same Node and WebAssembly
 ARM VPS fits a demo with up to about 14 visitors at once; for more, the 64 GB host holds about
 four times as many, with renders queuing when many visitors cut releases at the same moment.
 Measure again on the chosen host with `deploy/sandbox-test.sh`.
+
+## The public demo
+
+`deploy/compose.demo.yaml` runs a public demo on one host (#828): the launcher
+(`sandbox-launcher`, backend/sandbox-launcher/README.md), its agent (the same image), the shared
+portal (`demo-portal`) and Caddy for TLS in front. Each visitor gets a sandbox of their own (the
+sandbox image above), which the agent starts on an internal network of its own.
+
+```sh
+cd deploy
+mkdir -p secrets
+openssl rand -hex 32 > secrets/launcher-agent-token
+openssl rand -hex 32 > secrets/launcher-address-secret
+# deploy/.env, as compose.yaml reads it:
+#   OPENFOLIA_IMAGES=ghcr.io/<owner>/openfolia
+#   OPENFOLIA_VERSION=vX.Y.Z
+#   OPENFOLIA_DEMO_HOST=demo.example.org
+#   OPENFOLIA_DEMO_PORTAL_HOST=manuals.demo.example.org
+#   OPENFOLIA_DEMO_DOCKER_GID=<stat -c %g /var/run/docker.sock>
+docker pull ghcr.io/<owner>/openfolia/sandbox:vX.Y.Z    # the agent starts it, never pulls it
+docker compose -f compose.demo.yaml up -d
+```
+
+`deploy/demo.env` takes the launcher's other settings (`.env.example`, "The sandbox launcher"):
+the cap (`CCMS_LAUNCHER_MAX_SANDBOXES`, default 5: one per GB after 2 GB for the host, "Sizing the
+sandboxes"), the links of the start page (homepage, imprint, privacy policy, documentation, each
+hidden unless set), the abuse contact and the films folder (`CCMS_LAUNCHER_FILMS_DIR`, mounted
+into the launcher). Point both host names at the server; Caddy gets their certificates.
+
+- **The networks.** `edge`: Caddy (172.30.0.2), the launcher (172.30.0.10, the only address it
+  listens on) and the portal. `control` (internal): the launcher and the agent. One internal
+  network per sandbox: the sandbox and the launcher, nothing else, no route out.
+- **The agent alone has the container runtime's socket** (Docker's: whoever holds it is root on
+  the host). It answers only the launcher's three requests (start, list, remove), with the shared
+  token, on the internal control network, and starts only `CCMS_LAUNCHER_SANDBOX_IMAGE` with the
+  limits above (`--memory 1g --memory-swap 1g --cpus 1`, the tmpfs, 256 processes, a capped log,
+  no capabilities, a read-only root file system), labelled with `CCMS_LAUNCHER_INSTANCE`; it
+  lists sandboxes by that label and removes only by their names, `openfolia-sandbox-<instance>-<id>`.
+- **The client's address.** The launcher reads X-Forwarded-For only from Caddy's address
+  (`CCMS_LAUNCHER_TRUST_PROXY=1`, `CCMS_LAUNCHER_PROXY_ADDRESSES`) and refuses any other peer
+  (403 `untrusted-peer`): a sandbox shares a network with the launcher, but cannot reach its
+  listener, nor pass for a visitor.
+- **What the demo stores** (`/_demo/data` on the demo's host, for your privacy policy): one
+  strictly necessary cookie that expires with the sandbox, the address only as a keyed hash
+  (`CCMS_LAUNCHER_ADDRESS_SECRET`) for 24 hours in memory, logs without addresses or content.
+  Caddy's own access log is off by default; if you turn it on, say so in your privacy policy.
+- **The portal** is static: the demo's released manuals for owners, in English and German, built
+  when the image is built from a normal instance over the baked state (`scripts/demo/portal.mjs`),
+  never from a sandbox's API, whose demo sign-in is an admin.
+
+**The launcher test.** `deploy/launcher-test.sh` builds the sandbox and launcher images (or takes
+`SANDBOX_IMAGE` and `LAUNCHER_IMAGE`) and runs the agent and the launcher as above: two visitors
+each start a sandbox through the launcher in under 10 seconds and reach their own, one without a
+cookie gets the start page; each sandbox runs with its limits on its own internal network; neither
+reaches the other, the launcher's listener, the agent or the outside; a third start over the cap
+is refused; when the launcher stops, every sandbox and network is gone, and one left behind is
+removed at its next start. CI runs it on both architectures for every change to the launcher.
 
 ## Building the images
 

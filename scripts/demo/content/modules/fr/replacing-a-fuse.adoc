@@ -16,6 +16,9 @@ module::switch-off[]
 .Remplacer un fusible
 . [[step-open]]Ouvrez le couvercle de la boîte à fusibles, à l'extrémité droite de la planche de bord.
 . [[step-pull]]Retirez le fusible avec la pince en plastique clipsée à l'intérieur du couvercle.
++
+[#img-puller]
+image::demo-image:fuse-puller["Pince en plastique retirant un fusible du boîtier",width=45%]
 . [[step-check]]Un fusible dont le filament est coupé a grillé. Remplacez-le par un fusible de même calibre.
 . [[step-close]]Refermez le couvercle.
 
