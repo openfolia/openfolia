@@ -33,7 +33,7 @@ registry_image=registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58
 base_image=$(sed -n 's/^ *image: \(postgres:[^ ]*@sha256:[0-9a-f]\{64\}\)$/\1/p' "$here/compose.yaml")
 repo="localhost:$port/digests-test/openfolia"
 tag=v9.9.9
-images="api backup editor embedder mcp portal sandbox"
+images="api backup editor embedder mcp portal sandbox sandbox-launcher demo-portal"
 work=$(mktemp -d)
 own_registry=
 

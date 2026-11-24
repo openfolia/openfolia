@@ -138,14 +138,14 @@ const de: Record<TextKey, string> = {
   'ready.title': 'Probieren Sie OpenFolia in einer Sandbox',
   'ready.titleSoft': 'nur für Sie.',
   'ready.lede':
-    'Der ganze Editor mit Beispielinhalten: eine Betriebsanleitung und ein Serviceheft für ein erfundenes Auto, auf Englisch und Deutsch. Zwei Releases mit ihren PDFs und eine Revision, die auf ihre Prüfung wartet.',
+    'Der ganze Editor mit Beispielinhalten: eine Betriebsanleitung und ein Serviceheft für ein erfundenes Auto, auf Englisch und Deutsch. Zwei Veröffentlichungen mit ihren PDFs und eine Überarbeitung, die auf ihre Prüfung wartet.',
   'people.label': 'Die Demo-Personen',
   'people.author.role': 'Autorin',
-  'people.author.does': 'Schreibt Module und beginnt Revisionen.',
+  'people.author.does': 'Schreibt Module und beginnt Überarbeitungen.',
   'people.reviewer.role': 'Prüfer',
   'people.reviewer.does': 'Kommentiert Änderungen und gibt sie frei.',
   'people.admin.role': 'Administratorin',
-  'people.admin.does': 'Führt Freigegebenes zusammen und erstellt Releases.',
+  'people.admin.does': 'Führt Freigegebenes zusammen und erstellt Veröffentlichungen.',
   'people.note': 'Sie wechseln jederzeit zwischen ihnen, über das Kontomenü.',
   'private.title': 'Ihre eigene Sandbox: nur Sie sehen sie.',
   'private.text':
@@ -189,7 +189,7 @@ const de: Record<TextKey, string> = {
   'films.editor': 'Ein Modul schreiben',
   'films.review': 'Eine Änderung prüfen',
   'films.manual-builder': 'Eine Anleitung zusammenstellen',
-  'films.releases': 'Ein Release erstellen',
+  'films.releases': 'Eine Veröffentlichung erstellen',
   'films.play': 'Abspielen: {title}',
   'error.title': 'Ihre Sandbox ist nicht gestartet.',
   'error.lede':
