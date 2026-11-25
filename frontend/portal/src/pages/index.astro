@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import SearchField from '../components/SearchField.astro';
 import { textsFor } from '../lib/i18n.ts';
-import { catalogue, formatDate, href, manualPath, siteBrand } from '../lib/site.ts';
+import { catalogue, entryPath, formatDate, href, manualPath, siteBrand } from '../lib/site.ts';
 
 const { s, cards } = catalogue();
 const t = textsFor(s.lang);
@@ -36,8 +36,9 @@ const FOLD = 4;
           <ul class="entries">
             {release.manuals.slice(0, SHOWN).map((manual) => (
               <li class="entry">
-                <a class="entry__title" href={href(manualPath(release, manual, manual.variants[0]!))}>{manual.title}</a>
-                {manual.variants.length > 1 && (
+                <a class="entry__title" href={href(entryPath(release, manual))}>{manual.title}</a>
+                {manual.guide && <span class="kind-tag">{t.updateGuide}</span>}
+                {!manual.guide && manual.variants.length > 1 && (
                   <ul class="entry__variants" aria-label={t.variants}>
                     {manual.variants.slice(0, FOLD).map((v) => (
                       <li><a href={href(manualPath(release, manual, v))}>{v.label}</a></li>

@@ -40,6 +40,25 @@ const MAX_API_BODY = 2048;
 // clock (backend/api/src/sandbox/sandbox.module.ts), so the two agree on when it ends.
 const QUIET =
   /^\/(?:api\/(?:sandbox|health|me\/notifications\/unread-count)(?:[/?]|$)|healthz$)/;
+/**
+ * A request a sandbox's web server answers from its files (deploy/docker/editor/nginx.conf): the
+ * editor's code, styles, fonts, translations and its index page. One cold load of the editor asks
+ * for about 76 of them (#870), so they have a bucket of their own and never use up the API's.
+ * Only a plain path, as the sandbox will see it: anything percent-encoded could name `/api` once
+ * the sandbox decodes it, and counts as an API request, as do `/api`, `/d` and `/mcp` (the API's
+ * and the MCP server's doors) and every method but GET and HEAD.
+ */
+export function isFileRequest(
+  method: string | undefined,
+  path: string,
+): boolean {
+  return (
+    (method === 'GET' || method === 'HEAD') &&
+    /^\/[\w./-]*$/.test(path) &&
+    !/^\/+(?:api|d|mcp)(?:\/|$)/i.test(path)
+  );
+}
+
 const HOP_BY_HOP = new Set([
   'connection',
   'keep-alive',
@@ -79,6 +98,16 @@ export function createLauncherServer(deps: LauncherDeps): Server {
     settings.ratePerSecond * 10,
     now,
   );
+  // A sandbox's files, per sandbox: ten times the rate, a hundred seconds' worth in a burst (2000
+  // at the default rate), so 20 editor loads at once fit (#870). Static files grow no rows.
+  const fileRate = new RateLimiter(
+    settings.ratePerSecond * 10,
+    settings.ratePerSecond * 100,
+    now,
+  );
+  // Proxied requests under way, per sandbox: a burst of slow downloads cannot hold the launcher's
+  // sockets for everyone else (#876). 256 default: 20 tabs at six connections each is 120.
+  const inFlight = new Map<string, number>();
   const https = settings.publicUrl.protocol === 'https:';
   const origin = settings.publicUrl.origin;
   const films = {
@@ -474,6 +503,11 @@ export function createLauncherServer(deps: LauncherDeps): Server {
         answer.on('error', () => res.destroy());
       },
     );
+    // A visitor who gives up frees the sandbox's socket too, so aborting never works around the
+    // in-flight cap (#876).
+    res.once('close', () => {
+      if (!res.writableFinished) upstream.destroy();
+    });
     upstream.on('timeout', () => upstream.destroy(new Error('timeout')));
     upstream.on('error', (error: NodeJS.ErrnoException) => {
       if (
@@ -561,11 +595,18 @@ export function createLauncherServer(deps: LauncherDeps): Server {
         }
 
         if (session) {
-          // The visitor and the sandbox both: a sandbox's requests, and one address's.
-          const wait = Math.max(
-            sandboxRate.take(session.id),
-            pageRate.take(addr),
-          );
+          // A file: the sandbox's file bucket. Anything else: the visitor and the sandbox both, a
+          // sandbox's requests and one address's.
+          if ((inFlight.get(session.id) ?? 0) >= settings.maxInFlight)
+            return json(
+              res,
+              429,
+              { code: 'rate-limited' },
+              { 'retry-after': '1' },
+            );
+          const wait = isFileRequest(req.method, path)
+            ? fileRate.take(session.id)
+            : Math.max(sandboxRate.take(session.id), pageRate.take(addr));
           if (wait > 0)
             return json(
               res,
@@ -574,6 +615,12 @@ export function createLauncherServer(deps: LauncherDeps): Server {
               { 'retry-after': String(wait) },
             );
           if (!QUIET.test(path)) sandboxes.touch(session);
+          inFlight.set(session.id, (inFlight.get(session.id) ?? 0) + 1);
+          res.once('close', () => {
+            const left = (inFlight.get(session.id) ?? 1) - 1;
+            if (left > 0) inFlight.set(session.id, left);
+            else inFlight.delete(session.id);
+          });
           return proxy(req, res, session);
         }
 

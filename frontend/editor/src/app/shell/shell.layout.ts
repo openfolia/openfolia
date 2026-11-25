@@ -405,12 +405,19 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
         tabindex="-1"
       >
         <!-- A public sandbox's banner (issue 826): the page column's first line, nothing otherwise. -->
+        <!-- A centred tour step keeps clear of it (data-tip-keep-clear, issue 868). -->
         @if (sandbox.on()) {
-          <of-sandbox-banner class="mb-3" [measure]="true" />
+          <of-sandbox-banner
+            class="mb-3"
+            [measure]="true"
+            data-tip-keep-clear
+          />
         }
         @if (provider.sidebarService.isMobile()) {
+          <!-- A tour step about the sidebar points here while it is closed (issue 868). -->
           <button
             z-sidebar-trigger
+            data-tip="shell.menu"
             class="text-muted-foreground mb-2 size-8"
             [attr.aria-label]="'editor.shell.openSidebar' | transloco"
           ></button>

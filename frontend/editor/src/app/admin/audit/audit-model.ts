@@ -14,6 +14,15 @@ export const AUDIT_PAGE_SIZES = [25, 50, 100] as const;
 export const ACTOR_KINDS = ['user', 'service'] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
 
+/** The kinds of event (#877): changes, and the reads of service accounts. */
+export const AUDIT_KINDS = ['write', 'read'] as const;
+export type AuditKind = (typeof AUDIT_KINDS)[number];
+
+/** `?kind=`: `write` or `read`, as `filter[kind]` takes it. */
+export function validKind(value: string): boolean {
+  return (AUDIT_KINDS as readonly string[]).includes(value);
+}
+
 /** A subject type or action key part: a lowercase key, as the API takes it. */
 const KEY = /^[a-z][a-z0-9-]*$/;
 const KEY_MAX = 64;
@@ -84,6 +93,8 @@ export const SUBJECT_ID_MAX = 500;
  * is shown as its key.
  */
 export const ACTION_TEXTS: Readonly<Record<string, string>> = {
+  'api.read': 'editor.admin.audit.actions.apiRead',
+  'api.read-gap': 'editor.admin.audit.actions.apiReadGap',
   'asset.delete': 'editor.admin.audit.actions.assetDelete',
   'asset.upload': 'editor.admin.audit.actions.assetUpload',
   'audit-log.export': 'editor.admin.audit.actions.auditLogExport',
@@ -217,6 +228,7 @@ export const SUBJECT_TYPE_TEXTS: Readonly<Record<string, string>> = {
   'backup-request': 'editor.admin.audit.subjects.backupRequest',
   'backup-settings': 'editor.admin.audit.subjects.backupSettings',
   'group-mapping': 'editor.admin.audit.subjects.groupMapping',
+  route: 'editor.admin.audit.subjects.route',
 };
 
 /** Where a subject is shown in the editor, or null when it has no screen of its own. */
@@ -317,5 +329,42 @@ export function auditLogLink(subject: AuditSubject): {
   return {
     commands: ['/admin', 'audit'],
     queryParams: { type: subject.type, id: subject.id },
+  };
+}
+
+/** What a read event (#877, kind `read`) says beyond its path, as the row shows it. */
+export interface ReadFacts {
+  /** The client's own name for itself (`mcp/<tool>` for the MCP server). */
+  readonly client?: string;
+  /** The ref asked for. */
+  readonly ref?: string;
+  /** The HTTP status, when it was no success (400 and up). */
+  readonly failedStatus?: number;
+  /** Whether the client went away before the answer was complete. */
+  readonly aborted: boolean;
+  /** For a gap (`api.read-gap`): how many reads were not recorded one by one. */
+  readonly unrecorded?: number;
+}
+
+/** A read event's facts from its `data`; null for a change. */
+export function readFacts(event: AuditEventItem): ReadFacts | null {
+  const a = event.attributes;
+  if (a.kind !== 'read') return null;
+  const text = (key: string) => {
+    const value = a.data[key];
+    return typeof value === 'string' && value !== '' ? value : undefined;
+  };
+  const status = a.data['status'];
+  const client = text('client');
+  const ref = text('ref');
+  const count = a.data['count'];
+  return {
+    ...(a.action === 'api.read-gap' &&
+      typeof count === 'number' && { unrecorded: count }),
+    ...(client !== undefined && { client }),
+    ...(ref !== undefined && { ref }),
+    ...(typeof status === 'number' &&
+      status >= 400 && { failedStatus: status }),
+    aborted: a.data['aborted'] === true,
   };
 }

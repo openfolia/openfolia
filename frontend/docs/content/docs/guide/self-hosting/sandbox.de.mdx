@@ -90,8 +90,15 @@ der Demo.
   Sandbox.
 - **Grenzen:** höchstens `CCMS_LAUNCHER_MAX_SANDBOXES` gleichzeitig (Standard 5, für 8 GB), je
   Adresse eine gleichzeitig und drei am Tag; eine Sandbox endet nach 30 Minuten ohne Aktivität
-  und spätestens nach 90; jede Adresse und jede Sandbox hat eine Anfragerate. Sind alle belegt,
-  zeigt die Startseite die Filme der Demo und versucht es selbst erneut.
+  und spätestens nach 90; jede Adresse und jede Sandbox hat eine Anfragerate
+  (`CCMS_LAUNCHER_RATE`, Standard 20 pro Sekunde, zehn Sekunden auf einmal). Die eigenen Dateien
+  des Editors (sein Code, seine Styles, Schriften und Übersetzungen, beim ersten Laden etwa 80)
+  haben je Sandbox ein eigenes, zehnmal so großes Kontingent, sodass es auch dann reicht, wenn
+  jemand den Editor in vielen Tabs zugleich öffnet. Eine Sandbox darf außerdem höchstens
+  `CCMS_LAUNCHER_MAX_IN_FLIGHT` Anfragen zugleich offen haben (Standard 256, genug für etwa 40
+  Tabs); darüber antwortet der Launcher mit 429, bis eine endet, damit ein Schwall langsamer
+  Downloads den Launcher nicht für alle anderen blockiert. Sind alle belegt, zeigt die Startseite die
+  Filme der Demo und versucht es selbst erneut.
 - **Aufräumen:** Eine Sandbox wird entfernt, wenn ihre Zeit um ist, alle, wenn der Launcher
   stoppt, und jede unbekannte, wenn er startet.
 - **Getrennt gehalten:** Jede Sandbox hat ein eigenes internes Netz, dem nur der Launcher
@@ -122,6 +129,18 @@ Datenschutzerklärung darauf verweisen kann:
 
 Logo und Fußzeile verlinken Ihre Startseite, Ihr Impressum und Ihre Datenschutzerklärung, wenn Sie
 `CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` und `CCMS_LAUNCHER_PRIVACY_URL` setzen.
+
+### Wenn der Editor nicht lädt
+
+Lässt sich eine Datei nicht abrufen, mit der der Editor startet (eine unterbrochene Verbindung,
+eine abgelehnte Anfrage), zeigt die Seite **Der Editor wurde nicht geladen** mit **Erneut
+versuchen**, in der Sprache der Besucherin oder des Besuchers, statt leer zu bleiben. Was in der
+Sandbox gespeichert ist, bleibt erhalten. Kommt es immer wieder, zeigen die Entwicklerwerkzeuge des
+Browsers die fehlgeschlagene Anfrage (ein 429 `rate-limited` ist die Anfragerate des Launchers);
+`node deploy/launcher-parallel-loads.mjs
+https://<Ihr Demo-Host>` öffnet den Editor in 20 Tabs zugleich und listet jede fehlgeschlagene
+Anfrage auf (es startet eine Sandbox, die zum Tageslimit Ihrer Adresse zählt, und beendet sie
+danach).
 
 ### Wenn eine Sandbox endet
 

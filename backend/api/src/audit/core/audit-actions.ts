@@ -5,9 +5,14 @@
  * test (`frontend/editor/tools/i18n.test.mjs`) then asks for its label in
  * every language. An action no longer written stays listed: the log keeps
  * the events it wrote. Includes the ones written in SQL (`role.update` by
- * migrations, `audit-log.prune` by retention).
+ * migrations, `audit-log.prune` by retention). The reads (#877, kind `read`,
+ * `READ_ACTIONS`): `api.read`, a service account's request that changes
+ * nothing, and `api.read-gap`, reads of an account that could not be
+ * recorded one by one, with their count.
  */
 export const AUDIT_ACTIONS = [
+  'api.read',
+  'api.read-gap',
   'asset.delete',
   'asset.upload',
   'audit-log.export',

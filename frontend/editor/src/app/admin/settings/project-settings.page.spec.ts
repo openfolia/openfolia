@@ -550,7 +550,13 @@ describe('ProjectSettingsPage', () => {
     const groups = [...t.el().querySelectorAll('legend')].map((l) =>
       l.textContent?.trim(),
     );
-    expect(groups).toEqual(['Signal words', 'Notes', 'Captions', 'Other']);
+    expect(groups).toEqual([
+      'Signal words',
+      'Notes',
+      'Captions',
+      'Update guides',
+      'Other',
+    ]);
     const tip = () =>
       t.el().querySelector<HTMLInputElement>('#output-label-tip');
     expect(tip()?.placeholder).toBe('Tipp');

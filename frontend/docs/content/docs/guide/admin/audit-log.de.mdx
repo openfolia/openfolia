@@ -1,12 +1,18 @@
 ---
 title: 'Das Audit-Log'
-description: 'Sehen, wer was wann geändert hat, das Log filtern und als CSV oder JSON Lines exportieren.'
+description: 'Sehen, wer was wann geändert hat und welcher Service-Account was gelesen hat, das Log filtern und als CSV oder JSON Lines exportieren.'
 articleId: 'guide.admin.audit-log'
 ---
 
 Das Audit-Log zeichnet jede Zustandsänderung auf: eine freigegebene Überarbeitung, eine
 zugewiesene Rolle, einen gelöschten Webhook, einen Export. Jedes Ereignis sagt, wann, wer, was
 geschah, woran, und den Kommentar dazu. Ereignisse werden nie geändert.
+
+Es zeichnet auch auf, was **Service-Accounts lesen**: Jeder Lesezugriff (ein `GET` oder `HEAD`),
+den das Token eines Service-Accounts an die API stellt, ob von einem Portal-Build, einer Pipeline
+oder einem KI-Assistenten über [MCP](/de/guides/mcp), ist ein Ereignis. Was ein Service-Account
+ändert, steht als eigenes Änderungsereignis da; eine Änderung, die die API abgelehnt hat, wird
+nicht aufgezeichnet. Lesezugriffe von Personen im Editor werden nicht aufgezeichnet.
 
 ## Das Log lesen
 
@@ -23,8 +29,33 @@ Modul, die Anleitung oder die Prüfung der Überarbeitung.
 Eine Überarbeitung, die ihr Autor allein freigegeben hat, ist mit **Durch den Autor** markiert.
 Siehe [Die eigene Überarbeitung freigeben](/de/guide/review/self-approval).
 
+## Lesezugriffe von Service-Accounts
+
+Ein Lesezugriff steht als **Über die API gelesen** (`api.read`) da. Sein Objekt ist die gelesene
+**API-Route**, etwa `/modules/en/charging`, darunter die Ref, wenn eine angegeben war
+(**auf main**). Die Abzeichen in der Zeile sagen mehr:
+
+- **Der Client**, etwa `mcp/search`: Der MCP-Server nennt das Werkzeug, das gelesen hat, und
+  seine eigenen Prüfungen `mcp`. Der Client nennt sich selbst, nehmen Sie das als Hinweis; der
+  Service-Account ist, was das Token belegt.
+- **Antwort 404** (oder ein anderer Status ab 400): Die API hat abgelehnt oder konnte nicht
+  antworten.
+
+![Die Lesezugriffe eines Service-Accounts, gefiltert auf Lesezugriffe: jeder mit Route, Client und einem abgelehnten Status](/images/guide/de/admin-audit-reads.webp)
+
+**Details anzeigen** gibt den Rest: die ID des Tokens (die die Liste **Tokens** des
+Service-Accounts zeigt, nie das Token selbst), die Route, den Status und den gelesenen Commit.
+
+Lesezugriffe fallen nie spurlos weg. Liest ein Service-Account schneller, als der Server jeden
+Lesezugriff aufzeichnen kann, oder schlägt das Aufzeichnen kurz fehl, stehen die nicht einzeln
+aufgezeichneten Lesezugriffe als **Lesezugriffe nicht einzeln aufgezeichnet** (`api.read-gap`)
+da: der Service-Account mit einem Abzeichen wie **312 Lesezugriffe nicht aufgezeichnet**, in den
+Details der erste und der letzte davon. Eine Lücke wird so lange aufbewahrt wie Lesezugriffe.
+
 ## Das Log filtern
 
+- **Alle Ereignisse**, **Änderungen** oder **Lesezugriffe**: Zustandsänderungen, die
+  Lesezugriffe von Service-Accounts oder beides.
 - **Akteur**: alle, alle Personen, alle Service-Accounts oder eine bestimmte Person bzw. ein
   bestimmter Service-Account.
 - **Objekt**: die Art dessen, woran es geschah; **Objekt-ID** grenzt auf eines ein.
@@ -37,6 +68,9 @@ gefiltertes Log lässt sich also als Lesezeichen speichern oder teilen.
 Aus einem Modul oder einer Prüfung öffnet **Im Audit-Log anzeigen** in deren Menü das Log auf sie
 gefiltert.
 
+Um zu sehen, was ein Service-Account gelesen hat, wählen Sie **Lesezugriffe**, dann den Account
+unter **Akteur**.
+
 ## Das Log exportieren
 
 1. Setzen Sie die Filter für das, was Sie brauchen, etwa einen Zeitraum.
@@ -47,5 +81,8 @@ Jeder Export wird selbst im Log festgehalten: **Audit-Log exportiert**.
 
 ## Alte Ereignisse
 
-Wer den Server betreibt, kann eine Aufbewahrungsfrist festlegen. Ältere Ereignisse werden dann
-entfernt, und das Entfernen wird im Log festgehalten: **Alte Audit-Ereignisse entfernt**.
+Lesezugriffe werden nach **90 Tagen** entfernt, sofern wer den Server betreibt keine andere Frist
+festlegt. Änderungen bleiben, bis der Betreiber für sie eine Aufbewahrungsfrist festlegt; ältere
+Änderungen werden dann entfernt. Jedes Entfernen wird im Log festgehalten: **Alte
+Audit-Ereignisse entfernt** (bei Lesezugriffen mit `kind: read` in den Details). Siehe
+[Senke und Aufbewahrung des Audit-Logs](/de/guide/self-hosting/audit-log#aufbewahrung).

@@ -53,6 +53,7 @@ describe('DrizzleAuditLog', () => {
     expect(items[1]).toEqual({
       id: expect.stringMatching(/^\d+$/),
       at: expect.any(Date),
+      kind: 'write',
       actor: { kind: 'user', id: 'sample-admin' },
       action: 'role.assign',
       subject: { type: 'user', id: 'sample-reader' },
@@ -60,6 +61,26 @@ describe('DrizzleAuditLog', () => {
       data: { role: 'reviewer', nested: { list: [1, null, true] } },
     });
     expect(items[0]).toMatchObject({ comment: null, data: {} });
+  });
+
+  // #877: reads are events of their own kind, listed apart from changes.
+  it('records a read as kind read, and filters by kind', async () => {
+    await unit.run(async (tx) => {
+      await log.record(tx, admin, event());
+      await log.record(tx, admin, {
+        kind: 'read',
+        action: 'api.read',
+        subject: { type: 'route', id: '/modules/en/charging' },
+        data: { tokenId: '0123456789abcdef', status: 200 },
+      });
+    });
+    const reads = await log.list({ kind: 'read' }, all);
+    expect(reads.items.map((e) => [e.kind, e.action])).toEqual([
+      ['read', 'api.read'],
+    ]);
+    const writes = await log.list({ kind: 'write' }, all);
+    expect(writes.items.map((e) => e.kind)).toEqual(['write']);
+    expect((await log.list({}, all)).total).toBe(2);
   });
 
   it('keeps no event when the work fails after recording (same transaction)', async () => {
@@ -305,6 +326,13 @@ describe('DrizzleAuditLog', () => {
     await expect(insert({ subjectType: 'User' })).rejects.toThrow();
     await expect(insert({ subjectId: '' })).rejects.toThrow();
     await expect(insert({ comment: '' })).rejects.toThrow();
+    // #877: a read is one of the read actions, and only a read is.
+    await expect(
+      insert({ kind: 'read', action: 'api.read-gap' }),
+    ).resolves.toBeDefined();
+    await expect(insert({ kind: 'read' })).rejects.toThrow();
+    await expect(insert({ action: 'api.read' })).rejects.toThrow();
+    await expect(insert({ kind: 'other' })).rejects.toThrow();
     await expect(
       insert({ data: [1] as unknown as Record<string, unknown> }),
     ).rejects.toThrow();

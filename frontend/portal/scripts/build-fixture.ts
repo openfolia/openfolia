@@ -1,6 +1,6 @@
 // `pnpm nx build portal`: the portal built end to end from the fixture content repository
 // (testing/fixture-repo.ts) through the real API, booted in this process (testing/fixture-api.ts):
-// a public site in English and German and an internal one in English, in dist-fixture/, which
+// a public site and an internal one, each in English and German, in dist-fixture/, which
 // the browser tests (e2e/) check. The API has a branding (testing/fixture-brand.ts): the internal
 // site shows it, the public one is built with the branding off and shows the default look. Each build runs `scripts/build.ts` in a process of its own,
 // as a deployment does, with the token in its environment only; its output (the log) and its
@@ -61,7 +61,8 @@ await withFixtureApi(async (api) => {
     {
       ...common,
       CCMS_PORTAL_AUDIENCE: 'internal',
-      CCMS_PORTAL_LANGUAGES: 'en',
+      // Both languages: the update guide (#907) is internal, and is checked in each.
+      CCMS_PORTAL_LANGUAGES: 'en,de',
       CCMS_PORTAL_OUT_DIR: join(OUT, 'internal'),
     },
     api.tokens.internal,

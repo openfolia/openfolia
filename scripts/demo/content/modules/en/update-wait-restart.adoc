@@ -1,0 +1,10 @@
+= Wait for the restart
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+The display restarts twice. Do not open the doors until the welcome screen appears.

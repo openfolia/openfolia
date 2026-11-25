@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Export audit events
-         * @description Every event the filters select (the same filters as `GET /audit-events`, so the file holds exactly what the list pages through), newest first, as a download (`Content-Disposition: attachment`, `nosniff`, `Cache-Control: no-store`), streamed. `csv`: RFC 4180, a header row, lines ending in CRLF, columns `id`, `at`, `actor kind`, `actor id`, `action`, `subject type`, `subject id`, `comment`, `data` (`at` in ISO 8601 UTC, `data` as JSON text; a value a spreadsheet would run as a formula starts with `'`). `jsonl`: JSON Lines, one event per line with `id` and the members of `AuditEventAttributes`. The export itself is recorded first, as `audit-log.export` (`data`: the format and the filters given); when that fails, nothing is sent (500). A failure once the file has begun cuts the connection off, so a broken download never looks complete. `HEAD` is 405 (`Allow: GET`): every answer records an export. Needs the `admin.roles` permission.
+         * @description Every event the filters select (the same filters as `GET /audit-events`, so the file holds exactly what the list pages through), newest first, as a download (`Content-Disposition: attachment`, `nosniff`, `Cache-Control: no-store`), streamed. `csv`: RFC 4180, a header row, lines ending in CRLF, columns `id`, `at`, `actor kind`, `actor id`, `action`, `subject type`, `subject id`, `comment`, `data`, `kind` (`at` in ISO 8601 UTC, `data` as JSON text; a value a spreadsheet would run as a formula starts with `'`). `jsonl`: JSON Lines, one event per line with `id` and the members of `AuditEventAttributes`. The export itself is recorded first, as `audit-log.export` (`data`: the format and the filters given); when that fails, nothing is sent (500). A failure once the file has begun cuts the connection off, so a broken download never looks complete. `HEAD` is 405 (`Allow: GET`): every answer records an export. Needs the `admin.roles` permission.
          */
         get: operations["AuditExport_export"];
         put?: never;
@@ -133,7 +133,7 @@ export interface paths {
         };
         /**
          * List audit events
-         * @description The append-only audit log, newest first: who changed what, when, and why. `GET /audit-events/export` downloads every event the same filters select. Needs the `admin.roles` permission.
+         * @description The append-only audit log, newest first: who changed what, when, and why, and (kind `read`, #877) which service account read what over the API. `GET /audit-events/export` downloads every event the same filters select. Needs the `admin.roles` permission.
          */
         get: operations["AuditEvents_list"];
         put?: never;
@@ -1408,6 +1408,46 @@ export interface paths {
          * @description The manual assembled for one listed variant and a configured language: conditions applied, module references inlined, text attributes filled in (one the variant has no value for stays an `attribute` node, reported as `missing-text-attribute`), modules the reader may not see left out (an `outside-scope` issue each, for `content.read.draft` holders). Missing translations fall back to the source language and are reported as issues.
          */
         get: operations["Manuals_resolve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manuals/{id}/update-guide/{lang}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an update guide
+         * @description An update guide (`kind: update-guide`, #906) in a configured language: the versions a reader picks from and to, the levels and options it offers, and how many steps the reader may see (`…/steps` lists them). Not found for a manual of another kind, as for one the reader may not see.
+         */
+        get: operations["Manuals_updateGuide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manuals/{id}/update-guide/{lang}/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an update guide’s steps
+         * @description Every step of the update guide the reader may see (#906), whatever its level and condition, with its version, phase, level, condition and body, ordered by version, then phase (`before`, `during`, `after`), then manifest order: a client picks the steps of a jump itself (`resolveUpdateGuide` in `@openfolia/content-model/core`: `from < version <= to`, the reader’s level and options).
+         */
+        get: operations["Manuals_updateGuideSteps"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4518,6 +4558,11 @@ export interface components {
              * @description When the change was made (its transaction began).
              */
             at: string;
+            /**
+             * @description `write`: a change. `read` (#877): a request of a service account’s token that changed nothing (`api.read`), one event per request, or reads of one account that could not be recorded one by one (`api.read-gap`, with `data.count`).
+             * @enum {string}
+             */
+            kind: "write" | "read";
             /** @description Who made it. */
             actor: {
                 /** @enum {string} */
@@ -5496,6 +5541,14 @@ export interface components {
                     attachmentNote?: string;
                     /** @description The title of the glossary that ends a manual whose manifest sets `glossary: true`, e.g. `Glossary`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
                     glossary?: string;
+                    /** @description The word before a version in an update guide’s headings (`Version 2.0`), e.g. `Version`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateVersion?: string;
+                    /** @description The heading of an update guide’s steps done before the update, e.g. `Before the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateBefore?: string;
+                    /** @description The heading of an update guide’s steps done during the update, e.g. `During the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateDuring?: string;
+                    /** @description The heading of an update guide’s steps done after the update, e.g. `After the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateAfter?: string;
                 };
             };
             /**
@@ -6770,7 +6823,7 @@ export interface components {
             schemaVersion: 1;
             id: string;
             /** @enum {string} */
-            kind?: "derived";
+            kind?: "derived" | "update-guide";
             title: string | {
                 [key: string]: string;
             };
@@ -6831,6 +6884,18 @@ export interface components {
                     groupBy: "module" | "level";
                     levels?: ("danger" | "warning" | "caution" | "notice")[];
                 };
+            };
+            guide?: {
+                attribute: string;
+                versions: string[];
+                /** @default [] */
+                steps: {
+                    module: string;
+                    version?: string;
+                    phase: string;
+                    level?: string;
+                    when?: components["schemas"]["Condition"];
+                }[];
             };
             entries: components["schemas"]["ManifestEntry"][];
         };
@@ -7101,6 +7166,14 @@ export interface components {
                     attachmentNote?: string;
                     /** @description The title of the glossary that ends a manual whose manifest sets `glossary: true`, e.g. `Glossary`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
                     glossary?: string;
+                    /** @description The word before a version in an update guide’s headings (`Version 2.0`), e.g. `Version`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateVersion?: string;
+                    /** @description The heading of an update guide’s steps done before the update, e.g. `Before the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateBefore?: string;
+                    /** @description The heading of an update guide’s steps done during the update, e.g. `During the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateDuring?: string;
+                    /** @description The heading of an update guide’s steps done after the update, e.g. `After the update`. Without it: the label of the base language (`pt` for `pt-BR`), then the shipped default (English, German, French, Arabic and Hebrew ship one), else English, reported as `missing-label`. */
+                    updateAfter?: string;
                 };
             };
             /**
@@ -8623,10 +8696,10 @@ export interface components {
             /** @enum {number} */
             schemaVersion: 1;
             /**
-             * @description `derived` (#451): its entries are gathered from another manual by `rule`, never written by hand. Absent: an assembled manual.
+             * @description `derived` (#451): its entries are gathered from another manual by `rule`, never written by hand. `update-guide` (#906): its entries are its `guide`’s steps. Absent: an assembled manual.
              * @enum {string}
              */
-            kind?: "derived";
+            kind?: "derived" | "update-guide";
             title: string | {
                 [key: string]: string;
             };
@@ -8681,7 +8754,20 @@ export interface components {
                     levels?: ("danger" | "warning" | "caution" | "notice")[];
                 };
             };
-            /** @description Only the modules the reader may see (groups left empty go too), so it can be empty. A derived manual’s are the ones its rule gathers, front matter first, back matter last. */
+            /** @description An update guide’s own part (#906): `attribute`, the version attribute it follows; `versions`, the versions a reader picks from, oldest first; `steps`, each a `module` with the `version` that needs it, its `phase` (`before`, `during`, `after`) and optionally a `level` (an audience ID) and a `when` condition on the reader’s options. Only the steps whose module the reader may see. Absent for other kinds. */
+            guide?: {
+                attribute: string;
+                versions: string[];
+                /** @default [] */
+                steps: {
+                    module: string;
+                    version?: string;
+                    phase: string;
+                    level?: string;
+                    when?: components["schemas"]["Condition"];
+                }[];
+            };
+            /** @description Only the modules the reader may see (groups left empty go too), so it can be empty. A derived manual’s are the ones its rule gathers, front matter first, back matter last; an update guide’s one per step, by version and phase. */
             entries: components["schemas"]["ManifestEntry"][];
         };
         VariantSummary: {
@@ -8792,6 +8878,86 @@ export interface components {
             message: string;
             /** @description The module concerned. */
             module?: string;
+        };
+        UpdateGuideDocument: {
+            data: components["schemas"]["UpdateGuideResource"];
+        };
+        /** @description `id` is `<manual>/<lang>`, as in the URL. */
+        UpdateGuideResource: {
+            /** @enum {string} */
+            type: "UpdateGuide";
+            id: string;
+            attributes: {
+                title: string;
+                lang: string;
+                /** @description The version attribute the guide follows (`guide.attribute`), e.g. `{ "id": "software", "label": "Software" }`. */
+                attribute: components["schemas"]["UpdateGuideLabel"];
+                /** @description The versions a reader picks from and to, oldest first. A step applies to a jump from `from` to `to` when `from < version <= to`, compared numerically (`2.10` is after `2.9`). */
+                versions: string[];
+                /** @description The levels a reader picks from: the configured audience levels up to the guide’s audience, least restricted first. A step with a `level` is for that level and the more restricted ones. */
+                levels: components["schemas"]["UpdateGuideLabel"][];
+                /** @description The options the steps’ conditions test: each an enum variant attribute with its values. A condition on an option the reader has not set is false. */
+                options: {
+                    id: string;
+                    /** @description In the guide’s language, else the source language’s. */
+                    label: string;
+                    values: components["schemas"]["UpdateGuideLabel"][];
+                }[];
+            };
+            relationships: {
+                manual: {
+                    data: {
+                        /** @enum {string} */
+                        type: "Manual";
+                        id: string;
+                    };
+                };
+            };
+            meta: {
+                /** @description How many steps the reader may see (`…/steps` lists them). */
+                stepCount: number;
+                issues: components["schemas"]["ResolveIssue"][];
+            };
+        };
+        UpdateGuideLabel: {
+            id: string;
+            /** @description In the guide’s language, else the source language’s. */
+            label: string;
+        };
+        UpdateGuideStepPageDocument: {
+            data: components["schemas"]["UpdateGuideStepResource"][];
+            meta: {
+                page: components["schemas"]["PageMeta"];
+            };
+            links: components["schemas"]["PageLinks"];
+        };
+        /** @description `id` is the step’s module ID, with `--2`, `--3`, … for its later steps in the guide; stable while the guide’s steps are not reordered. */
+        UpdateGuideStepResource: {
+            /** @enum {string} */
+            type: "UpdateGuideStep";
+            id: string;
+            attributes: {
+                /** @description The module holding the step’s text. */
+                module: string;
+                title: string;
+                /** @description Differs from the guide when a translation is missing. */
+                lang: string;
+                /** @description The release that needs the step. */
+                version: string;
+                /**
+                 * @description `before`, `during` or `after` the update.
+                 * @enum {string}
+                 */
+                phase: "before" | "during" | "after";
+                /** @description The least restricted level the step is for (an audience ID); null: every level. */
+                level: string | null;
+                /** @description The condition on the reader’s options; null: every setup. */
+                when: components["schemas"]["Condition"] | null;
+                /** @description `when` as written in the manifest, e.g. `cluster in (yes)`. */
+                condition: string | null;
+                /** @description The step’s body, resolved as in a resolved manual (IDs `module--block`), for the guide’s first variant. */
+                blocks: components["schemas"]["Block"][];
+            };
         };
         ManualVersionPageDocument: {
             data: components["schemas"]["ManualVersionResource"][];
@@ -10699,10 +10865,10 @@ export interface components {
             id: string;
             attributes: {
                 /**
-                 * @description Stable. Its severity is fixed per code (in brackets below), but for `forbidden-term` and `style-rule`, whose severity the configuration decides (#55): `terminology.forbiddenIsBlocking`, a style rule's `severity`. `invalid-module` (blocking): A module file cannot be read. `invalid-manifest` (blocking): The manual’s manifest cannot be read. `unknown-module-type` (blocking): The module’s type is not configured. `unknown-audience` (blocking): The module’s or manual’s audience is not configured (a module with one is left out of every manual). `unknown-language` (blocking): The module’s language is neither the source nor a target. `unknown-facet` (blocking): The module names a facet that is not configured. `unknown-facet-value` (blocking): The module names a value its facet does not have. `unknown-safety-symbol` (blocking): A safety block uses a symbol that is not configured. `unknown-text-attribute` (blocking): A text attribute is not configured. `placeholder-in-module` (blocking): A module holds a page design placeholder (`placeholder:<key>[]`), which only a design’s regions, header and footer may hold. `unknown-placeholder` (blocking): A placeholder names no known value. `unknown-variant-attribute` (blocking): A condition or variant names an attribute that is not configured. `unknown-variant-value` (blocking): A condition or variant names a value its attribute does not have. `version-compare-on-enum` (blocking): A condition compares an attribute that is not a version. `invalid-version-value` (blocking): A version attribute’s value is not a version. `missing-variant-attribute` (blocking): A published variant does not set an attribute a condition tests: the content under it is left out. `missing-text-attribute` (blocking): A published variant has no value for a text attribute the content uses. `pdf-accessibility` (blocking): A variant’s PDF in a language cannot meet PDF/UA-1, the configured PDF standard (`params.problem` says why): the PDF route refuses it. `pdf-not-checked` (warning): A variant’s PDF in a language could not be rendered (too slow, or a template that does not compile), so PDF/UA-1 was not checked: the PDF route says why. `pdf-layout-not-checked` (warning): With `pdf.standard` `none`, a variant’s PDF in a language with a page design (or a callout legend beside its image) could not be rendered (too slow, or a template that does not compile; `params.reason`), so what its layout cannot fit was not checked: the PDF route says why. `page-design-missing-value` (warning): A placeholder or title page field of the manual’s page design has no value for the manual and variant (`params.design`, `params.at`, `params.name` the placeholder or field): a placeholder stays one, a field is left out. The release and the date are not reported, as a manual’s checks never know them. `page-design-missing-text-attribute` (blocking): A text of the manual’s page design uses a text attribute the variant has no value for (`params.design`, `params.at`, `params.name` the attribute). `page-design-missing-variant-attribute` (blocking): A condition in the manual’s page design tests an attribute the variant does not set (`params.design`, `params.at`, `params.name` the attribute): what it holds is left out. `page-design-overflow` (warning): A region of the manual’s page design does not fit its place on the title or back page in a variant’s PDF (`params.at`, e.g. `regions.footer`): the PDF cuts it off. `running-head-truncated` (warning): A running header or footer of the manual’s page design does not fit on one line even at its smallest size (`params.at`, e.g. `header.default.right`; `params.text`, the whole text): the PDF shortens it with an ellipsis. `callout-label-overflow` (warning): A callout’s legend beside its image does not fit the image’s height in a variant’s PDF, even at the smallest size (`pdf.calloutLabelMinSize`): the PDF cuts it off (`params.module`, `params.image`, `params.callout`; `params.at`, `callouts.<module>.<image>.<callout>`). `safety-message-split` (warning): A safety message is taller than a whole page of the manual’s page design in a variant’s PDF, so it cannot be kept on one page: the PDF breaks it across pages (`params.module`, `params.block`, `params.text` its hazard; `params.at`, `safety.<module>.<block>`). Shorten it or split it into several messages. `passthrough` (warning): Content kept verbatim from an import: convert it to blocks. `empty-table` (warning): Every cell of a table is empty. `snippet-too-large` (warning): A snippet holds a section or a module reference: snippets are one or a few blocks of text. `inconsistent-variants` (warning): The manual’s variants set different attributes. `above-audience` (warning): A module above the manual’s audience is left out of it. `delivery-access-capped` (warning): The project’s `delivery.access` (`params.access`) opens the stable addresses further than this deployment allows (`CCMS_DELIVERY_MAX_ACCESS`, `params.maxAccess`): they are served at that instead. `missing-manufacturer` (warning): The project has no manufacturer details (`manufacturer`) and turns this check on (`release.checkManufacturer`, #395): the manual would be released without its imprint, the manufacturer’s name, address and contact. `missing-module` (blocking): The manual, or a module reference block, names a module that does not exist. `module-cycle` (blocking): Module references form a cycle. `module-ref-unknown-block` (blocking): A module reference to one block of a module (#223) names a block that module does not have (`params.module`, `params.block`): nothing is included in its place. `expansion-too-large` (blocking): Too large once its module references are included: more than `MAX_EXPANDED_NODES` (500,000) content nodes, `MAX_EXPANDED_CHARS` (12,000,000) characters or `MAX_EXPANDED_TABLE_CELLS` (1,000,000) table cells (rows × columns) (a module referred to over several paths counts once per path), or blocks and references nested more than `MAX_NESTING_DEPTH` (100) deep; the message says which. At a manual, for a variant in a language: nothing of it is resolved, so its resolution, PDF, pages and previews are 422 `expansion-too-large`, and its PDF is not checked. At a module (#688), its retrieval chunks (every variant block kept, its FAQ entries counted with it): `GET /chunks` leaves the module out and names it in `meta.leftOut`; `params.reason` is `size` or `depth`. `chunk-set-too-large` (blocking): At a change set’s head, the retrieval chunks of the whole commit, as the reader sees it, are too large together (#710): many modules each include a lot, past four times the content they are made from plus room for 32 modules at the limits of one (`MAX_CHUNK_SET_FACTOR`, `CHUNK_SET_MODULES_AT_LIMITS`; of the text they keep, room for 8). Once released, `GET /chunks` refuses that commit (422 `chunk-set-too-large`) and the change feed tells none of its chunks. One check at each of the modules that expanded the most (`meta.largest` of that error, at most five, only modules the reader may see), `params.chars` and `params.nodes` what its chunks expanded to; `params.kept` `true` when the room for the text kept was the one passed. `chunks-not-checked` (warning): Cutting the retrieval chunks of the modules a checks run checks took more than its budget (#711: four times their content plus room for 32 modules at the limits of one, `ExpansionBudget.forContent`, as `GET /chunks` holds a commit’s chunks), so from this module on (module ID, then language order) whether they can be cut was not checked (`params.modules`: how many module files, a module in one language each, were not, this one included). Their modules include a lot: refer to fewer modules, over fewer paths. `xref-unknown-module` (blocking): A cross-reference links to a module that does not exist. `xref-unknown-block` (blocking): A cross-reference links to a block that does not exist. `xref-outside-manual` (warning): A cross-reference links to a module that is not in the manual. `deprecated-module` (warning): The manual includes a deprecated module, directly or through module references (`params.module`; `params.replacedBy`, the module replacing it, when it names one). `unknown-page-design` (blocking): The manual’s own page design (`design` in its manifest) or the project’s default (`pdf.design`) names a design that is not in the content, or whose file is no design (`params.design`, `params.from`: `manual` or `config`): the PDF uses the built-in design. `unknown-replacement` (warning): A deprecated module or manual names a replacement that does not exist, or itself (`params.replacedBy`). `address-taken` (blocking): A stable address (`params.address`) is both the ID of a manual and the slug or a former address of another (`delivery.manuals`, `params.as`: `slug` or `formerly`), both manuals ones the reader sees: the address opens the manual configured for it, never the one of that ID (`params.manual`, the other manual). `unknown-term` (blocking): A term link names a term that does not exist, or whose file cannot be read (`params.term`). `deprecated-term` (warning): A term link names a deprecated term (`params.term`; `params.replacedBy`, the term to use instead, when it names one). `unknown-callout` (blocking): A callout reference names an image of its module, or a callout of that image, that does not exist. `hidden-callout` (warning): A callout reference names a callout (or an image) that a variant of the manual leaves out: it has no number there. `unknown-callout-style` (blocking): A callout on an image names a style that is not configured. `missing-image` (blocking): An image block refers to an image that is not stored. `missing-attachment` (blocking): An attachment block refers to a file that is not stored. `attachment-file-name` (blocking): An attachment block names its file with an extension that does not fit the stored file (or a dangerous one): downloads ignore that name. `missing-translation` (warning): A module has no translation into a target language (a manual falls back to the source language). `outdated-translation` (warning): Blocks of the source module changed since this translation was made from it, or were never translated (`params.blocks` counts them; a translation without a record counts every block). At a manual (#656): units of its cover images’ alternative text (`params.at` `coverImage`) or of its page design’s region text (`params.design`) with a version in `params.lang` made from another source text, or without a record. `page-design-missing-translation` (warning): A text of the manual’s page design has no version in the manual’s language (`params.design`, `params.at`): the source language’s is used. `missing-cover-image` (warning): The manual’s cover image, or a variant’s (#394), is not stored or is no image (`params.at` where the manifest names it, `params.asset`): the PDF goes without it. `missing-cover-alt` (blocking): The alternative text of the manual’s cover image, or a variant’s (#394), has no version in the source language (`params.at`), which every other language falls back to. `missing-source-title` (blocking): The manual’s title, or a group’s (`params.at`), is written per language without a version in the source language (#731), which every other language falls back to. `unknown-cover-variant` (warning): The manual gives a cover image to a variant it does not build, or to one that has one already (`params.at`): it is never shown. `unknown-source-manual` (blocking): The derived manual’s source manual (#451, `rule.source`) does not exist or cannot be read: it holds only its front and back matter. `derived-source` (blocking): The derived manual’s source manual (#451) is a derived manual itself, or the manual itself: nothing is gathered, a derived manual is made from an assembled one. `no-gathered-types` (blocking): The derived manual’s rule (#451) names no module types and the configuration marks none as safety (`moduleTypes[].safety`): nothing is gathered. `safety-module-excluded` (warning): A module of a safety type (`moduleTypes[].safety`) in the derived manual’s source is left out by its rule (#451; `params.at` the module): excluded, or of a type the rule does not gather. `safety-notice-excluded` (warning): A safety notice of the derived manual’s source is left out by its notice gathering (#670; `params.at` the module holding it): every module of the source that includes it is excluded or of a type the rule does not search, or its hazard level is not one the rule gathers. `unknown-excluded-module` (warning): The derived manual’s rule excludes a module its source manual does not include (#451; `params.at` the module). `empty-derived-manual` (warning): The derived manual’s rule gathers no module from its source manual (#451): it holds only its front and back matter. `derived-audience-wider` (blocking): The derived manual is for a wider audience than its source manual (#451): nothing is gathered (only its front and back matter, with its own text attributes), so the source’s text never reaches readers it is not for. `page-design-template-error` (blocking): The page design’s own template (#396) does not compile: at a manual laid out with it, or at the design itself when a change set changes the design or its template (checked on a small manual of its own). `params.design`, `params.template`, `params.file` (its repository path), `params.line` and `params.column` (1-based; 0 when the compiler named no place) and `params.problem` (the compiler’s message). The PDF route answers 422 `template-error`; on the base branch the template merged before stays in use. `page-design-unknown-template` (blocking): The page design names an own template (`template`, #396) the content repository does not have (`templates/<id>/manual.typ`): its preset lays the PDF out. `params.design`, `params.template`. `page-design-missing-font` (warning): A font file of the manual’s page design is not stored, or is no TrueType, OpenType, WOFF or WOFF2 font (`params.design`, `params.at` the face, `params.asset`): the PDF uses the default font in its place. `page-design-dropped-text` (warning): A text of the manual’s page design has a version in neither the manual’s language nor the source language (`params.design`, `params.at`): it is left out of the PDF. `page-design-region-languages-differ` (warning): A region of the manual’s page design has other blocks in the manual’s language than in the source language (`params.design`, `params.at`, `params.name` the source language): its translation does not keep the source’s block IDs. `missing-label` (warning): No output labels in the manual’s language: English is used. `forbidden-term` (warning): The text uses a forbidden variant of an approved term in the module’s language, matched without case as a whole word (#55; `params.term`, `params.text` what was found, `params.replacement` the preferred variant, `params.note` the variant’s note, `params.field`, `params.start` and `params.end` where in the block’s plain text, UTF-16 offsets), or a variant of a deprecated term (`params.status` `deprecated`; `params.replacement` its replacement’s preferred variant, when it names one). Blocking when the configuration says so (`terminology.forbiddenIsBlocking`), for forbidden variants only; else a warning. `style-rule` (warning): The text matches a style rule of the module’s language (#55, `styleRules` in `openfolia.yaml`; `params.rule` its ID, `params.message` its message, `params.replacement` its fix, `params.text`, `params.field`, `params.start`, `params.end`), or has a sentence longer than `maxSentenceWords` (`params.rule` `max-sentence-words`, `params.words`, `params.max`). The rule’s `severity` decides: a warning unless it says `blocking`. `writing-not-checked` (warning): The writing checks (#55) stopped before the end of the module’s text (`params.stopped`): it is longer than they read (`chars`, `MAX_WRITING_CHARS`, 1,000,000 characters), it has more findings than they report (`findings`, `MAX_WRITING_FINDINGS`, 1,000), or its style rules’ patterns took more than their steps (`steps`, `MAX_WRITING_STEPS`). What comes after was not checked.
+                 * @description Stable. Its severity is fixed per code (in brackets below), but for `forbidden-term` and `style-rule`, whose severity the configuration decides (#55): `terminology.forbiddenIsBlocking`, a style rule's `severity`. `invalid-module` (blocking): A module file cannot be read. `invalid-manifest` (blocking): The manual’s manifest cannot be read. `unknown-module-type` (blocking): The module’s type is not configured. `unknown-audience` (blocking): The module’s or manual’s audience is not configured (a module with one is left out of every manual). `unknown-language` (blocking): The module’s language is neither the source nor a target. `unknown-facet` (blocking): The module names a facet that is not configured. `unknown-facet-value` (blocking): The module names a value its facet does not have. `unknown-safety-symbol` (blocking): A safety block uses a symbol that is not configured. `unknown-text-attribute` (blocking): A text attribute is not configured. `placeholder-in-module` (blocking): A module holds a page design placeholder (`placeholder:<key>[]`), which only a design’s regions, header and footer may hold. `unknown-placeholder` (blocking): A placeholder names no known value. `unknown-variant-attribute` (blocking): A condition or variant names an attribute that is not configured. `unknown-variant-value` (blocking): A condition or variant names a value its attribute does not have. `version-compare-on-enum` (blocking): A condition compares an attribute that is not a version. `invalid-version-value` (blocking): A version attribute’s value is not a version. `missing-variant-attribute` (blocking): A published variant does not set an attribute a condition tests: the content under it is left out. `missing-text-attribute` (blocking): A published variant has no value for a text attribute the content uses. `pdf-accessibility` (blocking): A variant’s PDF in a language cannot meet PDF/UA-1, the configured PDF standard (`params.problem` says why): the PDF route refuses it. `pdf-not-checked` (warning): A variant’s PDF in a language could not be rendered (too slow, or a template that does not compile), so PDF/UA-1 was not checked: the PDF route says why. `pdf-layout-not-checked` (warning): With `pdf.standard` `none`, a variant’s PDF in a language with a page design (or a callout legend beside its image) could not be rendered (too slow, or a template that does not compile; `params.reason`), so what its layout cannot fit was not checked: the PDF route says why. `page-design-missing-value` (warning): A placeholder or title page field of the manual’s page design has no value for the manual and variant (`params.design`, `params.at`, `params.name` the placeholder or field): a placeholder stays one, a field is left out. The release and the date are not reported, as a manual’s checks never know them. `page-design-missing-text-attribute` (blocking): A text of the manual’s page design uses a text attribute the variant has no value for (`params.design`, `params.at`, `params.name` the attribute). `page-design-missing-variant-attribute` (blocking): A condition in the manual’s page design tests an attribute the variant does not set (`params.design`, `params.at`, `params.name` the attribute): what it holds is left out. `page-design-overflow` (warning): A region of the manual’s page design does not fit its place on the title or back page in a variant’s PDF (`params.at`, e.g. `regions.footer`): the PDF cuts it off. `running-head-truncated` (warning): A running header or footer of the manual’s page design does not fit on one line even at its smallest size (`params.at`, e.g. `header.default.right`; `params.text`, the whole text): the PDF shortens it with an ellipsis. `callout-label-overflow` (warning): A callout’s legend beside its image does not fit the image’s height in a variant’s PDF, even at the smallest size (`pdf.calloutLabelMinSize`): the PDF cuts it off (`params.module`, `params.image`, `params.callout`; `params.at`, `callouts.<module>.<image>.<callout>`). `safety-message-split` (warning): A safety message is taller than a whole page of the manual’s page design in a variant’s PDF, so it cannot be kept on one page: the PDF breaks it across pages (`params.module`, `params.block`, `params.text` its hazard; `params.at`, `safety.<module>.<block>`). Shorten it or split it into several messages. `passthrough` (warning): Content kept verbatim from an import: convert it to blocks. `empty-table` (warning): Every cell of a table is empty. `snippet-too-large` (warning): A snippet holds a section or a module reference: snippets are one or a few blocks of text. `inconsistent-variants` (warning): The manual’s variants set different attributes. `above-audience` (warning): A module above the manual’s audience is left out of it. `delivery-access-capped` (warning): The project’s `delivery.access` (`params.access`) opens the stable addresses further than this deployment allows (`CCMS_DELIVERY_MAX_ACCESS`, `params.maxAccess`): they are served at that instead. `missing-manufacturer` (warning): The project has no manufacturer details (`manufacturer`) and turns this check on (`release.checkManufacturer`, #395): the manual would be released without its imprint, the manufacturer’s name, address and contact. `missing-module` (blocking): The manual, or a module reference block, names a module that does not exist. `module-cycle` (blocking): Module references form a cycle. `module-ref-unknown-block` (blocking): A module reference to one block of a module (#223) names a block that module does not have (`params.module`, `params.block`): nothing is included in its place. `expansion-too-large` (blocking): Too large once its module references are included: more than `MAX_EXPANDED_NODES` (500,000) content nodes, `MAX_EXPANDED_CHARS` (12,000,000) characters or `MAX_EXPANDED_TABLE_CELLS` (1,000,000) table cells (rows × columns) (a module referred to over several paths counts once per path), or blocks and references nested more than `MAX_NESTING_DEPTH` (100) deep; the message says which. At a manual, for a variant in a language: nothing of it is resolved, so its resolution, PDF, pages and previews are 422 `expansion-too-large`, and its PDF is not checked. At a module (#688), its retrieval chunks (every variant block kept, its FAQ entries counted with it): `GET /chunks` leaves the module out and names it in `meta.leftOut`; `params.reason` is `size` or `depth`. `chunk-set-too-large` (blocking): At a change set’s head, the retrieval chunks of the whole commit, as the reader sees it, are too large together (#710): many modules each include a lot, past four times the content they are made from plus room for 32 modules at the limits of one (`MAX_CHUNK_SET_FACTOR`, `CHUNK_SET_MODULES_AT_LIMITS`; of the text they keep, room for 8). Once released, `GET /chunks` refuses that commit (422 `chunk-set-too-large`) and the change feed tells none of its chunks. One check at each of the modules that expanded the most (`meta.largest` of that error, at most five, only modules the reader may see), `params.chars` and `params.nodes` what its chunks expanded to; `params.kept` `true` when the room for the text kept was the one passed. `chunks-not-checked` (warning): Cutting the retrieval chunks of the modules a checks run checks took more than its budget (#711: four times their content plus room for 32 modules at the limits of one, `ExpansionBudget.forContent`, as `GET /chunks` holds a commit’s chunks), so from this module on (module ID, then language order) whether they can be cut was not checked (`params.modules`: how many module files, a module in one language each, were not, this one included). Their modules include a lot: refer to fewer modules, over fewer paths. `xref-unknown-module` (blocking): A cross-reference links to a module that does not exist. `xref-unknown-block` (blocking): A cross-reference links to a block that does not exist. `xref-outside-manual` (warning): A cross-reference links to a module that is not in the manual. `deprecated-module` (warning): The manual includes a deprecated module, directly or through module references (`params.module`; `params.replacedBy`, the module replacing it, when it names one). `unknown-page-design` (blocking): The manual’s own page design (`design` in its manifest) or the project’s default (`pdf.design`) names a design that is not in the content, or whose file is no design (`params.design`, `params.from`: `manual` or `config`): the PDF uses the built-in design. `unknown-replacement` (warning): A deprecated module or manual names a replacement that does not exist, or itself (`params.replacedBy`). `address-taken` (blocking): A stable address (`params.address`) is both the ID of a manual and the slug or a former address of another (`delivery.manuals`, `params.as`: `slug` or `formerly`), both manuals ones the reader sees: the address opens the manual configured for it, never the one of that ID (`params.manual`, the other manual). `unknown-term` (blocking): A term link names a term that does not exist, or whose file cannot be read (`params.term`). `deprecated-term` (warning): A term link names a deprecated term (`params.term`; `params.replacedBy`, the term to use instead, when it names one). `unknown-callout` (blocking): A callout reference names an image of its module, or a callout of that image, that does not exist. `hidden-callout` (warning): A callout reference names a callout (or an image) that a variant of the manual leaves out: it has no number there. `unknown-callout-style` (blocking): A callout on an image names a style that is not configured. `missing-image` (blocking): An image block refers to an image that is not stored. `missing-attachment` (blocking): An attachment block refers to a file that is not stored. `attachment-file-name` (blocking): An attachment block names its file with an extension that does not fit the stored file (or a dangerous one): downloads ignore that name. `missing-translation` (warning): A module has no translation into a target language (a manual falls back to the source language). `outdated-translation` (warning): Blocks of the source module changed since this translation was made from it, or were never translated (`params.blocks` counts them; a translation without a record counts every block). At a manual (#656): units of its cover images’ alternative text (`params.at` `coverImage`) or of its page design’s region text (`params.design`) with a version in `params.lang` made from another source text, or without a record. `page-design-missing-translation` (warning): A text of the manual’s page design has no version in the manual’s language (`params.design`, `params.at`): the source language’s is used. `missing-cover-image` (warning): The manual’s cover image, or a variant’s (#394), is not stored or is no image (`params.at` where the manifest names it, `params.asset`): the PDF goes without it. `missing-cover-alt` (blocking): The alternative text of the manual’s cover image, or a variant’s (#394), has no version in the source language (`params.at`), which every other language falls back to. `missing-source-title` (blocking): The manual’s title, or a group’s (`params.at`), is written per language without a version in the source language (#731), which every other language falls back to. `unknown-cover-variant` (warning): The manual gives a cover image to a variant it does not build, or to one that has one already (`params.at`): it is never shown. `unknown-source-manual` (blocking): The derived manual’s source manual (#451, `rule.source`) does not exist or cannot be read: it holds only its front and back matter. `derived-source` (blocking): The derived manual’s source manual (#451) is a derived manual itself, or the manual itself: nothing is gathered, a derived manual is made from an assembled one. `no-gathered-types` (blocking): The derived manual’s rule (#451) names no module types and the configuration marks none as safety (`moduleTypes[].safety`): nothing is gathered. `safety-module-excluded` (warning): A module of a safety type (`moduleTypes[].safety`) in the derived manual’s source is left out by its rule (#451; `params.at` the module): excluded, or of a type the rule does not gather. `safety-notice-excluded` (warning): A safety notice of the derived manual’s source is left out by its notice gathering (#670; `params.at` the module holding it): every module of the source that includes it is excluded or of a type the rule does not search, or its hazard level is not one the rule gathers. `unknown-excluded-module` (warning): The derived manual’s rule excludes a module its source manual does not include (#451; `params.at` the module). `empty-derived-manual` (warning): The derived manual’s rule gathers no module from its source manual (#451): it holds only its front and back matter. `derived-audience-wider` (blocking): The derived manual is for a wider audience than its source manual (#451): nothing is gathered (only its front and back matter, with its own text attributes), so the source’s text never reaches readers it is not for. `update-step-version` (blocking): A step of the update guide (#906; `params.at` `guide.steps.<n>`, from 0) has no version, or one that is not a dotted version such as `2.3`: no jump crosses it. `update-step-outside-versions` (warning): A step of the update guide (#906; `params.at` `guide.steps.<n>`) is for a version no jump between the guide’s first and last version crosses (at most the first, or after the last): it is never shown. `update-step-phase` (blocking): A step of the update guide (#906; `params.at` `guide.steps.<n>`) has a phase that is not `before`, `during` or `after`. `page-design-template-error` (blocking): The page design’s own template (#396) does not compile: at a manual laid out with it, or at the design itself when a change set changes the design or its template (checked on a small manual of its own). `params.design`, `params.template`, `params.file` (its repository path), `params.line` and `params.column` (1-based; 0 when the compiler named no place) and `params.problem` (the compiler’s message). The PDF route answers 422 `template-error`; on the base branch the template merged before stays in use. `page-design-unknown-template` (blocking): The page design names an own template (`template`, #396) the content repository does not have (`templates/<id>/manual.typ`): its preset lays the PDF out. `params.design`, `params.template`. `page-design-missing-font` (warning): A font file of the manual’s page design is not stored, or is no TrueType, OpenType, WOFF or WOFF2 font (`params.design`, `params.at` the face, `params.asset`): the PDF uses the default font in its place. `page-design-dropped-text` (warning): A text of the manual’s page design has a version in neither the manual’s language nor the source language (`params.design`, `params.at`): it is left out of the PDF. `page-design-region-languages-differ` (warning): A region of the manual’s page design has other blocks in the manual’s language than in the source language (`params.design`, `params.at`, `params.name` the source language): its translation does not keep the source’s block IDs. `missing-label` (warning): No output labels in the manual’s language: English is used. `forbidden-term` (warning): The text uses a forbidden variant of an approved term in the module’s language, matched without case as a whole word (#55; `params.term`, `params.text` what was found, `params.replacement` the preferred variant, `params.note` the variant’s note, `params.field`, `params.start` and `params.end` where in the block’s plain text, UTF-16 offsets), or a variant of a deprecated term (`params.status` `deprecated`; `params.replacement` its replacement’s preferred variant, when it names one). Blocking when the configuration says so (`terminology.forbiddenIsBlocking`), for forbidden variants only; else a warning. `style-rule` (warning): The text matches a style rule of the module’s language (#55, `styleRules` in `openfolia.yaml`; `params.rule` its ID, `params.message` its message, `params.replacement` its fix, `params.text`, `params.field`, `params.start`, `params.end`), or has a sentence longer than `maxSentenceWords` (`params.rule` `max-sentence-words`, `params.words`, `params.max`). The rule’s `severity` decides: a warning unless it says `blocking`. `writing-not-checked` (warning): The writing checks (#55) stopped before the end of the module’s text (`params.stopped`): it is longer than they read (`chars`, `MAX_WRITING_CHARS`, 1,000,000 characters), it has more findings than they report (`findings`, `MAX_WRITING_FINDINGS`, 1,000), or its style rules’ patterns took more than their steps (`steps`, `MAX_WRITING_STEPS`). What comes after was not checked.
                  * @enum {string}
                  */
-                code: "invalid-module" | "invalid-manifest" | "unknown-module-type" | "unknown-audience" | "unknown-language" | "unknown-facet" | "unknown-facet-value" | "unknown-safety-symbol" | "unknown-text-attribute" | "placeholder-in-module" | "unknown-placeholder" | "unknown-variant-attribute" | "unknown-variant-value" | "version-compare-on-enum" | "invalid-version-value" | "missing-variant-attribute" | "missing-text-attribute" | "pdf-accessibility" | "pdf-not-checked" | "pdf-layout-not-checked" | "page-design-missing-value" | "page-design-missing-text-attribute" | "page-design-missing-variant-attribute" | "page-design-overflow" | "running-head-truncated" | "callout-label-overflow" | "safety-message-split" | "passthrough" | "empty-table" | "snippet-too-large" | "inconsistent-variants" | "above-audience" | "delivery-access-capped" | "missing-manufacturer" | "missing-module" | "module-cycle" | "module-ref-unknown-block" | "expansion-too-large" | "chunk-set-too-large" | "chunks-not-checked" | "xref-unknown-module" | "xref-unknown-block" | "xref-outside-manual" | "deprecated-module" | "unknown-page-design" | "unknown-replacement" | "address-taken" | "unknown-term" | "deprecated-term" | "unknown-callout" | "hidden-callout" | "unknown-callout-style" | "missing-image" | "missing-attachment" | "attachment-file-name" | "missing-translation" | "outdated-translation" | "page-design-missing-translation" | "missing-cover-image" | "missing-cover-alt" | "missing-source-title" | "unknown-cover-variant" | "unknown-source-manual" | "derived-source" | "no-gathered-types" | "safety-module-excluded" | "safety-notice-excluded" | "unknown-excluded-module" | "empty-derived-manual" | "derived-audience-wider" | "page-design-template-error" | "page-design-unknown-template" | "page-design-missing-font" | "page-design-dropped-text" | "page-design-region-languages-differ" | "missing-label" | "forbidden-term" | "style-rule" | "writing-not-checked";
+                code: "invalid-module" | "invalid-manifest" | "unknown-module-type" | "unknown-audience" | "unknown-language" | "unknown-facet" | "unknown-facet-value" | "unknown-safety-symbol" | "unknown-text-attribute" | "placeholder-in-module" | "unknown-placeholder" | "unknown-variant-attribute" | "unknown-variant-value" | "version-compare-on-enum" | "invalid-version-value" | "missing-variant-attribute" | "missing-text-attribute" | "pdf-accessibility" | "pdf-not-checked" | "pdf-layout-not-checked" | "page-design-missing-value" | "page-design-missing-text-attribute" | "page-design-missing-variant-attribute" | "page-design-overflow" | "running-head-truncated" | "callout-label-overflow" | "safety-message-split" | "passthrough" | "empty-table" | "snippet-too-large" | "inconsistent-variants" | "above-audience" | "delivery-access-capped" | "missing-manufacturer" | "missing-module" | "module-cycle" | "module-ref-unknown-block" | "expansion-too-large" | "chunk-set-too-large" | "chunks-not-checked" | "xref-unknown-module" | "xref-unknown-block" | "xref-outside-manual" | "deprecated-module" | "unknown-page-design" | "unknown-replacement" | "address-taken" | "unknown-term" | "deprecated-term" | "unknown-callout" | "hidden-callout" | "unknown-callout-style" | "missing-image" | "missing-attachment" | "attachment-file-name" | "missing-translation" | "outdated-translation" | "page-design-missing-translation" | "missing-cover-image" | "missing-cover-alt" | "missing-source-title" | "unknown-cover-variant" | "unknown-source-manual" | "derived-source" | "no-gathered-types" | "safety-module-excluded" | "safety-notice-excluded" | "unknown-excluded-module" | "empty-derived-manual" | "derived-audience-wider" | "update-step-version" | "update-step-outside-versions" | "update-step-phase" | "page-design-template-error" | "page-design-unknown-template" | "page-design-missing-font" | "page-design-dropped-text" | "page-design-region-languages-differ" | "missing-label" | "forbidden-term" | "style-rule" | "writing-not-checked";
                 /**
                  * @description `blocking`: holds up review and release until it is fixed; `warning`: worth a look, holds up nothing.
                  * @enum {string}
@@ -12956,6 +13122,8 @@ export interface operations {
                 "filter[actor]"?: string;
                 /** @description Only this action, e.g. `role.assign`. */
                 "filter[action]"?: string;
+                /** @description Only changes (`write`) or only reads (`read`: a service account’s requests, #877). */
+                "filter[kind]"?: "write" | "read";
                 /** @description Only events at or after this time: ISO 8601 with an offset, e.g. `2026-01-01T00:00:00Z`. */
                 "filter[from]"?: string;
                 /** @description Only events before this time (exclusive): ISO 8601 with an offset, e.g. `2026-02-01T00:00:00Z`. */
@@ -13018,6 +13186,8 @@ export interface operations {
                 "filter[actor]"?: string;
                 /** @description Only this action, e.g. `role.assign`. */
                 "filter[action]"?: string;
+                /** @description Only changes (`write`) or only reads (`read`: a service account’s requests, #877). */
+                "filter[kind]"?: "write" | "read";
                 /** @description Only events at or after this time: ISO 8601 with an offset, e.g. `2026-01-01T00:00:00Z`. */
                 "filter[from]"?: string;
                 /** @description Only events before this time (exclusive): ISO 8601 with an offset, e.g. `2026-02-01T00:00:00Z`. */
@@ -19717,6 +19887,204 @@ export interface operations {
                 };
                 content: {
                     "application/vnd.api+json": components["schemas"]["ResolvedManualDocument"];
+                };
+            };
+            /** @description The `If-None-Match` ETag is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `content.read` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `not-found`: unknown ref, or no such item at that ref. `change-set-branch-missing`: `ref` is the branch of a change set the reader may see, and that branch is gone from the content repository (`meta.branch`; the change set says so in `meta.branchMissing`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `invalid-content`: a file needed for the answer is broken; the error's `meta.path` names it. `table-too-large`: a module file holds a table of more than 1,000 columns or 50,000 cells (rows × columns), or tables of more than 1,000,000 cells together, so it is not read (`meta.path`; `meta.columns`, `meta.cells`, `meta.totalCells`: the caps). `expansion-too-large`: once its module references are included the manual holds more than 500,000 content nodes, 12,000,000 characters or 1,000,000 table cells (rows × columns) (a module referred to over several paths counts once per path), or its blocks and references nest more than 100 deep, so nothing of it is made (`meta.nodes`, `meta.chars`, `meta.tableCells`, `meta.depth`: the limits). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Manuals_updateGuide: {
+        parameters: {
+            query?: {
+                /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
+                ref?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                id: string;
+                lang: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The commit the response was read from. */
+                    "X-Ccms-Commit"?: string;
+                    /** @description `true` when `?ref=` names the tag of a withdrawn release (as `refs/tags/<tag>`, or `<tag>` when no branch has that name): the read still works, but the release was taken back. Who, when and why: `meta.withdrawal` of the tag in `GET /refs`, or `attributes.withdrawal` of the release in `GET /releases`. Absent otherwise. */
+                    "X-Ccms-Withdrawn"?: string;
+                    /** @description Changes with the commit, with what the reader may see and when the release whose tag is read is withdrawn. */
+                    ETag?: string;
+                    /** @description `immutable` when `?ref=` was a commit ID, except on routes whose answer also depends on refs (a module’s status): `no-cache` there. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["UpdateGuideDocument"];
+                };
+            };
+            /** @description The `If-None-Match` ETag is still current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `content.read` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `not-found`: unknown ref, or no such item at that ref. `change-set-branch-missing`: `ref` is the branch of a change set the reader may see, and that branch is gone from the content repository (`meta.branch`; the change set says so in `meta.branchMissing`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `invalid-content`: a file needed for the answer is broken; the error's `meta.path` names it. `table-too-large`: a module file holds a table of more than 1,000 columns or 50,000 cells (rows × columns), or tables of more than 1,000,000 cells together, so it is not read (`meta.path`; `meta.columns`, `meta.cells`, `meta.totalCells`: the caps). `expansion-too-large`: once its module references are included the manual holds more than 500,000 content nodes, 12,000,000 characters or 1,000,000 table cells (rows × columns) (a module referred to over several paths counts once per path), or its blocks and references nest more than 100 deep, so nothing of it is made (`meta.nodes`, `meta.chars`, `meta.tableCells`, `meta.depth`: the limits). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Manuals_updateGuideSteps: {
+        parameters: {
+            query?: {
+                /** @description Page to return, from 1. Default: 1. */
+                "page[number]"?: number;
+                /** @description Resources per page. Default: 50, at most 200. */
+                "page[size]"?: number;
+                /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
+                ref?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                id: string;
+                lang: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The commit the response was read from. */
+                    "X-Ccms-Commit"?: string;
+                    /** @description `true` when `?ref=` names the tag of a withdrawn release (as `refs/tags/<tag>`, or `<tag>` when no branch has that name): the read still works, but the release was taken back. Who, when and why: `meta.withdrawal` of the tag in `GET /refs`, or `attributes.withdrawal` of the release in `GET /releases`. Absent otherwise. */
+                    "X-Ccms-Withdrawn"?: string;
+                    /** @description Changes with the commit, with what the reader may see and when the release whose tag is read is withdrawn. */
+                    ETag?: string;
+                    /** @description `immutable` when `?ref=` was a commit ID, except on routes whose answer also depends on refs (a module’s status): `no-cache` there. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["UpdateGuideStepPageDocument"];
                 };
             };
             /** @description The `If-None-Match` ETag is still current. */

@@ -12,6 +12,41 @@
 }
 
 /*
+ * A page that scrolls the editor with itself keeps the toolbar in view (`doc-editor-sticky-toolbar`
+ * on the editor; the module editor while its columns are stacked): the toolbar sticks to the top of the page's
+ * scroller while the document passes under it. The caret stays clear of it
+ * (`plugins/sticky-bar-scroll.ts`).
+ */
+.doc-editor-sticky-toolbar > of-editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--card);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+
+/*
+ * Stuck (`data-stuck`, set by the plugin while the document passes under the bar): square corners,
+ * a soft shadow below, and the strip above it (the scroller's padding) in the page's colour,
+ * so no text shows above the bar. The cover reaches over the card's 1 px side borders.
+ */
+.doc-editor-sticky-toolbar > of-editor-toolbar[data-stuck] {
+  border-radius: 0;
+  box-shadow: 0 3px 6px -3px var(--border);
+}
+
+.doc-editor-sticky-toolbar > of-editor-toolbar[data-stuck]::before {
+  content: '';
+  position: absolute;
+  inset-inline: -1px;
+  bottom: 100%;
+  height: var(--doc-editor-stuck-gap, 0px);
+  background: var(--background);
+  pointer-events: none;
+}
+
+/*
  * Space below each block of a flow (the document, a section), never above: the grip's anchor
  * goes right before a block, so the block's top is the anchor's top and nothing moves when the
  * anchor comes and goes.

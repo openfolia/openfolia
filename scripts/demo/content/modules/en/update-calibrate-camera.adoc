@@ -1,0 +1,10 @@
+= Calibrate the rear camera
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: technician
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Run the camera calibration in the diagnostic tester with the vehicle on level ground.

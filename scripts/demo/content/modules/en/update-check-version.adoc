@@ -1,0 +1,10 @@
+= Check the software version
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Open Settings › Software update and check that the new version is shown.

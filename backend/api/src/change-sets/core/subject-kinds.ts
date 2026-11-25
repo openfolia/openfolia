@@ -25,6 +25,7 @@ import {
   Term,
   TERM_SCHEMA_VERSION,
   TermParseError,
+  updateGuideEntries,
   validateManifest,
   validateModule,
   validateTerm,
@@ -264,6 +265,13 @@ const MODULE_KIND: SubjectKind<SubjectOf<'module'>> = {
   },
 };
 
+/** An update guide (#906) with its entries made from its steps, as `parseManifest` makes them. */
+function withGuideEntries(manifest: DraftManifest): DraftManifest {
+  return manifest.kind === 'update-guide'
+    ? { ...manifest, entries: updateGuideEntries(manifest.guide?.steps ?? []) }
+    : manifest;
+}
+
 const MANUAL_KIND: SubjectKind<SubjectOf<'manual'>> = {
   type: 'manual',
   path: (s) => `manuals/${s.manualId}.yaml`,
@@ -275,8 +283,12 @@ const MANUAL_KIND: SubjectKind<SubjectOf<'manual'>> = {
   content: DraftManifest,
   schemaVersion: CURRENT_MANIFEST_VERSION,
   versionOf: (content) => (content as DraftManifest).schemaVersion,
-  stored: (content) => content as DraftManifest,
-  fromStored: (json) => DraftManifest.safeParse(json).data,
+  // An update guide's entries are its steps (#906), as a file read gives them, whatever was sent.
+  stored: (content) => withGuideEntries(content as DraftManifest),
+  fromStored: (json) => {
+    const manifest = DraftManifest.safeParse(json).data;
+    return manifest && withGuideEntries(manifest);
+  },
   names: (s, content) =>
     'id' in content && content.id === s.manualId && 'entries' in content,
   mismatch: (s) =>

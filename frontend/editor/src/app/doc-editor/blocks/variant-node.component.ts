@@ -10,6 +10,7 @@ import { Condition } from '@openfolia/content-model';
 import { VariantBlockComponent } from '@openfolia/ui/blocks';
 import { injectTranslate } from '@openfolia/ui/i18n';
 
+import { VARIANT_TIP_ANCHOR } from '../../tips/tips';
 import { conditionChips, DOC_BLOCKS, NODE_VIEW } from './doc-blocks-context';
 
 /**
@@ -33,6 +34,7 @@ import { conditionChips, DOC_BLOCKS, NODE_VIEW } from './doc-blocks-context';
       [emptyText]="emptyText()"
       [pickLabel]="pickLabel()"
       [pickDisabledReason]="pickDisabledReason()"
+      [tipAnchor]="tipAnchor()"
       (pick)="pick()"
     >
       <ng-content />
@@ -70,6 +72,18 @@ export class VariantNodeComponent {
     this.blocks.settings().pickVariant
       ? ''
       : this.t('editor.docEditor.variant.pickerUnavailable'),
+  );
+
+  /**
+   * Where the variant tip points (#892): the frame of a block the person can change, when the
+   * project has variant attributes to choose from; no anchor otherwise, so no tip.
+   */
+  protected readonly tipAnchor = computed(() =>
+    this.editable() &&
+    this.blocks.settings().pickVariant &&
+    this.blocks.settings().config?.variantAttributes.length
+      ? VARIANT_TIP_ANCHOR
+      : '',
   );
 
   protected async pick(): Promise<void> {

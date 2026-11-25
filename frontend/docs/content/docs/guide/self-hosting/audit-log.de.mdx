@@ -50,15 +50,27 @@ Log.
 
 ## Aufbewahrung
 
-`CCMS_AUDIT_KEEP_DAYS` (1 bis 36500; nicht gesetzt: für immer aufbewahrt) entfernt Ereignisse, die
-älter als so viele Tage sind, beim Start und täglich, in Stapeln. Jede Entfernung steht selbst im
-Log, als `audit-log.prune`, mit Stichtag, Anzahl und erster und letzter ID. Mit einer Senke
-entfernt sie nie ein Ereignis, das die Senke noch nicht gesendet hat.
+Das Log hält zwei Arten von Ereignissen, jede mit eigener Frist: **Änderungen** (jede
+Zustandsänderung) und **Lesezugriffe** (eines je Anfrage, die das Token eines Service-Accounts
+stellt, siehe [Das Audit-Log](/de/guide/admin/audit-log#lesezugriffe-von-service-accounts)).
+Lesezugriffe sammeln sich schnell an, deshalb werden sie nach 90 Tagen entfernt, wenn Sie nichts
+anderes festlegen.
+
+| Einstellung                 | Was                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `CCMS_AUDIT_KEEP_DAYS`      | Änderungen entfernen, die älter als so viele Tage sind (1 bis 36500). Nicht gesetzt: für immer aufbewahrt. |
+| `CCMS_AUDIT_READ_KEEP_DAYS` | Lesezugriffe entfernen, die älter als so viele Tage sind (1 bis 36500). Standard: 90.                      |
+
+Die Aufbewahrung läuft beim Start und täglich, in Stapeln. Jede Entfernung steht selbst im Log,
+als `audit-log.prune` (eine Änderung), mit Stichtag, Anzahl und erster und letzter ID, und mit
+`kind: read`, wenn sie Lesezugriffe entfernt hat. Mit einer Senke entfernt sie nie ein Ereignis,
+das die Senke noch nicht gesendet hat.
 
 ## Das Log in der Datenbank schützen
 
 Die Datenbank verweigert jede Änderung eines Audit-Ereignisses und jede Entfernung außer der durch
-die Aufbewahrung, die über die Datenbankfunktion `audit_events_prune` läuft. Mit einer
+die Aufbewahrung, die über die Datenbankfunktionen `audit_events_prune` (Änderungen) und
+`audit_events_prune_reads` (Lesezugriffe) läuft. Mit einer
 Datenbankrolle, der alles gehört, wie `deploy/compose.yaml` es betreibt, gelten diese Sperren.
 Damit auch die Rechte schützen, führen Sie die Migrationen als Eigentümer aus und die API als
 eigene Rolle, ohne `DELETE` auf der Tabelle:
@@ -67,7 +79,12 @@ eigene Rolle, ohne `DELETE` auf der Tabelle:
 -- als Eigentümer, nach den Migrationen; ccms_app ist die Rolle der API
 GRANT SELECT, INSERT ON audit_events TO ccms_app;          -- nie UPDATE, DELETE oder TRUNCATE
 GRANT EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) TO ccms_app;
+GRANT EXECUTE ON FUNCTION audit_events_prune_reads(timestamptz, integer, xid8, bigint) TO ccms_app;
 ```
+
+Das Update, das die Lesezugriffe bringt, gibt `audit_events_prune_reads` jeder Rolle, die
+`audit_events_prune` schon ausführen darf: Eine so eingerichtete API-Rolle entfernt also weiter
+beide Arten.
 
 Die API braucht ihre üblichen Rechte auf allen anderen Tabellen, auch auf `audit_sink`
 (`SELECT`, `INSERT`, `UPDATE`).
@@ -100,6 +117,7 @@ VACUUM audit_events;
 
 Eine Wiederherstellung entfernt auch die Rechte einer eigenen API-Rolle: Führen Sie die `GRANT`s
 oben erneut aus, und
-`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`.
+`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`
+(und dasselbe für `audit_events_prune_reads`).
 Eine Wiederherstellungsübung darf nicht an Ihren Collector senden: Lassen Sie dort
 `CCMS_AUDIT_SINK_URL` leer und diesen Schritt aus.

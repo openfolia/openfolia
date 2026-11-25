@@ -40,6 +40,17 @@ async function preferences(
   );
 }
 
+/**
+ * The tour starts at `step` in this tab on the next loads (#869), as after a reload mid-tour; a
+ * later call wins, its script running last.
+ */
+async function atTourStep(page: Page, person: string, step: string) {
+  await page.addInitScript(
+    ([key, value]) => sessionStorage.setItem(key!, value!),
+    [`openfolia.tour:${person}`, step],
+  );
+}
+
 test.describe('the user guide', () => {
   test('content and revisions', async ({ page, save, text, l }) => {
     await signIn(page, USERS.author);
@@ -87,17 +98,37 @@ test.describe('the user guide', () => {
     await save('account-menu');
   });
 
-  test('tour and tips', async ({ page, save, l }) => {
+  test('tour and tips', async ({ page, save, l, lang, text, as }) => {
     await preferences(page, { showTips: true, tourDone: false });
     await signIn(page, USERS.author);
+    // The tour's second step, Open a module (#869): this tab kept it, as after Show me how.
+    await atTourStep(page, USERS.author, 'tour.open-module');
     await page.goto('/content');
     await expect(page.getByRole('row').nth(3)).toBeVisible();
     await expect(
-      page.getByRole('dialog', { name: l('tour.content.title') }),
+      page.getByRole('dialog', { name: l('tour.openModule.title') }),
     ).toBeVisible();
     await save('tour');
+
+    // Change a sentence, in a revision of the author's with the module open.
+    const revision = await revisionWithModule(
+      await as(USERS.author),
+      lang,
+      text.revision,
+    );
+    await atTourStep(page, USERS.author, 'tour.edit');
+    await openModule(
+      page,
+      `/content/${lang}/${MODULE_ID}?cs=${revision.id}`,
+      text.module,
+    );
+    await expect(
+      page.getByRole('dialog', { name: l('tour.edit.title') }),
+    ).toBeVisible();
+    await save('tour-edit');
+
     await preferences(page, { showTips: true, tourDone: true });
-    await page.reload();
+    await page.goto('/content');
     await expect(page.getByRole('row').nth(3)).toBeVisible();
     await expect(
       page.getByRole('dialog', { name: l('tips.newModule.title') }),

@@ -31,7 +31,7 @@ test.describe('audit log export @area:admin @api:audit', () => {
     await csv.saveAs(csvFile);
     const lines = (await readFile(csvFile, 'utf8')).split('\r\n');
     expect(lines[0]).toBe(
-      'id,at,actor kind,actor id,action,subject type,subject id,comment,data',
+      'id,at,actor kind,actor id,action,subject type,subject id,comment,data,kind',
     );
     // The export is recorded before the file is read, so today's file holds it.
     expect(lines.some((l) => l.includes(',audit-log.export,audit-log,'))).toBe(
@@ -132,9 +132,7 @@ test.describe('audit log export @area:admin @api:audit', () => {
         .filter({ hasText: 'Old audit events removed' }),
     ).toBeVisible();
     await expect(
-      page.getByText(
-        'Only retention, when the operator sets a period, removes old events',
-      ),
+      page.getByText('Only retention removes old events', { exact: false }),
     ).toBeVisible();
   });
 });

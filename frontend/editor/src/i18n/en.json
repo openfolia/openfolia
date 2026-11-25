@@ -556,12 +556,17 @@
           "unconverted": "Unconverted content",
           "attachment": "Attachment",
           "attachmentNote": "Attachment note in the PDF",
-          "glossary": "Glossary heading"
+          "glossary": "Glossary heading",
+          "updateVersion": "Word before a version",
+          "updateBefore": "Steps before the update",
+          "updateDuring": "Steps during the update",
+          "updateAfter": "Steps after the update"
         },
         "groups": {
           "signalWords": "Signal words",
           "notes": "Notes",
           "captions": "Captions",
+          "updateGuides": "Update guides",
           "other": "Other"
         },
         "reset": "Reset to built-in",
@@ -762,7 +767,11 @@
         "anySubject": "Anything",
         "anyAction": "Any action",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "kind": "Kind of event",
+        "kindAll": "All events",
+        "kindWrite": "Changes",
+        "kindRead": "Reads"
       },
       "table": {
         "label": "Audit events",
@@ -787,9 +796,11 @@
         "title": "Nothing recorded yet",
         "description": "Every change of state is recorded here, with who made it and when.",
         "filteredTitle": "No events match",
-        "filteredDescription": "Try other filters."
+        "filteredDescription": "Try other filters.",
+        "readsTitle": "No reads recorded",
+        "readsDescription": "Every read a service account’s token makes is recorded here, with the account and the route. People’s reads in the editor are not."
       },
-      "note": "The audit log is append-only: events are never changed. Only retention, when the operator sets a period, removes old events, and records that it did.",
+      "note": "The audit log is append-only: events are never changed. Only retention removes old events, and records that it did: changes after the period the operator sets, reads of service accounts after their own period (90 days unless set otherwise).",
       "showIn": "Show in audit log",
       "subjects": {
         "changeSet": "Revision",
@@ -819,7 +830,8 @@
         "backupKey": "Backup key",
         "backupRequest": "Backup request",
         "groupMapping": "Group mapping",
-        "backupSettings": "Backup settings"
+        "backupSettings": "Backup settings",
+        "route": "API route"
       },
       "actions": {
         "assetDelete": "File deleted",
@@ -916,7 +928,9 @@
         "userPasswordResetRequested": "Password reset requested",
         "userPasswordSet": "Password set",
         "userSignIn": "Signed in",
-        "userSignOut": "Signed out"
+        "userSignOut": "Signed out",
+        "apiRead": "Read over the API",
+        "apiReadGap": "Reads not recorded one by one"
       },
       "export": {
         "label": "Export",
@@ -924,7 +938,15 @@
         "jsonl": "JSON Lines",
         "failed": "The audit log could not be exported. Try again."
       },
-      "self": "By its author"
+      "self": "By its author",
+      "read": {
+        "client": "Client: {client}",
+        "clientLabel": "Client: ",
+        "ref": "at {ref}",
+        "status": "Answered {status}",
+        "aborted": "Client left early",
+        "unrecorded": "{count, plural, one {# read not recorded} other {# reads not recorded}}"
+      }
     },
     "webhooks": {
       "note": "Calls are signed (HMAC-SHA256 with the subscriber's secret) and retried with backoff. A subscriber that keeps failing is turned off until it is re-enabled.",
@@ -3997,7 +4019,20 @@
       "types": "Module types it gathers",
       "typesSafety": "None chosen: the safety types the settings mark ({types}).",
       "typesNoSafety": "The settings mark no type as safety content: choose the types to gather.",
-      "typesMissing": "Choose the module types to gather."
+      "typesMissing": "Choose the module types to gather.",
+      "updateGuide": "Update guide, steps per software version",
+      "guideHint": "Readers pick the version they are on and the one they go to, and get the steps of every release in between. You add the steps once it is created.",
+      "product": "Product",
+      "noProduct": "The project’s default variant",
+      "productHint": "The guide is for the same product as this manual: it starts with its variants and text attributes.",
+      "versionAttribute": "Version attribute",
+      "noVersionAttribute": "The project has no version attribute yet. An admin adds one under Admin, Settings, Variant attributes, with the kind Version.",
+      "versionAttributeMissing": "Choose the version attribute the guide follows.",
+      "versions": "Versions",
+      "versionsPlaceholder": "1.0, 2.0, 3.0",
+      "versionsHint": "The versions a reader picks from and to, separated by commas. Any order: they are sorted oldest first.",
+      "versionsInvalid": "“{value}” is not a dotted version such as 2.3.",
+      "versionsTooFew": "Give at least two versions: the one a reader is on and the one they go to."
     },
     "create": {
       "done": "{title} created",
@@ -4221,6 +4256,71 @@
       "noticeCountByModule": "{count, plural, one {# module} other {# modules}} holding notices, gathered from {source}, a group per module",
       "noticeCountByLevel": "{count, plural, one {# module} other {# modules}} holding notices, gathered from {source}, grouped by hazard level",
       "emptyNoticesDescription": "The rule gathers no safety notice from its source manual. Its checks say why, beside the rule."
+    },
+    "guide": {
+      "add": "Add step",
+      "count": "{count, plural, =0 {No steps} one {# step} other {# steps}}",
+      "emptyTitle": "No steps yet",
+      "emptyDescription": "Add the first step: pick a module or create one, then set the version that needs it and its phase.",
+      "emptyReadOnly": "This update guide has no steps yet.",
+      "removed": "Removed the step “{title}”.",
+      "follows": "Follows {attribute}:",
+      "versions": "Versions",
+      "removeVersion": "Remove version {version}",
+      "unplaced": "Steps without a version or phase",
+      "version": "Version {version}",
+      "stepCount": "{count, plural, one {# step} other {# steps}}",
+      "phaseList": "Version {version}, {phase}",
+      "editStep": "Edit the step “{title}”",
+      "removeStep": "Remove the step “{title}”",
+      "phases": {
+        "before": "Before the update",
+        "during": "During the update",
+        "after": "After the update"
+      },
+      "form": {
+        "addTitle": "Add step",
+        "editTitle": "Edit step",
+        "description": "“{title}”: when a reader does it, and for whom.",
+        "version": "Version that needs it",
+        "versionPlaceholder": "Choose a version",
+        "otherVersion": "Another version…",
+        "newVersion": "New version",
+        "newVersionPlaceholder": "For example 2.3",
+        "versionHint": "Readers updating past this version get the step. A new version is added to the guide.",
+        "versionMissing": "Choose the version that needs this step.",
+        "versionInvalid": "Type a dotted version such as 2.3.",
+        "versionTooEarly": "Choose a version after {first}: no update starts before the guide’s first version.",
+        "phase": "Phase",
+        "phaseMissing": "Choose when the step is done.",
+        "level": "Level",
+        "everyLevel": "Every level",
+        "levelHint": "Readers at this level and more restricted ones see the step.",
+        "options": "Options",
+        "everySetup": "Every setup",
+        "pickCondition": "Only for some setups…",
+        "changeCondition": "Change…",
+        "clearCondition": "Every setup",
+        "pickTitle": "Only for some setups",
+        "pickSubtitle": "Readers see the step “{title}” only when their options match.",
+        "cancel": "Cancel",
+        "add": "Add step",
+        "save": "Save step",
+        "moduleMissing": "Choose the module that holds the step."
+      },
+      "preview": {
+        "heading": "Preview for",
+        "hint": "The steps a reader gets for their update, as the portal shows them once released.",
+        "from": "From",
+        "to": "To",
+        "level": "Level",
+        "everyLevel": "Every level",
+        "notSet": "Not set",
+        "refused": "Choose versions of the guide.",
+        "notForward": "Choose a later version to go to.",
+        "none": "No step for an update from {from} to {to}.",
+        "count": "{count, plural, one {# step} other {# steps}} from {from} to {to}"
+      }
     }
   },
   "checks": {
@@ -4611,6 +4711,18 @@
       "derived-audience-wider": {
         "title": "Wider audience than its source",
         "detail": "The derived manual is for a wider audience than its source manual, so nothing is gathered from it: it holds only its own front and back matter. Give it the source’s audience or a narrower one, or gather from a manual for its audience."
+      },
+      "update-step-version": {
+        "title": "Step without a valid version",
+        "detail": "A step of the update guide has no version, or one that is not a dotted version such as 2.3, so no update ever shows it. Give it the version that needs it."
+      },
+      "update-step-outside-versions": {
+        "title": "Step outside the guide’s versions",
+        "detail": "A step of the update guide is for a version that no update between the guide’s first and last version crosses, so it is never shown. Give it a later version, or add its version to the guide."
+      },
+      "update-step-phase": {
+        "title": "Unknown phase",
+        "detail": "A step of the update guide has a phase that is not before, during or after the update. Pick one of the three."
       },
       "missing-manufacturer": {
         "title": "Manufacturer details missing",
@@ -6199,9 +6311,17 @@
       "title": "See it as it prints",
       "body": "Preview shows the module beside what you write, laid out as in the PDF, for the variant you choose."
     },
+    "variant": {
+      "title": "Only for some products?",
+      "body": "Put the text in a variant block and choose the variants it applies to. Preview shows the module as each one."
+    },
     "review": {
       "title": "Your revisions and your reviews",
       "body": "Switch here between the revisions waiting for you and your own. Open one to see what changed, comment and approve it."
+    },
+    "search": {
+      "title": "Find anything",
+      "body": "Press {keys} anywhere to find a module, a manual or a page of the user guide, and / to search the list on screen."
     },
     "notifications": {
       "title": "Hear back on your revisions",
@@ -6209,26 +6329,39 @@
     }
   },
   "tour": {
-    "content": {
-      "title": "Content",
-      "body": "Every module is here, by language and type. Search and filter the list, and open a module to read or write it."
+    "welcome": {
+      "title": "Write it once, publish it everywhere",
+      "body": "OpenFolia keeps your manuals as small reusable modules. Write a module once, and it goes into every manual, product and language that needs it.",
+      "next": "Show me how",
+      "dismiss": "Not now"
     },
-    "editor": {
-      "title": "The editor",
-      "body": "Opening a module opens the editor. What you write is saved as you type, into your revision: nothing reaches the published content until it has been reviewed."
+    "openModule": {
+      "title": "Open a module",
+      "body": "Each row is a module: a short piece such as a procedure or a safety note. Open one to start.",
+      "readBody": "Each row is a module: a short piece such as a procedure or a safety note. Open one to read it.",
+      "next": "Open this module"
     },
-    "changeSets": {
-      "title": "Revisions",
-      "body": "Every change goes into a revision, a draft of your own. Pick one here, or start one with your first edit."
+    "edit": {
+      "title": "Change a sentence",
+      "body": "Click into the text and type. Your change is saved as you go, in a revision: your draft, kept apart from the published content until it is reviewed.",
+      "next": "Start typing"
+    },
+    "revision": {
+      "title": "Your own revision",
+      "namedBody": "Your change is in “{name}”, a revision of your own. The published content stays as it is until your revision is reviewed and merged. Switch between revisions and the published content here, or start a new revision.",
+      "body": "Your change is in a revision of your own. The published content stays as it is until your revision is reviewed and merged. Switch between revisions and the published content here, or start a new revision.",
+      "readTitle": "Published content and revisions",
+      "readBody": "You are reading the published content, as it was released. Choose a revision here to read changes still in progress."
     },
     "review": {
-      "title": "Review",
-      "body": "When your revision is ready, submit it here. Reviewers comment and approve it, and then it is merged into the published content."
+      "title": "Send it for review",
+      "body": "When you’re done, submit your revision here. A reviewer approves it, a publisher merges it into the published content, and the next release takes it to the manuals."
     },
-    "search": {
-      "title": "Search",
-      "body": "Press {keys} anywhere to find a module, a manual or a page of the user guide, and / to search the list on screen."
-    }
+    "manuals": {
+      "title": "Find the manuals",
+      "body": "A manual puts modules together for one product and language. Open Manuals to read one from start to end."
+    },
+    "done": "That’s the tour. Press {keys} any time to find a module, a manual or a page of the user guide."
   },
   "maintenance": {
     "lineLabel": "{product} {version}",

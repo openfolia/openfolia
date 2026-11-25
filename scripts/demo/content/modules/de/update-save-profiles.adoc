@@ -1,0 +1,10 @@
+= Fahrerprofile sichern
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Exportieren Sie Ihre Fahrerprofile unter Einstellungen › Profile in Ihr Konto, da das Update sie zurücksetzt.

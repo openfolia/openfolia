@@ -1,6 +1,6 @@
 ---
 import Base from '../../../../layouts/Base.astro';
-import { fileSize, languageName, onlyAsText, textsFor } from '../../../../lib/i18n.ts';
+import { codeCopyConfig, fileSize, languageName, onlyAsText, textsFor } from '../../../../lib/i18n.ts';
 import { switchHref, variantSwitches } from '../../../../lib/variant-switch.ts';
 import {
   contentsLabel,
@@ -165,7 +165,7 @@ const contents = contentsLabel(s.lang);
           )
         }
       </header>
-      <div class="manual-body" data-pagefind-body>
+      <div class="manual-body" data-pagefind-body data-code-copy={JSON.stringify(codeCopyConfig(t))}>
         {/* Read for the filters and meta only, never indexed as the page's text (#845). */}
         <div hidden data-pagefind-ignore>
           <span data-pagefind-filter={t.product}>{release.productLabel}</span>
@@ -180,11 +180,13 @@ const contents = contentsLabel(s.lang);
   </div>
   <script>
     import { highlightCallouts, dismissTermOnEscape } from '@openfolia/render-html/browser';
+    import { startCodeCopy } from '../../../../scripts/code-copy.ts';
     import { startReading } from '../../../../scripts/reading.ts';
     import { showSwitchNotice } from '../../../../scripts/variant-notice.ts';
     showSwitchNotice(document);
     highlightCallouts(document);
     dismissTermOnEscape(document);
     startReading(document);
+    startCodeCopy(document);
   </script>
 </Base>

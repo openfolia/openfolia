@@ -38,7 +38,10 @@ describe('audit retention (e2e)', () => {
         ).rows,
       ).toHaveLength(1),
     );
-    expect(await app.app.get(AuditSinkConsumer).pruneOnce()).toBe(0);
+    expect(await app.app.get(AuditSinkConsumer).pruneOnce()).toEqual({
+      write: 0,
+      read: 0,
+    });
 
     app.actAs({
       kind: 'user',

@@ -1427,6 +1427,276 @@ paths:
         - manuals
       x-audience: delivery
       x-required-permission: content.read
+  /manuals/{id}/update-guide/{lang}:
+    get:
+      description: >-
+        An update guide (`kind: update-guide`, #906) in a configured language:
+        the versions a reader picks from and to, the levels and options it
+        offers, and how many steps the reader may see (`…/steps` lists them).
+        Not found for a manual of another kind, as for one the reader may not
+        see.
+      operationId: Manuals_updateGuide
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+            maxLength: 100
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            example: software-update
+        - name: lang
+          required: true
+          in: path
+          schema:
+            type: string
+            pattern: ^[a-zA-Z]{2,3}(?:-[A-Za-z0-9]{2,8})*$
+            example: en
+        - name: ref
+          required: false
+          in: query
+          description: >-
+            Branch, tag or commit ID to read from. Default: the server's
+            `CCMS_DEFAULT_REF`.
+          schema:
+            type: string
+      responses:
+        '200':
+          headers:
+            X-Ccms-Commit:
+              description: The commit the response was read from.
+              schema:
+                type: string
+            X-Ccms-Withdrawn:
+              description: >-
+                `true` when `?ref=` names the tag of a withdrawn release (as
+                `refs/tags/<tag>`, or `<tag>` when no branch has that name): the
+                read still works, but the release was taken back. Who, when and
+                why: `meta.withdrawal` of the tag in `GET /refs`, or
+                `attributes.withdrawal` of the release in `GET /releases`.
+                Absent otherwise.
+              schema:
+                type: string
+            ETag:
+              description: >-
+                Changes with the commit, with what the reader may see and when
+                the release whose tag is read is withdrawn.
+              schema:
+                type: string
+            Cache-Control:
+              description: >-
+                `immutable` when `?ref=` was a commit ID, except on routes whose
+                answer also depends on refs (a module’s status): `no-cache`
+                there.
+              schema:
+                type: string
+          description: ''
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/UpdateGuideDocument'
+        '304':
+          description: The `If-None-Match` ETag is still current.
+        '400':
+          description: A query parameter the route does not support, or a malformed one.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '401':
+          description: Missing or wrong API token.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '403':
+          description: '`forbidden`: the actor lacks the `content.read` permission.'
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '404':
+          description: >-
+            `not-found`: unknown ref, or no such item at that ref.
+            `change-set-branch-missing`: `ref` is the branch of a change set the
+            reader may see, and that branch is gone from the content repository
+            (`meta.branch`; the change set says so in `meta.branchMissing`).
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '406':
+          description: The `Accept` header rules out `application/vnd.api+json`.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '422':
+          description: >-
+            `invalid-content`: a file needed for the answer is broken; the
+            error's `meta.path` names it. `table-too-large`: a module file holds
+            a table of more than 1,000 columns or 50,000 cells (rows × columns),
+            or tables of more than 1,000,000 cells together, so it is not read
+            (`meta.path`; `meta.columns`, `meta.cells`, `meta.totalCells`: the
+            caps). `expansion-too-large`: once its module references are
+            included the manual holds more than 500,000 content nodes,
+            12,000,000 characters or 1,000,000 table cells (rows × columns) (a
+            module referred to over several paths counts once per path), or its
+            blocks and references nest more than 100 deep, so nothing of it is
+            made (`meta.nodes`, `meta.chars`, `meta.tableCells`, `meta.depth`:
+            the limits).
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+      summary: Read an update guide
+      tags:
+        - manuals
+      x-audience: delivery
+      x-required-permission: content.read
+  /manuals/{id}/update-guide/{lang}/steps:
+    get:
+      description: >-
+        Every step of the update guide the reader may see (#906), whatever its
+        level and condition, with its version, phase, level, condition and body,
+        ordered by version, then phase (`before`, `during`, `after`), then
+        manifest order: a client picks the steps of a jump itself
+        (`resolveUpdateGuide` in `@openfolia/content-model/core`: `from <
+        version <= to`, the reader’s level and options).
+      operationId: Manuals_updateGuideSteps
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+            maxLength: 100
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            example: software-update
+        - name: lang
+          required: true
+          in: path
+          schema:
+            type: string
+            pattern: ^[a-zA-Z]{2,3}(?:-[A-Za-z0-9]{2,8})*$
+            example: en
+        - name: page[number]
+          required: false
+          in: query
+          description: 'Page to return, from 1. Default: 1.'
+          schema:
+            type: integer
+            minimum: 1
+        - name: page[size]
+          required: false
+          in: query
+          description: 'Resources per page. Default: 50, at most 200.'
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: ref
+          required: false
+          in: query
+          description: >-
+            Branch, tag or commit ID to read from. Default: the server's
+            `CCMS_DEFAULT_REF`.
+          schema:
+            type: string
+      responses:
+        '200':
+          headers:
+            X-Ccms-Commit:
+              description: The commit the response was read from.
+              schema:
+                type: string
+            X-Ccms-Withdrawn:
+              description: >-
+                `true` when `?ref=` names the tag of a withdrawn release (as
+                `refs/tags/<tag>`, or `<tag>` when no branch has that name): the
+                read still works, but the release was taken back. Who, when and
+                why: `meta.withdrawal` of the tag in `GET /refs`, or
+                `attributes.withdrawal` of the release in `GET /releases`.
+                Absent otherwise.
+              schema:
+                type: string
+            ETag:
+              description: >-
+                Changes with the commit, with what the reader may see and when
+                the release whose tag is read is withdrawn.
+              schema:
+                type: string
+            Cache-Control:
+              description: >-
+                `immutable` when `?ref=` was a commit ID, except on routes whose
+                answer also depends on refs (a module’s status): `no-cache`
+                there.
+              schema:
+                type: string
+          description: ''
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/UpdateGuideStepPageDocument'
+        '304':
+          description: The `If-None-Match` ETag is still current.
+        '400':
+          description: A query parameter the route does not support, or a malformed one.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '401':
+          description: Missing or wrong API token.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '403':
+          description: '`forbidden`: the actor lacks the `content.read` permission.'
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '404':
+          description: >-
+            `not-found`: unknown ref, or no such item at that ref.
+            `change-set-branch-missing`: `ref` is the branch of a change set the
+            reader may see, and that branch is gone from the content repository
+            (`meta.branch`; the change set says so in `meta.branchMissing`).
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '406':
+          description: The `Accept` header rules out `application/vnd.api+json`.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+        '422':
+          description: >-
+            `invalid-content`: a file needed for the answer is broken; the
+            error's `meta.path` names it. `table-too-large`: a module file holds
+            a table of more than 1,000 columns or 50,000 cells (rows × columns),
+            or tables of more than 1,000,000 cells together, so it is not read
+            (`meta.path`; `meta.columns`, `meta.cells`, `meta.totalCells`: the
+            caps). `expansion-too-large`: once its module references are
+            included the manual holds more than 500,000 content nodes,
+            12,000,000 characters or 1,000,000 table cells (rows × columns) (a
+            module referred to over several paths counts once per path), or its
+            blocks and references nest more than 100 deep, so nothing of it is
+            made (`meta.nodes`, `meta.chars`, `meta.tableCells`, `meta.depth`:
+            the limits).
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorDocument'
+      summary: List an update guide’s steps
+      tags:
+        - manuals
+      x-audience: delivery
+      x-required-permission: content.read
   /manuals/{id}/history:
     get:
       description: >-
@@ -7467,6 +7737,42 @@ components:
                   else English, reported as `missing-label`.
                 type: string
                 minLength: 1
+              updateVersion:
+                description: >-
+                  The word before a version in an update guide’s headings
+                  (`Version 2.0`), e.g. `Version`. Without it: the label of the
+                  base language (`pt` for `pt-BR`), then the shipped default
+                  (English, German, French, Arabic and Hebrew ship one), else
+                  English, reported as `missing-label`.
+                type: string
+                minLength: 1
+              updateBefore:
+                description: >-
+                  The heading of an update guide’s steps done before the update,
+                  e.g. `Before the update`. Without it: the label of the base
+                  language (`pt` for `pt-BR`), then the shipped default
+                  (English, German, French, Arabic and Hebrew ship one), else
+                  English, reported as `missing-label`.
+                type: string
+                minLength: 1
+              updateDuring:
+                description: >-
+                  The heading of an update guide’s steps done during the update,
+                  e.g. `During the update`. Without it: the label of the base
+                  language (`pt` for `pt-BR`), then the shipped default
+                  (English, German, French, Arabic and Hebrew ship one), else
+                  English, reported as `missing-label`.
+                type: string
+                minLength: 1
+              updateAfter:
+                description: >-
+                  The heading of an update guide’s steps done after the update,
+                  e.g. `After the update`. Without it: the label of the base
+                  language (`pt` for `pt-BR`), then the shipped default
+                  (English, German, French, Arabic and Hebrew ship one), else
+                  English, reported as `missing-label`.
+                type: string
+                minLength: 1
             additionalProperties: false
             description: >-
               One language’s labels, by language tag (`pt-BR`; `pt` also fills
@@ -10240,10 +10546,12 @@ components:
         kind:
           description: >-
             `derived` (#451): its entries are gathered from another manual by
-            `rule`, never written by hand. Absent: an assembled manual.
+            `rule`, never written by hand. `update-guide` (#906): its entries
+            are its `guide`’s steps. Absent: an assembled manual.
           type: string
           enum:
             - derived
+            - update-guide
         title:
           anyOf:
             - type: string
@@ -10432,6 +10740,62 @@ components:
             - front
             - back
           additionalProperties: false
+        guide:
+          description: >-
+            An update guide’s own part (#906): `attribute`, the version
+            attribute it follows; `versions`, the versions a reader picks from,
+            oldest first; `steps`, each a `module` with the `version` that needs
+            it, its `phase` (`before`, `during`, `after`) and optionally a
+            `level` (an audience ID) and a `when` condition on the reader’s
+            options. Only the steps whose module the reader may see. Absent for
+            other kinds.
+          type: object
+          properties:
+            attribute:
+              type: string
+              maxLength: 64
+              pattern: ^[a-z][a-z0-9-]*$
+            versions:
+              minItems: 2
+              maxItems: 500
+              type: array
+              items:
+                type: string
+                maxLength: 64
+                pattern: ^\d+(?:\.\d+)*$
+            steps:
+              default: []
+              maxItems: 2000
+              type: array
+              items:
+                type: object
+                properties:
+                  module:
+                    type: string
+                    maxLength: 100
+                    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                  version:
+                    type: string
+                    maxLength: 64
+                  phase:
+                    type: string
+                    maxLength: 64
+                  level:
+                    type: string
+                    maxLength: 64
+                    pattern: ^[a-z][a-z0-9-]*$
+                  when:
+                    allOf:
+                      - $ref: '#/components/schemas/Condition'
+                required:
+                  - module
+                  - phase
+                additionalProperties: false
+          required:
+            - attribute
+            - versions
+            - steps
+          additionalProperties: false
         entries:
           type: array
           items:
@@ -10439,7 +10803,8 @@ components:
           description: >-
             Only the modules the reader may see (groups left empty go too), so
             it can be empty. A derived manual’s are the ones its rule gathers,
-            front matter first, back matter last.
+            front matter first, back matter last; an update guide’s one per
+            step, by version and phase.
       required:
         - schemaVersion
         - title
@@ -10721,6 +11086,237 @@ components:
         - code
         - message
       additionalProperties: false
+    UpdateGuideDocument:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/UpdateGuideResource'
+      required:
+        - data
+      additionalProperties: false
+    UpdateGuideResource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - UpdateGuide
+        id:
+          type: string
+        attributes:
+          type: object
+          properties:
+            title:
+              type: string
+            lang:
+              type: string
+            attribute:
+              description: >-
+                The version attribute the guide follows (`guide.attribute`),
+                e.g. `{ "id": "software", "label": "Software" }`.
+              allOf:
+                - $ref: '#/components/schemas/UpdateGuideLabel'
+            versions:
+              type: array
+              items:
+                type: string
+              description: >-
+                The versions a reader picks from and to, oldest first. A step
+                applies to a jump from `from` to `to` when `from < version <=
+                to`, compared numerically (`2.10` is after `2.9`).
+            levels:
+              type: array
+              items:
+                $ref: '#/components/schemas/UpdateGuideLabel'
+              description: >-
+                The levels a reader picks from: the configured audience levels
+                up to the guide’s audience, least restricted first. A step with
+                a `level` is for that level and the more restricted ones.
+            options:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  label:
+                    type: string
+                    description: In the guide’s language, else the source language’s.
+                  values:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UpdateGuideLabel'
+                required:
+                  - id
+                  - label
+                  - values
+                additionalProperties: false
+              description: >-
+                The options the steps’ conditions test: each an enum variant
+                attribute with its values. A condition on an option the reader
+                has not set is false.
+          required:
+            - title
+            - lang
+            - attribute
+            - versions
+            - levels
+            - options
+          additionalProperties: false
+        relationships:
+          type: object
+          properties:
+            manual:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Manual
+                    id:
+                      type: string
+                  required:
+                    - type
+                    - id
+                  additionalProperties: false
+              required:
+                - data
+              additionalProperties: false
+          required:
+            - manual
+          additionalProperties: false
+        meta:
+          type: object
+          properties:
+            stepCount:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+              description: How many steps the reader may see (`…/steps` lists them).
+            issues:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResolveIssue'
+          required:
+            - stepCount
+            - issues
+          additionalProperties: false
+      required:
+        - type
+        - id
+        - attributes
+        - relationships
+        - meta
+      additionalProperties: false
+      description: '`id` is `<manual>/<lang>`, as in the URL.'
+    UpdateGuideLabel:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+          description: In the guide’s language, else the source language’s.
+      required:
+        - id
+        - label
+      additionalProperties: false
+    UpdateGuideStepPageDocument:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateGuideStepResource'
+        meta:
+          type: object
+          properties:
+            page:
+              $ref: '#/components/schemas/PageMeta'
+          required:
+            - page
+          additionalProperties: false
+        links:
+          $ref: '#/components/schemas/PageLinks'
+      required:
+        - data
+        - meta
+        - links
+      additionalProperties: false
+    UpdateGuideStepResource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - UpdateGuideStep
+        id:
+          type: string
+        attributes:
+          type: object
+          properties:
+            module:
+              type: string
+              description: The module holding the step’s text.
+            title:
+              type: string
+            lang:
+              type: string
+              description: Differs from the guide when a translation is missing.
+            version:
+              type: string
+              description: The release that needs the step.
+            phase:
+              type: string
+              enum:
+                - before
+                - during
+                - after
+              description: '`before`, `during` or `after` the update.'
+            level:
+              nullable: true
+              description: >-
+                The least restricted level the step is for (an audience ID);
+                null: every level.
+              type: string
+            when:
+              nullable: true
+              description: 'The condition on the reader’s options; null: every setup.'
+              allOf:
+                - $ref: '#/components/schemas/Condition'
+            condition:
+              nullable: true
+              description: '`when` as written in the manifest, e.g. `cluster in (yes)`.'
+              type: string
+            blocks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Block'
+              description: >-
+                The step’s body, resolved as in a resolved manual (IDs
+                `module--block`), for the guide’s first variant.
+          required:
+            - module
+            - title
+            - lang
+            - version
+            - phase
+            - level
+            - when
+            - condition
+            - blocks
+          additionalProperties: false
+      required:
+        - type
+        - id
+        - attributes
+      additionalProperties: false
+      description: >-
+        `id` is the step’s module ID, with `--2`, `--3`, … for its later steps
+        in the guide; stable while the guide’s steps are not reordered.
     ManualVersionPageDocument:
       type: object
       properties:

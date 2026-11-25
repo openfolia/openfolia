@@ -214,6 +214,10 @@ services:
         condition: service_healthy
     environment:
       CCMS_MCP_API_URL: http://api:3000
+      # Each caller sends a service account token of its own (#861), made in the editor: no
+      # token to set here. Deprecated, for one release (removed in v0.0.5): a shared
+      # CCMS_MCP_HTTP_TOKEN for every caller, who then read as CCMS_MCP_API_TOKEN. Leave both
+      # unset on a new install.
       CCMS_MCP_API_TOKEN: ${CCMS_MCP_API_TOKEN:-}
       CCMS_MCP_HTTP_TOKEN: ${CCMS_MCP_HTTP_TOKEN:-}
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: ${CCMS_MCP_HTTP_ALLOWED_ORIGINS:-}

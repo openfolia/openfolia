@@ -473,6 +473,27 @@ describe('the documentation blocks in the editor', () => {
     expect(button.getAttribute('aria-disabled')).toBe('true');
   });
 
+  it('mark the variant block for its tip only where a person can choose variants (#892)', async () => {
+    const tipOf = (el: HTMLElement) =>
+      el
+        .querySelector('[data-node="variant"] [data-tip]')
+        ?.getAttribute('data-tip');
+    const pickVariant = async () => null;
+    expect(tipOf((await mount({ config: CONFIG, pickVariant })).el)).toBe(
+      'module-editor.variant',
+    );
+    // No picker (nobody to choose), a read-only editor, or a project without variant attributes.
+    expect(tipOf((await mount({ config: CONFIG })).el)).toBeUndefined();
+    const readOnly = await mount({ config: CONFIG, pickVariant });
+    readOnly.fixture.componentRef.setInput('editable', false);
+    await readOnly.stable();
+    expect(tipOf(readOnly.el)).toBeUndefined();
+    const none = { ...CONFIG, variantAttributes: [] };
+    expect(
+      tipOf((await mount({ config: none, pickVariant })).el),
+    ).toBeUndefined();
+  });
+
   it('give the focus back to the variant block after the picker applies, the caret where it was (#793)', async () => {
     // Meanwhile the selection goes elsewhere (to the document's start): it comes back.
     let moveAway = () => undefined as unknown;

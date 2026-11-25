@@ -1,0 +1,10 @@
+= Attendre le redémarrage
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+L'écran redémarre deux fois. N'ouvrez pas les portes avant l'apparition de l'écran d'accueil.

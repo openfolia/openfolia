@@ -12,6 +12,7 @@ import {
   StoredManifest,
 } from './manifest.js';
 import { printableText } from './localized-text.js';
+import { updateGuideEntries } from './update-guide.js';
 
 export class ManifestParseError extends Error {
   constructor(message: string) {
@@ -43,6 +44,11 @@ export function parseManifest(
       'invalid manifest: entries: a derived manual has none; its rule gathers them',
     );
   }
+  if (raw['kind'] === 'update-guide' && raw['entries'] !== undefined) {
+    throw new ManifestParseError(
+      "invalid manifest: entries: an update guide has none; its guide's steps are its entries",
+    );
+  }
   let input: Record<string, unknown>;
   try {
     input = {
@@ -51,6 +57,12 @@ export function parseManifest(
       attributes: mapAttributes(raw['attributes'], parseWhen),
       ...(raw['entries'] !== undefined && {
         entries: mapEntries(raw['entries'], parseWhen),
+      }),
+      ...(isRecord(raw['guide']) && {
+        guide: {
+          ...raw['guide'],
+          steps: mapEntries(raw['guide']['steps'], parseWhen),
+        },
       }),
     };
   } catch (e) {
@@ -62,13 +74,21 @@ export function parseManifest(
       `invalid manifest: ${result.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')}`,
     );
   }
-  return result.data;
+  // An update guide's entries are its steps (#906), made here, never printed.
+  const guide = result.data.guide;
+  return guide && result.data.kind === 'update-guide'
+    ? { ...result.data, entries: updateGuideEntries(guide.steps) }
+    : result.data;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
  * Prints a manifest as canonical YAML: fixed key order, sorted variant keys, conditions as text.
  * A derived manual (#451) is printed with its rule and without entries, which are gathered when
- * it is read.
+ * it is read; an update guide (#906) with its guide and without entries, made from its steps.
  */
 export function printManifest(manifest: Manifest): string {
   const sortKeys = <T>(record: Record<string, T>) =>
@@ -79,7 +99,7 @@ export function printManifest(manifest: Manifest): string {
     );
   const doc: Record<string, unknown> = {
     schemaVersion: CURRENT_MANIFEST_VERSION,
-    ...(manifest.kind === 'derived' && { kind: 'derived' }),
+    ...(manifest.kind !== undefined && { kind: manifest.kind }),
     title: printableText(manifest.title),
   };
   if (manifest.audience) doc['audience'] = manifest.audience;
@@ -148,6 +168,21 @@ export function printManifest(manifest: Manifest): string {
             ...(rule.notices.levels && { levels: [...rule.notices.levels] }),
           },
         }),
+      };
+    }
+  } else if (manifest.kind === 'update-guide') {
+    const guide = manifest.guide;
+    if (guide) {
+      doc['guide'] = {
+        attribute: guide.attribute,
+        versions: [...guide.versions],
+        steps: guide.steps.map((step) => ({
+          module: step.module,
+          ...(step.version !== undefined && { version: step.version }),
+          phase: step.phase,
+          ...(step.level !== undefined && { level: step.level }),
+          ...(step.when !== undefined && { when: formatWhen(step.when) }),
+        })),
       };
     }
   } else {

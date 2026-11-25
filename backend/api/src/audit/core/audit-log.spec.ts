@@ -31,6 +31,7 @@ describe('AuditLog', () => {
       {
         id: '1',
         at: expect.any(Date),
+        kind: 'write',
         actor: { kind: 'user', id: 'sample-author' },
         action: 'role.assign',
         subject: { type: 'user', id: 'sample-reader' },
@@ -38,6 +39,22 @@ describe('AuditLog', () => {
         data: { role: 'reviewer' },
       },
     ]);
+  });
+
+  // #877: read retention removes reads, so only `api.read` may be one, and it always is.
+  it('refuses a read that is not api.read, and api.read as a change', async () => {
+    await expect(
+      unit.run((tx) => log.record(tx, author, { ...assign, kind: 'read' })),
+    ).rejects.toThrow('kind "read"');
+    await expect(
+      unit.run((tx) =>
+        log.record(tx, author, {
+          action: 'api.read',
+          subject: { type: 'route', id: '/me' },
+        }),
+      ),
+    ).rejects.toThrow('kind "read"');
+    expect(log.events).toEqual([]);
   });
 
   it('stores a missing comment as null and missing data as {}', async () => {

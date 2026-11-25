@@ -30,6 +30,10 @@ import {
   ListTableDirective,
 } from '@openfolia/ui/list-frame';
 import { ZardSelectImports } from '@openfolia/ui/select';
+import {
+  SegmentedComponent,
+  type SegmentedOption,
+} from '@openfolia/ui/segmented';
 import { ReservedSlotDirective } from '@openfolia/ui/smooth';
 import { ZardTableImports } from '@openfolia/ui/table';
 import { ToastService } from '@openfolia/ui/toast';
@@ -56,9 +60,12 @@ import {
   type AuditActor,
   type AuditEventItem,
   type AuditSubject,
+  type AuditKind,
   dataEntries,
   dayRangeFilter,
   type DataEntry,
+  readFacts,
+  type ReadFacts,
   SUBJECT_ID_MAX,
   SUBJECT_TYPE_TEXTS,
   subjectFilter,
@@ -67,6 +74,7 @@ import {
   validAction,
   validActor,
   validDay,
+  validKind,
   validSubjectType,
 } from './audit-model';
 
@@ -88,8 +96,9 @@ interface Option {
  * who acted (by name where the person or service account is known, else the ID), what happened
  * (in words for a known action, else its key), what it happened to (a link to the module, the
  * manual or the change set's review) and the comment. A row opens to show its details (`data`).
- * Filters: actor (a kind or one person or service account), subject (a type, and an ID within it),
- * action and a range of days (both included, in the browser's time zone); they, the page and its
+ * Filters: the kind of event (#877: changes, or the reads of service accounts, one per request
+ * their tokens make, each with the route, the client and the status), actor (a kind or one person
+ * or service account), subject (a type, and an ID within it), action and a range of days (both included, in the browser's time zone); they, the page and its
  * size are in the address, so the review and the module editor link here with the subject set.
  * Export (#379) downloads every event the filters select, as CSV or JSON Lines; the API records
  * each export in the log itself.
@@ -106,6 +115,7 @@ interface Option {
     ListItemDirective,
     ListTableDirective,
     ReservedSlotDirective,
+    SegmentedComponent,
     ZardBadgeComponent,
     ZardButtonComponent,
     ZardDropdownImports,
@@ -124,6 +134,14 @@ interface Option {
       role="group"
       [attr.aria-label]="'editor.admin.audit.filter.label' | transloco"
     >
+      <of-segmented
+        class="w-full sm:w-auto"
+        data-filter="kind"
+        [label]="'editor.admin.audit.filter.kind' | transloco"
+        [options]="kindOptions()"
+        [value]="kind() ?? ''"
+        (valueChange)="setKind($event)"
+      />
       <z-select
         class="w-full sm:w-60"
         zSearchable
@@ -260,18 +278,8 @@ interface Option {
       [error]="frameError()"
       [offset]="offset()"
       [pageSizes]="pageSizes"
-      [emptyTitle]="
-        (filtered()
-          ? 'editor.admin.audit.empty.filteredTitle'
-          : 'editor.admin.audit.empty.title'
-        ) | transloco
-      "
-      [emptyDescription]="
-        (filtered()
-          ? 'editor.admin.audit.empty.filteredDescription'
-          : 'editor.admin.audit.empty.description'
-        ) | transloco
-      "
+      [emptyTitle]="emptyTexts().title | transloco"
+      [emptyDescription]="emptyTexts().description | transloco"
       (pageChange)="view.set({ page: $event })"
       (pageSizeChange)="view.set({ size: $event, page: 1 })"
       (retry)="reload()"
@@ -308,6 +316,7 @@ interface Option {
               @let a = event.attributes;
               @let open = isOpen(event.id);
               @let link = linkOf(a.subject);
+              @let read = readOf(event);
               <tr
                 z-table-row
                 [ofListItem]="event"
@@ -382,6 +391,61 @@ interface Option {
                       >{{ a.action }}</span
                     >
                   }
+                  @if (read) {
+                    <span
+                      class="mt-1 flex flex-wrap gap-1"
+                      data-slot="audit-read-facts"
+                    >
+                      @if (read.client) {
+                        <z-badge
+                          zType="info"
+                          class="h-auto max-w-full font-mono font-normal whitespace-normal [overflow-wrap:anywhere]"
+                          data-slot="audit-read-client"
+                          [attr.title]="
+                            'editor.admin.audit.read.client'
+                              | transloco: { client: read.client }
+                          "
+                          ><span class="sr-only">{{
+                            'editor.admin.audit.read.clientLabel' | transloco
+                          }}</span
+                          >{{ read.client }}</z-badge
+                        >
+                      }
+                      @if (read.failedStatus) {
+                        <z-badge
+                          class="h-auto whitespace-normal tabular-nums"
+                          data-slot="audit-read-status"
+                          [zType]="
+                            read.failedStatus >= 500 ? 'destructive' : 'warning'
+                          "
+                          >{{
+                            'editor.admin.audit.read.status'
+                              | transloco: { status: read.failedStatus }
+                          }}</z-badge
+                        >
+                      }
+                      @if (read.unrecorded !== undefined) {
+                        <z-badge
+                          zType="warning"
+                          class="h-auto whitespace-normal tabular-nums"
+                          data-slot="audit-read-gap"
+                          >{{
+                            'editor.admin.audit.read.unrecorded'
+                              | transloco: { count: read.unrecorded }
+                          }}</z-badge
+                        >
+                      }
+                      @if (read.aborted) {
+                        <z-badge
+                          zType="secondary"
+                          class="h-auto whitespace-normal"
+                          >{{
+                            'editor.admin.audit.read.aborted' | transloco
+                          }}</z-badge
+                        >
+                      }
+                    </span>
+                  }
                   @if (a.data['self'] === true) {
                     <z-badge
                       zType="secondary"
@@ -407,6 +471,15 @@ interface Option {
                     <span
                       class="block font-mono text-xs [overflow-wrap:anywhere]"
                       >{{ a.subject.id }}</span
+                    >
+                  }
+                  @if (read?.ref; as ref) {
+                    <span
+                      class="text-muted-foreground mt-0.5 block text-xs [overflow-wrap:anywhere]"
+                      data-slot="audit-read-ref"
+                      >{{
+                        'editor.admin.audit.read.ref' | transloco: { ref }
+                      }}</span
                     >
                   }
                 </td>
@@ -490,6 +563,7 @@ export class AuditLogPage {
   private readonly t = injectTranslate();
 
   protected readonly view = injectQueryState({
+    kind: idParam(validKind),
     actor: idParam(validActor),
     type: idParam(validSubjectType),
     id: textParam({ max: SUBJECT_ID_MAX }),
@@ -499,6 +573,7 @@ export class AuditLogPage {
     page: intParam(1),
     size: intParam(AUDIT_PAGE_SIZES[0], { only: AUDIT_PAGE_SIZES }),
   });
+  protected readonly kind = this.view.get('kind');
   protected readonly actor = this.view.get('actor');
   protected readonly subjectType = this.view.get('type');
   protected readonly subjectId = this.view.get('id');
@@ -528,6 +603,7 @@ export class AuditLogPage {
 
   protected readonly filtered = computed(
     () =>
+      this.kind() !== undefined ||
       this.actor() !== undefined ||
       this.subjectType() !== undefined ||
       this.subjectId() !== '' ||
@@ -539,12 +615,46 @@ export class AuditLogPage {
   /** The filters as the API takes them, on the list and the export alike. */
   private readonly filterQuery = computed(
     (): Readonly<Record<string, string | undefined>> => ({
+      'filter[kind]': this.kind(),
       'filter[actor]': this.actor(),
       'filter[subject]': subjectFilter(this.subjectType(), this.subjectId()),
       'filter[action]': this.action(),
       ...dayRangeFilter(this.from(), this.to()),
     }),
   );
+
+  /** Changes, reads or both (#877). */
+  protected readonly kindOptions = computed((): SegmentedOption[] => [
+    { value: '', label: this.t('editor.admin.audit.filter.kindAll') },
+    { value: 'write', label: this.t('editor.admin.audit.filter.kindWrite') },
+    { value: 'read', label: this.t('editor.admin.audit.filter.kindRead') },
+  ]);
+
+  /** What an empty list says: about reads when only they are asked for. */
+  protected readonly emptyTexts = computed(() => {
+    const onlyReads =
+      this.kind() === 'read' &&
+      this.actor() === undefined &&
+      this.subjectType() === undefined &&
+      this.action() === undefined &&
+      this.from() === undefined &&
+      this.to() === undefined;
+    if (onlyReads) {
+      return {
+        title: 'editor.admin.audit.empty.readsTitle',
+        description: 'editor.admin.audit.empty.readsDescription',
+      };
+    }
+    return this.filtered()
+      ? {
+          title: 'editor.admin.audit.empty.filteredTitle',
+          description: 'editor.admin.audit.empty.filteredDescription',
+        }
+      : {
+          title: 'editor.admin.audit.empty.title',
+          description: 'editor.admin.audit.empty.description',
+        };
+  });
 
   protected readonly frameError = computed(() => {
     const failure = this.failure();
@@ -660,6 +770,10 @@ export class AuditLogPage {
     return subjectLink(subject);
   }
 
+  protected readOf(event: AuditEventItem): ReadFacts | null {
+    return readFacts(event);
+  }
+
   protected entriesOf(event: AuditEventItem): DataEntry[] {
     return dataEntries(event.attributes.data);
   }
@@ -681,6 +795,11 @@ export class AuditLogPage {
       if (!next.delete(id)) next.add(id);
       return next;
     });
+  }
+
+  protected setKind(value: string): void {
+    const kind = validKind(value) ? (value as AuditKind) : undefined;
+    this.view.set({ kind, page: 1 });
   }
 
   protected setActor(value: string | string[]): void {

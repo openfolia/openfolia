@@ -5,13 +5,16 @@ import {
   auditLogLink,
   dataEntries,
   dayRangeFilter,
+  readFacts,
   SUBJECT_TYPE_TEXTS,
   subjectFilter,
   subjectLink,
   validAction,
   validActor,
   validDay,
+  validKind,
   validSubjectType,
+  type AuditEventItem,
 } from './audit-model';
 
 /** The text of a whole key in one language, or undefined. */
@@ -28,6 +31,48 @@ const has = (key: string): boolean =>
   textOf(en, key) !== undefined && textOf(de, key) !== undefined;
 
 describe('audit model', () => {
+  // #877: reads of service accounts, a kind of their own.
+  it('takes the kinds the API filters by, and reads a read event’s facts', () => {
+    expect(validKind('read')).toBe(true);
+    expect(validKind('write')).toBe(true);
+    expect(validKind('other')).toBe(false);
+    const event = (
+      kind: 'read' | 'write',
+      data: Record<string, unknown>,
+    ): AuditEventItem => ({
+      type: 'AuditEvent',
+      id: '1',
+      attributes: {
+        at: '2026-11-25T10:00:00.000Z',
+        kind,
+        actor: { kind: 'service', id: 'agent' },
+        action: kind === 'read' ? 'api.read' : 'role.assign',
+        subject: { type: 'route', id: '/chunks' },
+        comment: null,
+        data,
+      },
+    });
+    expect(
+      readFacts(
+        event('read', { client: 'mcp/search', ref: 'main', status: 200 }),
+      ),
+    ).toEqual({ client: 'mcp/search', ref: 'main', aborted: false });
+    expect(readFacts(event('read', { status: 404, aborted: true }))).toEqual({
+      failedStatus: 404,
+      aborted: true,
+    });
+    expect(readFacts(event('write', { client: 'x' }))).toBeNull();
+    expect(
+      readFacts({
+        ...event('read', { count: 312 }),
+        attributes: {
+          ...event('read', { count: 312 }).attributes,
+          action: 'api.read-gap',
+        },
+      }),
+    ).toEqual({ unrecorded: 312, aborted: false });
+  });
+
   it('names every listed action and subject type with an existing key', () => {
     for (const key of [
       ...Object.values(ACTION_TEXTS),

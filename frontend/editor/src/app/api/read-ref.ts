@@ -23,6 +23,8 @@ export const REF_ROUTES = [
   '/manuals/{id}',
   '/manuals/{id}/checks',
   '/manuals/{id}/history',
+  '/manuals/{id}/update-guide/{lang}',
+  '/manuals/{id}/update-guide/{lang}/steps',
   '/manuals/{id}/variants/{variant}/{lang}',
   '/manuals/{id}/variants/{variant}/{lang}/hidden-content',
   '/manuals/{id}/variants/{variant}/{lang}/pdf/layout-warnings',

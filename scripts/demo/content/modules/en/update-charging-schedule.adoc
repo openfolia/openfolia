@@ -1,0 +1,10 @@
+= Set the charging schedule again
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+The update clears the charging schedule. Set it again under Settings › Charging.

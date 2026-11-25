@@ -1,0 +1,10 @@
+= Ladeplan erneut einstellen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Das Update löscht den Ladeplan. Stellen Sie ihn unter Einstellungen › Laden erneut ein.

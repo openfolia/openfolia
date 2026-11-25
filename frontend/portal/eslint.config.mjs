@@ -22,6 +22,8 @@ export default [
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
             '{projectRoot}/tests/**/*',
             '{projectRoot}/e2e/**/*',
+            // The sample site's content, built for the tests only.
+            '{projectRoot}/testing/**/*',
           ],
         },
       ],

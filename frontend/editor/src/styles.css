@@ -6,3 +6,26 @@
 
 /* The utility classes used by the app's own templates. */
 @source './';
+
+/*
+ * The module editor's columns (issue 889), by the width its page has (the `module-editor` container:
+ * the window less the sidebar, open or collapsed to icons), from lg up. Below `editor-split` the
+ * details and the outline sit below the text and the page scrolls, as on a phone.
+ * `editor-split`: the details beside the text (the outline is a tab of theirs);
+ * `editor-wide`: the outline beside it too. Declared in this order, so `editor-wide` wins.
+ */
+@custom-variant editor-split {
+  @media (width >= 64rem) {
+    @container module-editor (width >= 54rem) {
+      @slot;
+    }
+  }
+}
+
+@custom-variant editor-wide {
+  @media (width >= 64rem) {
+    @container module-editor (width >= 70rem) {
+      @slot;
+    }
+  }
+}

@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { countText, textsFor } from '../../lib/i18n.ts';
-import { catalogue, formatDate, href, manualPath } from '../../lib/site.ts';
+import { catalogue, entryPath, formatDate, href, manualPath } from '../../lib/site.ts';
 
 const { s, cards, products, attributes } = catalogue();
 const t = textsFor(s.lang);
@@ -62,12 +62,16 @@ const texts = { count: t.manualCount, pageOf: t.pageOf };
               <ul class="rows" data-fold={FOLD}>
                 {cards.map(({ release, manual }) => (
                   <li class="row" data-card data-product={release.product} data-title={manual.title.toLocaleLowerCase(s.lang)}>
-                    <a class="row__title" href={href(manualPath(release, manual, manual.variants[0]!))}>{manual.title}</a>
+                    <a class="row__title" href={href(entryPath(release, manual))}>{manual.title}</a>
                     <p class="row__product">
                       <span>{release.productLabel}</span>
                       <span class="row__release">{t.release(release.revision, formatDate(release.publishedAt, s.lang))}</span>
                     </p>
-                    {manual.variants.length > 1 ? (
+                    {manual.guide ? (
+                      <span class="row__variants row__variants--one" data-values={JSON.stringify(manual.variants[0]!.values)}>
+                        <span class="kind-tag">{t.updateGuide}</span>
+                      </span>
+                    ) : manual.variants.length > 1 ? (
                       <ul class="row__variants" aria-label={t.variants} data-variants>
                         {manual.variants.map((v) => (
                           <li data-values={JSON.stringify(v.values)}>

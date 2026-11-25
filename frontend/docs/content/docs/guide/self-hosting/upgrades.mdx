@@ -71,6 +71,15 @@ starts the API with `CCMS_ROLE=api` and the background work in `worker`. Both re
 `CCMS_PDF_WORKERS` there now sizes the API's own pool too: move it, with `CCMS_RENDER_CONCURRENCY`,
 into `deploy/worker.env`. See [Workers](/guide/self-hosting/workers).
 
+## Moving from the shared MCP token
+
+Until v0.0.3 the MCP server had one token for every caller, `CCMS_MCP_HTTP_TOKEN`, and they all
+read as its `CCMS_MCP_API_TOKEN`. Now each caller sends a service account token of its own
+(#861), and the server needs neither. Both settings still work for one release, with a
+warning at start; they are removed in v0.0.5. Give each caller its own token, change its client,
+then remove both from `deploy/.env` and run `docker compose up -d`:
+[Moving from the shared token](/guides/mcp#moving-from-the-shared-token).
+
 ## From a version before the name OpenFolia
 
 Versions before the product was named OpenFolia keep working after the upgrade, with these

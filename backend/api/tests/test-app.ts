@@ -174,6 +174,7 @@ export async function createTestApp(
       CCMS_AUDIT_SINK_POLL_MS: '0',
       CCMS_AUDIT_SINK_TIMEOUT_MS: '',
       CCMS_AUDIT_KEEP_DAYS: '',
+      CCMS_AUDIT_READ_KEEP_DAYS: '',
       // Never a checkout's own setting: a test sets it.
       CCMS_SOURCE_URL: '',
       CCMS_PUBLIC_URL: '',

@@ -1,5 +1,13 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
@@ -247,5 +255,105 @@ describe('images-plan', () => {
     for (const step of builds) {
       expect(step.with?.target).toBe('${{ matrix.image }}');
     }
+  });
+  // The merge step's script run against a stub `docker` (#866): the registry may answer `not
+  // found` just after the push; only that is retried, a bounded number of times.
+  describe('the merge step tagging an index', () => {
+    const digest = `sha256:${'a'.repeat(64)}`;
+    const both = JSON.stringify({
+      digest,
+      manifests: ['amd64', 'arm64'].map((architecture) => ({
+        platform: { os: 'linux', architecture },
+      })),
+    });
+    const onlyOne = JSON.stringify({
+      digest,
+      manifests: [{ platform: { os: 'linux', architecture: 'amd64' } }],
+    });
+
+    // `failures` inspects fail with `error` first, then one answers `manifest`.
+    function runMerge(failures: number, error: string, manifest: string) {
+      const dir = mkdtempSync(join(tmpdir(), 'images-merge-'));
+      const bin = join(dir, 'bin');
+      const legs = join(dir, 'legs');
+      mkdirSync(bin);
+      mkdirSync(legs);
+      for (const arch of ['amd64', 'arm64']) {
+        writeFileSync(join(legs, arch), `sha256:${'b'.repeat(64)}`);
+      }
+      const stub = (name: string, body: string) => {
+        writeFileSync(join(bin, name), `#!/bin/bash\n${body}\n`);
+        chmodSync(join(bin, name), 0o755);
+      };
+      stub('sleep', `echo slept >>"${dir}/sleeps"`);
+      stub(
+        'docker',
+        `[ "$2" = inspect ] || [ "$3" = inspect ] || exit 0
+n=$(cat "${dir}/n" 2>/dev/null || echo 0); echo $((n + 1)) >"${dir}/n"
+if [ "$n" -lt ${failures} ]; then echo '${error}' >&2; exit 1; fi
+echo '${manifest}'`,
+      );
+      const workflow = parse(
+        readFileSync(join(root, '.github', 'workflows', 'images.yml'), 'utf8'),
+      );
+      const step = workflow.jobs.merge.steps.find(
+        (s: { id?: string }) => s.id === 'index',
+      );
+      // `${OWNER,,}` needs bash 4 (the runners'; macOS ships 3.2): the owner is lowercase already.
+      const script = (step.run as string).replace('${OWNER,,}', '${OWNER}');
+      const result = spawnSync('bash', ['-e', '-c', script], {
+        encoding: 'utf8',
+        env: {
+          PATH: `${bin}:${process.env.PATH}`,
+          REGISTRY: 'ghcr.io',
+          OWNER: 'owner',
+          IMAGE_NAME: 'demo-portal',
+          TAGS: 'ghcr.io/owner/openfolia/demo-portal:abc',
+          LEGS: legs,
+          GITHUB_SHA: 'abc',
+          GITHUB_OUTPUT: join(dir, 'out'),
+        },
+      });
+      const read = (f: string) => {
+        try {
+          return readFileSync(join(dir, f), 'utf8');
+        } catch {
+          return '';
+        }
+      };
+      return {
+        status: result.status,
+        stderr: result.stderr,
+        stdout: result.stdout,
+        inspects: Number(read('n') || 0),
+        out: read('out'),
+      };
+    }
+
+    it('retries a not found, then goes on', () => {
+      const r = runMerge(2, 'ERROR: not found', both);
+      expect(r.status).toBe(0);
+      expect(r.inspects).toBe(3);
+      expect(r.out).toContain(`digest=${digest}`);
+    });
+
+    it('gives up after 5 tries of not found, with a message', () => {
+      const r = runMerge(99, 'ERROR: not found', both);
+      expect(r.status).toBe(1);
+      expect(r.inspects).toBe(5);
+      expect(r.stdout).toContain('cannot inspect');
+    });
+
+    it('does not retry any other error', () => {
+      const r = runMerge(99, 'ERROR: unauthorized', both);
+      expect(r.status).toBe(1);
+      expect(r.inspects).toBe(1);
+    });
+
+    it('still demands both architectures', () => {
+      const r = runMerge(0, '', onlyOne);
+      expect(r.status).toBe(1);
+      expect(r.stdout).toContain('is no index of linux/amd64 and linux/arm64');
+    });
   });
 });

@@ -27,6 +27,10 @@ export class FakeRuntime implements SandboxRuntime {
   readonly strays = new Set<string>();
   /** A start waits for this when set. */
   gate: Promise<void> | undefined;
+  /** A request for `/hold…` to a sandbox waits for this when set. */
+  hold: Promise<void> | undefined;
+  /** URLs whose connection the launcher closed before the sandbox answered. */
+  readonly dropped: string[] = [];
 
   async start(lang: SandboxLang): Promise<StartedSandbox> {
     await this.gate;
@@ -43,7 +47,11 @@ export class FakeRuntime implements SandboxRuntime {
         headers: { ...req.headers },
       });
       req.resume();
-      req.on('end', () => {
+      res.on('close', () => {
+        if (!res.writableFinished) this.dropped.push(req.url ?? '');
+      });
+      req.on('end', async () => {
+        if (req.url?.startsWith('/hold')) await this.hold;
         if (req.url === '/set-cookie') {
           res.setHeader('set-cookie', [
             '__Host-openfolia-demo=stolen; Path=/',

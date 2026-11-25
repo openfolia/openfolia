@@ -1,0 +1,134 @@
+---
+title: 'Update guides'
+description: 'Write each upgrade step once, with the version that needs it. A reader gets the steps for their jump from one version to another, for their level and setup.'
+articleId: 'guide.manuals.update-guides'
+---
+
+An update guide is a manual for software updates. You write each step once and give it the release
+that needs it. A reader who updates from version 2.0 to 4.0 gets the steps of every release they
+cross, grouped into what to do **before**, **during** and **after** the update. The guide hides the
+steps that are not for the reader's level or setup.
+
+## How a step works
+
+Each step is a module (its title and text) with these settings:
+
+- **Version:** the release that needs the step, as a dotted version such as `2.3`. A step applies to
+  an update from `from` to `to` when `from < version <= to`. So a reader on 2.0 does not see the
+  steps of 2.0 again, and a reader going to 3.0 sees the steps of 3.0. Versions compare by number:
+  `2.10` comes after `2.9`, and `2.3` is the same as `2.3.0`.
+- **Phase:** `before`, `during` or `after` the update.
+- **Level (optional):** one of your project's audience levels, such as **Operator** or
+  **Technician**. A step for a level is shown to readers who pick that level or a more restricted
+  one, so a basic reader sees fewer steps than an advanced one. Without a level, every reader sees
+  the step. A step for a level more restricted than the guide's own audience is for none of its
+  readers, so it is left out. Within the guide's audience, the level only picks what a reader sees: the module's own audience decides who may read it at all.
+- **Options (optional):** a condition on the reader's setup, written like any condition, such as
+  `cluster in (yes)`. The reader picks their options. A condition on an option they have not set
+  is false.
+
+The guide lists the versions a reader can choose from and to, oldest first. It follows one version
+attribute of your project (for example **Software**).
+
+## Write an update guide
+
+In a revision, open the manual switcher on **Manuals** and choose **New manual**. Under **Kind**,
+pick **Update guide, steps per software version**, then:
+
+- **Product:** the manual whose variants and text attributes the guide starts with, or the
+  project's default variant.
+- **Version attribute:** the version attribute the guide follows. With only one, it is chosen for
+  you.
+- **Versions:** the versions a reader picks from and to, separated by commas, at least two. Any
+  order: they are sorted oldest first.
+
+![The New manual dialog with the kind Update guide: the product, the version attribute and the versions](/images/guide/en/update-guide-new.webp)
+
+The guide opens in the builder. **Add step** asks for the step's module (an existing one, or a new
+one you create there), then for its settings: the version that needs it (one of the guide's, or
+**Another version…** to type a new one, which joins the guide's versions), the phase, and
+optionally the level and **Only for some setups…** for the options. A step's version is always
+after the guide's first version, as nobody updates to the first one.
+
+![The step form: the version that needs the step, the phase, the level and the options](/images/guide/en/update-guide-step.webp)
+
+The builder lists the steps by version, then by phase. Drag a step to change its place among the
+steps of its version and phase, use its pencil to change its settings, and remove it with its
+cross (**Undo** puts it back). The versions above the list show which ones the guide follows; a
+version no step needs can be taken out with its cross. A check's finding, such as a step outside
+the guide's versions, shows at the step.
+
+**Preview for** on the right shows the steps a reader gets: pick the versions they update from and
+to, their level and their options. It is the same choice the portal offers once the guide is
+released.
+
+![The update guide in the builder: the steps by version and phase, and Preview for with the steps of a jump from 1.0 to 4.0](/images/guide/en/update-guide.webp)
+
+## Release and print it
+
+An update guide is a manual like any other: check it, review it and release it in a revision. Its
+PDF holds the whole guide, every step, in a section per version and, within each version, one per
+phase. There is no PDF per range. A reader picks a range on the portal.
+
+The section headings come from the output labels of the manual's language. Your admin can change
+them under **Admin**, **Settings**, **Output labels**, **Update guides**.
+
+## Checks
+
+| Check                             | Severity | What it means                                                  |
+| --------------------------------- | -------- | -------------------------------------------------------------- |
+| Step without a valid version      | Blocking | The step has no version, or one that is not a dotted version.  |
+| Unknown phase                     | Blocking | The step's phase is not `before`, `during` or `after`.         |
+| Step outside the guide's versions | Warning  | No update between the first and the last version crosses it.   |
+| Unknown audience                  | Blocking | The step's level is not one of your project's audience levels. |
+
+## The manifest
+
+An update guide is stored as a manual file, `manuals/<id>.yaml`, with `kind: update-guide` and a
+`guide` instead of `entries`:
+
+```yaml
+schemaVersion: 1
+kind: update-guide
+title: Software update guide
+audience: technician
+variants:
+  - model: large
+guide:
+  attribute: software # a version attribute of the project
+  versions: ['1.0', '2.0', '2.1', '3.0', '4.0'] # oldest first, in quotes
+  steps:
+    - module: back-up-settings
+      version: '2.0'
+      phase: before
+    - module: migrate-database
+      version: '2.0'
+      phase: during
+      level: technician
+    - module: drain-cluster
+      version: '4.0'
+      phase: before
+      when: cluster in (yes)
+```
+
+| Field             | What it is                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `kind`            | `update-guide`.                                                                                |
+| `guide.attribute` | The version attribute the guide follows (`variantAttributes`, `kind: version`).                |
+| `guide.versions`  | The versions a reader picks from, oldest first, each once, at least two. Write them in quotes. |
+| `guide.steps`     | The steps, in the order you write them. Steps of one version and phase keep this order.        |
+| `steps[].module`  | The module holding the step's title and text.                                                  |
+| `steps[].version` | The release that needs the step.                                                               |
+| `steps[].phase`   | `before`, `during` or `after`.                                                                 |
+| `steps[].level`   | Optional: the audience level the step is for.                                                  |
+| `steps[].when`    | Optional: the condition on the reader's options.                                               |
+
+Write versions in quotes. Without them, YAML reads `2.10` as the number 2.1.
+
+## For integrators
+
+The API gives a reader's page what it needs to build the guide and filter it in the browser: the
+guide's versions, levels and options (`GET /manuals/{id}/update-guide/{lang}`), and every step with
+its version, phase, level, condition and text (`GET /manuals/{id}/update-guide/{lang}/steps`, a
+paged list). Only released content is served, with the same audience rules as manuals. See the
+[API reference](/api).

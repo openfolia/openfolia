@@ -1,0 +1,10 @@
+= Fahrerprofile wiederherstellen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Importieren Sie Ihre Fahrerprofile unter Einstellungen › Profile aus Ihrem Konto.

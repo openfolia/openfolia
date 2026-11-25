@@ -504,10 +504,12 @@
   "tip": {
     "learnMore": "Mehr erfahren",
     "learnMoreLabel": "Mehr erfahren: {title} (öffnet in einem neuen Tab)",
+    "read": "„{title}“ lesen",
+    "readLabel": "„{title}“ lesen (öffnet in einem neuen Tab)",
     "gotIt": "Verstanden",
     "turnOff": "Tipps ausschalten",
     "step": "{index} von {total}",
-    "skip": "Überspringen",
+    "close": "Rundgang beenden",
     "back": "Zurück",
     "next": "Weiter",
     "done": "Fertig"

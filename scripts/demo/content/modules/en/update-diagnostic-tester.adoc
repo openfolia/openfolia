@@ -1,0 +1,10 @@
+= Connect the diagnostic tester
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: technician
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Connect the diagnostic tester to the OBD socket and keep it connected until the update reports success.

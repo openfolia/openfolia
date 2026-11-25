@@ -1,3 +1,4 @@
+import { Condition, UPDATE_PHASES } from '@openfolia/content-model';
 import { z } from 'zod';
 import { modulesOf } from './modules.ts';
 
@@ -87,11 +88,45 @@ export const SnapshotVariant = z.object({
 });
 export type SnapshotVariant = z.infer<typeof SnapshotVariant>;
 
+/**
+ * An update guide's step (#907, `GET /manuals/{id}/update-guide/{lang}/steps`): what the page
+ * filters on. Its text is its module's in the guide's resolved manual (`SnapshotVariant`), whose
+ * audience is checked as any manual's.
+ */
+export const SnapshotStep = z.object({
+  /** The step's ID: its module's, with `--2`, `--3`, … for its later steps. */
+  id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*(?:--[0-9]+)?$/),
+  module: Segment,
+  title: z.string(),
+  version: z.string(),
+  phase: z.enum(UPDATE_PHASES),
+  /** The least restricted level it is for (an audience ID); null: every level. */
+  level: z.string().nullable(),
+  /** The condition on the reader's options; null: every setup. */
+  when: Condition.nullable(),
+});
+export type SnapshotStep = z.infer<typeof SnapshotStep>;
+
+/**
+ * An update guide's own part (#907, `GET /manuals/{id}/update-guide/{lang}`): the versions a
+ * reader picks from and to, the levels and options, and every step the token may read.
+ */
+export const SnapshotGuide = z.object({
+  attribute: Label,
+  versions: z.array(z.string()).min(2),
+  levels: z.array(Label),
+  options: z.array(Label.extend({ values: z.array(Label) })),
+  steps: z.array(SnapshotStep),
+});
+export type SnapshotGuide = z.infer<typeof SnapshotGuide>;
+
 export const SnapshotManual = z.object({
   id: Segment,
   title: z.string(),
   audience: z.string(),
   variants: z.array(SnapshotVariant),
+  /** Set for an update guide (`kind: update-guide`): its page is the guide's, not a manual's. */
+  guide: SnapshotGuide.optional(),
 });
 export type SnapshotManual = z.infer<typeof SnapshotManual>;
 
@@ -193,6 +228,25 @@ export function parseSnapshot(value: unknown): Snapshot {
           if (!Object.hasOwn(variant.moduleAudiences, module))
             throw new Error(
               `module ${module} in manual ${manual.id} has no checked audience`,
+            );
+      }
+      // An update guide's steps show its first variant's modules: each one checked there.
+      if (manual.guide) {
+        const checked = manual.variants[0]?.moduleAudiences ?? {};
+        for (const step of manual.guide.steps) {
+          if (!Object.hasOwn(checked, step.module))
+            throw new Error(
+              `step ${step.id} in update guide ${manual.id} has no checked audience`,
+            );
+          if (step.level !== null && above(step.level))
+            throw new Error(
+              `step ${step.id} in update guide ${manual.id} is for the level "${step.level}", above the build's audience "${snapshot.audience}"`,
+            );
+        }
+        for (const level of manual.guide.levels)
+          if (above(level.id))
+            throw new Error(
+              `update guide ${manual.id} offers the level "${level.id}", above the build's audience "${snapshot.audience}"`,
             );
       }
     }

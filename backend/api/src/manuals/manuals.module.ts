@@ -16,6 +16,7 @@ import { ManualLayoutWarningsAction } from './core/actions/manual-layout-warning
 import { RenderManualPageAction } from './core/actions/render-manual-page.action.js';
 import { RenderManualPdfAction } from './core/actions/render-manual-pdf.action.js';
 import { ResolveManualAction } from './core/actions/resolve-manual.action.js';
+import { GetUpdateGuideAction } from './core/actions/get-update-guide.action.js';
 import { PdfRenderer } from './core/pdf-renderer.js';
 import { TypstPdfRenderer } from './repos/typst-pdf-renderer.js';
 
@@ -35,6 +36,7 @@ import { TypstPdfRenderer } from './repos/typst-pdf-renderer.js';
     ListManualsAction,
     GetManualAction,
     ResolveManualAction,
+    GetUpdateGuideAction,
     RenderManualPdfAction,
     RenderManualPageAction,
     ManualLayoutWarningsAction,

@@ -152,6 +152,27 @@ describe('the subject kinds', () => {
     expect(kind.fromStored([stored])).toBeUndefined();
   });
 
+  it('stores an update guide with its entries made from its steps, whatever was sent (#906)', () => {
+    const kind = kindOf({ type: 'manual', manualId: 'update' });
+    const draft = {
+      ...manifest('update', ['stale']),
+      kind: 'update-guide' as const,
+      guide: {
+        attribute: 'software',
+        versions: ['1.0', '2.0'],
+        steps: [
+          { module: 'b', version: '2.0', phase: 'after' },
+          { module: 'a', version: '2.0', phase: 'before' },
+        ],
+      },
+    };
+    const entries = [{ module: 'a' }, { module: 'b' }];
+    expect(kind.stored(draft)).toMatchObject({ entries });
+    expect(kind.fromStored(JSON.parse(JSON.stringify(draft)))).toMatchObject({
+      entries,
+    });
+  });
+
   it('reads a design working copy saved before the manufacturer moved to the configuration (#395)', () => {
     const kind = kindOf({ type: 'design', designId: 'old' });
     const stored = {

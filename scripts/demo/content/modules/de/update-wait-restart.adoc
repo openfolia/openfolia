@@ -1,0 +1,10 @@
+= Neustart abwarten
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Das Display startet zweimal neu. Öffnen Sie die Türen erst, wenn der Begrüßungsbildschirm erscheint.

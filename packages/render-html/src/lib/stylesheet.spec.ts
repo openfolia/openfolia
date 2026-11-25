@@ -76,10 +76,13 @@ describe('render-html.css', () => {
       split(m[1] as string),
     );
     expect(selectors.length).toBeGreaterThan(10);
-    // A media query only wraps rules, which are checked themselves.
+    // A media or supports query only wraps rules, which are checked themselves.
     expect(
       selectors.filter(
-        (s) => !s.startsWith('.of-content') && !s.startsWith('@media '),
+        (s) =>
+          !s.startsWith('.of-content') &&
+          !s.startsWith('@media ') &&
+          !s.startsWith('@supports '),
       ),
     ).toEqual([]);
   });

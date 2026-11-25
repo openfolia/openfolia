@@ -37,6 +37,21 @@ export const AuditActor = z.strictObject({
 });
 export type AuditActor = z.infer<typeof AuditActor>;
 
+/**
+ * Whether an event records a change (`write`, every action's) or a read
+ * (`read`, #877: one per API request a service account's token makes,
+ * `READ_ACTIONS`). Each kind has its own retention.
+ */
+export const AuditKind = z.enum(['write', 'read']);
+export type AuditKind = z.infer<typeof AuditKind>;
+
+/**
+ * The actions of kind `read`, and only they are (the database checks the
+ * same, `audit_events_kind`): `api.read`, one read; `api.read-gap`, reads
+ * of one account that could not be recorded one by one, with their count.
+ */
+export const READ_ACTIONS: readonly string[] = ['api.read', 'api.read-gap'];
+
 /** At most this many UTF-16 code units of `data`, serialized as JSON. */
 export const MAX_DATA_LENGTH = 64 * 1024;
 
@@ -85,6 +100,8 @@ export const NewAuditEvent = z.strictObject({
   /** Why, in the actor's words (e.g. a review comment). */
   comment: text().min(1).max(10_000).optional(),
   data: JsonObject.optional(),
+  /** `write` when not given; `read` for `READ_ACTIONS`, and only for them. */
+  kind: AuditKind.optional(),
 });
 /** Its `action` one of the catalogue's (`AUDIT_ACTIONS`): a new action is listed there first. */
 export type NewAuditEvent = Omit<z.input<typeof NewAuditEvent>, 'action'> & {
@@ -93,6 +110,7 @@ export type NewAuditEvent = Omit<z.input<typeof NewAuditEvent>, 'action'> & {
 
 /** An event checked and ready to append. */
 export interface CheckedAuditEvent {
+  readonly kind: AuditKind;
   readonly actor: AuditActor;
   readonly action: string;
   readonly subject: { readonly type: string; readonly id: string };
@@ -114,13 +132,16 @@ export interface AuditEvent extends CheckedAuditEvent {
 
 /**
  * Which events to list or export; every field optional. `subject.id` and
- * `actor.id` narrow within their type or kind; `from` and `to` bound `at`
+ * `actor.id` narrow within their type or kind; `kind` picks changes or
+ * reads; `from` and `to` bound `at`
  * (from inclusive, to exclusive).
  */
 export interface AuditFilter {
   readonly subject?: { readonly type: string; readonly id?: string };
   readonly actor?: { readonly kind: AuditActor['kind']; readonly id?: string };
   readonly action?: string;
+  /** Only changes (`write`) or only reads (`read`). */
+  readonly kind?: AuditKind;
   /** Only events at or after this time. */
   readonly from?: Date;
   /** Only events before this time. */
@@ -130,7 +151,7 @@ export interface AuditFilter {
 /** Whether `event` is one `filter` selects: the one rule every adapter follows. */
 export function matchesAuditFilter(
   event: AuditEvent,
-  { subject, actor, action, from, to }: AuditFilter,
+  { subject, actor, action, kind, from, to }: AuditFilter,
 ): boolean {
   return (
     (!subject ||
@@ -140,6 +161,7 @@ export function matchesAuditFilter(
       (event.actor.kind === actor.kind &&
         (actor.id === undefined || event.actor.id === actor.id))) &&
     (action === undefined || event.action === action) &&
+    (kind === undefined || event.kind === kind) &&
     (from === undefined || event.at.getTime() >= from.getTime()) &&
     (to === undefined || event.at.getTime() < to.getTime())
   );

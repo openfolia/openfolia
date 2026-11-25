@@ -62,6 +62,8 @@ describe('delivery OpenAPI document', () => {
       '/manuals/{id}',
       '/manuals/{id}/compare',
       '/manuals/{id}/history',
+      '/manuals/{id}/update-guide/{lang}',
+      '/manuals/{id}/update-guide/{lang}/steps',
       '/manuals/{id}/variants/{variant}/{lang}',
       '/manuals/{id}/variants/{variant}/{lang}/html',
       '/manuals/{id}/variants/{variant}/{lang}/pdf',

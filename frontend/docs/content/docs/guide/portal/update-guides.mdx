@@ -1,0 +1,63 @@
+---
+title: 'Reading an update guide'
+description: 'How readers pick the version they are on and the one they are updating to, and get a checklist of exactly the steps for that update.'
+articleId: 'guide.portal.update-guides'
+---
+
+An update guide is a manual of steps, each tagged with the version that needs it. In the portal a
+reader does not read it front to back: they say which version they are on and which one they are
+going to, and the page shows exactly the steps for that jump, as a checklist.
+
+![An update guide in the portal: the pickers beside the page, the steps of the update grouped before, during and after it, two ticked off](/images/guide/en/portal-update-guide.webp)
+
+## Finding it
+
+An update guide is listed with its product's manuals on the start page and in **All manuals**,
+marked **Update guide**. It has one page per language, at
+`https://<team>.openfolia.com/<language>/<product>/<guide>/` on a portal your provider hosts, or
+under your own address on a portal you host yourself.
+
+## Picking the update
+
+The panel **Your update** (beside the page on a wide screen, above the steps on a phone) holds:
+
+- **From version** and **To version**: the version installed now and the one you are going to.
+  **To version** offers only the versions after **From version**. The page opens on the update from
+  the second-newest version to the newest.
+- **Level**: whose steps to show, from the audience levels the guide is written for (for example
+  customers, or your service staff as well). It shows only when the guide offers more than one. A
+  step written for a level shows for that level and the more restricted ones.
+- **Your setup**: the options the steps depend on, for example whether the product runs as a
+  cluster, each a list of its values. Until you pick a value, only the steps for every setup show.
+
+The steps change as you pick, without reloading the page.
+
+## The checklist
+
+- The steps are grouped **Before you update**, **During the update** and **After the update**.
+  Within each group they are in version order, and each step shows the version that brought it as
+  a small tag.
+- The line above the steps says how many there are ("12 steps"); screen readers announce it when
+  it changes.
+- Tick a step off when it is done. The ticks are kept in your browser for this guide and this
+  range (from and to): close the page, come back later and they are still there. Another browser
+  or device has its own. **Reset** clears the ticks of the range shown.
+- When nothing applies ("Nothing to change between 3.0 and 3.1 for this setup"), the page says so.
+- Printing prints the steps of the range shown, with boxes to tick on paper, without the panel.
+
+## Sharing the update
+
+The page's address holds your choice, for example
+`…/software-update/?from=2.0&to=4.0&level=internal&opt=cluster:yes`. Send it, and the reader opens the
+same update. An address that asks for a version, level or option the guide does not have opens the
+default update, with a short note saying so. The ticks are not part of the address.
+
+## Search
+
+Search finds the steps of an update guide like the sections of any manual. A step opens the guide
+on the update that ends at the step's version, at the step's level and with the setup its condition names, so the step is in the list.
+
+## Without JavaScript
+
+Without JavaScript the page shows the whole guide, version by version, each with its steps before,
+during and after the update, and a note that picking needs JavaScript.

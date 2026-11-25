@@ -10,12 +10,14 @@ import {
   markTipsSeen,
   raiseTyrePressure,
   reviseWheelChange,
+  TIPS_FIRST_VISIT,
   TIPS_SEEN,
   TRANSLATIONS,
   waitForOutputs,
   withTexts,
 } from '@/scripts/demo/populate.mjs';
 import { DEMO_PEOPLE } from '@/scripts/demo/people.mjs';
+import { SANDBOX_TIPS } from '@/scripts/demo/bake.mjs';
 import { DEFAULT_PORTS } from '@/scripts/demo/paths.mjs';
 import { framePage, LOOK } from '@/scripts/demo/stills.mjs';
 
@@ -236,10 +238,30 @@ describe('the first-run tips', () => {
   });
 
   it('fail the set-up when the API does not keep them', async () => {
-    preferencesApi(() => ({}));
+    preferencesApi(() => ({ tourDone: false, showTips: true }));
     await expect(
       markTipsSeen({ apiUrl: 'http://127.0.0.1:3290', token: 't' }),
-    ).rejects.toThrow(/not marked as seen/);
+    ).rejects.toThrow(/not marked as asked/);
+  });
+
+  it('are a first visit in a sandbox: the tour to come, the tips on (#868)', async () => {
+    expect(SANDBOX_TIPS).toEqual({ tourDone: false, showTips: true });
+    expect(SANDBOX_TIPS).toBe(TIPS_FIRST_VISIT);
+    const calls = preferencesApi();
+    await markTipsSeen({
+      apiUrl: 'http://127.0.0.1:3290',
+      token: 't',
+      tips: SANDBOX_TIPS,
+    });
+    expect(calls).toHaveLength(Object.values(DEMO_PEOPLE).length);
+    for (const call of calls) {
+      expect(call.body).toEqual({
+        data: {
+          type: 'Preferences',
+          attributes: { tourDone: false, showTips: true },
+        },
+      });
+    }
   });
 });
 

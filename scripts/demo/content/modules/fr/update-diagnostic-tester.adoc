@@ -1,0 +1,10 @@
+= Brancher l'outil de diagnostic
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: technician
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Branchez l'outil de diagnostic sur la prise OBD et laissez-le branché jusqu'à ce que la mise à jour signale sa réussite.

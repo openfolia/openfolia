@@ -46,6 +46,14 @@ import {
   toResolvedManualResource,
 } from './manual.resources.js';
 import { BROKEN_OR_TOO_LARGE } from './too-large-response.js';
+import { paginate } from '../../base/core/paging.js';
+import { GetUpdateGuideAction } from '../core/actions/get-update-guide.action.js';
+import {
+  UpdateGuideDocument,
+  UpdateGuideStepPageDocument,
+  toUpdateGuideResource,
+  toUpdateGuideStepResource,
+} from './update-guide.resources.js';
 
 @ApiTags('manuals')
 @Controller('manuals')
@@ -56,6 +64,7 @@ export class ManualsController {
     private readonly listManuals: ListManualsAction,
     private readonly getManual: GetManualAction,
     private readonly resolveManual: ResolveManualAction,
+    private readonly getUpdateGuide: GetUpdateGuideAction,
   ) {}
 
   @Get()
@@ -151,5 +160,79 @@ export class ManualsController {
       lang,
     });
     return { data: toResolvedManualResource(variant, resolution) };
+  }
+
+  @Get(':id/update-guide/:lang')
+  @DeliveryApi()
+  @ApiOperation({
+    summary: 'Read an update guide',
+    description:
+      'An update guide (`kind: update-guide`, #906) in a configured language: the versions a reader picks from and to, the levels and options it offers, and how many steps the reader may see (`…/steps` lists them). Not found for a manual of another kind, as for one the reader may not see.',
+  })
+  @ApiParam({ name: 'id', example: 'software-update' })
+  @ApiParam({ name: 'lang', example: 'en' })
+  @ApiPermission('content.read')
+  @ApiOkResponse({
+    standardSchema: UpdateGuideDocument,
+    headers: CONTENT_HEADERS,
+  })
+  @ApiUnprocessableEntityResponse({
+    description: BROKEN_OR_TOO_LARGE,
+    standardSchema: ErrorDocument,
+  })
+  async updateGuide(
+    @CurrentActor() actor: Actor,
+    @CurrentSnapshot() snapshot: ReadableContent,
+    @Param('id', { schema: params.manualId }) id: string,
+    @Param('lang', { schema: params.lang }) lang: string,
+  ): Promise<z.infer<typeof UpdateGuideDocument>> {
+    const view = await this.getUpdateGuide.handle({
+      actor,
+      snapshot,
+      id,
+      lang,
+    });
+    return { data: toUpdateGuideResource(view) };
+  }
+
+  @Get(':id/update-guide/:lang/steps')
+  @DeliveryApi()
+  @Paged()
+  @ApiOperation({
+    summary: 'List an update guide’s steps',
+    description:
+      'Every step of the update guide the reader may see (#906), whatever its level and condition, with its version, phase, level, condition and body, ordered by version, then phase (`before`, `during`, `after`), then manifest order: a client picks the steps of a jump itself (`resolveUpdateGuide` in `@openfolia/content-model/core`: `from < version <= to`, the reader’s level and options).',
+  })
+  @ApiParam({ name: 'id', example: 'software-update' })
+  @ApiParam({ name: 'lang', example: 'en' })
+  @ApiPermission('content.read')
+  @ApiOkResponse({
+    standardSchema: UpdateGuideStepPageDocument,
+    headers: CONTENT_HEADERS,
+  })
+  @ApiUnprocessableEntityResponse({
+    description: BROKEN_OR_TOO_LARGE,
+    standardSchema: ErrorDocument,
+  })
+  async updateGuideSteps(
+    @Req() req: Request,
+    @CurrentActor() actor: Actor,
+    @CurrentSnapshot() snapshot: ReadableContent,
+    @PageParams() page: PageRequest,
+    @Param('id', { schema: params.manualId }) id: string,
+    @Param('lang', { schema: params.lang }) lang: string,
+  ): Promise<z.infer<typeof UpdateGuideStepPageDocument>> {
+    const view = await this.getUpdateGuide.handle({
+      actor,
+      snapshot,
+      id,
+      lang,
+    });
+    return toPagedDocument(
+      req,
+      page,
+      paginate(view.steps, page),
+      toUpdateGuideStepResource,
+    );
   }
 }

@@ -1,12 +1,17 @@
 ---
 title: 'The audit log'
-description: 'See who changed what and when, filter the log, and export it as CSV or JSON Lines.'
+description: 'See who changed what and when, which service account read what, filter the log, and export it as CSV or JSON Lines.'
 articleId: 'guide.admin.audit-log'
 ---
 
 The audit log records every change of state: a revision approved, a role assigned, a webhook
 deleted, an export made. Each event says when, who acted, what happened, to what, and the comment
 given. Events are never changed.
+
+It also records what **service accounts read**: every read (a `GET` or `HEAD`) a service
+account's token makes to the API, from a portal build, a pipeline or an AI assistant over
+[MCP](/guides/mcp), is one event. What a service account changes shows as its own change events;
+a change the API refused is not recorded. People's reads in the editor are not recorded.
 
 ## Read the log
 
@@ -22,8 +27,32 @@ revision's review where it can.
 A revision an author approved alone is marked **By its author**. See
 [Approve your own revision](/guide/review/self-approval).
 
+## Reads of service accounts
+
+A read shows as **Read over the API** (`api.read`). Its subject is the **API route** that was
+read, for example `/modules/en/charging`, with the ref below it when one was given (**at main**).
+The badges in the row say more:
+
+- **The client**, for example `mcp/search`: the MCP server names the tool that read, and its own
+  checks as `mcp`. The client names itself, so take it as a hint; the service account is what
+  the token proves.
+- **Answered 404** (or another status from 400 up): the API refused or could not answer.
+
+![The reads of a service account, filtered to Reads: each with its route, the client and a refused status](/images/guide/en/admin-audit-reads.webp)
+
+**Show details** gives the rest: the token's ID (the one the service account's **Tokens** list
+shows, never the token itself), the route, the status and the commit read.
+
+Reads are never left out without a trace. When a service account reads faster than the server
+can record each read, or recording fails for a moment, the reads it could not record one by one
+show as **Reads not recorded one by one** (`api.read-gap`): the service account, with a badge
+such as **312 reads not recorded**, and in the details the first and last of them. A gap is
+kept as long as reads are.
+
 ## Filter the log
 
+- **All events**, **Changes** or **Reads**: changes of state, the reads of service accounts, or
+  both.
 - **Actor**: anyone, any person, any service account, or one of them.
 - **Subject**: the kind of thing it happened to; **Subject ID** narrows it to one.
 - **Action**: one kind of event.
@@ -33,6 +62,8 @@ A revision an author approved alone is marked **By its author**. See
 can be bookmarked or shared.
 
 From a module or a review, **Show in audit log** in its menu opens the log filtered to it.
+
+To see what one service account read, choose **Reads**, then the account under **Actor**.
 
 ## Export the log
 
@@ -44,5 +75,7 @@ Each export is itself recorded in the log: **Audit log exported**.
 
 ## Old events
 
-The person who runs the server can set a retention period. Older events are then removed, and the
-removal is recorded in the log: **Old audit events removed**.
+Reads are removed after **90 days** unless the person who runs the server sets another period.
+Changes are kept until the operator sets a retention period for them; older changes are then
+removed. Each removal is recorded in the log: **Old audit events removed** (with `kind: read`
+in its details for reads). See [Audit log sink and retention](/guide/self-hosting/audit-log#retention).

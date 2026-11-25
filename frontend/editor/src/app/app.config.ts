@@ -10,6 +10,7 @@ import { provideI18n, provideZard } from '@openfolia/ui/startup';
 
 import { API_DEMO_USER, provideApi } from './api';
 import { routes } from './app.routes';
+import { provideBootSignal } from './boot-signal';
 import { BrandingService } from './branding/branding.service';
 import { TranslatedTitleStrategy } from './i18n';
 import { provideChangeSetUrl } from './session/change-set-url';
@@ -21,6 +22,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
+    // The first navigation's outcome, for index.html's start-up error state (#870).
+    provideBootSignal(),
     provideApi(),
     // The demo identity: only while the API says it is in demo mode (see `DemoSession`).
     { provide: API_DEMO_USER, useFactory: () => inject(DemoSession).actingAs },

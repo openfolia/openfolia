@@ -436,36 +436,36 @@ the MCP server, with a service account that may only read.
 
    **Check:** it prints `Seeded 1 roles and 0 users`.
 
-2. **Its token, and the MCP server's own**, written straight into the settings file (never shown).
-   The server listens on `127.0.0.1` at the MCP port of step 1 (default 3200): check that port is
-   free first, as in step 2.
+2. **The agent's own token**, written straight into a file only the install's user can read
+   (never shown), and the MCP server switched on. The server needs no token of its own: each
+   caller sends a service account token of its own. It listens on `127.0.0.1` at the MCP port of
+   step 1 (default 3200): check that port is free first, as in step 2.
 
    ```sh
    cd ~/openfolia
    umask 077
    token=$(docker compose exec -T api node dist/database/service-token.main.js agent --role agent-reader --name mcp | grep -oE 'ccms_sat_[0-9a-f]{16}_[0-9a-f]{64}')
-   http=$(openssl rand -hex 32)
-   if [ ${#token} -eq 90 ] && [ ${#http} -eq 64 ]; then
-     {
-       echo "COMPOSE_PROFILES=mcp"
-       echo "OPENFOLIA_MCP_PORT=3200"
-       echo "CCMS_MCP_API_TOKEN=$token"
-       echo "CCMS_MCP_HTTP_TOKEN=$http"
-     } >> .env && echo "added the MCP settings to .env"
+   if [ ${#token} -eq 90 ]; then
+     printf '%s\n' "$token" > mcp-agent.token &&
+       { echo "COMPOSE_PROFILES=mcp"; echo "OPENFOLIA_MCP_PORT=3200"; } >> .env &&
+       echo "added the MCP settings"
    else
      echo "no token: stop"
    fi
-   unset token http
+   unset token
    ```
 
-   **Check:** it prints `added the MCP settings to .env`. If it prints `no token: stop`, a token
-   may still have been made: the person revokes it in the editor (Admin, Service accounts,
-   `agent`) before you try again. The account exists then: leave out `--role agent-reader`, which
-   is only for a new one (an existing account keeps its roles), and replace the
-   `CCMS_MCP_API_TOKEN` line, after asking, instead of adding the block again.
+   **Check:** it prints `added the MCP settings`. If it prints `no token: stop`, a token may still
+   have been made: the person revokes it in the editor (Admin, Service accounts, `agent`) before
+   you try again. The account exists then: leave out `--role agent-reader`, which is only for a
+   new one (an existing account keeps its roles), and write only `mcp-agent.token`, after asking,
+   instead of adding the settings again.
 
    The service account's token is valid for 90 days: make a new one the same way before then
-   (replace the `CCMS_MCP_API_TOKEN` line, after asking).
+   (replace `mcp-agent.token` and your configuration's header, after asking). An installation that
+   still has `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` in `.env` (before v0.0.4) keeps
+   working for one release; to move off them, see [Moving from the shared
+   token](%%SITE_URL%%/guides/mcp#moving-from-the-shared-token).
 
 3. **Start the MCP server:**
 
@@ -473,7 +473,7 @@ the MCP server, with a service account that may only read.
    docker compose config --images
    docker compose pull
    docker compose up -d --wait && echo "started"
-   sed -n 's/^CCMS_MCP_HTTP_TOKEN=/Authorization: Bearer /p' .env | tail -n 1 |
+   sed 's/^/Authorization: Bearer /' mcp-agent.token |
      curl -fsS -X POST http://127.0.0.1:3200/mcp -H @- \
      -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
      --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_manuals","arguments":{}}}'
@@ -491,22 +491,22 @@ the MCP server, with a service account that may only read.
 
 4. **Add the server to your own MCP configuration**, in the way your agent documents it, as a
    Streamable HTTP server: the editor's address plus `/mcp`, `http://127.0.0.1:8080/mcp`, and the
-   header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN from .env>`. With a domain, the URL is
+   header `Authorization: Bearer <the token in mcp-agent.token>`. With a domain, the URL is
    `https://<their domain>/mcp` instead: the editor then answers for that name only. Claude Code,
    for example:
 
    ```sh
    cd ~/openfolia
    claude mcp add --transport http openfolia http://127.0.0.1:8080/mcp \
-     --header "Authorization: Bearer $(sed -n 's/^CCMS_MCP_HTTP_TOKEN=//p' .env | tail -n 1)"
+     --header "Authorization: Bearer $(cat mcp-agent.token)"
    ```
 
    Other clients' configurations: [The MCP server](%%SITE_URL%%/guides/mcp). Tell the person which file of yours
    now holds that token. Never paste it into the conversation, and never read the value yourself:
-   write it into your configuration with a shell command that reads `.env` directly, or name the
-   setting where your configuration takes one from the environment. If you can't change your own
-   configuration, tell the person these two values' places (the URL, and the setting in `.env`),
-   so they add the server themselves.
+   write it into your configuration with a shell command that reads `mcp-agent.token` directly,
+   or name the variable where your configuration takes one from the environment. If you can't
+   change your own configuration, tell the person these two values' places (the URL, and
+   `mcp-agent.token`), so they add the server themselves.
 
    **Check:** call the server's `list_manuals` tool yourself, and show the person what it lists.
    Without your own configuration, the check of 3 stands in for it: say so.
@@ -515,7 +515,7 @@ the MCP server, with a service account that may only read.
 
    ```sh
    cd ~/openfolia
-   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server at http://127.0.0.1:8080/mcp and on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env)." >> INSTALL-RECORD.md
+   echo "- Step 9: the role agent-reader, the service account agent (token mcp, 90 days), the MCP server at http://127.0.0.1:8080/mcp and on 127.0.0.1:3200 (COMPOSE_PROFILES=mcp in .env; its token in mcp-agent.token)." >> INSTALL-RECORD.md
    ```
 
    Add a line naming your configuration file, if you changed it.

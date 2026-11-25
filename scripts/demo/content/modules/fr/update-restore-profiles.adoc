@@ -1,0 +1,10 @@
+= Restaurer vos profils de conducteur
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Importez vos profils de conducteur depuis votre compte sous Réglages › Profils.

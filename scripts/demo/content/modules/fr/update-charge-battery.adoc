@@ -1,0 +1,10 @@
+= Charger la batterie haute tension
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Chargez la batterie haute tension à au moins 50 % avant de lancer la mise à jour.

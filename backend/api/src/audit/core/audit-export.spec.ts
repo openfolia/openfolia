@@ -9,6 +9,7 @@ import {
 const event = (over: Partial<AuditEvent> = {}): AuditEvent => ({
   id: '42',
   at: new Date('2026-03-04T05:06:07.089Z'),
+  kind: 'write',
   actor: { kind: 'user', id: 'sample-admin' },
   action: 'role.assign',
   subject: { type: 'user', id: 'sample-reader' },
@@ -20,10 +21,10 @@ const event = (over: Partial<AuditEvent> = {}): AuditEvent => ({
 describe('audit export formats', () => {
   it('writes the CSV header and a row, CRLF-terminated', () => {
     expect(auditCsvHeader()).toBe(
-      'id,at,actor kind,actor id,action,subject type,subject id,comment,data\r\n',
+      'id,at,actor kind,actor id,action,subject type,subject id,comment,data,kind\r\n',
     );
     expect(auditCsvLine(event({ data: { role: 'reviewer' } }))).toBe(
-      '42,2026-03-04T05:06:07.089Z,user,sample-admin,role.assign,user,sample-reader,,"{""role"":""reviewer""}"\r\n',
+      '42,2026-03-04T05:06:07.089Z,user,sample-admin,role.assign,user,sample-reader,,"{""role"":""reviewer""}",write\r\n',
     );
   });
 
@@ -51,6 +52,7 @@ describe('audit export formats', () => {
     expect(JSON.parse(line)).toEqual({
       id: '42',
       at: '2026-03-04T05:06:07.089Z',
+      kind: 'write',
       actor: { kind: 'user', id: 'sample-admin' },
       action: 'role.assign',
       subject: { type: 'user', id: 'sample-reader' },

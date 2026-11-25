@@ -147,6 +147,18 @@ import {
   type NewManualPrefill,
 } from './new-manual-dialog.component';
 import { NewManualRequest } from './new-manual-request';
+import {
+  putStep,
+  removeStep,
+  restoreStep,
+  type UpdateGuide,
+} from './update-guide';
+import { UpdateGuidePreviewComponent } from './update-guide-preview.component';
+import { UpdateGuideStepsComponent } from './update-guide-steps.component';
+import {
+  UpdateStepDialogComponent,
+  type StepRequest,
+} from './update-step-dialog.component';
 import { ModuleChoices } from './module-choices';
 import { summaryOf } from './new-module-summary';
 import { OutlineSummaries } from './outline-summaries';
@@ -261,8 +273,8 @@ interface ManualOption {
   readonly state?: 'new' | 'deleted' | undefined;
   /** Deprecated (#266): as committed, or as the open manual's working copy holds it. */
   readonly deprecated?: boolean;
-  /** A derived manual (#451), as committed: never a source of another. */
-  readonly kind?: 'derived' | undefined;
+  /** A derived manual (#451) or an update guide (#906), as committed: never a source of another. */
+  readonly kind?: 'derived' | 'update-guide' | undefined;
   /** Its audience as committed (a derived manual gathers only from one for its own or a wider one). */
   readonly audience?: string | undefined;
 }
@@ -351,6 +363,9 @@ interface LocalChange {
     ManualSettingsPanelComponent,
     SettingsCardComponent,
     DerivedRuleCardComponent,
+    UpdateGuidePreviewComponent,
+    UpdateGuideStepsComponent,
+    UpdateStepDialogComponent,
     VariantPickerDialogComponent,
     ZardSheetImports,
     ZardSwitchComponent,
@@ -649,11 +664,16 @@ interface LocalChange {
                   gatheredCountKey()
                     | transloco: { count: count(), source: source }
                 }}
+              } @else if (draft.guide(); as guide) {
+                {{
+                  'editor.manuals.guide.count'
+                    | transloco: { count: guide.steps.length }
+                }}
               } @else {
                 {{ 'editor.manuals.count' | transloco: { count: count() } }}
               }
             </span>
-            @if (shownRows().length > 0) {
+            @if (shownRows().length > 0 && !draft.updateGuide()) {
               <button
                 z-button
                 zType="ghost"
@@ -672,7 +692,8 @@ interface LocalChange {
             }
           </div>
           <!-- A derived manual's outline is gathered by its rule: nothing is added to it (issue 669). -->
-          @if (!draft.derived()) {
+          <!-- An update guide's outline is its steps (issue 908): a module chosen here becomes a step. -->
+          @if (!draft.derived() && (!draft.updateGuide() || editable())) {
             <button
               z-button
               zType="outline"
@@ -695,7 +716,12 @@ interface LocalChange {
                 data-icon="inline-start"
                 aria-hidden="true"
               />
-              {{ 'editor.manuals.add.open' | transloco }}
+              {{
+                (draft.updateGuide()
+                  ? 'editor.manuals.guide.add'
+                  : 'editor.manuals.add.open'
+                ) | transloco
+              }}
             </button>
           }
         </div>
@@ -775,6 +801,38 @@ interface LocalChange {
             [count]="10"
             [label]="'editor.manuals.loading' | transloco"
           />
+        } @else if (draft.guide(); as guide) {
+          <!-- An update guide (issue 908): its steps by version and phase, in place of the outline. -->
+          @if (config(); as c) {
+            @if (guide.steps.length === 0) {
+              <of-empty-state
+                ofFadeIn
+                data-testid="guide-empty"
+                [title]="'editor.manuals.guide.emptyTitle' | transloco"
+                [description]="
+                  (editable()
+                    ? 'editor.manuals.guide.emptyDescription'
+                    : 'editor.manuals.guide.emptyReadOnly'
+                  ) | transloco
+                "
+              />
+            } @else {
+              <of-update-guide-steps
+                ofFadeIn
+                class="px-1 pb-1"
+                [ofRefreshing]="reloading()"
+                [guide]="guide"
+                [config]="c"
+                [issues]="draft.issues()"
+                [editable]="editable()"
+                [titleOf]="titleOf"
+                [conditionText]="whenText"
+                (guideChange)="draft.changeGuide($event)"
+                (edit)="editStep($event)"
+                (remove)="removeGuideStep($event)"
+              />
+            }
+          }
         } @else if (shownRows().length === 0) {
           <div [ofRefreshing]="draft.gathering()">
             <of-empty-state
@@ -807,7 +865,7 @@ interface LocalChange {
           >
             <of-module-tree
               [items]="shownRows()"
-              [readonly]="!editable() || draft.derived()"
+              [readonly]="!editable() || draft.derived() || draft.updateGuide()"
               [label]="'editor.manuals.structure' | transloco"
               [selected]="selectedNode()"
               (selectedChange)="selectNode($event)"
@@ -898,7 +956,9 @@ interface LocalChange {
                       <ng-icon name="lucideEyeOff" aria-hidden="true" />
                     </button>
                   }
-                } @else if (editable() && !draft.derived()) {
+                } @else if (
+                  editable() && !draft.derived() && !draft.updateGuide()
+                ) {
                   <button
                     z-button
                     zType="ghost"
@@ -941,6 +1001,19 @@ interface LocalChange {
                 [titleOf]="titleOf"
                 [inOutline]="outlineModules()"
                 (ruleChange)="draft.changeRule($event)"
+              />
+            }
+          }
+        }
+        @if (config(); as c) {
+          @if (draft.guide(); as guide) {
+            @if (!selectedDeleted()) {
+              <of-update-guide-preview
+                ofFadeIn
+                [guide]="guide"
+                [config]="c"
+                [levels]="guideLevels()"
+                [titleOf]="titleOf"
               />
             }
           }
@@ -1311,6 +1384,21 @@ interface LocalChange {
         }
       }
     </z-sheet>
+
+    @if (config(); as c) {
+      @if (draft.guide(); as guide) {
+        <of-update-step-dialog
+          [(open)]="stepOpen"
+          [request]="stepRequest()"
+          [guide]="guide"
+          [config]="c"
+          [levels]="guideLevels()"
+          [pickCondition]="pickCondition"
+          [conditionText]="whenText"
+          (save)="saveStep($event)"
+        />
+      }
+    }
 
     <of-variant-picker-dialog
       [request]="variantRequest()?.request ?? null"
@@ -2779,6 +2867,11 @@ export class ManualBuilderPage {
     if (!summary || !this.editable()) return;
     // Its row shows its title and status at once.
     this.outline.put(summary);
+    // An update guide's module becomes a step once its version and phase are set (#908).
+    if (this.draft.updateGuide()) {
+      this.openStep(null, { module: summary.id }, summary.attributes.title);
+      return;
+    }
     const { rows, id } = addModule(
       this.draft.rows(),
       { id: summary.id, title: summary.attributes.title },
@@ -2834,6 +2927,13 @@ export class ManualBuilderPage {
     }
     // Listed at once with its title (the next read of the lists replaces it).
     this.outline.put(summaryOf(module));
+    if (this.draft.updateGuide()) {
+      this.toast.success(
+        translated('editor.content.create.done', { title: module.title }),
+      );
+      this.openStep(null, { module: module.id }, module.title);
+      return;
+    }
     const { rows, id } = addModule(this.draft.rows(), module, after);
     this.draft.change(rows);
     this.selectNode(id);
@@ -2868,6 +2968,8 @@ export class ManualBuilderPage {
   }
 
   protected remove(id: string): void {
+    // An update guide's rows are its steps (#906): removed on its own screen, never here.
+    if (this.draft.updateGuide()) return;
     const result = removeRow(this.draft.rows(), id);
     if (!result) return;
     const title = this.shownRows().find((r) => r.id === id)?.title ?? id;
@@ -2880,6 +2982,76 @@ export class ManualBuilderPage {
         this.draft.change(restoreRows(this.draft.rows(), result.removed));
       },
     });
+  }
+
+  /** The step dialog (#908): open, and what it edits. */
+  protected readonly stepOpen = signal(false);
+  protected readonly stepRequest = signal<StepRequest | null>(null);
+  /** The draft the step dialog was opened for: its answer applies to that one only. */
+  private stepKey = '';
+
+  /** The levels an update guide's step is for: the configured ones up to the guide's audience. */
+  protected readonly guideLevels = computed(() => {
+    const audiences = this.config()?.audiences ?? [];
+    const audience = this.draft.settings()?.audience;
+    const rank = audiences.findIndex((a) => a.id === audience);
+    return (rank < 0 ? audiences : audiences.slice(0, rank + 1)).map((a) => ({
+      id: a.id,
+      label: a.label,
+    }));
+  });
+
+  /** A condition in words, for an update guide's steps (any value: a step's `when`). */
+  protected readonly whenText = (when: unknown): string =>
+    this.conditionText(when as Condition);
+
+  private openStep(
+    index: number | null,
+    step: StepRequest['step'],
+    title: string,
+  ): void {
+    if (!this.editable() || !this.draft.guide()) return;
+    this.stepKey = this.draftKey();
+    this.stepRequest.set({ index, step, title });
+    this.stepOpen.set(true);
+  }
+
+  /** Edits the update guide's step at `index`. */
+  protected editStep(index: number): void {
+    const step = this.draft.guide()?.steps[index];
+    if (step) this.openStep(index, step, this.titleOf(step.module));
+  }
+
+  protected saveStep(saved: {
+    index: number | null;
+    step: UpdateGuide['steps'][number];
+  }): void {
+    const guide = this.draft.guide();
+    if (!guide || this.stepKey !== this.draftKey() || !this.editable()) return;
+    this.draft.changeGuide(putStep(guide, saved.index, saved.step));
+  }
+
+  /** Removes the update guide's step at `index`, with an undo while the same draft is shown. */
+  protected removeGuideStep(index: number): void {
+    const guide = this.draft.guide();
+    const step = guide?.steps[index];
+    if (!guide || !step || !this.editable()) return;
+    this.draft.changeGuide(removeStep(guide, index));
+    const generation = this.draftKey();
+    this.toast.show(
+      translated('editor.manuals.guide.removed', {
+        title: this.titleOf(step.module),
+      }),
+      {
+        actionLabel: translated('editor.manuals.row.undo'),
+        onAction: () => {
+          const now = this.draft.guide();
+          if (generation !== this.draftKey() || !this.editable() || !now)
+            return;
+          this.draft.changeGuide(restoreStep(now, index, step));
+        },
+      },
+    );
   }
 
   /** The condition in words, as the chips read ("Market: EU; Software: ≥ 2.3"). */

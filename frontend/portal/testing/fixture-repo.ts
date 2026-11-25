@@ -4,6 +4,10 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { printModule, type Block, type Module } from '@openfolia/content-model';
+import {
+  SAMPLE_UPDATE_STEPS,
+  SAMPLE_UPDATE_VERSIONS,
+} from '@openfolia/content-repo/testing';
 
 /**
  * Words that appear only in the internal and the restricted modules and manuals (their titles,
@@ -71,6 +75,13 @@ variantAttributes:
     values:
       - { id: battery, label: { en: Battery, de: Akku } }
       - { id: mains, label: { en: Mains adapter, de: Netzteil } }
+  - { id: software, label: Software, kind: version }
+  - id: cluster
+    label: { en: Cluster setup, de: Cluster-Betrieb }
+    kind: enum
+    values:
+      - { id: "yes", label: { en: "Yes", de: "Ja" } }
+      - { id: "no", label: { en: "No", de: "Nein" } }
 textAttributes:
   - { id: product-name, label: Product name }
 safetySymbols:
@@ -94,6 +105,16 @@ const paragraph = (id: string, value: string): Block => ({
   type: 'paragraph',
   id,
   content: [text(value)],
+});
+
+/** A paragraph whose last word is the battery term. */
+const termParagraph = (id: string): Block => ({
+  type: 'paragraph',
+  id,
+  content: [
+    text('Store the '),
+    { ...text('battery'), marks: [{ type: 'term', termId: 'battery' }] },
+  ],
 });
 
 interface Texts {
@@ -191,6 +212,31 @@ const MODULES: Module[] = [
         symbols: ['w001'],
         blocks: [paragraph('cool', 'Let the contacts cool down.')],
       },
+      // A term where an ancestor clips: a notice, a table's last row and an FAQ answer (#891).
+      {
+        type: 'safety',
+        id: 'pack',
+        severity: 'danger',
+        hazard: [text('Pack under load')],
+        symbols: [],
+        blocks: [termParagraph('pack-term')],
+      },
+      {
+        type: 'table',
+        id: 'specs',
+        columns: [{ width: 1 }],
+        header: false,
+        rows: [
+          { cells: [{ blocks: [paragraph('spec-1', 'Rated at 48 V.')] }] },
+          { cells: [{ blocks: [termParagraph('spec-2')] }] },
+        ],
+      },
+      {
+        type: 'faq',
+        id: 'faq',
+        question: [text('How is it stored?')],
+        blocks: [termParagraph('faq-term')],
+      },
       {
         type: 'procedure',
         id: 'steps',
@@ -199,6 +245,18 @@ const MODULES: Module[] = [
           { id: 's1', content: [text('Park the vehicle.')], blocks: [] },
           { id: 's2', content: [text('Connect the cable.')], blocks: [] },
         ],
+      },
+      // Literal blocks for the copy button: one with indentation and blank lines, one long line.
+      {
+        type: 'literal',
+        id: 'config',
+        language: 'sh',
+        text: 'charger:\n  mode: fast\n\n  limit: 80',
+      },
+      {
+        type: 'literal',
+        id: 'long',
+        text: `export CHARGER_URL=https://charger.example.com/${'very-long-path/'.repeat(12)}end`,
       },
       // Internal content brought into a public module: never in a public build.
       { type: 'moduleRef', id: 'code', module: 'service-code' },
@@ -228,6 +286,17 @@ const MODULES: Module[] = [
             blocks: [],
           },
         ],
+      },
+      {
+        type: 'literal',
+        id: 'config',
+        language: 'sh',
+        text: 'charger:\n  mode: fast\n\n  limit: 80',
+      },
+      {
+        type: 'literal',
+        id: 'long',
+        text: `export CHARGER_URL=https://charger.example.com/${'very-long-path/'.repeat(12)}end`,
       },
       { type: 'moduleRef', id: 'code', module: 'service-code' },
     ],
@@ -317,10 +386,100 @@ entries:
   - module: master-key
 `;
 
+/** The fixture's update guide (#907): `manuals/<id>.yaml`, for the internal audience. */
+export const UPDATE_GUIDE_ID = 'software-update';
+
+/** Its versions, oldest first: the sample guide's (`@openfolia/content-repo/testing`). */
+export const UPDATE_VERSIONS = SAMPLE_UPDATE_VERSIONS;
+
+/** A step title long enough to wrap on a phone, in English and German. */
+export const LONG_STEP_TITLE = [
+  'Confirm that every scheduled export, report and backup job still runs on the new version',
+  'Prüfen Sie, ob alle geplanten Exporte, Berichte und Sicherungsaufträge in der neuen Version weiterlaufen',
+] as const;
+
+/**
+ * The update guide's steps (#907), in manifest order: the sample guide's twelve (two for the
+ * `internal` level only, two for a cluster setup only), then a step with a long title and 27
+ * maintenance steps at 1.1, so the jump from 1.0 to 4.0 at the internal level with a cluster
+ * holds 40 steps. Module ID, version, phase, level, condition, then the English and German title
+ * and text, as `SAMPLE_UPDATE_STEPS`.
+ */
+export const UPDATE_STEPS: typeof SAMPLE_UPDATE_STEPS = [
+  ...SAMPLE_UPDATE_STEPS,
+  [
+    'check-jobs',
+    '4.0',
+    'after',
+    undefined,
+    undefined,
+    LONG_STEP_TITLE[0],
+    'Open the job list and check the time each job last ran.',
+    LONG_STEP_TITLE[1],
+    'Öffnen Sie die Auftragsliste und prüfen Sie, wann jeder Auftrag zuletzt lief.',
+  ],
+  ...Array.from({ length: 27 }, (_, i) => {
+    const n = String(i + 1).padStart(2, '0');
+    return [
+      `check-component-${n}`,
+      '1.1',
+      'after',
+      undefined,
+      undefined,
+      `Check component ${n}`,
+      `Open the status page and check that component ${n} reports “ready”.`,
+      `Komponente ${n} prüfen`,
+      `Öffnen Sie die Statusseite und prüfen Sie, ob Komponente ${n} „bereit“ meldet.`,
+    ] as const;
+  }),
+];
+
+/** The guide's manifest: internal, so its readers pick the public or the internal level. */
+const UPDATE_GUIDE = [
+  'schemaVersion: 1',
+  'kind: update-guide',
+  'title: { en: Software update guide, de: Leitfaden für Software-Updates }',
+  'audience: internal',
+  'variants:',
+  '  - model: large',
+  'attributes:',
+  '  product-name: Model A',
+  'guide:',
+  '  attribute: software',
+  `  versions: [${UPDATE_VERSIONS.map((v) => `"${v}"`).join(', ')}]`,
+  '  steps:',
+  ...UPDATE_STEPS.map(([id, version, phase, level, when]) =>
+    [
+      `    - module: ${id}`,
+      `      version: "${version}"`,
+      `      phase: ${phase}`,
+      ...(level ? [`      level: ${level}`] : []),
+      ...(when ? [`      when: ${when}`] : []),
+    ].join('\n'),
+  ),
+  '',
+].join('\n');
+
+/** A procedure module per step, in English and German. */
+const STEP_MODULES: Module[] = UPDATE_STEPS.flatMap(
+  ([id, , , , , enTitle, enText, deTitle, deText]) => [
+    module(id, 'en', 'procedure', 'public', {
+      title: enTitle,
+      keywords: [],
+      blocks: [paragraph('text', enText)],
+    }),
+    module(id, 'de', 'procedure', 'public', {
+      title: deTitle,
+      keywords: [],
+      blocks: [paragraph('text', deText)],
+    }),
+  ],
+);
+
 /**
  * Creates the portal's fixture content repository (bare, as a server that writes tags needs) in
  * a new temporary directory: three audiences, two products, English and German, one manual per
- * audience, the public one listing modules of all three. Returns its directory.
+ * audience, the public one listing modules of all three, and an internal update guide (#907). Returns its directory.
  */
 export function createFixtureRepo(): string {
   const work = mkdtempSync(join(tmpdir(), 'openfolia-portal-work-'));
@@ -341,11 +500,12 @@ export function createFixtureRepo(): string {
   };
   git(work, 'init', '-q', '-b', 'main');
   write('openfolia.yaml', CONFIG);
-  for (const m of MODULES)
+  for (const m of [...MODULES, ...STEP_MODULES])
     write(`modules/${m.meta.lang}/${m.id}.adoc`, printModule(m));
   write('manuals/operating.yaml', OPERATING);
   write('manuals/service.yaml', SERVICE);
   write('manuals/vault.yaml', VAULT);
+  write(`manuals/${UPDATE_GUIDE_ID}.yaml`, UPDATE_GUIDE);
   write('terms/battery.yaml', TERM);
   write(`assets/${PNG_HASH}`, PNG);
   write(`assets/${ATTACHMENT_HASH}`, ATTACHMENT);

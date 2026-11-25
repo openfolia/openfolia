@@ -32,6 +32,15 @@ export interface NewManual {
    */
   readonly derivedFrom?: string | undefined;
   readonly moduleTypes?: readonly string[] | undefined;
+  /**
+   * An update guide (#908): the version attribute it follows and the versions a reader picks
+   * from (oldest first, at least two); it starts with no step.
+   */
+  readonly updateGuide?:
+    | { readonly attribute: string; readonly versions: readonly string[] }
+    | undefined;
+  /** An update guide's product: the manual whose variants and text attributes it starts with. */
+  readonly productFrom?: string | undefined;
 }
 
 /** A manual (or a working copy of one) with this ID is there already, and is not this one. */
@@ -142,18 +151,22 @@ export class ManualCreation {
           path: { changeSetId: changeSet.id },
         }),
       ),
-      (manual.derivedFrom ?? manual.copyFrom)
+      (manual.derivedFrom ?? manual.copyFrom ?? manual.productFrom)
         ? this.readSource(
-            (manual.derivedFrom ?? manual.copyFrom) as string,
+            (manual.derivedFrom ??
+              manual.copyFrom ??
+              manual.productFrom) as string,
             changeSet,
           )
         : Promise.resolve(null),
     ]);
     const derived = manual.derivedFrom !== undefined;
+    const guide = manual.updateGuide;
     const content: DraftManifest = {
       schemaVersion: 1,
       id: manual.id,
       ...(derived ? { kind: 'derived' as const } : {}),
+      ...(guide ? { kind: 'update-guide' as const } : {}),
       title: manual.title,
       ...(manual.audience ? { audience: manual.audience } : {}),
       variants: source
@@ -164,8 +177,19 @@ export class ManualCreation {
       ...(manual.derivedFrom
         ? { rule: newRule(manual.derivedFrom, manual.moduleTypes) }
         : {}),
-      // A derived manual's entries are gathered by its rule, never written.
-      entries: source && !derived ? structuredClone(source.entries) : [],
+      ...(guide
+        ? {
+            guide: {
+              attribute: guide.attribute,
+              versions: [...guide.versions],
+              steps: [],
+            },
+          }
+        : {}),
+      // A derived manual's entries are gathered by its rule, never written; an update guide's
+      // are its steps (#906), none yet; its product gives it variants and text attributes only.
+      entries:
+        source && !derived && !guide ? structuredClone(source.entries) : [],
     };
     const path = { changeSetId: changeSet.id, manualId: manual.id };
     const existing = await firstValueFrom(

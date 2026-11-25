@@ -1,0 +1,140 @@
+---
+title: 'Update-Leitfäden'
+description: 'Jeden Update-Schritt einmal schreiben, mit der Version, die ihn erfordert. Leser erhalten die Schritte für ihren Sprung von einer Version zur anderen, für ihre Stufe und ihre Ausstattung.'
+articleId: 'guide.manuals.update-guides'
+---
+
+Ein Update-Leitfaden ist eine Anleitung für Software-Updates. Sie schreiben jeden Schritt einmal und
+geben ihm die Version, die ihn erfordert. Wer von Version 2.0 auf 4.0 aktualisiert, erhält die
+Schritte jeder Version dazwischen, gruppiert nach dem, was **vor**, **während** und **nach** dem
+Update zu tun ist. Schritte, die nicht zur Stufe oder Ausstattung des Lesers passen, blendet der
+Leitfaden aus.
+
+## So funktioniert ein Schritt
+
+Jeder Schritt ist ein Modul (sein Titel und Text) mit diesen Angaben:
+
+- **Version:** die Version, die den Schritt erfordert, als Version mit Punkten wie `2.3`. Ein
+  Schritt gilt für ein Update von `from` auf `to`, wenn `from < Version <= to`. Wer also auf 2.0
+  ist, sieht die Schritte von 2.0 nicht noch einmal, und wer auf 3.0 geht, sieht die Schritte von
+  3.0. Versionen werden als Zahlen verglichen: `2.10` kommt nach `2.9`, und `2.3` ist dasselbe wie
+  `2.3.0`.
+- **Phase:** `before` (vor), `during` (während) oder `after` (nach dem Update).
+- **Stufe (optional):** eine der Zielgruppen Ihres Projekts, etwa **Bediener** oder **Techniker**.
+  Ein Schritt für eine Stufe wird Lesern gezeigt, die diese Stufe oder eine eingeschränktere wählen.
+  So sieht ein einfacher Leser weniger Schritte als ein fortgeschrittener. Ohne Stufe sieht jeder
+  Leser den Schritt. Ein Schritt für eine Stufe, die eingeschränkter ist als die Zielgruppe des
+  Leitfadens, gilt für keinen seiner Leser und entfällt. Innerhalb der Zielgruppe des Leitfadens wählt die Stufe nur aus, was ein Leser sieht: Wer
+  das Modul überhaupt lesen darf, entscheidet seine eigene Zielgruppe.
+- **Optionen (optional):** eine Bedingung an die Ausstattung des Lesers, geschrieben wie jede
+  Bedingung, etwa `cluster in (yes)`. Der Leser wählt seine Optionen. Eine Bedingung an eine Option,
+  die er nicht gesetzt hat, ist falsch.
+
+Der Leitfaden listet die Versionen, zwischen denen Leser wählen, die älteste zuerst. Er folgt einem
+Versionsattribut Ihres Projekts (zum Beispiel **Software**).
+
+## Einen Update-Leitfaden schreiben
+
+Öffnen Sie in einer Revision unter **Anleitungen** die Anleitungsauswahl und wählen Sie **Neue
+Anleitung**. Wählen Sie unter **Art** **Update-Leitfaden, Schritte je Softwareversion**, dann:
+
+- **Produkt:** die Anleitung, deren Varianten und Textattribute der Leitfaden übernimmt, oder die
+  Standardvariante des Projekts.
+- **Versionsmerkmal:** das Versionsmerkmal, dem der Leitfaden folgt. Gibt es nur eines, ist es
+  schon gewählt.
+- **Versionen:** die Versionen, zwischen denen Leser wählen, durch Kommas getrennt, mindestens zwei.
+  Die Reihenfolge ist egal: Sie werden mit der ältesten zuerst sortiert.
+
+![Der Dialog Neue Anleitung mit der Art Update-Leitfaden: Produkt, Versionsmerkmal und Versionen](/images/guide/de/update-guide-new.webp)
+
+Der Leitfaden öffnet sich im Builder. **Schritt hinzufügen** fragt nach dem Modul des Schritts (einem
+vorhandenen oder einem neuen, das Sie dort anlegen) und dann nach seinen Angaben: der Version, die
+ihn erfordert (eine des Leitfadens oder **Andere Version …**, um eine neue einzugeben, die zu den
+Versionen des Leitfadens kommt), der Phase und optional der Stufe und **Nur für manche
+Ausstattungen …** für die Optionen. Die Version eines Schritts liegt immer nach der ersten Version
+des Leitfadens, denn auf die erste aktualisiert niemand.
+
+![Das Schrittformular: die Version, die den Schritt erfordert, die Phase, die Stufe und die Optionen](/images/guide/de/update-guide-step.webp)
+
+Der Builder listet die Schritte nach Version, darin nach Phase. Ziehen Sie einen Schritt, um seinen
+Platz unter den Schritten seiner Version und Phase zu ändern, ändern Sie seine Angaben mit dem Stift
+und entfernen Sie ihn mit dem Kreuz (**Rückgängig** holt ihn zurück). Die Versionen über der Liste
+zeigen, welchen der Leitfaden folgt; eine Version, die kein Schritt braucht, nehmen Sie mit ihrem
+Kreuz heraus. Ein Befund der Prüfungen, etwa ein Schritt außerhalb der Versionen, steht am Schritt.
+
+**Vorschau für** rechts zeigt die Schritte, die ein Leser erhält: Wählen Sie die Versionen, von der
+und auf die er aktualisiert, seine Stufe und seine Optionen. Es ist dieselbe Wahl, die das Portal
+anbietet, sobald der Leitfaden veröffentlicht ist.
+
+![Der Update-Leitfaden im Builder: die Schritte nach Version und Phase und Vorschau für mit den Schritten eines Sprungs von 1.0 auf 4.0](/images/guide/de/update-guide.webp)
+
+## Veröffentlichen und drucken
+
+Ein Update-Leitfaden ist eine Anleitung wie jede andere: Sie prüfen, besprechen und veröffentlichen
+ihn in einer Revision. Sein PDF enthält den ganzen Leitfaden, jeden Schritt, in einem Abschnitt je
+Version und darin einem je Phase. Ein PDF je Bereich gibt es nicht. Den Bereich wählen Leser im
+Portal.
+
+Die Abschnittsüberschriften kommen aus den Ausgabetexten der Sprache der Anleitung. Ihr Admin ändert
+sie unter **Admin**, **Einstellungen**, **Ausgabetexte**, **Update-Leitfäden**.
+
+## Prüfungen
+
+| Prüfung                         | Schwere     | Bedeutung                                                                  |
+| ------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| Schritt ohne gültige Version    | Blockierend | Der Schritt hat keine Version oder keine Version mit Punkten.              |
+| Unbekannte Phase                | Blockierend | Die Phase des Schritts ist weder `before`, `during` noch `after`.          |
+| Schritt außerhalb der Versionen | Warnung     | Kein Update zwischen der ersten und der letzten Version überschreitet ihn. |
+| Unbekannte Zielgruppe           | Blockierend | Die Stufe des Schritts ist keine Zielgruppe Ihres Projekts.                |
+
+## Das Manifest
+
+Ein Update-Leitfaden wird als Anleitungsdatei gespeichert, `manuals/<id>.yaml`, mit
+`kind: update-guide` und einem `guide` statt `entries`:
+
+```yaml
+schemaVersion: 1
+kind: update-guide
+title: Software-Update-Leitfaden
+audience: technician
+variants:
+  - model: large
+guide:
+  attribute: software # ein Versionsattribut des Projekts
+  versions: ['1.0', '2.0', '2.1', '3.0', '4.0'] # die älteste zuerst, in Anführungszeichen
+  steps:
+    - module: back-up-settings
+      version: '2.0'
+      phase: before
+    - module: migrate-database
+      version: '2.0'
+      phase: during
+      level: technician
+    - module: drain-cluster
+      version: '4.0'
+      phase: before
+      when: cluster in (yes)
+```
+
+| Feld              | Bedeutung                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| `kind`            | `update-guide`.                                                                                           |
+| `guide.attribute` | Das Versionsattribut, dem der Leitfaden folgt (`variantAttributes`, `kind: version`).                     |
+| `guide.versions`  | Die Versionen, zwischen denen Leser wählen, die älteste zuerst, jede einmal, mindestens zwei.             |
+| `guide.steps`     | Die Schritte in der Reihenfolge, in der Sie sie schreiben. Schritte einer Version und Phase behalten sie. |
+| `steps[].module`  | Das Modul mit Titel und Text des Schritts.                                                                |
+| `steps[].version` | Die Version, die den Schritt erfordert.                                                                   |
+| `steps[].phase`   | `before`, `during` oder `after`.                                                                          |
+| `steps[].level`   | Optional: die Zielgruppe, für die der Schritt gilt.                                                       |
+| `steps[].when`    | Optional: die Bedingung an die Optionen des Lesers.                                                       |
+
+Schreiben Sie Versionen in Anführungszeichen. Ohne sie liest YAML `2.10` als die Zahl 2.1.
+
+## Für Integratoren
+
+Die API gibt einer Leserseite, was sie braucht, um den Leitfaden zu bauen und im Browser zu filtern:
+die Versionen, Stufen und Optionen des Leitfadens (`GET /manuals/{id}/update-guide/{lang}`) und
+jeden Schritt mit Version, Phase, Stufe, Bedingung und Text
+(`GET /manuals/{id}/update-guide/{lang}/steps`, eine Liste in Seiten). Ausgeliefert werden nur
+veröffentlichte Inhalte, mit denselben Zielgruppenregeln wie für Anleitungen. Siehe die
+[API-Referenz](/api).

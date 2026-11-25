@@ -1,0 +1,10 @@
+= Pair your phone again
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+The update removes paired phones. Pair your phone again under Settings › Bluetooth.

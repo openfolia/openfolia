@@ -1,6 +1,7 @@
 import {
   type AuditEvent,
   type AuditFilter,
+  type AuditKind,
   matchesAuditFilter,
 } from '../../src/audit/core/audit-event.js';
 import {
@@ -56,11 +57,15 @@ export class FakeAuditLog extends AuditLog {
     yield* this.matching(filter);
   }
 
-  /** `audit_events_prune` as the database runs it; every event's position is `{ tx: '1', id }`. */
+  /**
+   * `audit_events_prune` (or `audit_events_prune_reads` for `read`) as the
+   * database runs it; every event's position is `{ tx: '1', id }`.
+   */
   async prune(
     before: Date,
     maxRows: number,
     keptAfter?: AuditPosition,
+    kind: AuditKind = 'write',
   ): Promise<number> {
     if (before.getTime() > Date.now() - 23 * 60 * 60 * 1000) {
       throw new Error(
@@ -73,6 +78,7 @@ export class FakeAuditLog extends AuditLog {
     const doomed = this.events
       .filter(
         (e) =>
+          e.kind === kind &&
           e.at.getTime() < before.getTime() &&
           (!keptAfter || !positionBefore(keptAfter, fakePosition(e))),
       )
@@ -89,6 +95,7 @@ export class FakeAuditLog extends AuditLog {
     this.events.push({
       id: String(++this.lastId),
       at: new Date(),
+      kind: 'write',
       actor: { kind: 'service', id: 'audit-retention' },
       action: 'audit-log.prune',
       subject: { type: 'audit-log', id: 'audit-events' },
@@ -98,6 +105,7 @@ export class FakeAuditLog extends AuditLog {
         removed: doomed.length,
         firstId: String(Math.min(...ids)),
         lastId: String(Math.max(...ids)),
+        ...(kind === 'read' && { kind }),
       },
     });
     return doomed.length;

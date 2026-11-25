@@ -1,0 +1,10 @@
+= Telefon erneut koppeln
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Das Update entfernt gekoppelte Telefone. Koppeln Sie Ihr Telefon unter Einstellungen › Bluetooth erneut.

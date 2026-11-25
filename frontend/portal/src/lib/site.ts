@@ -4,12 +4,18 @@ import {
   type ResolvedEntry,
   type ResolvedManual,
 } from '@openfolia/content-model';
-import { renderManualHtml } from '@openfolia/render-html';
+import {
+  headingIdOf,
+  renderManualHtml,
+  renderModuleHtml,
+} from '@openfolia/render-html';
 import {
   parseSnapshot,
   type Snapshot,
+  type SnapshotGuide,
   type SnapshotManual,
   type SnapshotRelease,
+  type SnapshotStep,
   type SnapshotVariant,
 } from './snapshot.ts';
 
@@ -44,11 +50,13 @@ export interface ManualPage {
   readonly variant: SnapshotVariant;
 }
 
-/** Every manual page of the build: one per release, manual and variant. */
+/** Every manual page of the build: one per release, manual and variant (update guides have their own). */
 export function manualPages(): ManualPage[] {
   return snapshot().releases.flatMap((release) =>
     release.manuals.flatMap((manual) =>
-      manual.variants.map((variant) => ({ release, manual, variant })),
+      manual.guide
+        ? []
+        : manual.variants.map((variant) => ({ release, manual, variant })),
     ),
   );
 }
@@ -58,6 +66,82 @@ export const manualPath = (
   manual: SnapshotManual,
   variant: SnapshotVariant,
 ) => `${release.product}/${manual.id}/${variant.slug}/`;
+
+export interface GuidePage {
+  readonly release: SnapshotRelease;
+  readonly manual: SnapshotManual & { guide: SnapshotGuide };
+  /** The guide's resolved manual: its steps' text. */
+  readonly variant: SnapshotVariant;
+}
+
+/** Every update guide page of the build (#907): one per release and guide. */
+export function guidePages(): GuidePage[] {
+  return snapshot().releases.flatMap((release) =>
+    release.manuals.flatMap((manual) =>
+      manual.guide && manual.variants[0]
+        ? [
+            {
+              release,
+              manual: manual as GuidePage['manual'],
+              variant: manual.variants[0],
+            },
+          ]
+        : [],
+    ),
+  );
+}
+
+/** An update guide's page: one per guide, whatever its variants. */
+export const guidePath = (release: SnapshotRelease, manual: SnapshotManual) =>
+  `${release.product}/${manual.id}/`;
+
+/** Where a list links a manual: its first variant's page, an update guide's own page. */
+export const entryPath = (release: SnapshotRelease, manual: SnapshotManual) =>
+  manual.guide
+    ? guidePath(release, manual)
+    : manualPath(release, manual, manual.variants[0]!);
+
+/** How every page links the build's files: images, attachments and symbols it wrote. */
+function fileLinks() {
+  const s = snapshot();
+  return {
+    // `safeUrl` refuses a `data:` URL, so an asset the build has no file for renders without one.
+    assetUrl: (hash: string) =>
+      s.assets[hash] === undefined
+        ? 'data:,'
+        : href(`assets/${s.assets[hash]}`),
+    symbolUrl: (id: string) =>
+      s.symbols[id] === undefined ? undefined : href(`assets/${s.symbols[id]}`),
+    symbolLabel: (id: string) =>
+      s.safetySymbols.find((symbol) => symbol.id === id)?.label,
+    outputLabels: s.outputLabels as never,
+  };
+}
+
+/**
+ * A step's text (#907): its module in the guide's resolved manual, rendered by
+ * `@openfolia/render-html` as anywhere (escaped by construction), its title an `<h3>`. `n` is
+ * the step's place on the page: each step's IDs start with `of-s<n>-`, so a module in two steps
+ * never gives two elements one ID. Undefined: the module is not in the resolved manual.
+ */
+export function stepHtml(
+  page: GuidePage,
+  step: SnapshotStep,
+  n: number,
+): { html: string; headingId: string } | undefined {
+  const prefix = `of-s${n}-`;
+  const result = renderModuleHtml(
+    page.variant.resolved as unknown as ResolvedManual,
+    step.module,
+    { ...fileLinks(), idPrefix: prefix, headingLevel: 3 },
+  );
+  return (
+    result && {
+      html: result.html,
+      headingId: `${prefix}${headingIdOf(step.module)}`,
+    }
+  );
+}
 
 /** A date in the build's language. */
 export function formatDate(iso: string, lang: string): string {
@@ -74,22 +158,10 @@ export function formatDate(iso: string, lang: string): string {
  * wrote; one it did not write gets no link.
  */
 export function manualHtml(page: ManualPage): string {
-  const s = snapshot();
   const { html } = renderManualHtml(
     page.variant.resolved as unknown as ResolvedManual,
     {
-      // `safeUrl` refuses a `data:` URL, so an asset the build has no file for renders without one.
-      assetUrl: (hash) =>
-        s.assets[hash] === undefined
-          ? 'data:,'
-          : href(`assets/${s.assets[hash]}`),
-      symbolUrl: (id) =>
-        s.symbols[id] === undefined
-          ? undefined
-          : href(`assets/${s.symbols[id]}`),
-      symbolLabel: (id) =>
-        s.safetySymbols.find((symbol) => symbol.id === id)?.label,
-      outputLabels: s.outputLabels as never,
+      ...fileLinks(),
       subtitle: `${page.release.productLabel} ${page.release.revision} · ${page.variant.label}`,
       toc: false,
     },

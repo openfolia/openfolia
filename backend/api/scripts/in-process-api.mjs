@@ -35,19 +35,15 @@ export async function withInProcessApi(use, options = {}) {
   const blobRoot = mkdtempSync(join(tmpdir(), 'openfolia-openapi-blobs-'));
 
   // The API connects to Postgres on boot: an in-memory PGlite on a loopback socket will do,
-  // migrated as the server starts (it reads the stored secrets as it starts).
-  const { PGlite } = apiRequire('@electric-sql/pglite');
-  // The migrations create pg_trgm (#54).
-  const { pg_trgm } = apiRequire('@electric-sql/pglite/contrib/pg_trgm');
-  const { PGLiteSocketServer } = apiRequire('@electric-sql/pglite-socket');
-  const pglite = await PGlite.create({ extensions: { pg_trgm } });
-  const database = new PGLiteSocketServer({
-    db: pglite,
-    host: '127.0.0.1',
-    port: 0,
-    maxConnections: 10,
-  });
-  await database.start();
+  // migrated as the server starts (it reads the stored secrets as it starts). The sandbox
+  // image's server, run as it is (as the browser tests' `stack/db.mjs` does): its queue keeps
+  // each connection's extended queries and transactions together, where the socket server's
+  // own interleaves them across connections (rows to the wrong query, under concurrent use
+  // such as the reads of service accounts being recorded beside a build's reads, #877).
+  const { startDatabase } = await import(
+    url(join(apiRoot, '..', 'sandbox', 'src', 'database.ts'))
+  );
+  const database = await startDatabase();
 
   for (const key of Object.keys(process.env))
     if (key.startsWith('CCMS_')) delete process.env[key];
@@ -57,7 +53,7 @@ export async function withInProcessApi(use, options = {}) {
     CCMS_DEFAULT_REF: 'main',
     CCMS_BLOB_DRIVER: 'fs',
     CCMS_BLOB_FS_ROOT: blobRoot,
-    CCMS_DATABASE_URL: `postgres://postgres@${database.getServerConn()}/postgres`,
+    CCMS_DATABASE_URL: database.url,
     // Migrated: starting reads the stored secrets (the secret key's check, #470).
     CCMS_DATABASE_MIGRATE: 'true',
     // A throwaway key, so no key file is made, never a checkout's own.
@@ -93,7 +89,6 @@ export async function withInProcessApi(use, options = {}) {
   } finally {
     await app?.close();
     await database.stop();
-    await pglite.close();
     if (!sample.keep) rmSync(sample.dir, { recursive: true, force: true });
     rmSync(blobRoot, { recursive: true, force: true });
   }

@@ -23,6 +23,7 @@ export * from './lib/block-places.js';
 export * from './lib/validate.js';
 export * from './lib/snippet.js';
 export * from './lib/derive.js';
+export * from './lib/update-guide.js';
 export * from './lib/safety.js';
 export * from './lib/structure.js';
 export * from './lib/table-limits.js';

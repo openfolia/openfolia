@@ -1,0 +1,10 @@
+= Sauvegarder vos profils de conducteur
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Exportez vos profils de conducteur vers votre compte sous Réglages › Profils, car la mise à jour les réinitialise.

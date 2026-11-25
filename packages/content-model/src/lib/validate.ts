@@ -11,6 +11,12 @@ import { imagesById } from './callouts.js';
 import { walk } from './walk.js';
 import { isPlaceholderKey, PLACEHOLDER_KEYS } from './placeholder.js';
 import { type LocalizedText, textIn } from './localized-text.js';
+import { compareVersions } from './condition-eval.js';
+import {
+  isUpdatePhase,
+  UPDATE_PHASES,
+  validStepVersion,
+} from './update-guide.js';
 
 export interface Issue {
   severity: 'error' | 'warning';
@@ -61,7 +67,13 @@ export type IssueCode =
   /** A derived manual's rule gathers no module. */
   | 'empty-derived-manual'
   /** A derived manual for a wider audience than its source manual. */
-  | 'derived-audience-wider';
+  | 'derived-audience-wider'
+  /** An update guide's step without a version, or with one that is not a dotted version (#906). */
+  | 'update-step-version'
+  /** An update guide's step at a version no jump between the guide's versions crosses (#906). */
+  | 'update-step-outside-versions'
+  /** An update guide's step whose phase is not `before`, `during` or `after` (#906). */
+  | 'update-step-phase';
 
 /**
  * Checks a module (already parsed by `Module`) against the project
@@ -534,6 +546,10 @@ export function validateManifest(
         });
       }
     }
+  } else if (manifest.kind === 'update-guide') {
+    // An update guide's entries are its steps (#906), checked as steps.
+    if (manifest.guide)
+      pushAll(issues, updateGuideIssues(manifest.guide, config));
   } else checkEntries(manifest.entries);
   const replacement = replacementIssue(
     manifest.id,
@@ -541,6 +557,78 @@ export function validateManifest(
     'manual',
   );
   if (replacement) issues.push(replacement);
+  return issues;
+}
+
+/**
+ * An update guide's own checks (#906): its version attribute a configured version attribute, and
+ * per step (`at` `guide.steps.<n>`, from 0) a dotted version (`update-step-version`, an error)
+ * that a jump between the guide's versions crosses, i.e. after the first and at most the last
+ * (`update-step-outside-versions`, a warning: the step is never shown), a known phase
+ * (`update-step-phase`, an error), a configured level (`unknown-audience`) and a valid condition.
+ */
+function updateGuideIssues(
+  guide: NonNullable<Manifest['guide']>,
+  config: ProjectConfig,
+): Issue[] {
+  const issues: Issue[] = [];
+  const attr = config.variantAttributes.find((a) => a.id === guide.attribute);
+  if (!attr || attr.kind !== 'version') {
+    issues.push({
+      severity: 'error',
+      code: 'unknown-variant-attribute',
+      message: attr
+        ? `variant attribute "${guide.attribute}" of the guide is not a version attribute`
+        : `variant attribute "${guide.attribute}" of the guide is not configured`,
+      at: 'guide.attribute',
+    });
+  }
+  const first = guide.versions[0] as string;
+  const last = guide.versions[guide.versions.length - 1] as string;
+  guide.steps.forEach((step, i) => {
+    const at = `guide.steps.${i}`;
+    if (!validStepVersion(step.version)) {
+      issues.push({
+        severity: 'error',
+        code: 'update-step-version',
+        message:
+          step.version === undefined
+            ? `the step "${step.module}" has no version`
+            : `the step "${step.module}" has version "${step.version}", which is not a dotted version such as "2.3"`,
+        at,
+      });
+    } else if (
+      compareVersions(step.version, first) <= 0 ||
+      compareVersions(step.version, last) > 0
+    ) {
+      issues.push({
+        severity: 'warning',
+        code: 'update-step-outside-versions',
+        message: `the step "${step.module}" is for version ${step.version}, which no update from ${first} to ${last} crosses: it is never shown`,
+        at,
+      });
+    }
+    if (!isUpdatePhase(step.phase)) {
+      issues.push({
+        severity: 'error',
+        code: 'update-step-phase',
+        message: `the step "${step.module}" has phase "${step.phase}"; a phase is one of ${UPDATE_PHASES.join(', ')}`,
+        at,
+      });
+    }
+    if (
+      step.level !== undefined &&
+      !config.audiences.some((a) => a.id === step.level)
+    ) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-audience',
+        message: `level "${step.level}" of the step "${step.module}" is not a configured audience`,
+        at,
+      });
+    }
+    if (step.when) pushAll(issues, conditionIssues(step.when, config, at));
+  });
   return issues;
 }
 

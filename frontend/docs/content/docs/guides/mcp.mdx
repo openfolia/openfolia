@@ -1,14 +1,14 @@
 ---
 title: 'The MCP server'
-description: 'Connect an AI assistant to your OpenFolia over MCP: the address, the token, a client configuration that works, the tools and resources, and what to do when a call fails.'
+description: 'Connect an AI assistant to your OpenFolia over MCP: the address, a token of your own, a client configuration that works, the tools and resources, and what to do when a call fails.'
 ---
 
 The MCP server lets AI assistants and agents (Claude Code, Cursor, Claude Desktop, your own) search
 and read your **released** documentation over the [Model Context Protocol](https://modelcontextprotocol.io).
 It only reads. An assistant sees `main` and the release tags, never a draft, a change set or a
-comment, and only what the server's service account may read. It cannot change anything.
+comment, and only what your token's service account may read. It cannot change anything.
 
-To connect a client you need two things: the server's **address** and its **token**.
+To connect a client you need two things: the server's **address** and a **token of your own**.
 
 ## The address
 
@@ -24,21 +24,47 @@ The endpoint is **stateless**: every request is one `POST` with one JSON-RPC mes
 JSON. There are no sessions and no event stream, so `GET` and `DELETE` answer 405, which MCP clients
 expect. Where no MCP server runs, `/mcp` answers 404.
 
-## The token
+## Your token
 
-Every request carries `Authorization: Bearer <token>`.
+Every request carries `Authorization: Bearer <token>`: a **service account token of your own**
+(`ccms_sat_…`), whose role holds `content.read` and nothing else. Each person or agent that
+connects gets one, so one can be revoked without stopping the others, and each reads within its own
+role's scope (languages, module types, audience, facets). A module outside that scope is
+`not-found`, exactly like one that does not exist. A token that may do more than read (drafts,
+editing, releases) is refused with 403 `token-not-read-only`, so a role given by mistake never
+widens what an assistant reads.
 
-- **Hosted:** your provider or your OpenFolia admin gives you the token.
-- **Self-hosted:** it is `CCMS_MCP_HTTP_TOKEN` in the settings file (`deploy/.env`), made with
-  `openssl rand -hex 32`. [Running it yourself](#running-it-yourself) shows how.
+### Make a service account and token for MCP
 
-There is one token per instance, shared by everyone who connects. The token only gets you in.
-What you read is decided by the **service account** behind the server (`CCMS_MCP_API_TOKEN`),
-whose role holds `content.read` and nothing else. Its scope (languages, module types, audience,
-facets) is the same for every caller. A module outside that scope is `not-found`, exactly like
-one that does not exist. Keep the token out of shared files and chats: anyone who holds it reads
-what the service account reads. To revoke it, an admin sets a new `CCMS_MCP_HTTP_TOKEN` and
-restarts the server. Every client then needs the new one.
+An admin does this in the editor, once for each person or agent that connects. It works the same
+hosted and self-hosted, with no provider involved.
+
+1. **A role that may only read.** In **Admin**, open **Roles** and choose **New role**. Name it,
+   for example "MCP reader", and tick **content.read** alone. To limit what it reads, set its
+   **Scope**: audience levels, languages, module types or facets
+   ([Make or change a role](/guide/admin/users-and-roles#make-or-change-a-role)). Choose
+   **Create role**.
+2. **A service account with that role.** In **Admin**, open **Service accounts** and choose **New
+   service account**. Name it after who connects, for example "Claude Code, Jane", and under
+   **Roles** choose the role of step 1
+   ([Add a service account](/guide/admin/service-accounts#add-a-service-account)).
+3. **A token.** In its row, choose **Tokens**, then **Issue token**. Under **What it is for**,
+   write "MCP", choose how long it lasts, and choose **Issue**. **Copy the token now**: it is shown
+   once ([Issue a token](/guide/admin/service-accounts#issue-a-token)).
+4. **Use it as the bearer token** in your client, as the next sections show. Keep it out of shared
+   files and chats: anyone who holds it reads what its account reads.
+
+**Revoking it:** **Revoke** beside the token (Admin, Service accounts, **Tokens**). Every read with
+it is refused from then on, and the server lets it in no more within a minute; the other callers
+go on. Before a token expires, issue a new one and replace it in your client. The token's **Last
+used** shows when it read: the API sees each caller's own account.
+
+**Reads are logged per token.** Every read the server makes for you is recorded in the audit log
+under your service account, with the token's ID, the API route, the ref and the tool that read
+(`mcp/search`, `mcp/read_module`, …; the server's own token checks show as `mcp`). An admin sees
+them in **Admin**, **Audit log**, under **Reads**
+([Reads of service accounts](/guide/admin/audit-log#reads-of-service-accounts)). What you asked
+the assistant, and what the API answered, are never recorded.
 
 ## Connect Claude Code
 
@@ -47,7 +73,7 @@ restarts the server. Every client then needs the new one.
    your shell's history and your project files:
 
    ```sh
-   export OPENFOLIA_MCP_TOKEN='<the token>'
+   export OPENFOLIA_MCP_TOKEN='<your token, ccms_sat_…>'
    ```
 
 2. **Add the server.** Your shell fills in the token, and Claude Code stores it in your own
@@ -104,14 +130,14 @@ expands variables is in its own documentation.
 ## Claude Desktop and other clients that start a local server (stdio)
 
 A client that only starts servers on your machine runs the MCP server itself, over stdio. That
-server reads the API directly, so it takes the API's address and a service account token instead
-of the HTTP token:
+server reads the API directly, so it takes the API's address and your service account token (the
+same kind of token as above) as settings:
 
 - `CCMS_MCP_API_URL`: the API, `https://<team>.openfolia.com/api` (self-hosted: the editor's
   address plus `/api`).
 - `CCMS_MCP_API_TOKEN`: a service account token (`ccms_sat_…`) whose role holds `content.read`
-  alone. An admin issues it in the editor ([Service accounts and
-  tokens](/guide/admin/service-accounts)). The server refuses a token that may do more.
+  alone, made as in [Make a service account and token for
+  MCP](#make-a-service-account-and-token-for-mcp). The server refuses a token that may do more.
 
 With Docker, it runs the MCP image of your instance's version. Claude Desktop's configuration file is
 `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS and
@@ -156,7 +182,8 @@ curl -sS -X POST https://<team>.openfolia.com/mcp \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-The answer lists the nine tools. Without the header, it is 401.
+The answer lists the nine tools. Without the header, it is 401; with a token that may do more
+than read, 403 `token-not-read-only`.
 
 ## The tools
 
@@ -203,7 +230,7 @@ assistant (or your own code) can act on it. The ones you meet most:
 | `not-found`                             | no such module or manual, or one outside the service account's scope |
 | `unknown-variant`                       | the manual has no such variant                                       |
 | `ref-not-released`, `release-withdrawn` | the `ref` is no released content (see above)                         |
-| `token-not-read-only`                   | the server's service account may do more than read: every call fails |
+| `token-not-read-only`                   | over stdio: the service account may do more than read (see below)    |
 | `busy`                                  | too many calls at once: try again shortly                            |
 | `api-unavailable`                       | the server could not reach the API                                   |
 | `invalid-cursor`                        | a `cursor` this server did not give                                  |
@@ -216,22 +243,35 @@ The full list is in `backend/mcp/README.md` in the repository, the server's own 
 - A call has **120 seconds**, waiting included. A client that cancels it frees its place.
 - One client address may send **600 requests a minute**; then 429 with `Retry-After`.
 - Wrong tokens: after **10 a minute from one address**, or 100 from all addresses together, every
-  wrong token gets 429 until the minute ends. The right token is always served, even from that
-  address.
+  token that is no service account's gets 429 until the minute ends. A service account token is
+  still checked then, unless wrong ones came from its own address 10 times that minute; a caller
+  already connected is always served. One address may have 4 token checks under way at once.
+- A token is checked with the API when it first connects, and again **once a minute** at most.
+  Every read sends it on, so the API refuses a revoked or expired token on its next read, and
+  the server lets it in no more within that minute. A refused token is refused again for 10
+  seconds without asking the API.
 - A request body holds at most **1 MiB** and one JSON-RPC message (no batches).
 - `read_module` gives up to 100,000 characters a call and a resource read up to 500,000. A longer
   text comes in parts by `cursor`, or says it was cut.
 
 ## Troubleshooting
 
-**401 Unauthorized.** The header is missing, or the token is wrong or was replaced. The header is
-exactly `Authorization: Bearer <token>`, with no quotes or line break in the token. Check that the
-variable your configuration names is set where the client runs (`echo ${#OPENFOLIA_MCP_TOKEN}`
-prints its length: 64 for a token from `openssl rand -hex 32`).
+**401 Unauthorized.** The header is missing, or the token is wrong, revoked or expired. The answer
+names the reason: `unauthorized` (unknown or wrong), `token-revoked`, `token-expired`. A
+deactivated service account is 403 `service-account-deactivated`. The header is exactly
+`Authorization: Bearer <token>`, with no quotes or line break in the token. Check that the variable
+your configuration names is set where the client runs (`echo ${#OPENFOLIA_MCP_TOKEN}` prints its
+length: 90 for a service account token). A revoked or expired token does not come back: issue a new
+one.
 
-**`token-not-read-only`.** Every tool call fails with it, although you got in. The server's own
-service account holds more than `content.read` (drafts, editing), so the server refuses to answer
-rather than show more. Your admin gives that account a role that holds `content.read` alone.
+**403 `token-not-read-only`.** Your token's service account holds more than `content.read`
+(drafts, editing, releases), so the server refuses it rather than show more. Use a token of an
+account whose role holds `content.read` alone, made as in [Make a service account and token for
+MCP](#make-a-service-account-and-token-for-mcp). Over stdio, every tool call fails with this code
+instead.
+
+**503 `The token could not be checked`.** The server did not reach the API to check your token, or too many checks were under way.
+Nothing is counted against you: try again after the seconds `Retry-After` names.
 
 **403 `Forbidden: origin not allowed`.** The request carried an `Origin` header, as a client running
 in a browser does, and the server allows none by default (it protects against DNS rebinding). A
@@ -239,7 +279,8 @@ self-hoster adds the client's origin to `CCMS_MCP_HTTP_ALLOWED_ORIGINS`. Desktop
 clients send no `Origin` and never see this.
 
 **429.** `Too many failed attempts`: wrong tokens came from your address (or from many at once).
-Fix the token, then wait the seconds `Retry-After` names. `Too many requests`: more than 600 a
+Fix the token, then wait the seconds `Retry-After` names. `Too many token checks at once`: your
+address sent more than 4 new tokens at the same time. `Too many requests`: more than 600 a
 minute from your address; slow the client down. A `busy` tool error means the server is already
 running its 8 calls at once.
 
@@ -247,15 +288,37 @@ running its 8 calls at once.
 the URL has a path after `/mcp` or a trailing slash. While the MCP server restarts, `/mcp` answers 404
 or **502** (it is there but did not answer) for up to 10 seconds after it is back.
 
+## Moving from the shared token
+
+Until v0.0.3, a self-hosted MCP server had one token for everyone, `CCMS_MCP_HTTP_TOKEN`, and every
+caller read as the server's own service account, `CCMS_MCP_API_TOKEN`. That shared token is
+**deprecated**: it still works in this release, and the server warns about it when it starts. It is
+removed in v0.0.5.
+
+1. Make a service account and token for each person or agent that connects, as in [Make a
+   service account and token for MCP](#make-a-service-account-and-token-for-mcp). The account
+   behind `CCMS_MCP_API_TOKEN` already holds `content.read` alone, so you can also issue more
+   tokens of it, one per caller.
+2. In each client, replace the shared token with the caller's own (in `OPENFOLIA_MCP_TOKEN`, say).
+   Meanwhile, callers with their own tokens and callers still on the shared one are served side by
+   side.
+3. Once every client has moved, remove both settings and restart the server.
+
+<ServerSetting>
+  Remove [`CCMS_MCP_HTTP_TOKEN`](/reference/settings#ccms_mcp_http_token) and
+  [`CCMS_MCP_API_TOKEN`](/reference/settings#ccms_mcp_api_token) from
+  `deploy/.env`, then run `docker compose up -d`.
+</ServerSetting>
+
 ## Running it yourself
 
 In a container deployment the MCP server is the optional `mcp` service. Once it runs, the editor
-serves it at its own address plus `/mcp`, and on the MCP port of the same machine.
+serves it at its own address plus `/mcp`, and on the MCP port of the same machine. It needs no token
+of its own: each caller brings one.
 
-1. A role that holds `content.read` alone, a service account with it, and its token as
-   `CCMS_MCP_API_TOKEN`.
-2. A random `CCMS_MCP_HTTP_TOKEN` (`openssl rand -hex 32`), and `COMPOSE_PROFILES=mcp` in
-   `deploy/.env`, then `docker compose up -d --wait`.
+1. `COMPOSE_PROFILES=mcp` in `deploy/.env`, then `docker compose up -d --wait`.
+2. For each caller, a service account and token, as in [Make a service account and token for
+   MCP](#make-a-service-account-and-token-for-mcp).
 
 The [install guide for coding agents](/agents), step 9, does each step with a check, and
 [Self-hosting](/self-hosting) describes the deployment. Behind your own reverse proxy:

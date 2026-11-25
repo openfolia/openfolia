@@ -4,8 +4,8 @@ import type { OutputLabelSet } from './config.js';
  * The fixed texts an output format (the PDF) prints around the content:
  * safety signal words, admonition captions, the table of contents title,
  * figure and table captions, and the attachment label with the PDF's note
- * that the file is downloaded from the online version, and the glossary's
- * title. They follow the manual's language, never the
+ * that the file is downloaded from the online version, the glossary's
+ * title, and an update guide's headings (#906: the word before a version, the three phases). They follow the manual's language, never the
  * reader's interface language.
  */
 export const OUTPUT_LABEL_KEYS = [
@@ -23,6 +23,10 @@ export const OUTPUT_LABEL_KEYS = [
   'attachment',
   'attachmentNote',
   'glossary',
+  'updateVersion',
+  'updateBefore',
+  'updateDuring',
+  'updateAfter',
 ] as const;
 export type OutputLabelKey = (typeof OUTPUT_LABEL_KEYS)[number];
 export type OutputLabels = Record<OutputLabelKey, string>;
@@ -47,6 +51,10 @@ export const DEFAULT_OUTPUT_LABELS: Readonly<
     attachmentNote:
       'Download the file from the online version of this document.',
     glossary: 'Glossary',
+    updateVersion: 'Version',
+    updateBefore: 'Before the update',
+    updateDuring: 'During the update',
+    updateAfter: 'After the update',
   },
   de: {
     danger: 'GEFAHR',
@@ -64,6 +72,10 @@ export const DEFAULT_OUTPUT_LABELS: Readonly<
     attachmentNote:
       'Die Datei steht in der Online-Ausgabe dieses Dokuments zum Herunterladen bereit.',
     glossary: 'Glossar',
+    updateVersion: 'Version',
+    updateBefore: 'Vor dem Update',
+    updateDuring: 'Während des Updates',
+    updateAfter: 'Nach dem Update',
   },
   fr: {
     danger: 'DANGER',
@@ -81,6 +93,10 @@ export const DEFAULT_OUTPUT_LABELS: Readonly<
     attachmentNote:
       'Téléchargez le fichier depuis la version en ligne de ce document.',
     glossary: 'Glossaire',
+    updateVersion: 'Version',
+    updateBefore: 'Avant la mise à jour',
+    updateDuring: 'Pendant la mise à jour',
+    updateAfter: 'Après la mise à jour',
   },
   ar: {
     danger: 'خطر',
@@ -97,6 +113,10 @@ export const DEFAULT_OUTPUT_LABELS: Readonly<
     attachment: 'مرفق',
     attachmentNote: 'نزِّل الملف من النسخة الإلكترونية لهذا المستند.',
     glossary: 'مسرد المصطلحات',
+    updateVersion: 'الإصدار',
+    updateBefore: 'قبل التحديث',
+    updateDuring: 'أثناء التحديث',
+    updateAfter: 'بعد التحديث',
   },
   he: {
     danger: 'סכנה',
@@ -113,6 +133,10 @@ export const DEFAULT_OUTPUT_LABELS: Readonly<
     attachment: 'קובץ מצורף',
     attachmentNote: 'הורידו את הקובץ מהגרסה המקוונת של מסמך זה.',
     glossary: 'מילון מונחים',
+    updateVersion: 'גרסה',
+    updateBefore: 'לפני העדכון',
+    updateDuring: 'במהלך העדכון',
+    updateAfter: 'אחרי העדכון',
   },
 };
 

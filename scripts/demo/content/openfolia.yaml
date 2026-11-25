@@ -50,6 +50,9 @@ variantAttributes:
         label: { en: EU (left-hand drive), de: EU (Linkslenker), fr: UE (conduite à gauche) }
       - id: uk
         label: { en: UK (right-hand drive), de: UK (Rechtslenker), fr: Royaume-Uni (conduite à droite) }
+  - id: software
+    label: { en: Software, de: Software, fr: Logiciel }
+    kind: version
 textAttributes:
   - id: model-name
     label: { en: Model name, de: Modellname, fr: Nom du modèle }

@@ -30,13 +30,30 @@ async function setUp(
   return { author, changeSet, id };
 }
 
-/** Opens the module, waits for its lock and for the terms the checks read. */
+/** The editor's lock request answered (as long as a busy machine may take, not an action's 15 s). */
+const lockTaken = (page: Page) =>
+  page.waitForResponse(
+    (r) =>
+      /\/change-sets\/[^/]+\/locks$/.test(new URL(r.url()).pathname) &&
+      r.request().method() === 'POST' &&
+      r.ok(),
+    { timeout: 30_000 },
+  );
+
+/**
+ * Opens the module, waits for its lock and for the terms the checks read. The lock is the end of
+ * a chain of requests (the module, its working copy, the lock), which on a busy machine can use
+ * most of an expect's 10 s: the flow waits for the lock's response first (registered before
+ * `goto`), then for what it shows (README, "The first check after a page load"; #523, #912).
+ */
 async function open(page: Page, id: string, changeSet: string) {
   await signIn(page, USERS.author);
+  const locked = lockTaken(page);
   const terms = page.waitForResponse(
     (r) => new URL(r.url()).pathname === '/api/terms' && r.ok(),
   );
   await page.goto(`/content/en/${id}?cs=${changeSet}`);
+  await locked;
   await expect(page.getByText('Locked by you')).toBeVisible();
   await terms;
 }
@@ -260,7 +277,9 @@ test.describe('writing aids @area:doc-editor @area:module-editor @api:terms @api
     }).toPass({ timeout: 20_000 });
 
     // Opened again, the links are there.
+    const locked = lockTaken(page);
     await page.goto(`/content/en/${id}?cs=${changeSet.id}`);
+    await locked;
     await expect(page.getByText('Locked by you')).toBeVisible();
     await expect(editor(page, title).locator('[data-mark="term"]')).toHaveText([
       'charger',

@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { Module } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { auditSinkTarget } from '../config/audit-env.js';
 import type { Env } from '../config/env.js';
@@ -7,9 +11,11 @@ import { ServerRole } from '../config/server-role.js';
 import { AuditEventsController } from './api/audit-events.controller.js';
 import { AuditExportController } from './api/audit-export.controller.js';
 import { AuditSinkConsumer } from './api/audit-sink-consumer.js';
+import { ReadAuditMiddleware } from './api/read-audit.middleware.js';
 import { ExportAuditEventsAction } from './core/actions/export-audit-events.action.js';
 import { ListAuditEventsAction } from './core/actions/list-audit-events.action.js';
 import { PruneAuditLogAction } from './core/actions/prune-audit-log.action.js';
+import { RecordReadAction } from './core/actions/record-read.action.js';
 import { SendToAuditSinkAction } from './core/actions/send-to-audit-sink.action.js';
 import { AuditLog } from './core/audit-log.js';
 import {
@@ -36,7 +42,10 @@ export class NoAuditSink extends AuditSink {
  * record what they change (in the change's own transaction, `UnitOfWork`),
  * `GET /audit-events` to read it and `GET /audit-events/export` to take
  * it out as a file, and in the background (#379) the delivery to a sink
- * (`CCMS_AUDIT_SINK_URL`) and retention (`CCMS_AUDIT_KEEP_DAYS`).
+ * (`CCMS_AUDIT_SINK_URL`) and retention (`CCMS_AUDIT_KEEP_DAYS`, and
+ * `CCMS_AUDIT_READ_KEEP_DAYS` for reads). Reads (#877): one `api.read`
+ * event per request a service account's token makes that changes nothing
+ * (`ReadAuditMiddleware`).
  */
 @Module({
   controllers: [AuditExportController, AuditEventsController],
@@ -45,6 +54,7 @@ export class NoAuditSink extends AuditSink {
     ExportAuditEventsAction,
     SendToAuditSinkAction,
     PruneAuditLogAction,
+    RecordReadAction,
     AuditSinkConsumer,
     { provide: AuditLog, useClass: DrizzleAuditLog },
     { provide: AuditSinkCursor, useClass: DrizzleAuditSinkCursor },
@@ -55,6 +65,7 @@ export class NoAuditSink extends AuditSink {
         sinkEnabled:
           config.get('CCMS_AUDIT_SINK_URL', { infer: true }) !== undefined,
         keepDays: config.get('CCMS_AUDIT_KEEP_DAYS', { infer: true }),
+        readKeepDays: config.get('CCMS_AUDIT_READ_KEEP_DAYS', { infer: true }),
       }),
     },
     {
@@ -97,4 +108,8 @@ export class NoAuditSink extends AuditSink {
   ],
   exports: [AuditLog],
 })
-export class AuditModule {}
+export class AuditModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(ReadAuditMiddleware).forRoutes('*path');
+  }
+}

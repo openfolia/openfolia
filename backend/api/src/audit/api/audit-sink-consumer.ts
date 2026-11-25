@@ -14,6 +14,7 @@ import {
   PRUNE_BATCH,
   PRUNE_CALLS,
   PruneAuditLogAction,
+  type PruneReport,
 } from '../core/actions/prune-audit-log.action.js';
 import {
   type SinkReport,
@@ -37,7 +38,8 @@ export const SINK_SHUTDOWN_WAIT_MS = 5_000;
  * call `runOnce`), never two at once; after a failed delivery the next
  * waits 30 s, doubling to at most 10 min, for as long as it takes (the
  * cursor stays, so nothing is skipped and the order holds). Retention
- * (`PruneAuditLogAction`, `CCMS_AUDIT_KEEP_DAYS`) at start-up and daily,
+ * (`PruneAuditLogAction`: changes after `CCMS_AUDIT_KEEP_DAYS` when set,
+ * reads after `CCMS_AUDIT_READ_KEEP_DAYS`, #877) at start-up and daily,
  * again after 10 min while a backlog lasts.
  * Logs say how many and why, never the URL, a header or an event.
  */
@@ -76,7 +78,8 @@ export class AuditSinkConsumer
   onApplicationBootstrap(): void {
     if (!this.role.runsBackground) return;
     if (this.settings.sinkEnabled && this.pollMs > 0) this.scheduleSink(0);
-    if (this.settings.keepDays !== undefined) this.scheduleRetention(0);
+    // Reads always have a period (#877), so retention always runs.
+    this.scheduleRetention(0);
   }
 
   async beforeApplicationShutdown(): Promise<void> {
@@ -119,7 +122,7 @@ export class AuditSinkConsumer
   }
 
   /** One retention run now (also for tests), after any pass running. Never rejects. */
-  pruneOnce(): Promise<number | undefined> {
+  pruneOnce(): Promise<PruneReport | undefined> {
     return this.enqueue(() => this.pruneNow());
   }
 
@@ -165,12 +168,22 @@ export class AuditSinkConsumer
     }
   }
 
-  private async pruneNow(): Promise<number | undefined> {
+  private async pruneNow(): Promise<PruneReport | undefined> {
     try {
       const removed = await this.prune.handle();
-      if (removed > 0) {
+      if (removed.write > 0) {
         this.logger.log(
-          `Removed ${removed} audit events older than ${this.settings.keepDays} days.`,
+          `Removed ${removed.write} audit events older than ${this.settings.keepDays} days.`,
+        );
+      }
+      for (const { kind, error } of removed.failed ?? []) {
+        this.logger.error(
+          `Removing old audit events (${kind === 'read' ? 'reads' : 'changes'}) failed (${error}).`,
+        );
+      }
+      if (removed.read > 0) {
+        this.logger.log(
+          `Removed ${removed.read} read events older than ${this.settings.readKeepDays} days.`,
         );
       }
       return removed;
@@ -199,7 +212,8 @@ export class AuditSinkConsumer
     this.retentionTimer = setTimeout(() => {
       void this.pruneOnce().then((removed) =>
         this.scheduleRetention(
-          removed !== undefined && removed >= PRUNE_BATCH * PRUNE_CALLS
+          removed !== undefined &&
+            Math.max(removed.write, removed.read) >= PRUNE_BATCH * PRUNE_CALLS
             ? RETENTION_BACKLOG_MS
             : RETENTION_EVERY_MS,
         ),

@@ -5,6 +5,7 @@ import {
   AuditActor,
   type AuditEvent,
   type AuditFilter,
+  AuditKind,
   SubjectId,
   SubjectType,
 } from '../core/audit-event.js';
@@ -14,6 +15,9 @@ export const AuditEventAttributes = z
     at: z.iso
       .datetime({ offset: true })
       .describe('When the change was made (its transaction began).'),
+    kind: AuditKind.describe(
+      '`write`: a change. `read` (#877): a request of a service account’s token that changed nothing (`api.read`), one event per request, or reads of one account that could not be recorded one by one (`api.read-gap`, with `data.count`).',
+    ),
     actor: AuditActor.describe('Who made it.'),
     action: AuditAction.describe('What happened, e.g. `role.assign`.'),
     subject: z
@@ -46,6 +50,7 @@ export function toAuditEventResource(
     id: event.id,
     attributes: {
       at: event.at.toISOString(),
+      kind: event.kind,
       actor: event.actor,
       action: event.action,
       subject: event.subject,
@@ -106,6 +111,7 @@ export const auditFilters = {
     'user/sample-author',
   ),
   action: AuditAction,
+  kind: AuditKind,
   from: instant,
   to: instant,
 };
@@ -123,6 +129,11 @@ export const AUDIT_FILTER_DOCS = [
       'Only events by this actor: `<kind>` (`user` or `service`) or `<kind>/<id>` (e.g. `user/sample-author`).',
   },
   { name: 'action', description: 'Only this action, e.g. `role.assign`.' },
+  {
+    name: 'kind',
+    description:
+      'Only changes (`write`) or only reads (`read`: a service account’s requests, #877).',
+  },
   {
     name: 'from',
     description:
@@ -144,10 +155,11 @@ export function toAuditFilter(params: {
   subject?: Parsed<'subject'>;
   actor?: Parsed<'actor'>;
   action?: string;
+  kind?: AuditKind;
   from?: Date;
   to?: Date;
 }): AuditFilter {
-  const { subject, actor, action, from, to } = params;
+  const { subject, actor, action, kind, from, to } = params;
   return {
     ...(subject && {
       subject: {
@@ -162,6 +174,7 @@ export function toAuditFilter(params: {
       },
     }),
     ...(action !== undefined && { action }),
+    ...(kind !== undefined && { kind }),
     ...(from && { from }),
     ...(to && { to }),
   };

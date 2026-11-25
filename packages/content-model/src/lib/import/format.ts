@@ -55,6 +55,7 @@ export const ImportedManifest = Manifest.omit({
   translations: true,
   kind: true,
   rule: true,
+  guide: true,
 }).extend({ entries: z.array(ManifestEntry).min(1) });
 
 /**

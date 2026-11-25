@@ -1,10 +1,12 @@
 import {
+  afterNextRender,
   afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   Injector,
   linkedSignal,
@@ -175,6 +177,8 @@ import {
 import { heldLockOf, isOwnLock, type HeldLock } from './module-lock';
 import { ModuleLockedDialogComponent } from './module-locked-dialog.component';
 import { injectPersonName } from '../history/history-model';
+import { TipsController } from '../tips/tips.controller';
+import { TOUR_EDIT } from '../tips/tips';
 
 /** Why the module opens read-only (a translation key and its parameters), or null: editable. */
 interface ReadOnly {
@@ -235,7 +239,7 @@ const ISSUE_TEXTS: Readonly<Record<string, string>> = {
 const BLOCK_ID = /^[a-z_][a-z0-9_-]{0,63}$/;
 
 const SUMMARY_PAGE_SIZE = 100;
-/** Wide enough for the live preview beside the document: Tailwind's `lg`. */
+/** Tailwind's `lg`: until the page's columns are measured, the preview's place goes by it. */
 const WIDE = '(min-width: 64rem)';
 /** How many titles of referenced modules are looked up at once. */
 const TITLE_LOOKUPS = 4;
@@ -318,27 +322,19 @@ const MANUAL_PAGES = 10;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    // From lg up the page is as tall as the shell's content area and never scrolls as a whole:
-    // only the document scrolls (the editor's own scroller), and the outline and the details
-    // panel each scroll on their own when taller (positioned, so what is placed absolutely inside
-    // them, such as screen-reader-only text, scrolls with them instead of stretching the page).
-    // On a phone the page scrolls as before.
-    class: 'block lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
+    // From lg up the page is as tall as the shell's content area. With the details beside the
+    // text (`editor-split`, by this container's width: styles.css, issue 889) it never scrolls as a
+    // whole: only the document scrolls (the editor's own scroller), and the outline and the
+    // details panel each scroll on their own when taller (positioned, so what is placed absolutely
+    // inside them, such as screen-reader-only text, scrolls with them instead of stretching the
+    // page). Narrower (a phone, or the sidebar open on a small screen) the columns stack below
+    // the text and the page scrolls.
+    class:
+      'block @container/module-editor lg:flex lg:min-h-0 lg:flex-1 lg:flex-col',
     '(window:beforeunload)': 'beforeUnload($event)',
     '(window:online)': 'draft.online()',
     '(document:visibilitychange)': 'hidden()',
   },
-  styles: `
-    /* The toolbar stays in view while the document scrolls with the page (below lg). */
-    of-module-editor-page of-editor-toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: var(--card);
-      border-start-start-radius: inherit;
-      border-start-end-radius: inherit;
-    }
-  `,
   template: `
     @let v = view();
     @let ready = v.kind === 'ready' ? v.loaded : null;
@@ -594,33 +590,40 @@ const MANUAL_PAGES = 10;
       }
     </z-dropdown-menu-content>
 
-    <!-- A size container: the preview is 45 % of this row wide (45cqw), also while it grows. -->
+    <!--
+      A size container: the preview is 45 % of this row wide (45cqw), also while it grows.
+      Stacked from lg up, the row overflows the page's fixed height (the shell's bottom padding
+      stays behind), so it brings that padding itself.
+    -->
     <div
-      class="flex flex-col gap-4 lg:@container lg:min-h-0 lg:flex-1 lg:flex-row lg:items-start"
+      #columns
+      class="flex flex-col gap-4 [--module-columns:1] lg:pb-6 editor-split:pb-0 editor-split:@container editor-split:min-h-0 editor-split:flex-1 editor-split:flex-row editor-split:items-start editor-split:[--module-columns:2] editor-wide:[--module-columns:3]"
       data-slot="module-editor-columns"
       [ofRefreshing]="refreshing()"
     >
       <of-module-outline
-        class="order-2 shrink-0 lg:relative lg:order-none lg:max-h-full lg:w-56 lg:overflow-y-auto"
+        class="order-2 shrink-0 editor-split:hidden editor-wide:relative editor-wide:order-none editor-wide:flex editor-wide:max-h-full editor-wide:w-56 editor-wide:overflow-y-auto"
         [loading]="v.kind === 'loading'"
         [entries]="outline()"
         [problems]="problems()"
         (go)="editor()?.focusBlock($event)"
       />
       <div
-        class="order-1 flex min-w-0 flex-1 flex-col lg:order-none lg:max-h-full lg:self-stretch"
+        class="order-1 flex min-w-0 flex-1 flex-col editor-split:order-none editor-split:max-h-full editor-split:self-stretch"
       >
         @if (ready) {
           @for (l of [ready]; track l.key) {
+            <!-- The toolbar stays in view while the document scrolls with the page (columns stacked). -->
             <of-block-editor
               ofFadeIn
-              class="min-h-96 lg:min-h-0 lg:flex-1"
+              class="doc-editor-sticky-toolbar min-h-96 editor-split:min-h-0 editor-split:flex-1"
               [label]="
                 'editor.moduleEditor.documentLabel'
                   | transloco: { title: title() }
               "
               [value]="l.doc"
               [editable]="!l.readOnly"
+              [attr.data-tip]="l.readOnly ? null : 'module-editor.text'"
               [attr.inert]="submitting() || null"
               [focused]="focused()"
               [issues]="blockIssues()"
@@ -656,9 +659,10 @@ const MANUAL_PAGES = 10;
             }
           </div>
         } @else {
-          <!-- The editor's shape: its toolbar, a heading and blocks of text. -->
+          <!-- The editor's shape: its toolbar, a heading and blocks of text. A tip waits for the real one (data-tip-loading, issue 892). -->
           <div
             ofFadeIn="delayed"
+            data-tip-loading
             class="border-border flex min-h-96 flex-col rounded-xl border"
             role="status"
             aria-busy="true"
@@ -696,7 +700,7 @@ const MANUAL_PAGES = 10;
       -->
       <of-side-panel
         #previewPanel
-        class="lg:max-h-full lg:self-stretch [--of-side-panel-gap:1rem] [--of-side-panel-width:45cqw]"
+        class="editor-split:max-h-full editor-split:self-stretch [--of-side-panel-gap:1rem] [--of-side-panel-width:45cqw]"
         fill
         [takeFocus]="false"
       >
@@ -730,13 +734,13 @@ const MANUAL_PAGES = 10;
         </ng-template>
       </of-side-panel>
       <div
-        class="order-3 shrink-0 [--of-collapse-gap:1rem] lg:order-none lg:flex lg:max-h-full lg:w-80 lg:flex-col"
+        class="order-3 shrink-0 [--of-collapse-gap:1rem] editor-split:order-none editor-split:flex editor-split:max-h-full editor-split:w-80 editor-split:flex-col"
         data-slot="module-details-column"
         [ofCollapseWidth]="previewPanel.opened() && !suggestionShown()"
         [ofCollapseWidthInstant]="!previewPanel.animates()"
       >
         <aside
-          class="lg:relative lg:min-h-0 lg:w-80 lg:overflow-y-auto"
+          class="editor-split:relative editor-split:min-h-0 editor-split:w-80 editor-split:overflow-y-auto"
           [attr.aria-label]="'editor.moduleEditor.details.label' | transloco"
         >
           @if (ready && suggestionShown()) {
@@ -763,7 +767,21 @@ const MANUAL_PAGES = 10;
               (valueChange)="chooseSide($event)"
             />
           }
-          @if (side() === 'suggestions' && ready && editingChangeSet()) {
+          @if (side() === 'outline' && v.kind !== 'error') {
+            <!--
+              The outline's column, as a tab while there is no room for it (issue 889). Hidden by
+              the same variant that shows the column: the tab follows the width only once the
+              columns are read again, and the outline must not show twice meanwhile (issue 917).
+            -->
+            <of-module-outline
+              class="editor-wide:hidden"
+              ofFadeIn
+              [loading]="v.kind === 'loading'"
+              [entries]="outline()"
+              [problems]="problems()"
+              (go)="editor()?.focusBlock($event)"
+            />
+          } @else if (side() === 'suggestions' && ready && editingChangeSet()) {
             <of-suggestions-panel
               ofFadeIn
               [checks]="checkItems()"
@@ -936,6 +954,8 @@ export class ModuleEditorPage {
   private readonly me = inject(MeService);
   private readonly permissions = inject(PermissionService);
   protected readonly changeSets = inject(ChangeSetSession);
+  /** The first-run tour (#869), in the shell; absent where a page is shown without it. */
+  private readonly tips = inject(TipsController, { optional: true });
   private readonly lines = inject(MaintenanceLines);
   private readonly toast = inject(ToastService);
   private readonly dialogs = inject(ZardAlertDialogService);
@@ -964,10 +984,20 @@ export class ModuleEditorPage {
   );
   protected readonly lang = computed(() => this.params().lang);
   protected readonly moduleId = computed(() => this.params().moduleId);
-  /** Wide enough for the preview beside the document (Tailwind's `lg`); else it is a sheet. */
-  protected readonly wide = signal(
-    typeof matchMedia === 'function' ? matchMedia(WIDE).matches : true,
+  /**
+   * How many columns the page lays out (issue 889), as its styles say (`--module-columns`, by the
+   * `editor-split` and `editor-wide` variants): 1, the text with the outline and the details below
+   * it; 2, the details beside the text, the outline a tab of theirs; 3, the outline beside it too.
+   */
+  private readonly columns = signal<1 | 2 | 3>(
+    typeof matchMedia === 'function' && !matchMedia(WIDE).matches ? 1 : 3,
   );
+  private readonly columnsElement =
+    viewChild.required<ElementRef<HTMLElement>>('columns');
+  /** The details beside the document, so the preview opens in their place; else it is a sheet. */
+  protected readonly wide = computed(() => this.columns() > 1);
+  /** The outline is a tab of the side panel: there is no room for it beside the text. */
+  protected readonly outlineTab = computed(() => this.columns() === 2);
   /**
    * The panel beside the document (a sheet on a phone): the live preview (`?preview=open`) or
    * the source language, read-only, while translating (`?preview=source`).
@@ -1022,19 +1052,29 @@ export class ModuleEditorPage {
      * The side panel's tab: the details (left out), the history (#88) or, while the module is
      * edited, the suggestions (#247, #573).
      */
-    side: oneOfParam(['history', 'suggestions'] as const),
+    side: oneOfParam(['history', 'suggestions', 'outline'] as const),
     historyPage: intParam(1, { min: 1 }),
   });
   protected readonly side = computed(
-    (): 'details' | 'history' | 'suggestions' => {
+    (): 'details' | 'history' | 'suggestions' | 'outline' => {
       const side = this.query.get('side')() ?? 'details';
-      // Suggestions are made and applied only while the module is edited.
-      return side === 'suggestions' && !this.editingChangeSet()
+      // Suggestions are made and applied only while the module is edited; the outline is a tab
+      // only while it has no column of its own.
+      return (side === 'suggestions' && !this.editingChangeSet()) ||
+        (side === 'outline' && !this.outlineTab())
         ? 'details'
         : side;
     },
   );
   protected readonly sideOptions = computed(() => [
+    ...(this.outlineTab()
+      ? [
+          {
+            value: 'outline',
+            label: this.t('editor.moduleEditor.outline.title'),
+          },
+        ]
+      : []),
     { value: 'details', label: this.t('editor.moduleEditor.side.details') },
     ...(this.editingChangeSet()
       ? [
@@ -1048,7 +1088,10 @@ export class ModuleEditorPage {
   ]);
   protected chooseSide(value: string): void {
     this.query.set({
-      side: value === 'history' || value === 'suggestions' ? value : undefined,
+      side:
+        value === 'history' || value === 'suggestions' || value === 'outline'
+          ? value
+          : undefined,
       historyPage: 1,
     });
   }
@@ -2049,6 +2092,41 @@ export class ModuleEditorPage {
   });
 
   constructor() {
+    // The tour's "Change a sentence" (#869): with no revision open, it starts one for the
+    // person, as "Suggest a change" does (named after the module); a typed change once saved
+    // moves the tour on.
+    effect(() => {
+      if (this.tips?.tourStep() !== TOUR_EDIT) return;
+      if (!this.canSuggest() || this.suggesting()) return;
+      // The list known first: a revision kept from a past tour is chosen again, not doubled.
+      // A switch under way would refuse the choice below: wait for it, tracked, to settle.
+      if (this.changeSets.status() !== 'ready' || this.changeSets.switching())
+        return;
+      untracked(() => {
+        const kept = this.focused() ? null : this.tips?.tourRevision();
+        const again = this.changeSets
+          .options()
+          .find(
+            (option) =>
+              option.id === kept &&
+              option.authorId === this.me.me().id &&
+              option.state === 'draft',
+          );
+        if (again) this.changeSets.choose(again.id, 'session');
+        // Once per tour, not per module the person opens.
+        else if (this.tips?.claimRevision()) void this.suggest();
+      });
+    });
+    // A save that went through (not an undo back to the stored text, nor a reset on leaving).
+    let saving = false;
+    effect(() => {
+      const state = this.draft.state();
+      if (state === 'saving') saving = true;
+      else if (state === 'saved' && saving) {
+        saving = false;
+        untracked(() => this.tips?.stepDone(TOUR_EDIT));
+      } else if (state !== 'pending') saving = false;
+    });
     // Another module, language or change set: its suggestions start empty (#573).
     effect(() => {
       const subject = this.styleSubject();
@@ -2164,11 +2242,31 @@ export class ModuleEditorPage {
       untracked(() => void this.load());
     });
     const tick = setInterval(() => this.now.set(new Date()), 30_000);
-    const media = typeof matchMedia === 'function' ? matchMedia(WIDE) : null;
-    const onMedia = () => this.wide.set(media?.matches ?? true);
-    media?.addEventListener('change', onMedia);
+    // The columns follow the page's width (the window less the sidebar), read from its styles.
+    let sizes: ResizeObserver | undefined;
+    afterNextRender({
+      read: () => {
+        if (typeof ResizeObserver !== 'function') return;
+        const columns = this.columnsElement().nativeElement;
+        const read = () => {
+          const n = Number(
+            getComputedStyle(columns).getPropertyValue('--module-columns'),
+          );
+          if (n === 1 || n === 2 || n === 3) this.columns.set(n);
+        };
+        read();
+        // Only a new width can change the columns (the stacked page grows as one types).
+        let width = columns.clientWidth;
+        sizes = new ResizeObserver(() => {
+          if (columns.clientWidth === width) return;
+          width = columns.clientWidth;
+          read();
+        });
+        sizes.observe(columns);
+      },
+    });
     destroyRef.onDestroy(() => {
-      media?.removeEventListener('change', onMedia);
+      sizes?.disconnect();
       clearInterval(tick);
       this.picked(null);
       this.variantPicked(null);

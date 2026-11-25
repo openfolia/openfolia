@@ -97,7 +97,6 @@
 html {
   color-scheme: light;
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: calc(var(--head-h) + 1.5rem);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1954,6 +1953,14 @@ mark {
 .manual-body .of-module {
   scroll-margin-top: calc(var(--head-h) + 1.5rem);
 }
+/* Not `scroll-padding` on html: it makes the sticky head's own search field "obscured", so
+   focusing or typing in it scrolled the page. Anchors and focus in the content clear the head
+   through their own margin instead (WCAG 2.4.11); `main` is a sibling of the head, so the head's
+   own field stays out. */
+main [id],
+main :focus-visible {
+  scroll-margin-top: calc(var(--head-h) + 1.5rem);
+}
 .manual-body .of-module + .of-module,
 .manual-body .of-group + .of-module,
 .manual-body .of-module + .of-group,
@@ -2171,6 +2178,111 @@ mark {
 }
 .manual-body .of-kbd__key {
   font-family: var(--font-sans);
+}
+
+/* The copy button on code blocks (#895): added by script, so a block without it reads as it
+   always did. The wrapper keeps the button in place while a long line scrolls inside the block,
+   and the block reserves the button's width, so the text never moves. */
+.manual-body .code-copy {
+  position: relative;
+}
+.manual-body .code-copy .of-literal {
+  padding-right: 3.25rem;
+}
+.code-copy__button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 0.4375rem;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--background) 88%, transparent);
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    opacity var(--fast) var(--ease),
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    scale var(--fast) var(--ease);
+}
+.code-copy__button:hover {
+  background: var(--background);
+  color: var(--foreground);
+}
+.code-copy__button:active {
+  scale: 0.94;
+}
+.code-copy__button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* The icons share one cell and swap by cross-fade, so the button never changes size. */
+.code-copy__icon {
+  grid-area: 1 / 2;
+  transition:
+    opacity var(--fast) var(--ease),
+    scale var(--fast) var(--ease);
+}
+.code-copy__note {
+  grid-area: 1 / 1;
+  display: none;
+  white-space: nowrap;
+}
+.code-copy__icon--done,
+.code-copy__icon--failed {
+  opacity: 0;
+  scale: 0.6;
+}
+.code-copy__button[data-state] .code-copy__icon--copy {
+  opacity: 0;
+  scale: 0.6;
+}
+.code-copy__button[data-state='copied'] {
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+}
+.code-copy__button[data-state='copied'] .code-copy__icon--done,
+.code-copy__button[data-state='failed'] .code-copy__icon--failed {
+  opacity: 1;
+  scale: 1;
+}
+.code-copy__button[data-state='failed'] {
+  color: var(--destructive);
+  border-color: color-mix(in oklab, var(--destructive) 45%, var(--border));
+}
+/* The gap only while the note shows: idle, the empty note column would push the icon off centre. */
+.code-copy__button[data-state] {
+  column-gap: 0.375rem;
+}
+.code-copy__button[data-state] .code-copy__note {
+  display: block;
+}
+/* Shown on hover and focus where there is a pointer; always on touch screens. */
+@media (hover: hover) {
+  .code-copy__button {
+    opacity: 0;
+  }
+  .code-copy:hover .code-copy__button,
+  .code-copy__button:focus-visible,
+  .code-copy__button[data-state] {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .code-copy__button,
+  .code-copy__icon {
+    transition: none;
+  }
 }
 
 /* The glossary: terms set as a dictionary's. */
@@ -2516,6 +2628,424 @@ mark {
   }
 }
 
+/* ===== Update guides (#907): the pickers beside the page, the steps as a checklist ===== */
+
+.kind-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--tint-strong);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.entry .kind-tag {
+  margin-inline-start: 0.5rem;
+  vertical-align: 0.125em;
+}
+.masthead__kicker {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--primary);
+}
+.masthead__kicker + .masthead__title {
+  margin-top: 0.25rem;
+}
+
+/* The grid: the head and the steps in the reading column, the pickers in the side column
+   (sticky) on wide screens, between the head and the steps on narrow ones. */
+.guide {
+  grid-template-areas: 'head' 'aside' 'main';
+}
+@media (min-width: 64rem) {
+  .guide {
+    grid-template-areas: 'aside head' 'aside main';
+    grid-template-rows: auto 1fr;
+  }
+}
+.guide__head {
+  grid-area: head;
+  max-width: var(--measure);
+  margin-bottom: 2rem;
+}
+.guide__aside {
+  grid-area: aside;
+  min-width: 0;
+}
+.guide__main {
+  grid-area: main;
+  min-width: 0;
+  max-width: var(--measure);
+}
+.guide__intro {
+  margin: 1.25rem 0 0;
+  max-width: 36rem;
+  font-family: var(--font-read);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+
+/* What only works with script shows only with it (`theme.js` marks the page before it paints). */
+html:not(.has-script) .guide-picker,
+html:not(.has-script) .guide-status,
+html:not(.has-script) .step__check {
+  display: none;
+}
+html.has-script .guide-note--no-script {
+  display: none;
+}
+/* The steps show once the script has put them into their phases: no reshuffle in view. */
+html.has-script .guide:not([data-ready]) .guide-body {
+  visibility: hidden;
+}
+
+.guide-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem 1rem 1.125rem;
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--tint);
+}
+@media (min-width: 64rem) {
+  .guide-picker {
+    position: sticky;
+    top: calc(var(--head-h) + 2rem);
+    margin-top: 2.5rem;
+    margin-bottom: 0;
+  }
+}
+.guide-picker__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.guide-picker .field {
+  flex: none;
+  min-width: 0;
+}
+.guide-picker__range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 0.5rem;
+}
+.guide-picker__arrow {
+  margin-bottom: 0.75rem;
+  color: var(--muted-foreground);
+}
+[dir='rtl'] .guide-picker__arrow {
+  scale: -1 1;
+}
+.guide-picker__setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.guide-picker__setup legend {
+  margin-bottom: 0.375rem;
+  padding: 0;
+}
+.guide-note {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--tint);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.guide-note--quiet {
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  animation: settle var(--slow) var(--ease) both;
+}
+
+.guide-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.guide-status__count {
+  margin: 0;
+  min-width: 6ch;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+.guide-status__range {
+  display: none;
+}
+.guide-status__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.meter {
+  display: block;
+  width: 5rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.meter__fill {
+  display: block;
+  height: 100%;
+  inline-size: 0;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: inline-size var(--slow) var(--ease);
+}
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
+}
+.ghost-button:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.ghost-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Without script: the whole guide, version by version. */
+.guide-version + .guide-version {
+  margin-top: 3.5rem;
+}
+.guide-version__title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.375rem, 2.4vw, 1.625rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.guide-version__phase,
+.guide-phase__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.75rem 0 0.25rem;
+  font-family: var(--font-read);
+  font-size: 1.125rem;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.guide-version__phase::after,
+.guide-phase__title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.guide-phase__title {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  color: var(--foreground);
+}
+.guide-phase + .guide-phase {
+  margin-top: 3rem;
+}
+.guide-phase {
+  animation: settle var(--slow) var(--ease) both;
+}
+.guide-phase__count {
+  order: 1;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding-inline: 0.4375rem;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 1rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+html:not(.has-script) .step {
+  grid-template-columns: minmax(0, 1fr);
+}
+.step.is-entering {
+  animation: rise var(--slow) var(--ease) both;
+}
+.step__check {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0.125rem 0 0;
+  border: 1.5px solid var(--input);
+  border-radius: 7px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    scale var(--fast) var(--ease);
+}
+.step__check::before {
+  content: '';
+  width: 0.875rem;
+  height: 0.875rem;
+  background: var(--primary-foreground);
+  mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M20 6 9 17l-5-5" fill="none" stroke="%23000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/%3E%3C/svg%3E')
+    center / contain no-repeat;
+  scale: 0.4;
+  opacity: 0;
+  transition:
+    scale var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
+}
+.step__check:hover {
+  border-color: var(--primary);
+}
+.step__check:active {
+  scale: 0.92;
+}
+.step__check:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.step__check:checked::before {
+  scale: 1;
+  opacity: 1;
+}
+.step__body {
+  min-width: 0;
+}
+.step__version {
+  float: inline-end;
+  margin: 0.25rem 0 0.375rem 1rem;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.guide-body .of-content {
+  font-size: 1.0625rem;
+}
+.guide-body .of-module__title,
+.guide-body .step__title {
+  margin: 0 0 0.375rem;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 620;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  transition: color var(--fast) var(--ease);
+}
+.guide-body .of-module > :last-child {
+  margin-bottom: 0;
+}
+.step.is-done .of-module__title,
+.step.is-done .step__title {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, currentColor 55%, transparent);
+}
+.step.is-done .of-module > :not(.of-module__title) {
+  color: var(--muted-foreground);
+}
+
+.guide-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.375rem;
+  padding: 3rem 1.5rem;
+  border: 1px dashed var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  text-align: center;
+  animation: settle var(--slow) var(--ease) both;
+}
+.guide-empty__icon {
+  box-sizing: content-box;
+  margin-bottom: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 999px;
+  background: var(--tint-strong);
+  color: var(--primary);
+}
+.guide-empty__text {
+  margin: 0;
+  max-width: 28rem;
+  font-family: var(--font-read);
+  font-size: 1.125rem;
+  text-wrap: balance;
+}
+.guide-empty__hint {
+  margin: 0;
+  max-width: 28rem;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+  text-wrap: balance;
+}
+
 /* ===== Print: the manual alone, as a book page ===== */
 
 @media print {
@@ -2532,8 +3062,28 @@ mark {
   .skip-link,
   .filters,
   .prodswitch,
-  .pager {
+  .pager,
+  .code-copy__button,
+  .guide__aside,
+  .guide-note,
+  .guide-status__progress,
+  .guide-empty__hint {
     display: none !important;
+  }
+  /* An update guide: the steps of the range chosen, the range named, boxes to tick on paper. */
+  .guide-status__range {
+    display: block;
+    margin: 0;
+    font-family: var(--font-read);
+  }
+  .guide-status {
+    border-color: #000;
+  }
+  .step {
+    break-inside: avoid;
+  }
+  .guide__intro {
+    display: none;
   }
   body.has-thumbs main {
     padding: 0;

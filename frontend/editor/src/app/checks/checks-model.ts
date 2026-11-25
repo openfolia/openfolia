@@ -110,6 +110,10 @@ export const CHECK_TITLES: Readonly<Record<CheckCode, string>> = {
     'editor.checks.codes.unknown-excluded-module.title',
   'empty-derived-manual': 'editor.checks.codes.empty-derived-manual.title',
   'derived-audience-wider': 'editor.checks.codes.derived-audience-wider.title',
+  'update-step-version': 'editor.checks.codes.update-step-version.title',
+  'update-step-outside-versions':
+    'editor.checks.codes.update-step-outside-versions.title',
+  'update-step-phase': 'editor.checks.codes.update-step-phase.title',
   'page-design-region-languages-differ':
     'editor.checks.codes.page-design-region-languages-differ.title',
   'unknown-replacement': 'editor.checks.codes.unknown-replacement.title',
@@ -207,6 +211,10 @@ const CHECK_DETAILS: Readonly<Record<CheckCode, string>> = {
     'editor.checks.codes.unknown-excluded-module.detail',
   'empty-derived-manual': 'editor.checks.codes.empty-derived-manual.detail',
   'derived-audience-wider': 'editor.checks.codes.derived-audience-wider.detail',
+  'update-step-version': 'editor.checks.codes.update-step-version.detail',
+  'update-step-outside-versions':
+    'editor.checks.codes.update-step-outside-versions.detail',
+  'update-step-phase': 'editor.checks.codes.update-step-phase.detail',
   'page-design-region-languages-differ':
     'editor.checks.codes.page-design-region-languages-differ.detail',
   'unknown-replacement': 'editor.checks.codes.unknown-replacement.detail',

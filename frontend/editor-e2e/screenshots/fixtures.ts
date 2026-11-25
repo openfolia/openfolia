@@ -33,6 +33,7 @@ export const TEXT = {
     large: 'The large model has two batteries. Replace both.',
     newModule: 'Clean the sensors',
     leaflet: 'Safety leaflet for service staff',
+    guide: 'Firmware update guide',
     search: 'charg',
     mainChange: 'Keep the housing closed while the machine runs.',
   },
@@ -53,6 +54,7 @@ export const TEXT = {
     large: 'Das große Modell hat zwei Batterien. Wechseln Sie beide.',
     newModule: 'Sensoren reinigen',
     leaflet: 'Sicherheitsblatt für das Servicepersonal',
+    guide: 'Firmware-Update-Leitfaden',
     search: 'lad',
     mainChange:
       'Lassen Sie das Gehäuse geschlossen, solange die Maschine läuft.',

@@ -2,12 +2,14 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { Component, signal } from '@angular/core';
+import { Component, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { provideZard } from '@openfolia/ui/core';
+import { TipOverlay, type TipOpenOptions } from '@openfolia/ui/tip';
+import { ToastService } from '@openfolia/ui/toast';
 
 import { provideApi } from '../api';
 import { HelpService } from '../help/help.service';
@@ -17,6 +19,7 @@ import { advance } from '../testing/fake-time';
 import { PreferencesService } from './preferences.service';
 import {
   MAX_TRIES,
+  RESIZE_SETTLE_MS,
   RETRY_MS,
   SETTLE_MS,
   TipsController,
@@ -26,12 +29,19 @@ import {
   template: `
     <nav>
       <a data-tip="nav.content" href="/content">Content</a>
+      <a data-tip="nav.manuals" href="/manuals">Manuals</a>
       <a data-tip="nav.review" href="/review">Review</a>
     </nav>
+    <table>
+      <tr data-tip="content.module">
+        <td><a href="/content/en/m1" id="row-link">A module</a></td>
+      </tr>
+    </table>
     <button type="button" data-tip="shell.change-set">Revision</button>
     <button type="button" data-tip="shell.search">Search</button>
     <button type="button" data-tip="content.new-module">New module</button>
     <input id="field" />
+    <button type="button" id="outside">Elsewhere</button>
   `,
 })
 class Shell {}
@@ -39,13 +49,29 @@ class Shell {}
 @Component({ template: '' })
 class Blank {}
 
-const person: Me = {
+const writer: Me = {
   id: 'pat',
   kind: 'user',
   name: 'Pat',
   role: 'Author',
   permissions: new Set(['content.read', 'content.read.draft', 'content.edit']),
 };
+const reader: Me = {
+  ...writer,
+  role: 'Reader',
+  permissions: new Set(['content.read']),
+};
+const me = signal(writer);
+
+/** The module editor's text, as the page has it once the module is editable. */
+function editorText(): HTMLElement {
+  const text = document.createElement('div');
+  text.setAttribute('data-tip', 'module-editor.text');
+  text.innerHTML =
+    '<div contenteditable="true"><h2>Title</h2><p id="first">Open the cover.</p><p>Check the seal.</p></div>';
+  document.body.append(text);
+  return text;
+}
 
 const prefs = (attributes: {
   showTips?: boolean;
@@ -66,6 +92,8 @@ const prefs = (attributes: {
 });
 
 const card = () => document.querySelector<HTMLElement>('[data-slot="tip"]');
+const stepOf = () =>
+  card()?.querySelector('[data-slot="tip-step"]')?.textContent?.trim();
 const press = (action: string) =>
   card()!.querySelector<HTMLElement>(`[data-action="${action}"]`)!.click();
 
@@ -99,8 +127,13 @@ describe('the tips and the tour', () => {
         provideRouter([
           { path: 'content', component: Blank },
           { path: 'review', component: Blank },
+          {
+            path: 'content/:lang/:id',
+            component: Blank,
+            data: { help: 'guide.writing.edit-a-module' },
+          },
         ]),
-        { provide: MeService, useValue: { me: signal(person) } },
+        { provide: MeService, useValue: { me } },
         {
           provide: ChangeSetSession,
           useValue: { value: signal('published'), options: signal([]) },
@@ -129,6 +162,8 @@ describe('the tips and the tour', () => {
     http.verify();
     document.body.innerHTML = '';
     localStorage.clear();
+    sessionStorage.clear();
+    me.set(writer);
   });
 
   /** The controller running, `GET /me/preferences` answered with `answer`. */
@@ -157,24 +192,16 @@ describe('the tips and the tour', () => {
     }
   }
 
-  it('shows a new person the tour once the screen settles; Skip ends it for good', async () => {
+  it('welcomes a new person once the screen settles; Not now ends it for good', async () => {
     await start(prefs({}));
     expect(card()).toBeNull();
     await advance(SETTLE_MS);
-    expect(card()?.dataset['tipId']).toBe('tour.content');
-    expect(
-      card()?.querySelector('[data-slot="tip-step"]')?.textContent?.trim(),
-    ).toBe('1 of 5');
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    expect(stepOf()).toBe('1 of 4');
     // Focus moved in, so it is announced.
     expect(document.activeElement).toBe(card());
-
-    press('next');
-    await advance();
-    expect(card()?.dataset['tipId']).toBe('tour.editor');
-    press('back');
-    await advance();
-    expect(card()?.dataset['tipId']).toBe('tour.content');
-    press('skip');
+    expect(card()?.querySelector('[data-action="back"]')).toBeNull();
+    press('dismiss');
     await advance();
     expect(card()).toBeNull();
     expect(await patches()).toEqual([{ tourDone: true }]);
@@ -185,17 +212,376 @@ describe('the tips and the tour', () => {
     expect(card()?.dataset['tipId'] ?? '').not.toMatch(/^tour\./);
   });
 
-  it('finishes the tour on its last step', async () => {
+  it('walks a writer to a first edit: open a module, type, then Review; Done says where search is (#869)', async () => {
     await start(prefs({}));
+    const tips = TestBed.inject(TipsController);
+    const router = TestBed.inject(Router);
+    // The row's link, as its routerLink does it: the list goes, the module comes.
+    document.querySelector('#row-link')!.addEventListener('click', (event) => {
+      event.preventDefault();
+      document.querySelector('table')!.remove();
+      void router.navigateByUrl('/content/en/m1');
+    });
     await advance(SETTLE_MS);
-    for (let i = 0; i < 4; i++) {
-      press('next');
-      await advance();
-    }
-    expect(card()?.dataset['tipId']).toBe('tour.search');
+    press('next');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    expect(tips.tourStep()).toBe('tour.open-module');
+    expect(stepOf()).toBe('2 of 4');
+
+    // Opening a module (here by the step's own button) moves it on, to a screen still loading.
+    press('next');
+    await advance();
+    expect(router.url).toBe('/content/en/m1');
+    expect(card()).toBeNull();
+    expect(tips.tourStep()).toBe('tour.edit');
+    await advance(SETTLE_MS + RETRY_MS * 2);
+    expect(card()).toBeNull();
+
+    // The module editable: the step lights up its first sentence.
+    const text = editorText();
+    await advance(RETRY_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.edit');
+    // Start typing: the caret in the text, the card still there.
+    press('next');
+    await advance();
+    expect(text.contains(document.activeElement)).toBe(true);
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.edit');
+
+    tips.stepDone('tour.edit');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(stepOf()).toBe('4 of 4');
+    // The focus stays in the text.
+    expect(text.contains(document.activeElement)).toBe(true);
+    // Typing on, or a click in the text, leaves it there.
+    text
+      .querySelector('#first')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.review');
     expect(
       card()?.querySelector('[data-action="next"]')?.textContent?.trim(),
     ).toBe('Done');
+    press('next');
+    await advance();
+    expect(card()).toBeNull();
+    expect(tips.tourStep()).toBeNull();
+    expect(await patches()).toEqual([{ tourDone: true }]);
+    expect(TestBed.inject(ToastService).toasts()).toEqual([
+      expect.objectContaining({
+        message: { key: 'editor.tour.done', params: { keys: 'Ctrl+K' } },
+      }),
+    ]);
+  });
+
+  it('waits on the list for a row that comes late, keeping its search, until the list has loaded (issue 903)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/content?q=late');
+    // The search has no row yet (a module merged a moment ago).
+    const table = document.querySelector('table')!;
+    const row = table.querySelector('tr')!;
+    row.remove();
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    press('next');
+    await advance();
+    // Already on the list: the step waits there, the search kept.
+    expect(router.url).toBe('/content?q=late');
+    expect(card()).toBeNull();
+
+    // The row comes while the list still loads: not yet, it may move or go.
+    table.setAttribute('aria-busy', 'true');
+    table.append(row);
+    await advance(SETTLE_MS + RETRY_MS * 2);
+    expect(card()).toBeNull();
+
+    table.removeAttribute('aria-busy');
+    await advance(RETRY_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    expect(router.url).toBe('/content?q=late');
+  });
+
+  it('shows the whole list when its search, once loaded, has no row to open (issue 903)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/content?q=nothing');
+    const table = document.querySelector('table')!;
+    const row = table.querySelector('tr')!;
+    row.remove();
+    table.setAttribute('aria-busy', 'true');
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    press('next');
+    await advance(SETTLE_MS + RETRY_MS * 2);
+    // Still loading: the search is kept.
+    expect(router.url).toBe('/content?q=nothing');
+
+    // Loaded, and nothing found: the list without its search.
+    table.removeAttribute('aria-busy');
+    await advance(RETRY_MS);
+    expect(router.url).toBe('/content');
+    table.append(row);
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+  });
+
+  it('leaves a search the person made alone, and waits for a row drawn again instead of centring (issue 903)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/content');
+    const table = document.querySelector('table')!;
+    const row = table.querySelector('tr')!;
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    press('next');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+
+    // The list draws its rows again: the row goes, the new one comes a moment later.
+    row.remove();
+    await advance(50);
+    expect(card()).toBeNull();
+    const drawn = row.cloneNode(true) as HTMLElement;
+    table.append(drawn);
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    expect(
+      document
+        .querySelector('[data-slot="tip-spotlight"]')
+        ?.hasAttribute('data-empty'),
+    ).toBe(false);
+
+    // The person searches for something with no module: the search stays theirs.
+    drawn.remove();
+    await router.navigateByUrl('/content?q=mine');
+    await advance(SETTLE_MS + RETRY_MS * 3);
+    expect(router.url).toBe('/content?q=mine');
+  });
+
+  it('pauses on a click elsewhere, a dialog or another screen, and resumes at the same step (#869)', async () => {
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    press('next');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+
+    // A click outside the card and the lit row: paused, not ended.
+    document
+      .querySelector('#outside')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await advance();
+    expect(card()).toBeNull();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+
+    // A dialog (the palette, say) takes the focus: paused while it is open.
+    const dialog = document.createElement('div');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.innerHTML = '<input id="palette" />';
+    document.body.append(dialog);
+    dialog.querySelector<HTMLInputElement>('#palette')!.focus();
+    await advance(SETTLE_MS + RETRY_MS * 3);
+    expect(card()).toBeNull();
+    dialog.remove();
+    await advance(RETRY_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+
+    // Another screen: paused, then the same step where it can be shown.
+    await TestBed.inject(Router).navigateByUrl('/review');
+    await advance();
+    expect(card()).toBeNull();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    expect(await patches()).toEqual([]);
+  });
+
+  it('shows Send it for review while the person is still in the text, after a pause (#869)', async () => {
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.review');
+    const text = editorText();
+    text.querySelector<HTMLElement>('[contenteditable]')!.focus();
+    const open = vi.spyOn(TestBed.inject(TipOverlay), 'open');
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    // It keeps clear of the sentence the person changed: the caret's, else the one the step lit.
+    const options = open.mock.calls.at(-1)![0] as TipOpenOptions;
+    expect(options.keepClear?.()).toBe(text.querySelector('#first'));
+    const second = text.querySelectorAll('p')[1]!;
+    document.getSelection()!.collapse(second.firstChild, 3);
+    expect(options.keepClear?.()).toBe(second);
+    // It comes without taking the caret out of the text.
+    expect(text.contains(document.activeElement)).toBe(true);
+    // Escape in the text is the editor's: the step only pauses, and comes back.
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    await advance();
+    expect(card()).toBeNull();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(await patches()).toEqual([]);
+  });
+
+  it('lets the tour start one revision, not one per module; a new tour may again (#869)', async () => {
+    await start(prefs({ tourDone: true }));
+    const tips = TestBed.inject(TipsController);
+    expect(tips.claimRevision()).toBe(true);
+    expect(tips.claimRevision()).toBe(false);
+    expect(sessionStorage.getItem('openfolia.tour-revision:pat')).toBe(
+      'started',
+    );
+    tips.restartTour();
+    expect(tips.claimRevision()).toBe(true);
+    await advance();
+    expect(await patches()).toEqual([{ tourDone: false }]);
+  });
+
+  it('shows where the change went at the revision picker, naming the person’s revision, while they type (#869)', async () => {
+    const sets = TestBed.inject(ChangeSetSession) as unknown as {
+      value: WritableSignal<string>;
+      options: WritableSignal<object[]>;
+    };
+    sets.options.set([
+      { id: 'cs1', title: 'Charge the battery', authorId: 'pat' },
+    ]);
+    sets.value.set('cs1');
+    // The top bar's picker, as the shell has it for a person who may use it.
+    const picker = document.createElement('div');
+    picker.setAttribute('data-tip', 'shell.revision');
+    picker.innerHTML =
+      '<button type="button" data-tip="shell.change-set">Revision</button>';
+    document.body.append(picker);
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.edit');
+    const text = editorText();
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.edit');
+    expect(stepOf()).toBe('3 of 5');
+    text.querySelector<HTMLElement>('[contenteditable]')!.focus();
+
+    TestBed.inject(TipsController).stepDone('tour.edit');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.revision');
+    expect(stepOf()).toBe('4 of 5');
+    const body = document.getElementById(
+      card()!.getAttribute('aria-describedby')!,
+    );
+    expect(body?.textContent).toContain(
+      '“Charge the battery”, a revision of your own',
+    );
+    // The picker stays closed, and the caret in the text.
+    expect(text.contains(document.activeElement)).toBe(true);
+
+    press('next');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(stepOf()).toBe('5 of 5');
+  });
+
+  it('takes → and ← from a presenter: on to the next step and back, never from a field (#869)', async () => {
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    const key = (target: Element, key: string) =>
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true }),
+      );
+    // From the card (it has the focus as it opens).
+    key(document.activeElement!, 'ArrowRight');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    // With nothing focused.
+    (document.activeElement as HTMLElement).blur();
+    key(document.body, 'ArrowLeft');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    key(document.body, 'ArrowLeft');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    // A field keeps its arrows.
+    key(document.querySelector('#field')!, 'ArrowRight');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+  });
+
+  it('keeps the revision a tour typed into for the next tour, and finds a picker that came late (#869)', async () => {
+    const sets = TestBed.inject(ChangeSetSession) as unknown as {
+      value: WritableSignal<string>;
+      options: WritableSignal<object[]>;
+    };
+    sets.options.set([{ id: 'cs1', title: 'Battery', authorId: 'pat' }]);
+    sets.value.set('cs1');
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.edit');
+    editorText();
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    const tips = TestBed.inject(TipsController);
+    // No picker yet (a slow top bar): four steps.
+    expect(stepOf()).toBe('3 of 4');
+    expect(tips.tourRevision()).toBeNull();
+
+    // The picker comes; the next showing counts its step.
+    const picker = document.createElement('div');
+    picker.setAttribute('data-tip', 'shell.revision');
+    document.body.append(picker);
+    document
+      .querySelector('#outside')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await advance(SETTLE_MS);
+    expect(stepOf()).toBe('3 of 5');
+
+    tips.stepDone('tour.edit');
+    await advance();
+    expect(tips.tourRevision()).toBe('cs1');
+    // Taken again (a demo given twice): the same revision is there for it.
+    tips.restartTour();
+    await advance();
+    expect(tips.tourRevision()).toBe('cs1');
+    await patches();
+  });
+
+  it('keeps the step open while the person types where it asks (#869)', async () => {
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.edit');
+    const text = editorText();
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.edit');
+    text.querySelector<HTMLElement>('[contenteditable]')!.focus();
+    text
+      .querySelector('#first')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.edit');
+  });
+
+  it('picks up after a reload at the step this tab was at; a module left before typing asks to open one again (#869)', async () => {
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.edit');
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    // No module open here: the step before it.
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    expect(sessionStorage.getItem('openfolia.tour:pat')).toBe(
+      'tour.open-module',
+    );
+  });
+
+  it('gives a reader the reading tour, never the step that starts a revision (#869)', async () => {
+    me.set(reader);
+    await start(prefs({}));
+    const tips = TestBed.inject(TipsController);
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    expect(stepOf()).toBe('1 of 3');
+    press('next');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+    await TestBed.inject(Router).navigateByUrl('/content/en/m1');
+    await advance();
+    expect(tips.tourStep()).toBe('tour.manuals');
+    editorText();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.manuals');
+    expect(stepOf()).toBe('3 of 3');
     press('next');
     await advance();
     expect(card()).toBeNull();
@@ -218,7 +604,10 @@ describe('the tips and the tour', () => {
 
   it('never offers a dismissed tip, nor any while tips are off', async () => {
     await start(
-      prefs({ tourDone: true, dismissedTips: ['content.new-module'] }),
+      prefs({
+        tourDone: true,
+        dismissedTips: ['content.new-module', 'shell.search'],
+      }),
     );
     await advance(SETTLE_MS);
     expect(card()).toBeNull();
@@ -285,17 +674,114 @@ describe('the tips and the tour', () => {
     const tips = TestBed.inject(TipsController);
     tips.restartTour();
     await advance(SETTLE_MS);
-    expect(card()?.dataset['tipId']).toBe('tour.content');
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
     press('skip');
     await advance();
     tips.resetTips();
     await advance(SETTLE_MS);
     expect(card()?.dataset['tipId']).toBe('content.new-module');
     expect(await patches()).toEqual([
-      { tourDone: false, showTips: true },
+      { tourDone: false },
       { tourDone: true },
       { dismissedTips: [], showTips: true },
     ]);
+  });
+
+  it('takes the tour from the menu with tips off, and leaves them off (#868)', async () => {
+    await start(prefs({ tourDone: true, showTips: false }));
+    const tips = TestBed.inject(TipsController);
+    tips.restartTour();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    // The preferences' change (tourDone) does not close it.
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    press('skip');
+    await advance();
+    expect(card()).toBeNull();
+    expect(await patches()).toEqual([{ tourDone: false }, { tourDone: true }]);
+    expect(TestBed.inject(PreferencesService).showTips()).toBe(false);
+    // No tip afterwards: tips are still off.
+    await advance(SETTLE_MS * 2);
+    expect(card()).toBeNull();
+  });
+
+  it('does not bring a requested tour back once tips are turned off', async () => {
+    await start(prefs({ tourDone: true, showTips: false }));
+    const tips = TestBed.inject(TipsController);
+    tips.restartTour();
+    await advance(SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    // The account menu takes the focus (the tour pauses), then tips are switched off.
+    document.querySelector<HTMLInputElement>('#field')!.focus();
+    await advance();
+    expect(card()).toBeNull();
+    document.querySelector<HTMLInputElement>('#field')!.blur();
+    tips.setShowTips(false);
+    await advance(SETTLE_MS * 2);
+    expect(card()).toBeNull();
+    await patches();
+  });
+
+  it('moves on when the step on show says its task is done, and only then', async () => {
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    const tips = TestBed.inject(TipsController);
+    tips.stepDone('tour.review');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.welcome');
+    tips.stepDone('tour.welcome');
+    await advance();
+    expect(card()?.dataset['tipId']).toBe('tour.open-module');
+  });
+
+  it('ends the tour on Escape pressed anywhere on the page', async () => {
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    document
+      .querySelector('#outside')!
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+    await advance();
+    expect(card()).toBeNull();
+    expect(await patches()).toEqual([{ tourDone: true }]);
+  });
+
+  it('points a step about the closed sidebar at the menu button, and again after a resize', async () => {
+    // A narrow screen: the sidebar is a closed sheet (inert), its menu button shows.
+    const sidebar = document.querySelector<HTMLElement>('nav')!;
+    sidebar.setAttribute('data-sidebar', 'sidebar');
+    sidebar.setAttribute('inert', '');
+    const menu = document.createElement('button');
+    menu.setAttribute('data-tip', 'shell.menu');
+    document.body.append(menu);
+
+    sessionStorage.setItem('openfolia.tour:pat', 'tour.review');
+    await start(prefs({}));
+    await advance(SETTLE_MS);
+    // Every step is kept: the review step's anchor is in the closed sidebar, not missing.
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(stepOf()).toBe('4 of 4');
+    const spotlight = () =>
+      document.querySelector('[data-slot="tip-spotlight"]');
+    expect(spotlight()).not.toBeNull();
+    expect(spotlight()?.hasAttribute('data-empty')).toBe(false);
+
+    // Wide again: the sidebar shows, the menu button goes; the card follows after a resize.
+    sidebar.removeAttribute('inert');
+    menu.remove();
+    window.dispatchEvent(new Event('resize'));
+    await advance(RESIZE_SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(spotlight()?.hasAttribute('data-empty')).toBe(false);
+
+    // Narrow with no menu button either: centred, the whole page dimmed.
+    sidebar.setAttribute('inert', '');
+    window.dispatchEvent(new Event('resize'));
+    await advance(RESIZE_SETTLE_MS);
+    expect(card()?.dataset['tipId']).toBe('tour.review');
+    expect(spotlight()?.hasAttribute('data-empty')).toBe(true);
   });
 
   it('keeps to this browser when the API cannot be read', async () => {

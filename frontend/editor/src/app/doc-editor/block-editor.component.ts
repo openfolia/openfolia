@@ -54,6 +54,7 @@ import {
   type TextChangeRefusal,
 } from './text-fields';
 import { setSnippets } from './plugins/snippet-suggestions';
+import { stickyBarScroll } from './plugins/sticky-bar-scroll';
 import { findingMessage } from './writing/finding-text';
 import { setTermHints } from './writing/term-suggestions';
 import {
@@ -366,6 +367,13 @@ export class BlockEditorComponent {
       // Commands run on the editor (inserting an image) reach the page's picker through it.
       setDocBlocksContext(editor, context);
       editor.registerPlugin(calloutHoverPlugin(this.calloutHover));
+      editor.registerPlugin(
+        stickyBarScroll(() =>
+          this.host.nativeElement.querySelector<HTMLElement>(
+            ':scope > of-editor-toolbar',
+          ),
+        ),
+      );
       setInlineEditor(editor, this.inlinePopover());
       editor.on('update', ({ transaction, appendedTransactions }) => {
         // Only blank lines tidied away (by the collapse's timer, or appended to a caret move).

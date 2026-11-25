@@ -298,4 +298,80 @@ describe('the content', () => {
       parseSnapshot(snapshot({ a: 'public', b: 'public' })).releases,
     ).toHaveLength(1);
   });
+
+  it('checks an update guide’s steps and levels when the pages read it (#907)', () => {
+    const snapshot = (
+      step: string,
+      level: string,
+      stepLevel: string | null = null,
+    ) => ({
+      format: SNAPSHOT_FORMAT,
+      audience: 'public',
+      audiences: LEVELS.map(({ id }) => ({ id, label: id })),
+      lang: 'en',
+      dir: 'ltr',
+      languages: ['en'],
+      variantAttributes: [],
+      safetySymbols: [],
+      outputLabels: {},
+      releases: [
+        {
+          id: 'r',
+          product: 'alpha',
+          productLabel: 'Alpha',
+          revision: '1',
+          tag: 't',
+          publishedAt: '2026-01-01T00:00:00Z',
+          notes: null,
+          manuals: [
+            {
+              id: 'g',
+              title: 'G',
+              audience: 'public',
+              variants: [
+                {
+                  slug: 'x=y',
+                  label: 'Y',
+                  values: {},
+                  resolved: {},
+                  moduleAudiences: { a: 'public' },
+                  pdf: null,
+                },
+              ],
+              guide: {
+                attribute: { id: 'software', label: 'Software' },
+                versions: ['1.0', '2.0'],
+                levels: [{ id: level, label: level }],
+                options: [],
+                steps: [
+                  {
+                    id: step,
+                    module: step,
+                    title: 'S',
+                    version: '2.0',
+                    phase: 'after',
+                    level: stepLevel,
+                    when: null,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      assets: {},
+      symbols: {},
+      branding: null,
+    });
+    expect(parseSnapshot(snapshot('a', 'public')).releases).toHaveLength(1);
+    expect(() => parseSnapshot(snapshot('b', 'public'))).toThrow(
+      'step b in update guide g has no checked audience',
+    );
+    expect(() => parseSnapshot(snapshot('a', 'internal'))).toThrow(
+      'offers the level "internal", above the build',
+    );
+    expect(() => parseSnapshot(snapshot('a', 'public', 'internal'))).toThrow(
+      'is for the level "internal", above the build',
+    );
+  });
 });

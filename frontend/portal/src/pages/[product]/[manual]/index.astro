@@ -1,0 +1,197 @@
+---
+import { byVersionAndPhase, resolveUpdateGuide, type UpdatePhase } from '@openfolia/content-model/core';
+import Base from '../../../layouts/Base.astro';
+import { codeCopyConfig, countText, guideConfig, languageName, textsFor } from '../../../lib/i18n.ts';
+import { formatDate, guidePages, guidePath, href, stepHtml, snapshot, type GuidePage } from '../../../lib/site.ts';
+import { guideDefaults, guideShape } from '../../../lib/update-guide.ts';
+
+// An update guide's page (#907): pickers for the jump, and its steps as a checklist. Every step
+// is in the page; the script (`scripts/update-guide.ts`) shows those of the reader's choice.
+export function getStaticPaths() {
+  return guidePages().map((page) => ({
+    params: { product: page.release.product, manual: page.manual.id },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props as { page: GuidePage };
+const s = snapshot();
+const t = textsFor(s.lang);
+const { release, manual } = page;
+const { guide } = manual;
+const path = guidePath(release, manual);
+const shape = guideShape(guide);
+const defaults = guideDefaults(shape);
+
+const phaseLabel: Record<UpdatePhase, string> = {
+  before: t.phaseBefore,
+  during: t.phaseDuring,
+  after: t.phaseAfter,
+};
+// Each step once, its text rendered with IDs of its own (`of-s<n>-`), in the whole guide's order.
+const rendered = guide.steps.map((step, n) => ({ step, n, body: stepHtml(page, step, n) }));
+const byVersion = byVersionAndPhase(rendered.map((r) => ({ ...r, ...r.step }))).map((v) => ({
+  version: v.version,
+  phases: v.phases.map((p) => ({ phase: p.phase, steps: p.steps.map((entry) => entry.step) })),
+}));
+// The default jump's count, so the line reads right before the script runs.
+const initial = resolveUpdateGuide(guide, defaults, shape.levels);
+const initialCount = initial.status === 'resolved' ? initial.count : 0;
+const config = { ...guideConfig(t, s.lang), ...shape };
+---
+
+<Base title={manual.title} path={path} product={release.product} guide={[release.productLabel, manual.title]}>
+  <article class="reading guide" aria-labelledby="manual-title" data-update-guide={JSON.stringify(config)}>
+    <header class="masthead guide__head">
+      <nav class="crumbs" aria-label={t.breadcrumb}>
+        <ol>
+          <li><a href={href(`#product-${release.product}`)}>{release.productLabel}</a></li>
+        </ol>
+      </nav>
+      <p class="masthead__kicker">{t.updateGuide}</p>
+      <h1 class:list={['masthead__title', { 'masthead__title--long': manual.title.length > 48 }]} id="manual-title">{manual.title}</h1>
+      <p class="masthead__colophon">
+        <span class="nowrap">{t.latestRelease} {release.revision}</span>
+        <span class="sep" aria-hidden="true">·</span>
+        <time datetime={release.publishedAt}>{formatDate(release.publishedAt, s.lang)}</time>
+        <span class="sep" aria-hidden="true">·</span>
+        <span class="nowrap">{languageName(s.lang)}</span>
+      </p>
+      <p class="guide__intro">{t.guideIntro}</p>
+    </header>
+    <aside class="guide__aside">
+      <form class="guide-picker" data-guide-picker aria-labelledby="picker-title">
+        <h2 class="guide-picker__title" id="picker-title">{t.yourUpdate}</h2>
+        <div class="guide-picker__range">
+          <label class="field">
+            <span class="field__label">{t.fromVersion}</span>
+            <select name="from" data-guide-from>
+              {guide.versions.slice(0, -1).map((v) => <option value={v} selected={v === defaults.from}>{v}</option>)}
+            </select>
+          </label>
+          <svg class="guide-picker__arrow" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M5 12h14m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <label class="field">
+            <span class="field__label">{t.toVersion}</span>
+            <select name="to" data-guide-to>
+              {guide.versions.slice(1).map((v) => <option value={v} selected={v === defaults.to}>{v}</option>)}
+            </select>
+          </label>
+        </div>
+        {
+          guide.levels.length > 1 && (
+            <label class="field">
+              <span class="field__label">{t.level}</span>
+              <select name="level" data-guide-level>
+                {guide.levels.map((l) => <option value={l.id} selected={l.id === defaults.level}>{l.label}</option>)}
+              </select>
+            </label>
+          )
+        }
+        {
+          guide.options.length > 0 && (
+            <fieldset class="guide-picker__setup">
+              <legend class="field__label">{t.yourSetup}</legend>
+              {/* Each option a list of its values, none set at first: a value never stands for another. */}
+              {guide.options.map((o) => (
+                <label class="field">
+                  <span class="field__label">{o.label}</span>
+                  <select name={`opt:${o.id}`} data-guide-option={o.id}>
+                    <option value="">{t.notSet}</option>
+                    {o.values.map((v) => <option value={v.id}>{v.label}</option>)}
+                  </select>
+                </label>
+              ))}
+            </fieldset>
+          )
+        }
+      </form>
+    </aside>
+    <div class="guide__main">
+      <p class="guide-note guide-note--no-script">{t.guideNoScript}</p>
+      <p class="guide-note guide-note--quiet" data-guide-invalid hidden>{t.invalidChoice}</p>
+      <div class="guide-status">
+        <p class="guide-status__count" role="status" aria-live="polite" data-guide-count>{countText(t.stepCount, initialCount, s.lang)}</p>
+        <p class="guide-status__range" data-guide-range></p>
+        <div class="guide-status__progress">
+          <span class="meter" aria-hidden="true"><span class="meter__fill" data-guide-meter></span></span>
+          <span data-guide-done>{t.doneCount.replace('{done}', '0').replace('{n}', String(initialCount))}</span>
+          <button type="button" class="ghost-button" data-guide-reset aria-label={t.resetChecklistLong} disabled>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span>{t.resetChecklist}</span>
+          </button>
+        </div>
+      </div>
+      <div class="guide-body manual-body" data-pagefind-body data-code-copy={JSON.stringify(codeCopyConfig(t))}>
+        {/* Read for the filters and meta only, never indexed as the page's text (#845). */}
+        <div hidden data-pagefind-ignore>
+          <span data-pagefind-filter={t.product}>{release.productLabel}</span>
+          <span data-pagefind-meta="title">{manual.title}</span>
+          <span data-pagefind-meta={t.product}>{release.productLabel}</span>
+          <span data-pagefind-meta={t.variant}>{t.updateGuide}</span>
+        </div>
+        <div class="guide-whole" data-guide-whole>
+          {
+            byVersion.map((v) => (
+              <section class="guide-version">
+                <h2 class="guide-version__title" data-pagefind-ignore>{t.versionHeading.replace('{version}', () => v.version)}</h2>
+                {v.phases.map((p) => (
+                  <>
+                    <p class="guide-version__phase" data-pagefind-ignore>{phaseLabel[p.phase]}</p>
+                    <ol class="steps">
+                      {p.steps.map(({ step, n, body }) => (
+                        <li
+                          class="step"
+                          data-step={step.id}
+                          data-version={step.version}
+                          data-phase={step.phase}
+                          data-level={step.level ?? undefined}
+                          data-when={step.when ? JSON.stringify(step.when) : undefined}
+                        >
+                          <input class="step__check" type="checkbox" id={`done-${n}`} aria-labelledby={body?.headingId ?? `title-${n}`} data-step-check />
+                          <div class="step__body">
+                            <span class="step__version" data-pagefind-ignore>
+                              <span class="visually-hidden">{t.stepVersion} </span>
+                              {step.version}
+                            </span>
+                            {body ? <Fragment set:html={body.html} /> : <h3 class="step__title" id={`title-${n}`}>{step.title}</h3>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                ))}
+              </section>
+            ))
+          }
+        </div>
+        <div class="guide-phases" data-guide-phases data-pagefind-ignore="all" hidden>
+          {
+            (['before', 'during', 'after'] as const).map((phase) => (
+              <section class="guide-phase" data-phase-section={phase} aria-labelledby={`phase-${phase}`}>
+                <h2 class="guide-phase__title" id={`phase-${phase}`}>
+                  <span>{phaseLabel[phase]}</span>
+                  <span class="guide-phase__count" data-phase-count></span>
+                </h2>
+                <ol class="steps" data-phase-list={phase}></ol>
+              </section>
+            ))
+          }
+        </div>
+        <div class="guide-empty" data-guide-empty hidden>
+          <svg class="guide-empty__icon" aria-hidden="true" viewBox="0 0 24 24" width="28" height="28"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <p class="guide-empty__text" data-guide-empty-text></p>
+          <p class="guide-empty__hint">{t.nothingHint}</p>
+        </div>
+      </div>
+    </div>
+  </article>
+  <script>
+    import { highlightCallouts, dismissTermOnEscape } from '@openfolia/render-html/browser';
+    import { startCodeCopy } from '../../../scripts/code-copy.ts';
+    import { startUpdateGuide } from '../../../scripts/update-guide.ts';
+    startUpdateGuide(document);
+    highlightCallouts(document);
+    dismissTermOnEscape(document);
+    startCodeCopy(document);
+  </script>
+</Base>

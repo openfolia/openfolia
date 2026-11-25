@@ -24,6 +24,7 @@ const ORIGIN = 'http://localhost:4000';
 async function launcher(
   env: Record<string, string> = {},
   log: Logger = silentLogger,
+  now?: () => number,
 ) {
   const settings = launcherSettings({
     CCMS_LAUNCHER_PUBLIC_URL: `${ORIGIN}/`,
@@ -45,6 +46,7 @@ async function launcher(
     sandboxes,
     assets: loadAssets(),
     log,
+    now,
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -419,6 +421,138 @@ describe('the launcher', () => {
     expect(touch).not.toHaveBeenCalled();
     await call(l, '/api/modules', { cookie: a.cookie });
     expect(touch).toHaveBeenCalledOnce();
+  });
+
+  describe('the rate limits (#870)', () => {
+    // One cold load of the built editor, as measured through the launcher: 76 files (its code in
+    // chunks, styles, fonts, translations) and 8 API requests.
+    const FILES = 76;
+    const API = 8;
+    /** Statuses of `paths`, sent 100 at a time, all at one instant (the clock stands still). */
+    async function statuses(paths: string[], cookie: string) {
+      const seen: number[] = [];
+      for (let i = 0; i < paths.length; i += 100)
+        seen.push(
+          ...(await Promise.all(
+            paths.slice(i, i + 100).map((path) =>
+              call(l, path, { cookie }).then(async (res) => {
+                await res.arrayBuffer();
+                return res.status;
+              }),
+            ),
+          )),
+        );
+      return seen;
+    }
+    const load = (n: number) =>
+      Array.from({ length: n }, (_, i) => [
+        i % 2 ? '/' : `/manuals/m${i}`,
+        ...Array.from({ length: FILES - 1 }, (_, f) => `/chunk-${f}.js`),
+        ...Array.from({ length: API }, (_, a) => `/api/r${a}?page[number]=1`),
+      ]).flat();
+
+    it('lets 20 editor loads at once through at the default rate', async () => {
+      l = await launcher({ CCMS_LAUNCHER_RATE: '20' }, silentLogger, () => 0);
+      const a = await startSandbox(l);
+      const answered = await statuses(load(20), a.cookie);
+      expect(answered.filter((s) => s !== 200)).toEqual([]);
+    });
+
+    it('still limits a flood of files, and the API on its own', async () => {
+      l = await launcher({ CCMS_LAUNCHER_RATE: '2' }, silentLogger, () => 0);
+      const a = await startSandbox(l);
+      // The API: ten seconds' worth (20) in a burst, less the two the start took from the
+      // address's; the files do not use it up.
+      const api = Array.from({ length: 18 }, (_, i) => `/api/r${i}`);
+      expect(await statuses(api, a.cookie)).toEqual(api.map(() => 200));
+      expect(await statuses(['/api/one-more'], a.cookie)).toEqual([429]);
+      // The files: a hundred seconds' worth (200) in a burst, then refused too.
+      const files = Array.from({ length: 200 }, (_, i) => `/chunk-${i}.js`);
+      expect(await statuses(files, a.cookie)).toEqual(files.map(() => 200));
+      expect(await statuses(['/chunk-x.js'], a.cookie)).toEqual([429]);
+    });
+
+    it('caps a sandbox’s requests in flight, and frees the room as they end (#876)', async () => {
+      l = await launcher({ CCMS_LAUNCHER_MAX_IN_FLIGHT: '3' });
+      const a = await startSandbox(l);
+      const b = await startSandbox(l, '203.0.113.2');
+      let release!: () => void;
+      l.runtime.hold = new Promise<void>((r) => (release = r));
+      const held = [0, 1, 2].map((i) =>
+        call(l, `/hold-${i}.js`, { cookie: a.cookie }),
+      );
+      // Wait until all three reached the sandbox.
+      const reached = () =>
+        [...l.runtime.seen.values()]
+          .flat()
+          .filter((s) => s.url.startsWith('/hold')).length;
+      while (reached() < 3) await new Promise((r) => setTimeout(r, 5));
+      const over = await call(l, '/chunk.js', { cookie: a.cookie });
+      expect(over.status).toBe(429);
+      expect(over.headers.get('retry-after')).toBe('1');
+      // Another sandbox is not held back.
+      expect((await call(l, '/chunk.js', { cookie: b.cookie })).status).toBe(
+        200,
+      );
+      release();
+      for (const res of await Promise.all(held)) {
+        expect(res.status).toBe(200);
+        await res.arrayBuffer();
+      }
+      expect((await call(l, '/chunk.js', { cookie: a.cookie })).status).toBe(
+        200,
+      );
+    });
+
+    it('closes the sandbox’s socket when the visitor gives up (#876)', async () => {
+      l = await launcher({ CCMS_LAUNCHER_MAX_IN_FLIGHT: '1' });
+      const a = await startSandbox(l);
+      l.runtime.hold = new Promise<void>(() => undefined);
+      const abort = new AbortController();
+      const pending = call(l, '/hold-x.js', {
+        cookie: a.cookie,
+        signal: abort.signal,
+      }).catch(() => undefined);
+      while (![...l.runtime.seen.values()].flat().length)
+        await new Promise((r) => setTimeout(r, 5));
+      abort.abort();
+      await pending;
+      for (let i = 0; i < 200 && !l.runtime.dropped.length; i++)
+        await new Promise((r) => setTimeout(r, 10));
+      expect(l.runtime.dropped).toEqual(['/hold-x.js']);
+      l.runtime.hold = undefined;
+      expect((await call(l, '/chunk.js', { cookie: a.cookie })).status).toBe(
+        200,
+      );
+    });
+
+    it('counts a write, an encoded path and the API’s other doors as API requests', async () => {
+      l = await launcher({ CCMS_LAUNCHER_RATE: '2' }, silentLogger, () => 0);
+      const a = await startSandbox(l);
+      // These use up the API's burst (18, as above), whatever their spelling.
+      const api = [
+        ...Array.from({ length: 8 }, (_, i) => `/api/r${i}`),
+        '/api',
+        '/api/x',
+        '/d/manual',
+        '/mcp',
+        '/%61pi/x',
+        '/x/..%2Fapi/y',
+        '/API%2Fx',
+        '/.%2e/api/x',
+        '/api/../api/x',
+        '/a%20b',
+      ];
+      expect(await statuses(api, a.cookie)).toEqual(api.map(() => 200));
+      expect(await statuses(['/api/one-more'], a.cookie)).toEqual([429]);
+      const post = await call(l, '/chunk-a.js', {
+        method: 'POST',
+        cookie: a.cookie,
+      });
+      expect(post.status).toBe(429);
+      // A file still goes through: its own bucket.
+      expect(await statuses(['/chunk-a.js'], a.cookie)).toEqual([200]);
+    });
   });
 
   it('keeps a gone sandbox’s cookie on the editor’s polls, so the next page shows the ended dialog', async () => {

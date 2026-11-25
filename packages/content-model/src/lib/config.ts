@@ -156,6 +156,22 @@ const OUTPUT_LABEL_DESCRIPTIONS: Record<OutputLabelKey, string> = {
     'The title of the glossary that ends a manual whose manifest sets `glossary: true`',
     'Glossary',
   ),
+  updateVersion: outputLabel(
+    'The word before a version in an update guide’s headings (`Version 2.0`)',
+    'Version',
+  ),
+  updateBefore: outputLabel(
+    'The heading of an update guide’s steps done before the update',
+    'Before the update',
+  ),
+  updateDuring: outputLabel(
+    'The heading of an update guide’s steps done during the update',
+    'During the update',
+  ),
+  updateAfter: outputLabel(
+    'The heading of an update guide’s steps done after the update',
+    'After the update',
+  ),
 };
 
 /** One language's labels in the configuration: any subset, each overriding the shipped default. */

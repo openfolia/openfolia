@@ -34,6 +34,7 @@ export interface VariantCondition {
       'block rounded-lg border border-dashed bg-muted/50 px-3 py-3 text-card-foreground',
     role: 'group',
     '[attr.aria-label]': 'labelText()',
+    '[attr.data-tip]': 'tipAnchor() || null',
     '[class.border-foreground]': 'selected()',
     '[class.border-ring]': '!selected()',
   },
@@ -92,6 +93,8 @@ export class VariantBlockComponent {
   );
   readonly editable = input(true);
   readonly selected = input(false);
+  /** The `data-tip` of the whole frame, where a tip may point (its card sits below the frame); none by default. */
+  readonly tipAnchor = input('');
   /** Why the button can't be used now; non-empty disables it and shows the reason as its tooltip. */
   readonly pickDisabledReason = input('');
   /** The button was used: open the variant picker. */

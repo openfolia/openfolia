@@ -18,7 +18,7 @@ import { AuthenticateServiceTokenAction } from '../core/actions/authenticate-ser
 import { AuthenticateSessionAction } from '../core/actions/authenticate-session.action.js';
 import { ResolveActorAction } from '../core/actions/resolve-actor.action.js';
 import { IdentityProviders } from '../core/identity-provider.js';
-import { isServiceToken } from '../core/service-token.js';
+import { isServiceToken, serviceTokenId } from '../core/service-token.js';
 import { EMAIL_CODE_PROVIDER } from '../core/email-codes.js';
 import { PASSWORD_PROVIDER } from '../core/passwords.js';
 import { FailedAuthentications } from './failed-authentications.js';
@@ -39,6 +39,12 @@ declare global {
        * guard with `actor`; undefined for a token.
        */
       signInSession?: { readonly provider: string; readonly expiresAt: Date };
+      /**
+       * The public ID of the service account token the request acts
+       * through (#877: its reads are recorded), set by the guard with
+       * `actor`; undefined for anything else. Never the token itself.
+       */
+      serviceTokenId?: string;
     }
   }
 }
@@ -249,6 +255,7 @@ export class ActorGuard implements CanActivate {
           ]);
         }
         req.actor = result.actor;
+        req.serviceTokenId = serviceTokenId(token);
         return true;
       }
       switch (result.refused) {

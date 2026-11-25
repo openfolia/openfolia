@@ -45,15 +45,26 @@ sends the whole log first.
 
 ## Retention
 
-`CCMS_AUDIT_KEEP_DAYS` (1 to 36500; unset: kept for ever) removes events older than that many
-days, at start-up and daily, in batches. Each removal is itself recorded in the log, as
-`audit-log.prune`, with the cut-off, how many and the first and last ID. With a sink set, it never
-removes an event the sink has not sent.
+The log holds two kinds of event, each kept for a period of its own: **changes** (every change of
+state) and **reads** (one per request a service account's token makes, see
+[The audit log](/guide/admin/audit-log#reads-of-service-accounts)). Reads add up quickly, so they
+are removed after 90 days unless you say otherwise.
+
+| Setting                     | What                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `CCMS_AUDIT_KEEP_DAYS`      | Remove changes older than this many days (1 to 36500). Unset: changes are kept for ever. |
+| `CCMS_AUDIT_READ_KEEP_DAYS` | Remove reads older than this many days (1 to 36500). Default: 90.                        |
+
+Retention runs at start-up and daily, in batches. Each removal is itself recorded in the log, as
+`audit-log.prune` (a change), with the cut-off, how many and the first and last ID, and
+`kind: read` when it removed reads. With a sink set, it never removes an event the sink has not
+sent.
 
 ## Protect the log in the database
 
 The database refuses every change to an audit event, and every removal but retention's, which
-goes through the database function `audit_events_prune`. With one database role owning
+goes through the database functions `audit_events_prune` (changes) and
+`audit_events_prune_reads` (reads). With one database role owning
 everything, as `deploy/compose.yaml` runs it, those guards hold. To have the grants hold too, run
 the migrations as the owner and the API as a role of its own, without `DELETE` on the table:
 
@@ -61,7 +72,11 @@ the migrations as the owner and the API as a role of its own, without `DELETE` o
 -- as the owner, after the migrations; ccms_app is the API's role
 GRANT SELECT, INSERT ON audit_events TO ccms_app;          -- never UPDATE, DELETE or TRUNCATE
 GRANT EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) TO ccms_app;
+GRANT EXECUTE ON FUNCTION audit_events_prune_reads(timestamptz, integer, xid8, bigint) TO ccms_app;
 ```
+
+The upgrade that brings read events grants `audit_events_prune_reads` to every role that may run
+`audit_events_prune` already, so an API role set up this way goes on removing both.
 
 The API needs its usual rights on every other table, `audit_sink` included (`SELECT`, `INSERT`,
 `UPDATE`).
@@ -92,6 +107,7 @@ VACUUM audit_events;
 ```
 
 A restore also drops the grants of a separate API role: run the `GRANT`s above again, and
-`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`.
+`REVOKE EXECUTE ON FUNCTION audit_events_prune(timestamptz, integer, xid8, bigint) FROM PUBLIC`
+(and the same for `audit_events_prune_reads`).
 A restore drill must not send to your collector: leave `CCMS_AUDIT_SINK_URL` unset there and skip
 this step.

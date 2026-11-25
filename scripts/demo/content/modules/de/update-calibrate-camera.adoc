@@ -1,0 +1,10 @@
+= Rückfahrkamera kalibrieren
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: technician
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Führen Sie die Kamerakalibrierung im Diagnosetester durch, während das Fahrzeug auf ebenem Grund steht.

@@ -1,0 +1,10 @@
+= Start the installation
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+In the centre display, open Settings › Software update and tap Install now.

@@ -31,6 +31,7 @@ const SECRET = `whsec_${'ab'.repeat(32)}`;
 const event = (id: string, action = 'role.update'): AuditEvent => ({
   id,
   at: new Date('2026-11-01T10:00:00.000Z'),
+  kind: 'write',
   actor: { kind: 'user', id: 'ada' },
   action,
   subject: { type: 'role', id: 'author' },
@@ -112,6 +113,7 @@ describe('HttpsAuditSink', () => {
     expect(parsed.events[0]).toEqual({
       id: '1',
       at: '2026-11-01T10:00:00.000Z',
+      kind: 'write',
       actor: { kind: 'user', id: 'ada' },
       action: 'role.update',
       subject: { type: 'role', id: 'author' },
@@ -173,7 +175,7 @@ describe('syslogFrame', () => {
     const [message = ''] = frames(frame);
     expect(frame.toString('utf8')).toMatch(/^\d+ <110>1 /);
     expect(message).toBe(
-      `<110>1 2026-11-01T10:00:00.000Z api-1 ${SINK_APP_NAME} 42 role.update - \uFEFF{"id":"7","at":"2026-11-01T10:00:00.000Z","actor":{"kind":"user","id":"ada"},"action":"role.update","subject":{"type":"role","id":"author"},"comment":null,"data":{"n":7,"word":"Grüße"}}`,
+      `<110>1 2026-11-01T10:00:00.000Z api-1 ${SINK_APP_NAME} 42 role.update - \uFEFF{"id":"7","at":"2026-11-01T10:00:00.000Z","kind":"write","actor":{"kind":"user","id":"ada"},"action":"role.update","subject":{"type":"role","id":"author"},"comment":null,"data":{"n":7,"word":"Grüße"}}`,
     );
     // The count is octets, not characters (ü, ß and the BOM take more than one).
     const space = frame.indexOf(0x20);

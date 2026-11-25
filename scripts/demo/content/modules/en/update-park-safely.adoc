@@ -1,0 +1,10 @@
+= Park the vehicle safely
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Park on level ground, switch the ignition off and close all doors. The vehicle cannot be driven while the software is installed.

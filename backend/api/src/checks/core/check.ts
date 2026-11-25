@@ -432,6 +432,24 @@ export const CHECK_CODES = {
     description:
       'The derived manual is for a wider audience than its source manual (#451): nothing is gathered (only its front and back matter, with its own text attributes), so the source’s text never reaches readers it is not for.',
   },
+  'update-step-version': {
+    severity: 'blocking',
+    category: 'validation',
+    description:
+      'A step of the update guide (#906; `params.at` `guide.steps.<n>`, from 0) has no version, or one that is not a dotted version such as `2.3`: no jump crosses it.',
+  },
+  'update-step-outside-versions': {
+    severity: 'warning',
+    category: 'validation',
+    description:
+      'A step of the update guide (#906; `params.at` `guide.steps.<n>`) is for a version no jump between the guide’s first and last version crosses (at most the first, or after the last): it is never shown.',
+  },
+  'update-step-phase': {
+    severity: 'blocking',
+    category: 'validation',
+    description:
+      'A step of the update guide (#906; `params.at` `guide.steps.<n>`) has a phase that is not `before`, `during` or `after`.',
+  },
   'page-design-template-error': {
     severity: 'blocking',
     category: 'validation',

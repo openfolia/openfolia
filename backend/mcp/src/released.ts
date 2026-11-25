@@ -327,7 +327,7 @@ export class TokenCheck {
       if (other.length > 0 || !held.includes('content.read')) {
         throw new ToolError(
           'token-not-read-only',
-          'The server’s API token must hold `content.read` alone',
+          'The API token must hold `content.read` alone',
           `It holds: ${held.join(', ') || 'nothing'}. Give the service account a role with only \`content.read\`.`,
         );
       }

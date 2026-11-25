@@ -91,11 +91,19 @@ Every frontend app imports its components from here, never from files of its own
   `of-tip-card` beside an element (placed by `createTriggerOverlay`; `anchor: null` centres it
   near the top), one at a time: a non-modal dialog named by its title and described by its text,
   "Learn more" (`noopener noreferrer`, a new tab), and "Got it" and "Turn off tips", or, with a
-  `step`, "2 of 5", Skip, Back (kept in place on the first step) and Next (Done on the last). It
+  `step`, "2 of 5", ×, Back and Next (Done on the last); a step may name its main button (`next`),
+  add a quiet button that ends the tour (`dismiss`, "Not now") and leave Back out (`back: false`,
+  #869). `learnMore.read` names the guide page instead ("Read “Your first edit”"). It
   fades and scales in and out (150 ms; at once under reduced motion), takes the focus as it opens
   and gives it back as it closes; Escape closes it; `update()` moves it to the next step's anchor.
+  With `focus: false` it leaves the focus where it is (a step that comes while the person types)
+  and says its title and text politely in the page's one live region (CDK `LiveAnnouncer`), once
+  per step. `keepClear` names what it must not cover (the person's own edit): a card that would
+  moves below it, or above it with no room below (`clearOf`), and drops its arrow. A centred step
+  is a little wider, so its title breaks well.
   Its texts are keys, translated in the card. `pageBusy()` says whether a tip must wait: a modal
-  open, a menu, select or popover open in the overlay container, or the focus in a field.
+  open, a menu, select or popover open in the overlay container, or the focus in a field (but not
+  in `typingIn`, the field a tour step asks the person to type in).
 - `src/lib/theme/`: dark mode. `ThemeService` (`preference`: `light`, `dark` or `system`;
   `resolved`; `choose()`) puts `.dark` and `color-scheme` on `<html>`, follows the device while
   the choice is `system` and remembers a choice in `localStorage` (`of-theme`; storage that

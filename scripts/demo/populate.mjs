@@ -292,22 +292,28 @@ export function reviseWheelChange(module, lang) {
 }
 
 /**
- * The preferences a demo person starts with (#222, `PATCH /me/preferences`): the first-run tour
- * done, as the editor stores it when the person skips it, and the tips off, so no tip or tour
- * card appears on a screen the films show.
+ * The preferences a demo person starts with in the films (#222, `PATCH /me/preferences`): the
+ * first-run tour done, as the editor stores it when the person skips it, and the tips off, so no
+ * tip or tour card appears on a screen the films show.
  */
 export const TIPS_SEEN = { tourDone: true, showTips: false };
 
-/** Marks the tips and the tour as seen for every demo person, each as themself. */
-export async function markTipsSeen({ apiUrl, token }) {
+/**
+ * The preferences a demo person starts with in a public sandbox (#868, `bake.mjs`): a first
+ * visit, so the tour opens on a visitor's first screen and the tips follow it.
+ */
+export const TIPS_FIRST_VISIT = { tourDone: false, showTips: true };
+
+/** Sets the tips and the tour to `tips` for every demo person, each as themself. */
+export async function markTipsSeen({ apiUrl, token, tips = TIPS_SEEN }) {
   for (const person of Object.values(DEMO_PEOPLE)) {
     const { data } = await new Client(apiUrl, token, person).patch(
       '/me/preferences',
-      { data: { type: 'Preferences', attributes: TIPS_SEEN } },
+      { data: { type: 'Preferences', attributes: tips } },
     );
     const { tourDone, showTips } = data.attributes;
-    if (tourDone !== TIPS_SEEN.tourDone || showTips !== TIPS_SEEN.showTips) {
-      throw new Error(`${person.id}: the tips are not marked as seen`);
+    if (tourDone !== tips.tourDone || showTips !== tips.showTips) {
+      throw new Error(`${person.id}: the tips are not marked as asked`);
     }
   }
 }
@@ -346,7 +352,8 @@ export async function waitForOutputs(
 
 /**
  * Makes the demo's state through the API at `apiUrl` (demo mode, `token`). `lang` is the take's
- * language: what the API stores as text is written in it. Resolves to the IDs the films use.
+ * language: what the API stores as text is written in it. `tips`: the people's tips and tour
+ * (`TIPS_SEEN` for the films, `TIPS_FIRST_VISIT` for a sandbox). Resolves to the IDs the films use.
  */
 export async function populate({
   apiUrl,
@@ -354,14 +361,17 @@ export async function populate({
   lang = 'en',
   log = () => undefined,
   outputsTimeoutMs = 300_000,
+  tips = TIPS_SEEN,
 }) {
   const texts = TEXTS[lang] ?? TEXTS.en;
   const author = new Client(apiUrl, token, DEMO_PEOPLE.author);
   const reviewer = new Client(apiUrl, token, DEMO_PEOPLE.reviewer);
   const admin = new Client(apiUrl, token, DEMO_PEOPLE.admin);
 
-  log('the tips and the tour marked as seen');
-  await markTipsSeen({ apiUrl, token });
+  log(
+    tips.tourDone ? 'the tips and the tour marked as seen' : 'the tour to come',
+  );
+  await markTipsSeen({ apiUrl, token, tips });
 
   log('release 1.0');
   const first = await admin.release('1.0', TEXTS.en.release1, {

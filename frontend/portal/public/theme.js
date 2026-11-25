@@ -4,6 +4,8 @@
 (function () {
   const KEY = 'of-portal-theme';
   const root = document.documentElement;
+  // Script runs: what only works with it (the update guide's pickers, #907) may show at once.
+  root.classList.add('has-script');
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   function saved() {
     try {

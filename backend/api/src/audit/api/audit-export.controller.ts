@@ -29,7 +29,7 @@ import { ErrorDocument } from '../../base/api/json-api.js';
 import { JsonApiException } from '../../base/api/json-api.exception.js';
 import { ExportAuditEventsAction } from '../core/actions/export-audit-events.action.js';
 import { READ_AUDIT_LOG } from '../core/actions/list-audit-events.action.js';
-import type { AuditEvent } from '../core/audit-event.js';
+import type { AuditEvent, AuditKind } from '../core/audit-event.js';
 import {
   AUDIT_CSV_COLUMNS,
   AUDIT_EXPORT_FORMATS,
@@ -122,6 +122,8 @@ export class AuditExportController {
     by?: Parsed<'actor'>,
     @Query('filter[action]', { schema: auditFilters.action.optional() })
     action?: string,
+    @Query('filter[kind]', { schema: auditFilters.kind.optional() })
+    kind?: AuditKind,
     @Query('filter[from]', { schema: auditFilters.from.optional() })
     from?: Date,
     @Query('filter[to]', { schema: auditFilters.to.optional() })
@@ -154,7 +156,7 @@ export class AuditExportController {
     const events = await this.exportAuditEvents.handle({
       actor,
       format,
-      filter: toAuditFilter({ subject, actor: by, action, from, to }),
+      filter: toAuditFilter({ subject, actor: by, action, kind, from, to }),
     });
     // The first batch is read before the answer begins: a database that
     // fails then is still a JSON:API error, not a cut-off file.

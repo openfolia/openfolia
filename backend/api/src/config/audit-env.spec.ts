@@ -52,6 +52,7 @@ describe('AuditEnv', () => {
     expect(result.data).toEqual({
       CCMS_AUDIT_SINK_POLL_MS: 3_000,
       CCMS_AUDIT_SINK_TIMEOUT_MS: 10_000,
+      CCMS_AUDIT_READ_KEEP_DAYS: 90,
     });
   });
 

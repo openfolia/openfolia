@@ -36,6 +36,7 @@ import {
   typedTextIn,
 } from '../shared/localized-text-fields.component';
 import { headingText } from './manual-outline';
+import { parseVersions } from './update-guide';
 
 const TITLE_MAX = 200;
 
@@ -44,11 +45,14 @@ export interface KnownManual {
   readonly id: string;
   readonly title: string;
   readonly state?: 'new' | 'deleted' | undefined;
-  /** A derived manual (#451): never a source of another. */
-  readonly kind?: 'derived' | undefined;
+  /** A derived manual (#451) or an update guide (#906): never a source of another. */
+  readonly kind?: 'derived' | 'update-guide' | undefined;
   /** Its audience as committed: a derived manual gathers only from one for its own or a wider one. */
   readonly audience?: string | undefined;
 }
+
+/** The kinds of manual the dialog makes. */
+type ManualKind = 'assembled' | 'derived' | 'update-guide';
 
 /** What the dialog starts with: "Duplicate" fills in the title and the manual to copy. */
 export interface NewManualPrefill {
@@ -177,9 +181,7 @@ export interface NewManualPrefill {
               data-testid="new-manual-kind"
               [attr.aria-label]="'editor.manuals.new.kind' | transloco"
               [value]="kind()"
-              (valueChange)="
-                kind.set($event === 'derived' ? 'derived' : 'assembled')
-              "
+              (valueChange)="setKind($event)"
             >
               @for (k of kinds; track k) {
                 <label
@@ -188,15 +190,115 @@ export interface NewManualPrefill {
                 >
                   <z-radio [value]="k" [zId]="'new-manual-kind-' + k" />
                   <span class="min-w-0 break-words">{{
-                    (k === 'derived'
-                      ? 'editor.manuals.new.derived'
-                      : 'editor.manuals.new.assembled'
-                    ) | transloco
+                    kindLabels[k] | transloco
                   }}</span>
                 </label>
               }
             </z-radio-group>
           </fieldset>
+
+          <!-- An update guide (issue 908): its product, version attribute and versions. -->
+          <of-collapse [open]="kind() === 'update-guide'">
+            <div
+              class="flex flex-col gap-4 pb-1"
+              data-testid="new-manual-guide"
+            >
+              <p class="m-0 text-xs break-words text-muted-foreground">
+                {{ 'editor.manuals.new.guideHint' | transloco }}
+              </p>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-sm">{{
+                  'editor.manuals.new.product' | transloco
+                }}</span>
+                <z-select
+                  zSearchable
+                  zPosition="popper"
+                  data-testid="new-manual-product"
+                  [zAriaLabel]="'editor.manuals.new.product' | transloco"
+                  [zPlaceholder]="'editor.manuals.new.noProduct' | transloco"
+                  [zValue]="product()"
+                  (zSelectionChange)="product.set(single($event))"
+                >
+                  <z-select-item zValue="">{{
+                    'editor.manuals.new.noProduct' | transloco
+                  }}</z-select-item>
+                  @for (m of productOptions(); track m.id) {
+                    <z-select-item [zValue]="m.id">{{ m.title }}</z-select-item>
+                  }
+                </z-select>
+                <p class="m-0 text-xs break-words text-muted-foreground">
+                  {{ 'editor.manuals.new.productHint' | transloco }}
+                </p>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-sm">{{
+                  'editor.manuals.new.versionAttribute' | transloco
+                }}</span>
+                <z-select
+                  zPosition="popper"
+                  data-testid="new-manual-version-attribute"
+                  [zAriaLabel]="
+                    'editor.manuals.new.versionAttribute' | transloco
+                  "
+                  [zPlaceholder]="
+                    'editor.manuals.new.versionAttribute' | transloco
+                  "
+                  [zInvalid]="attributeMissing()"
+                  [zDisabled]="versionAttributes().length === 0"
+                  [zValue]="attribute()"
+                  (zSelectionChange)="attribute.set(single($event))"
+                >
+                  @for (a of versionAttributes(); track a.id) {
+                    <z-select-item [zValue]="a.id">{{ a.label }}</z-select-item>
+                  }
+                </z-select>
+                @if (versionAttributes().length === 0) {
+                  <p
+                    class="m-0 text-xs break-words text-destructive"
+                    data-testid="new-manual-no-version-attribute"
+                  >
+                    {{ 'editor.manuals.new.noVersionAttribute' | transloco }}
+                  </p>
+                } @else if (attributeMissing()) {
+                  <p class="m-0 text-xs text-destructive">
+                    {{
+                      'editor.manuals.new.versionAttributeMissing' | transloco
+                    }}
+                  </p>
+                }
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-sm" for="new-manual-versions">{{
+                  'editor.manuals.new.versions' | transloco
+                }}</label>
+                <input
+                  id="new-manual-versions"
+                  z-input
+                  autocomplete="off"
+                  inputmode="decimal"
+                  aria-describedby="new-manual-versions-hint"
+                  [attr.aria-invalid]="versionsProblem() ? 'true' : null"
+                  [placeholder]="
+                    'editor.manuals.new.versionsPlaceholder' | transloco
+                  "
+                  [value]="versionsText()"
+                  (input)="versionsText.set($any($event.target).value)"
+                />
+                <p
+                  id="new-manual-versions-hint"
+                  class="m-0 text-xs break-words text-muted-foreground"
+                  [class.text-destructive]="!!versionsProblem()"
+                  aria-live="polite"
+                >
+                  @if (versionsProblem(); as problem) {
+                    {{ problem.key | transloco: { value: problem.value } }}
+                  } @else {
+                    {{ 'editor.manuals.new.versionsHint' | transloco }}
+                  }
+                </p>
+              </div>
+            </div>
+          </of-collapse>
 
           <of-collapse [open]="kind() === 'derived'">
             <div
@@ -335,9 +437,19 @@ export class NewManualDialogComponent {
   protected readonly audience = signal('');
   protected readonly copy = signal(false);
   protected readonly copyFrom = signal('');
-  protected readonly kinds = ['assembled', 'derived'] as const;
-  /** An assembled manual, or one derived from another (#451, #669). */
-  protected readonly kind = signal<'assembled' | 'derived'>('assembled');
+  protected readonly kinds = ['assembled', 'derived', 'update-guide'] as const;
+  protected readonly kindLabels: Readonly<Record<ManualKind, string>> = {
+    assembled: 'editor.manuals.new.assembled',
+    derived: 'editor.manuals.new.derived',
+    'update-guide': 'editor.manuals.new.updateGuide',
+  };
+  /** An assembled manual, one derived from another (#451, #669), or an update guide (#908). */
+  protected readonly kind = signal<ManualKind>('assembled');
+  /** An update guide's product (a manual whose variants it takes; empty: the default variant). */
+  protected readonly product = signal('');
+  /** An update guide's version attribute, and its versions as typed. */
+  protected readonly attribute = signal('');
+  protected readonly versionsText = signal('');
   /** A derived manual's source and the types it gathers (none: the configured safety types). */
   protected readonly source = signal('');
   protected readonly types = signal<string[]>([]);
@@ -395,6 +507,34 @@ export class NewManualDialogComponent {
       !this.safetyLabels(),
   );
 
+  /** The configured version attributes: an update guide follows one of them. */
+  protected readonly versionAttributes = computed(() =>
+    this.config().variantAttributes.filter((a) => a.kind === 'version'),
+  );
+  /** The manuals an update guide may take its product from: assembled ones not deleted. */
+  protected readonly productOptions = computed(() =>
+    this.manuals().filter((m) => m.state !== 'deleted' && m.kind === undefined),
+  );
+  protected readonly attributeMissing = computed(
+    () =>
+      this.submitted() &&
+      this.kind() === 'update-guide' &&
+      this.versionAttributes().length > 0 &&
+      !this.versionAttributes().some((a) => a.id === this.attribute()),
+  );
+  /** What is wrong with the versions typed, once submitted (or once something is typed). */
+  protected readonly versionsProblem = computed(
+    (): { key: string; value: string } | null => {
+      if (this.kind() !== 'update-guide') return null;
+      if (!this.submitted() && this.versionsText().trim() === '') return null;
+      const parsed = parseVersions(this.versionsText());
+      if ('versions' in parsed) return null;
+      // While typing, only an invalid version is said; too few once submitted.
+      if (!this.submitted() && !parsed.value) return null;
+      return { key: parsed.problem, value: parsed.value ?? '' };
+    },
+  );
+
   constructor() {
     // Every opening starts afresh, or with the duplicate's values.
     effect(() => {
@@ -406,6 +546,13 @@ export class NewManualDialogComponent {
         this.copy.set(!!prefill);
         this.copyFrom.set(prefill?.copyFrom ?? '');
         this.kind.set('assembled');
+        this.product.set('');
+        // The only version attribute is the one to follow.
+        const versions = this.versionAttributes();
+        this.attribute.set(
+          versions.length === 1 ? (versions[0]?.id ?? '') : '',
+        );
+        this.versionsText.set('');
         this.source.set('');
         this.types.set([]);
         this.submitted.set(false);
@@ -435,6 +582,12 @@ export class NewManualDialogComponent {
     return title;
   }
 
+  protected setKind(value: unknown): void {
+    this.kind.set(
+      value === 'derived' || value === 'update-guide' ? value : 'assembled',
+    );
+  }
+
   protected single(value: string | string[]): string {
     return Array.isArray(value) ? (value[0] ?? '') : value;
   }
@@ -448,9 +601,17 @@ export class NewManualDialogComponent {
     this.submitted.set(true);
     if (this.blocked() || this.titleError() || this.copyMissing()) return;
     if (this.sourceMissing() || this.typesMissing()) return;
+    const guide = this.kind() === 'update-guide';
+    const versions = guide ? parseVersions(this.versionsText()) : null;
+    if (guide) {
+      if (this.versionAttributes().length === 0 || this.attributeMissing())
+        return;
+      if (!versions || !('versions' in versions)) return;
+    }
     const derived = this.kind() === 'derived';
+    // Only an assembled manual copies one: a guide's product and a derived manual's source are their own.
     const source =
-      !derived && this.copy()
+      this.kind() === 'assembled' && this.copy()
         ? this.copyOptions().find((m) => m.id === this.copyFrom())
         : undefined;
     this.create.emit({
@@ -463,6 +624,19 @@ export class NewManualDialogComponent {
             derivedFrom: this.source(),
             moduleTypes:
               this.types().length > 0 ? [...this.types()] : undefined,
+          }
+        : {}),
+      ...(versions && 'versions' in versions
+        ? {
+            updateGuide: {
+              attribute: this.attribute(),
+              versions: versions.versions,
+            },
+            productFrom: this.productOptions().some(
+              (m) => m.id === this.product(),
+            )
+              ? this.product()
+              : undefined,
           }
         : {}),
     });

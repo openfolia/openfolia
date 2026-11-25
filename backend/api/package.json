@@ -90,6 +90,7 @@
           },
           "{projectRoot}/scripts/openapi-delivery.mjs",
           "{projectRoot}/scripts/in-process-api.mjs",
+          "{workspaceRoot}/backend/sandbox/src/database.ts",
           "{projectRoot}/openapi/delivery.yaml",
           "{workspaceRoot}/pnpm-lock.yaml"
         ],

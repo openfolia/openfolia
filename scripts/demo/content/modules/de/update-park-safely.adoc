@@ -1,0 +1,10 @@
+= Fahrzeug sicher abstellen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Parken Sie auf ebenem Grund, schalten Sie die Zündung aus und schließen Sie alle Türen. Während der Installation kann das Fahrzeug nicht gefahren werden.

@@ -129,9 +129,9 @@ export class PreferencesService {
     this.change({ tourDone: true });
   }
 
-  /** The tour comes again, with tips on. */
+  /** The tour comes again; "Show tips" stays as the person set it. */
   restartTour(): void {
-    this.change({ tourDone: false, showTips: true });
+    this.change({ tourDone: false });
   }
 
   /** Every tip shows again, with tips on. */

@@ -7,7 +7,8 @@ import {
   type ServerResponse,
 } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { createMcpServer, type McpContext } from './server.js';
+import { Callers, isRefusal, SERVICE_TOKEN } from './callers.js';
+import { createMcpServer, Limiter, type McpContext } from './server.js';
 
 /** The MCP endpoint's path. */
 export const MCP_PATH = '/mcp';
@@ -24,8 +25,18 @@ export const WINDOW_MS = 60_000;
 const MAX_ADDRESSES = 10_000;
 
 export interface HttpOptions {
-  /** The bearer token callers send (`CCMS_MCP_HTTP_TOKEN`). */
-  readonly token: string;
+  /**
+   * The context a caller reads with, made from its own token (a service
+   * account's, `ccms_sat_…`, forwarded to the API on every read, #861).
+   */
+  readonly callerContext: (token: string) => McpContext;
+  /**
+   * Deprecated (#861, to be removed in v0.0.5): the one token every caller
+   * may send instead (`CCMS_MCP_HTTP_TOKEN`), and the context it reads with
+   * (the server's own service account, `CCMS_MCP_API_TOKEN`). Unset: callers
+   * bring their own tokens only.
+   */
+  readonly shared?: { readonly token: string; readonly context: McpContext };
   /** Origins a browser-based caller may send (`Origin`); any other is 403. */
   readonly allowedOrigins: readonly string[];
   /** Whether the server listens on a loopback address only: then `Host` must name one. */
@@ -95,6 +106,17 @@ class Counter {
   over(address: string): boolean {
     const entry = this.#current(address);
     return entry !== undefined && entry.n >= this.max;
+  }
+
+  /** When the address's current window started (after `count`), to `forgive` in that window only. */
+  windowOf(address: string): number | undefined {
+    return this.#current(address)?.start;
+  }
+
+  /** Takes back one counted in the window that started at `start`, if it still runs (a check that passed, or could not be made). */
+  forgive(address: string, start: number | undefined): void {
+    const entry = this.#current(address);
+    if (entry && entry.start === start && entry.n > 0) entry.n--;
   }
 
   /** Counts one, and says whether that went over the limit. */
@@ -205,23 +227,38 @@ class BodyError extends Error {
   }
 }
 
+/** Checks of tokens not yet admitted one client address may have under way at once; past it, 429. */
+export const MAX_CHECKS_PER_ADDRESS = 4;
+/** Checks of tokens not yet admitted under way at once for everyone; more wait, up to `MAX_CHECKS_WAITING` (then 503). */
+export const MAX_CHECKS_AT_ONCE = 16;
+export const MAX_CHECKS_WAITING = 256;
+
+/** How long a caller is asked to wait when its token could not be checked (the API did not answer). */
+export const CHECK_RETRY_AFTER_S = 5;
+
 /**
  * The Streamable HTTP transport's request handler: one stateless MCP server
  * per request (no sessions), after these checks, in order: the path, the
  * `Origin` (DNS rebinding; any not allowed is 403), the `Host` when bound to
- * loopback, the bearer token (compared in constant time; failures counted
- * per client address, `clientAddress`), the client's rate, the method (POST
- * only) and the body size.
+ * loopback, the bearer token (failures counted per client address,
+ * `clientAddress`), the client's rate, the method (POST only) and the body
+ * size. The token is the caller's own service account token, checked by the
+ * API (`Callers`), or the deprecated shared token, compared in constant time.
  */
 export function createHttpHandler(
-  context: McpContext,
   options: HttpOptions,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   const now = options.now ?? Date.now;
   const requests = new Counter(MAX_REQUESTS_PER_WINDOW, now);
   const failures = new Counter(MAX_FAILURES_PER_WINDOW, now);
   const allFailures = new Counter(MAX_FAILURES_PER_WINDOW_ALL, now);
-  const expected = digest(options.token);
+  const shared = options.shared && {
+    digest: digest(options.shared.token),
+    context: options.shared.context,
+  };
+  const callers = new Callers(options.callerContext, now);
+  const checks = new Limiter(MAX_CHECKS_AT_ONCE, MAX_CHECKS_WAITING);
+  const checking = new Map<string, number>();
   const origins = new Set(options.allowedOrigins);
   return async (req, res) => {
     const address = clientAddress(req, options.trustProxy);
@@ -236,20 +273,40 @@ export function createHttpHandler(
       if (!isLoopback(host))
         return refuse(res, 403, 'Forbidden: host not allowed');
     }
-    // The token first: a caller holding it is always served, even from an
-    // address others have locked out (a NAT, a proxy, this machine). Once
-    // the failures of all addresses together, or of this one, run over their
-    // budget, every wrong token gets the same 429, so a guess then learns
-    // only that it is not the token. This does not slow guessing down: the
-    // token's entropy is the defence (see `settings.ts`); the lockout bounds
-    // the 401s and the noise.
+    // The token first. A caller already admitted with its own token (or
+    // holding the shared one) is always served, even from an address others
+    // have locked out (a NAT, a proxy, this machine). Any other token costs a
+    // failed attempt of its address up front, taken back when the API accepts
+    // it or cannot say, so checks under way count too. A token of no service
+    // account's form is refused here; past the failures of all addresses
+    // together, or of this one, every such token gets the same 429, so a
+    // guess then learns only that it is not a token. A service account's
+    // token not yet admitted is bounded by its address alone (its failures,
+    // its rate, `MAX_CHECKS_PER_ADDRESS` at once) and by `MAX_CHECKS_AT_ONCE`
+    // for everyone, which queues: never by the global budget, so a flood of
+    // wrong tokens from many addresses cannot lock a new real caller out.
+    // This does not slow guessing down: the tokens' entropy is the defence
+    // (256 random bits; see `settings.ts` for the shared one).
     const header = req.headers.authorization ?? '';
-    const match = /^Bearer\s+(\S+)$/i.exec(header);
-    const valid =
-      match !== null && timingSafeEqual(digest(match[1] ?? ''), expected);
-    if (!valid) {
-      // The global budget first: past it, no address is counted or looked up.
-      const global = allFailures.over(EVERYONE);
+    const presented = /^Bearer\s+(\S+)$/i.exec(header)?.[1];
+    const sent = presented === undefined ? undefined : digest(presented);
+    const key = sent?.toString('hex');
+    let context: McpContext | undefined;
+    if (shared && sent && timingSafeEqual(sent, shared.digest)) {
+      context = shared.context;
+    }
+    const own =
+      context === undefined &&
+      presented !== undefined &&
+      key !== undefined &&
+      SERVICE_TOKEN.test(presented);
+    const known = own && key !== undefined && callers.known(key);
+    // Whether this request holds a failed attempt counted up front.
+    let counted = false;
+    let countedIn: number | undefined;
+    if (context === undefined && !known) {
+      // The global budget first (not for a service token): past it, no address is counted or looked up.
+      const global = !own && allFailures.over(EVERYONE);
       const local = !global && failures.over(address);
       if (global || local) {
         return refuse(res, 429, 'Too many failed attempts', {
@@ -262,14 +319,81 @@ export function createHttpHandler(
         });
       }
       failures.count(address);
-      allFailures.count(EVERYONE);
-      return refuse(res, 401, 'Unauthorized', { 'WWW-Authenticate': 'Bearer' });
+      if (!own) allFailures.count(EVERYONE);
+      counted = true;
+      countedIn = failures.windowOf(address);
+      if (!own) {
+        return refuse(res, 401, 'Unauthorized', {
+          'WWW-Authenticate': 'Bearer',
+        });
+      }
     }
+    const forgive = () => {
+      if (!counted) return;
+      counted = false;
+      failures.forgive(address, countedIn);
+    };
     if (requests.count(address)) {
+      forgive();
       return refuse(res, 429, 'Too many requests', {
         'Retry-After': String(requests.retryAfter(address)),
       });
     }
+    if (context === undefined && own && presented !== undefined && key) {
+      const under = checking.get(address) ?? 0;
+      if (!known && under >= MAX_CHECKS_PER_ADDRESS) {
+        forgive();
+        return refuse(res, 429, 'Too many token checks at once', {
+          'Retry-After': String(CHECK_RETRY_AFTER_S),
+        });
+      }
+      // Only checks of tokens not yet admitted take a place (an admitted caller's re-check none).
+      if (!known) checking.set(address, under + 1);
+      try {
+        context = await (known
+          ? callers.admit(presented, key)
+          : checks.run(() => callers.admit(presented, key)));
+        forgive();
+      } catch (error) {
+        // The API's own code and status (`token-revoked`, `token-not-read-only`, …), never the token.
+        if (isRefusal(error)) {
+          if (!counted) failures.count(address);
+          if (error.code === 'token-not-read-only') {
+            return refuse(
+              res,
+              403,
+              `Forbidden: token-not-read-only: ${error.detail ?? error.title}`,
+            );
+          }
+          // The API locking this server's address out (only wrong tokens get that there).
+          if (error.status === 429) {
+            return refuse(res, 429, 'Too many failed attempts', {
+              'Retry-After': String(error.retryAfter ?? CHECK_RETRY_AFTER_S),
+            });
+          }
+          return error.status === 403
+            ? refuse(res, 403, `Forbidden: ${error.code}`)
+            : refuse(res, 401, `Unauthorized: ${error.code}`, {
+                'WWW-Authenticate': 'Bearer',
+              });
+        }
+        // The API could not say (down, slow, a 5xx), or too many checks wait: nothing is counted against the caller.
+        forgive();
+        return refuse(
+          res,
+          503,
+          'The token could not be checked now (the content API did not answer, or too many checks are under way); try again shortly',
+          { 'Retry-After': String(CHECK_RETRY_AFTER_S) },
+        );
+      } finally {
+        if (!known) {
+          const left = (checking.get(address) ?? 1) - 1;
+          if (left > 0) checking.set(address, left);
+          else checking.delete(address);
+        }
+      }
+    }
+    if (context === undefined) return refuse(res, 500, 'Internal error');
     if (req.method !== 'POST') {
       return refuse(res, 405, 'Method not allowed: POST only (stateless)', {
         Allow: 'POST',
@@ -312,10 +436,9 @@ export function createHttpHandler(
 
 /** Starts the HTTP transport on `host:port`; resolves once it listens. */
 export async function startHttpServer(
-  context: McpContext,
   options: Omit<HttpOptions, 'loopbackOnly'> & { host: string; port: number },
 ): Promise<Server> {
-  const handler = createHttpHandler(context, {
+  const handler = createHttpHandler({
     ...options,
     loopbackOnly: isLoopback(options.host),
   });

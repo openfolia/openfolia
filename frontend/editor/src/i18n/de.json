@@ -556,12 +556,17 @@
           "unconverted": "Nicht konvertierter Inhalt",
           "attachment": "Anhang",
           "attachmentNote": "Hinweis zum Anhang im PDF",
-          "glossary": "Überschrift des Glossars"
+          "glossary": "Überschrift des Glossars",
+          "updateVersion": "Wort vor einer Version",
+          "updateBefore": "Schritte vor dem Update",
+          "updateDuring": "Schritte während des Updates",
+          "updateAfter": "Schritte nach dem Update"
         },
         "groups": {
           "signalWords": "Signalwörter",
           "notes": "Hinweise",
           "captions": "Beschriftungen",
+          "updateGuides": "Update-Leitfäden",
           "other": "Sonstiges"
         },
         "reset": "Auf eingebauten Text zurücksetzen",
@@ -762,7 +767,11 @@
         "anySubject": "Alle Objekte",
         "anyAction": "Alle Aktionen",
         "from": "Von",
-        "to": "Bis"
+        "to": "Bis",
+        "kind": "Art des Ereignisses",
+        "kindAll": "Alle Ereignisse",
+        "kindWrite": "Änderungen",
+        "kindRead": "Lesezugriffe"
       },
       "table": {
         "label": "Audit-Ereignisse",
@@ -787,9 +796,11 @@
         "title": "Noch nichts aufgezeichnet",
         "description": "Hier wird jede Zustandsänderung aufgezeichnet, mit Akteur und Zeitpunkt.",
         "filteredTitle": "Keine passenden Ereignisse",
-        "filteredDescription": "Versuchen Sie andere Filter."
+        "filteredDescription": "Versuchen Sie andere Filter.",
+        "readsTitle": "Keine Lesezugriffe aufgezeichnet",
+        "readsDescription": "Hier wird jeder Lesezugriff aufgezeichnet, den das Token eines Service-Accounts stellt, mit Account und Route. Lesezugriffe von Personen im Editor nicht."
       },
-      "note": "Das Audit-Log wird nur ergänzt: Ereignisse werden nie geändert. Nur die Aufbewahrung entfernt alte Ereignisse, wenn der Betreiber eine Frist festlegt, und hält das fest.",
+      "note": "Das Audit-Log wird nur ergänzt: Ereignisse werden nie geändert. Nur die Aufbewahrung entfernt alte Ereignisse und hält das fest: Änderungen nach der Frist, die der Betreiber festlegt, Lesezugriffe von Service-Accounts nach ihrer eigenen Frist (90 Tage, sofern nicht anders festgelegt).",
       "showIn": "Im Audit-Log anzeigen",
       "subjects": {
         "changeSet": "Überarbeitung",
@@ -819,7 +830,8 @@
         "backupKey": "Backup-Schlüssel",
         "backupRequest": "Backup-Anforderung",
         "groupMapping": "Gruppenzuordnung",
-        "backupSettings": "Backup-Einstellungen"
+        "backupSettings": "Backup-Einstellungen",
+        "route": "API-Route"
       },
       "actions": {
         "assetDelete": "Datei gelöscht",
@@ -916,7 +928,9 @@
         "userPasswordResetRequested": "Zurücksetzen des Passworts angefordert",
         "userPasswordSet": "Passwort festgelegt",
         "userSignIn": "Angemeldet",
-        "userSignOut": "Abgemeldet"
+        "userSignOut": "Abgemeldet",
+        "apiRead": "Über die API gelesen",
+        "apiReadGap": "Lesezugriffe nicht einzeln aufgezeichnet"
       },
       "export": {
         "label": "Exportieren",
@@ -924,7 +938,15 @@
         "jsonl": "JSON Lines",
         "failed": "Das Audit-Log konnte nicht exportiert werden. Versuchen Sie es erneut."
       },
-      "self": "Durch den Autor"
+      "self": "Durch den Autor",
+      "read": {
+        "client": "Client: {client}",
+        "clientLabel": "Client: ",
+        "ref": "auf {ref}",
+        "status": "Antwort {status}",
+        "aborted": "Client vorzeitig getrennt",
+        "unrecorded": "{count, plural, one {# Lesezugriff nicht aufgezeichnet} other {# Lesezugriffe nicht aufgezeichnet}}"
+      }
     },
     "webhooks": {
       "note": "Aufrufe sind signiert (HMAC-SHA256 mit dem Secret des Abonnenten) und werden mit Backoff wiederholt. Ein Abonnent, der immer wieder fehlschlägt, wird abgeschaltet, bis er wieder aktiviert wird.",
@@ -3997,7 +4019,20 @@
       "types": "Gesammelte Modultypen",
       "typesSafety": "Keiner gewählt: die Sicherheitstypen, die die Einstellungen markieren ({types}).",
       "typesNoSafety": "Die Einstellungen markieren keinen Typ als Sicherheitsinhalt: die zu sammelnden Typen wählen.",
-      "typesMissing": "Die zu sammelnden Modultypen wählen."
+      "typesMissing": "Die zu sammelnden Modultypen wählen.",
+      "updateGuide": "Update-Leitfaden, Schritte je Softwareversion",
+      "guideHint": "Leser wählen die Version, auf der sie sind, und die, auf die sie wechseln, und erhalten die Schritte aller Versionen dazwischen. Die Schritte fügen Sie hinzu, sobald der Leitfaden angelegt ist.",
+      "product": "Produkt",
+      "noProduct": "Die Standardvariante des Projekts",
+      "productHint": "Der Leitfaden gilt für dasselbe Produkt wie diese Anleitung: Er übernimmt ihre Varianten und Textattribute.",
+      "versionAttribute": "Versionsmerkmal",
+      "noVersionAttribute": "Das Projekt hat noch kein Versionsmerkmal. Eine Administratorin oder ein Administrator legt eines unter Admin, Einstellungen, Variantenmerkmale an, mit der Art Version.",
+      "versionAttributeMissing": "Wählen Sie das Versionsmerkmal, dem der Leitfaden folgt.",
+      "versions": "Versionen",
+      "versionsPlaceholder": "1.0, 2.0, 3.0",
+      "versionsHint": "Die Versionen, aus denen Leser „von“ und „nach“ wählen, durch Kommas getrennt. In beliebiger Reihenfolge: Sie werden von der ältesten an sortiert.",
+      "versionsInvalid": "„{value}“ ist keine Version mit Punkten wie 2.3.",
+      "versionsTooFew": "Geben Sie mindestens zwei Versionen an: die, auf der Leser sind, und die, auf die sie wechseln."
     },
     "create": {
       "done": "{title} angelegt",
@@ -4221,6 +4256,71 @@
       "noticeCountByModule": "{count, plural, one {# Modul} other {# Module}} mit Hinweisen, gesammelt aus {source}, eine Gruppe je Modul",
       "noticeCountByLevel": "{count, plural, one {# Modul} other {# Module}} mit Hinweisen, gesammelt aus {source}, nach Gefahrenstufe gruppiert",
       "emptyNoticesDescription": "Die Regel sammelt keinen Sicherheitshinweis aus ihrer Quellanleitung. Die Prüfungen neben der Regel sagen, warum."
+    },
+    "guide": {
+      "add": "Schritt hinzufügen",
+      "count": "{count, plural, =0 {Keine Schritte} one {# Schritt} other {# Schritte}}",
+      "emptyTitle": "Noch keine Schritte",
+      "emptyDescription": "Fügen Sie den ersten Schritt hinzu: Wählen Sie ein Modul oder legen Sie eines an, dann die Version, die ihn braucht, und seine Phase.",
+      "emptyReadOnly": "Dieser Update-Leitfaden hat noch keine Schritte.",
+      "removed": "Schritt „{title}“ entfernt.",
+      "follows": "Folgt {attribute}:",
+      "versions": "Versionen",
+      "removeVersion": "Version {version} entfernen",
+      "unplaced": "Schritte ohne Version oder Phase",
+      "version": "Version {version}",
+      "stepCount": "{count, plural, one {# Schritt} other {# Schritte}}",
+      "phaseList": "Version {version}, {phase}",
+      "editStep": "Schritt „{title}“ bearbeiten",
+      "removeStep": "Schritt „{title}“ entfernen",
+      "phases": {
+        "before": "Vor dem Update",
+        "during": "Während des Updates",
+        "after": "Nach dem Update"
+      },
+      "form": {
+        "addTitle": "Schritt hinzufügen",
+        "editTitle": "Schritt bearbeiten",
+        "description": "„{title}“: wann Leser ihn ausführen und für wen.",
+        "version": "Version, die ihn braucht",
+        "versionPlaceholder": "Version wählen",
+        "otherVersion": "Andere Version …",
+        "newVersion": "Neue Version",
+        "newVersionPlaceholder": "Zum Beispiel 2.3",
+        "versionHint": "Leser, die über diese Version hinaus aktualisieren, erhalten den Schritt. Eine neue Version wird dem Leitfaden hinzugefügt.",
+        "versionMissing": "Wählen Sie die Version, die diesen Schritt braucht.",
+        "versionInvalid": "Geben Sie eine Version mit Punkten wie 2.3 ein.",
+        "versionTooEarly": "Wählen Sie eine Version nach {first}: Kein Update beginnt vor der ersten Version des Leitfadens.",
+        "phase": "Phase",
+        "phaseMissing": "Wählen Sie, wann der Schritt ausgeführt wird.",
+        "level": "Stufe",
+        "everyLevel": "Alle Stufen",
+        "levelHint": "Leser dieser Stufe und eingeschränkterer Stufen sehen den Schritt.",
+        "options": "Optionen",
+        "everySetup": "Jede Ausstattung",
+        "pickCondition": "Nur für manche Ausstattungen …",
+        "changeCondition": "Ändern …",
+        "clearCondition": "Jede Ausstattung",
+        "pickTitle": "Nur für manche Ausstattungen",
+        "pickSubtitle": "Leser sehen den Schritt „{title}“ nur, wenn ihre Optionen passen.",
+        "cancel": "Abbrechen",
+        "add": "Schritt hinzufügen",
+        "save": "Schritt speichern",
+        "moduleMissing": "Wählen Sie das Modul mit dem Schritt."
+      },
+      "preview": {
+        "heading": "Vorschau für",
+        "hint": "Die Schritte, die Leser für ihr Update erhalten, wie das Portal sie nach der Freigabe zeigt.",
+        "from": "Von",
+        "to": "Nach",
+        "level": "Stufe",
+        "everyLevel": "Alle Stufen",
+        "notSet": "Nicht gesetzt",
+        "refused": "Wählen Sie Versionen des Leitfadens.",
+        "notForward": "Wählen Sie eine spätere Zielversion.",
+        "none": "Kein Schritt für ein Update von {from} nach {to}.",
+        "count": "{count, plural, one {# Schritt} other {# Schritte}} von {from} nach {to}"
+      }
     }
   },
   "checks": {
@@ -4611,6 +4711,18 @@
       "derived-audience-wider": {
         "title": "Breitere Zielgruppe als die Quelle",
         "detail": "Die abgeleitete Anleitung ist für eine breitere Zielgruppe als ihre Quellanleitung, daher wird nichts daraus übernommen: Sie enthält nur ihre eigenen Module davor und danach. Geben Sie ihr die Zielgruppe der Quelle oder eine engere, oder übernehmen Sie aus einer Anleitung für ihre Zielgruppe."
+      },
+      "update-step-version": {
+        "title": "Schritt ohne gültige Version",
+        "detail": "Ein Schritt des Update-Leitfadens hat keine Version oder keine Version mit Punkten wie 2.3, daher zeigt ihn kein Update an. Geben Sie ihm die Version, die ihn erfordert."
+      },
+      "update-step-outside-versions": {
+        "title": "Schritt außerhalb der Versionen",
+        "detail": "Ein Schritt des Update-Leitfadens gehört zu einer Version, die kein Update zwischen der ersten und der letzten Version des Leitfadens überschreitet, daher wird er nie angezeigt. Geben Sie ihm eine spätere Version oder ergänzen Sie seine Version im Leitfaden."
+      },
+      "update-step-phase": {
+        "title": "Unbekannte Phase",
+        "detail": "Ein Schritt des Update-Leitfadens hat eine Phase, die weder vor, während noch nach dem Update liegt. Wählen Sie eine der drei."
       },
       "missing-manufacturer": {
         "title": "Herstellerangaben fehlen",
@@ -6199,9 +6311,17 @@
       "title": "So, wie es gedruckt wird",
       "body": "Die Vorschau zeigt das Modul neben Ihrem Text, gesetzt wie im PDF, für die gewählte Variante."
     },
+    "variant": {
+      "title": "Nur für manche Produkte?",
+      "body": "Setzen Sie den Text in einen Variantenblock und wählen Sie die Varianten, für die er gilt. Die Vorschau zeigt das Modul für jede einzelne."
+    },
     "review": {
       "title": "Ihre Überarbeitungen und Prüfungen",
       "body": "Wechseln Sie hier zwischen den Überarbeitungen, die auf Sie warten, und Ihren eigenen. Öffnen Sie eine, um die Änderungen zu sehen, zu kommentieren und freizugeben."
+    },
+    "search": {
+      "title": "Alles finden",
+      "body": "Drücken Sie {keys}, um überall ein Modul, eine Anleitung oder eine Hilfeseite zu finden, und /, um die Liste auf dem Bildschirm zu durchsuchen."
     },
     "notifications": {
       "title": "Rückmeldung zu Ihren Überarbeitungen",
@@ -6209,26 +6329,39 @@
     }
   },
   "tour": {
-    "content": {
-      "title": "Inhalte",
-      "body": "Hier sind alle Module, nach Sprache und Typ. Durchsuchen und filtern Sie die Liste und öffnen Sie ein Modul, um es zu lesen oder zu bearbeiten."
+    "welcome": {
+      "title": "Einmal schreiben, überall veröffentlichen",
+      "body": "OpenFolia hält Ihre Anleitungen in kleinen, wiederverwendbaren Modulen. Schreiben Sie ein Modul einmal, und es kommt in jede Anleitung, jedes Produkt und jede Sprache, die es braucht.",
+      "next": "Zeigen Sie es mir",
+      "dismiss": "Nicht jetzt"
     },
-    "editor": {
-      "title": "Der Editor",
-      "body": "Ein geöffnetes Modul öffnet den Editor. Was Sie schreiben, wird beim Tippen in Ihrer Überarbeitung gespeichert: Nichts erreicht die veröffentlichten Inhalte, bevor es geprüft ist."
+    "openModule": {
+      "title": "Ein Modul öffnen",
+      "body": "Jede Zeile ist ein Modul: ein kurzer Abschnitt wie eine Handlungsanweisung oder ein Sicherheitshinweis. Öffnen Sie eines, um zu beginnen.",
+      "readBody": "Jede Zeile ist ein Modul: ein kurzer Abschnitt wie eine Handlungsanweisung oder ein Sicherheitshinweis. Öffnen Sie eines, um es zu lesen.",
+      "next": "Dieses Modul öffnen"
     },
-    "changeSets": {
-      "title": "Überarbeitungen",
-      "body": "Jede Änderung kommt in eine Überarbeitung, Ihren eigenen Entwurf. Wählen Sie hier eine aus oder beginnen Sie eine mit Ihrer ersten Änderung."
+    "edit": {
+      "title": "Einen Satz ändern",
+      "body": "Klicken Sie in den Text und tippen Sie. Ihre Änderung wird laufend gespeichert, in einer Überarbeitung: Ihrem Entwurf, getrennt von den veröffentlichten Inhalten, bis er geprüft ist.",
+      "next": "Losschreiben"
+    },
+    "revision": {
+      "title": "Ihre eigene Überarbeitung",
+      "namedBody": "Ihre Änderung steht in „{name}“, Ihrer eigenen Überarbeitung. Die veröffentlichten Inhalte bleiben, wie sie sind, bis Ihre Überarbeitung geprüft und zusammengeführt ist. Hier wechseln Sie zwischen Überarbeitungen und den veröffentlichten Inhalten oder beginnen eine neue Überarbeitung.",
+      "body": "Ihre Änderung steht in Ihrer eigenen Überarbeitung. Die veröffentlichten Inhalte bleiben, wie sie sind, bis Ihre Überarbeitung geprüft und zusammengeführt ist. Hier wechseln Sie zwischen Überarbeitungen und den veröffentlichten Inhalten oder beginnen eine neue Überarbeitung.",
+      "readTitle": "Veröffentlichte Inhalte und Überarbeitungen",
+      "readBody": "Sie lesen die veröffentlichten Inhalte, so wie sie freigegeben wurden. Wählen Sie hier eine Überarbeitung, um Änderungen zu lesen, die noch in Arbeit sind."
     },
     "review": {
-      "title": "Prüfung",
-      "body": "Ist Ihre Überarbeitung fertig, reichen Sie sie hier zur Prüfung ein. Prüfende kommentieren und geben sie frei, dann wird sie in die veröffentlichten Inhalte zusammengeführt."
+      "title": "Zur Prüfung einreichen",
+      "body": "Wenn Sie fertig sind, reichen Sie Ihre Überarbeitung hier ein. Eine prüfende Person gibt sie frei, eine veröffentlichende Person führt sie mit den veröffentlichten Inhalten zusammen, und die nächste Veröffentlichung bringt sie in die Anleitungen."
     },
-    "search": {
-      "title": "Suche",
-      "body": "Drücken Sie {keys}, um überall ein Modul, eine Anleitung oder eine Seite der Benutzeranleitung zu finden, und /, um die Liste auf dem Bildschirm zu durchsuchen."
-    }
+    "manuals": {
+      "title": "Die Anleitungen finden",
+      "body": "Eine Anleitung fügt Module für ein Produkt und eine Sprache zusammen. Öffnen Sie Anleitungen, um eine von Anfang bis Ende zu lesen."
+    },
+    "done": "Das war der Rundgang. Drücken Sie jederzeit {keys}, um ein Modul, eine Anleitung oder eine Hilfeseite zu finden."
   },
   "maintenance": {
     "lineLabel": "{product} {version}",

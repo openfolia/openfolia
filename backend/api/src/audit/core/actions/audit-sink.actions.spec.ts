@@ -23,6 +23,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const event = (id: number, at = new Date()): AuditEvent => ({
   id: String(id),
   at,
+  kind: 'write',
   actor: { kind: 'user', id: 'ada' },
   action: 'role.update',
   subject: { type: 'role', id: `r${id}` },
@@ -133,6 +134,7 @@ describe('PruneAuditLogAction', () => {
   const settings = (over: Partial<AuditSettings> = {}): AuditSettings => ({
     sinkEnabled: false,
     keepDays: 30,
+    readKeepDays: 90,
     ...over,
   });
 
@@ -145,7 +147,7 @@ describe('PruneAuditLogAction', () => {
       settings(),
     );
 
-    expect(await action.handle()).toBe(3);
+    expect(await action.handle()).toEqual({ write: 3, read: 0 });
     expect(log.events.map((e) => e.action)).toEqual([
       'role.update',
       'audit-log.prune',
@@ -164,8 +166,58 @@ describe('PruneAuditLogAction', () => {
       new FakeAuditSinkCursor(log),
       settings({ keepDays: undefined }),
     );
-    expect(await action.handle()).toBe(0);
+    expect(await action.handle()).toEqual({ write: 0, read: 0 });
     expect(log.events).toHaveLength(2);
+  });
+
+  // #877: reads have a period of their own, and each kind is removed only by its own.
+  it('removes reads after their own period, and changes only after theirs', async () => {
+    const at = (days: number) => new Date(Date.now() - days * DAY);
+    const read = (id: number, days: number): AuditEvent => ({
+      ...event(id, at(days)),
+      kind: 'read',
+      action: 'api.read',
+    });
+    const log = new FakeAuditLog([
+      read(1, 100),
+      event(2, at(100)),
+      read(3, 50),
+      event(4, at(20)),
+    ]);
+    const action = new PruneAuditLogAction(
+      log,
+      new FakeAuditSinkCursor(log),
+      settings({ keepDays: 200, readKeepDays: 60 }),
+    );
+
+    expect(await action.handle()).toEqual({ write: 0, read: 1 });
+    expect(log.events.map((e) => e.id)).toEqual(['2', '3', '4', '5']);
+    expect(log.events[3]).toMatchObject({
+      kind: 'write',
+      action: 'audit-log.prune',
+      data: { removed: 1, firstId: '1', lastId: '1', kind: 'read' },
+    });
+  });
+
+  it('removes reads even when removing changes fails, and names the kind that failed', async () => {
+    const log = new FakeAuditLog();
+    const prune = vi
+      .spyOn(log, 'prune')
+      .mockImplementation(async (_before, _rows, _kept, kind) => {
+        if (kind === 'write') throw new TypeError('no grant');
+        return 2;
+      });
+    const action = new PruneAuditLogAction(
+      log,
+      new FakeAuditSinkCursor(log),
+      settings(),
+    );
+    expect(await action.handle()).toEqual({
+      write: 0,
+      read: 2,
+      failed: [{ kind: 'write', error: 'TypeError' }],
+    });
+    expect(prune.mock.calls.map((c) => c[3])).toEqual(['write', 'read']);
   });
 
   it('with a sink, keeps what it has not sent', async () => {
@@ -177,7 +229,7 @@ describe('PruneAuditLogAction', () => {
       cursor,
       settings({ sinkEnabled: true }),
     );
-    expect(await action.handle()).toBe(2);
+    expect(await action.handle()).toEqual({ write: 2, read: 0 });
     expect(log.events.map((e) => e.id)).toEqual(['3', '4', '5']);
   });
 
@@ -189,11 +241,22 @@ describe('PruneAuditLogAction', () => {
       new FakeAuditSinkCursor(log),
       settings(),
     );
-    expect(await action.handle()).toBe(PRUNE_BATCH * PRUNE_CALLS);
-    expect(prune).toHaveBeenCalledTimes(PRUNE_CALLS);
+    expect(await action.handle()).toEqual({
+      write: PRUNE_BATCH * PRUNE_CALLS,
+      read: PRUNE_BATCH * PRUNE_CALLS,
+    });
+    expect(prune).toHaveBeenCalledTimes(2 * PRUNE_CALLS);
     prune.mockClear();
-    prune.mockResolvedValueOnce(PRUNE_BATCH).mockResolvedValueOnce(7);
-    expect(await action.handle()).toBe(PRUNE_BATCH + 7);
-    expect(prune).toHaveBeenCalledTimes(2);
+    prune
+      .mockResolvedValueOnce(PRUNE_BATCH)
+      .mockResolvedValueOnce(7)
+      .mockResolvedValueOnce(3);
+    expect(await action.handle()).toEqual({ write: PRUNE_BATCH + 7, read: 3 });
+    expect(prune).toHaveBeenCalledTimes(3);
+    expect(prune.mock.calls.map((c) => c[3])).toEqual([
+      'write',
+      'write',
+      'read',
+    ]);
   });
 });

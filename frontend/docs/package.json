@@ -60,6 +60,7 @@
           "{workspaceRoot}/backend/api/error-codes.yaml",
           "{workspaceRoot}/backend/api/scripts/openapi-document.mjs",
           "{workspaceRoot}/backend/api/scripts/in-process-api.mjs",
+          "{workspaceRoot}/backend/sandbox/src/database.ts",
           "{workspaceRoot}/backend/api/src/access/core/permissions.ts",
           "{workspaceRoot}/backend/api/src/access/repos/example-seed.ts",
           "{workspaceRoot}/frontend/editor/src/app/**/*.ts",

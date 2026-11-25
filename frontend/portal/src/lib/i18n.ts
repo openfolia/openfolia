@@ -74,6 +74,11 @@ export interface Texts {
   /** One change in the notice: `{attribute}`, `{value}`. */
   readonly switchChange: string;
   readonly dismissNotice: string;
+  /** The copy button on code blocks: its name, the "done" line and the refused-clipboard lines. */
+  readonly copyCode: string;
+  readonly copied: string;
+  readonly copyFailed: string;
+  readonly copyFailedHint: string;
   /** The typeahead under a search field (#845): its list's name. */
   readonly suggestions: string;
   /** Read out when the suggestions arrive: `{n}`. */
@@ -83,6 +88,37 @@ export interface Texts {
   /** The last row: the search page for `{q}`. */
   readonly allResults: string;
   readonly searching: string;
+  /** Update guides (#907): what marks one in the lists, and its page. */
+  readonly updateGuide: string;
+  readonly guideIntro: string;
+  readonly yourUpdate: string;
+  readonly fromVersion: string;
+  readonly toVersion: string;
+  readonly level: string;
+  readonly yourSetup: string;
+  /** An option the reader has not set. */
+  readonly notSet: string;
+  readonly phaseBefore: string;
+  readonly phaseDuring: string;
+  readonly phaseAfter: string;
+  /** `{n}` steps. */
+  readonly stepCount: { readonly one: string; readonly other: string };
+  /** `{done}` of `{n}` ticked off. */
+  readonly doneCount: string;
+  readonly resetChecklist: string;
+  readonly resetChecklistLong: string;
+  /** No step for the jump: `{from}`, `{to}`. */
+  readonly nothingToChange: string;
+  readonly nothingHint: string;
+  /** The link's choice was not valid: the defaults show. */
+  readonly invalidChoice: string;
+  readonly guideNoScript: string;
+  /** A group of the whole guide, without script: `{version}`. */
+  readonly versionHeading: string;
+  /** Read before a step's version tag. */
+  readonly stepVersion: string;
+  /** The range, in print: `{from}`, `{to}`. */
+  readonly guideRange: string;
 }
 
 const en: Texts = {
@@ -152,6 +188,10 @@ const en: Texts = {
   },
   switchChange: '{attribute} changed to {value}',
   dismissNotice: 'Dismiss notice',
+  copyCode: 'Copy code',
+  copied: 'Copied',
+  copyFailed: 'Copy failed',
+  copyFailedHint: 'Copy failed. The code is selected: press Ctrl+C.',
   suggestions: 'Suggestions',
   suggestionCount: {
     one: '1 match. Choose it with the arrow keys.',
@@ -160,6 +200,31 @@ const en: Texts = {
   noSuggestion: 'No passage matches “{q}”.',
   allResults: 'All results for “{q}”',
   searching: 'Searching…',
+  updateGuide: 'Update guide',
+  guideIntro:
+    'Pick the version you are on and the one you are updating to: the checklist shows exactly the steps for that update.',
+  yourUpdate: 'Your update',
+  fromVersion: 'From version',
+  toVersion: 'To version',
+  level: 'Level',
+  yourSetup: 'Your setup',
+  notSet: 'Not set',
+  phaseBefore: 'Before you update',
+  phaseDuring: 'During the update',
+  phaseAfter: 'After the update',
+  stepCount: { one: '1 step', other: '{n} steps' },
+  doneCount: '{done} of {n} done',
+  resetChecklist: 'Reset',
+  resetChecklistLong: 'Reset the checklist',
+  nothingToChange: 'Nothing to change between {from} and {to} for this setup.',
+  nothingHint: 'Pick another range, level or setup to see its steps.',
+  invalidChoice:
+    'The link asked for a choice this guide does not offer, so it shows the default.',
+  guideNoScript:
+    'Without JavaScript this page shows the whole guide, by version. Turn it on to pick your versions and tick off the steps.',
+  versionHeading: 'Version {version}',
+  stepVersion: 'Version',
+  guideRange: 'From {from} to {to}',
 };
 
 const de: Texts = {
@@ -234,6 +299,11 @@ const de: Texts = {
   },
   switchChange: '{attribute} auf {value}',
   dismissNotice: 'Hinweis schließen',
+  copyCode: 'Code kopieren',
+  copied: 'Kopiert',
+  copyFailed: 'Kopieren fehlgeschlagen',
+  copyFailedHint:
+    'Kopieren fehlgeschlagen. Der Code ist markiert: Strg+C drücken.',
   suggestions: 'Vorschläge',
   suggestionCount: {
     one: '1 Treffer. Wählen Sie ihn mit den Pfeiltasten aus.',
@@ -242,6 +312,33 @@ const de: Texts = {
   noSuggestion: 'Keine Stelle passt zu „{q}“.',
   allResults: 'Alle Treffer für „{q}“',
   searching: 'Suche läuft …',
+  updateGuide: 'Update-Leitfaden',
+  guideIntro:
+    'Wählen Sie die Version, die Sie haben, und die, auf die Sie aktualisieren: Die Checkliste zeigt genau die Schritte für dieses Update.',
+  yourUpdate: 'Ihr Update',
+  fromVersion: 'Von Version',
+  toVersion: 'Auf Version',
+  level: 'Stufe',
+  yourSetup: 'Ihre Einrichtung',
+  notSet: 'Nicht festgelegt',
+  phaseBefore: 'Vor dem Update',
+  phaseDuring: 'Während des Updates',
+  phaseAfter: 'Nach dem Update',
+  stepCount: { one: '1 Schritt', other: '{n} Schritte' },
+  doneCount: '{done} von {n} erledigt',
+  resetChecklist: 'Zurücksetzen',
+  resetChecklistLong: 'Checkliste zurücksetzen',
+  nothingToChange:
+    'Zwischen {from} und {to} ist für diese Einrichtung nichts zu tun.',
+  nothingHint:
+    'Wählen Sie einen anderen Bereich, eine andere Stufe oder Einrichtung, um deren Schritte zu sehen.',
+  invalidChoice:
+    'Der Link verlangt eine Auswahl, die dieser Leitfaden nicht anbietet. Er zeigt daher die Standardauswahl.',
+  guideNoScript:
+    'Ohne JavaScript zeigt diese Seite den ganzen Leitfaden, nach Versionen. Schalten Sie es ein, um Ihre Versionen zu wählen und Schritte abzuhaken.',
+  versionHeading: 'Version {version}',
+  stepVersion: 'Version',
+  guideRange: 'Von {from} auf {to}',
 };
 
 /** A count in the build's language, from its `{ one, other }` templates. */
@@ -362,6 +459,16 @@ export function fileSize(bytes: number, lang: string): string {
   }).format(value);
 }
 
+/** What the update guide's script needs (`scripts/update-guide.ts`): its texts and language. */
+export const guideConfig = (t: Texts, lang: string) => ({
+  lang,
+  stepCount: t.stepCount,
+  doneCount: t.doneCount,
+  nothingToChange: t.nothingToChange,
+  range: t.guideRange,
+});
+export type GuideConfig = ReturnType<typeof guideConfig>;
+
 /** A language's name in itself ("Deutsch"), for the language switch. */
 export function languageName(lang: string): string {
   try {
@@ -373,3 +480,11 @@ export function languageName(lang: string): string {
     return lang;
   }
 }
+
+/** What the code blocks' copy script needs (`scripts/code-copy.ts`). */
+export const codeCopyConfig = (t: Texts) => ({
+  label: t.copyCode,
+  copied: t.copied,
+  failed: t.copyFailed,
+  failedHint: t.copyFailedHint,
+});

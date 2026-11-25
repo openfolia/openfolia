@@ -43,7 +43,8 @@ sample content. It checks:
   origin refused there;
 - a PDF rendered directly and through the editor;
 - the editor reaching the API after the API container is recreated;
-- the MCP server: refused without its token, its tools listed with it;
+- the MCP server: refused without a token, its tools listed with a caller's own read-only service
+  account token, a token that may do more than read refused (`token-not-read-only`);
 - backups: a backup key, an S3 location, a verified backup, and a restore onto a fresh stack that
   renders a PDF and still opens its sealed secrets;
 - the instance secret key on the data volume.

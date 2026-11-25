@@ -1,0 +1,10 @@
+= Save your driver profiles
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Export your driver profiles to your account under Settings › Profiles, as the update resets them.

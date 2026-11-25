@@ -6,9 +6,10 @@
 //     --entrypoint node <image> --input-type=module - < deploy/sandbox-client.mjs
 //
 // MODE:
-//   people  each demo person signed in (GET /api/me), the sandbox's limits (GET /api/sandbox), the
-//           baked state (two releases, the change set in review), the editor's page, and the
-//           proxy's refusals: a request from another site, another host, an upload
+//   people  each demo person signed in (GET /api/me) with the tour to come (GET /api/me/preferences),
+//           the sandbox's limits (GET /api/sandbox), the baked state (two releases, the change
+//           set in review), the editor's page, and the proxy's refusals: a request from another
+//           site, another host, an upload
 //   edit    a change made (a module edited, a save point), submitted, commented and approved
 //           by the reviewer, merged by the admin; then EDIT_SAVES autosaves of a working copy,
 //           as a visitor typing for a while
@@ -143,7 +144,13 @@ async function people() {
     const { data } = await get(id, '/me');
     if (data?.id !== id) fail(`GET /me as ${id} answered ${data?.id}`);
     say(`signed in as the ${role}: ${data.attributes?.name ?? id}`);
+    // A first visit (#868, bake.mjs): the tour opens on the visitor's first screen.
+    const { data: tips } = await get(id, '/me/preferences');
+    const { tourDone, showTips } = tips?.attributes ?? {};
+    if (tourDone !== false || showTips !== true)
+      fail(`the ${role}'s tips are ${JSON.stringify({ tourDone, showTips })}`);
   }
+  say('every demo person starts with the tour to come and tips on');
   const { data: sandbox } = await get(PEOPLE.author, '/sandbox');
   if (sandbox?.type !== 'Sandbox') fail('GET /sandbox: no sandbox');
   say(

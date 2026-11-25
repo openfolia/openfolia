@@ -1,0 +1,70 @@
+---
+title: 'Einen Update-Leitfaden lesen'
+description: 'Wie Leser die Version wählen, die sie haben, und die, auf die sie aktualisieren, und eine Checkliste mit genau den Schritten für dieses Update bekommen.'
+articleId: 'guide.portal.update-guides'
+---
+
+Ein Update-Leitfaden ist eine Anleitung aus Schritten, jeder mit der Version, die ihn braucht. Im
+Portal liest ein Leser ihn nicht von vorn bis hinten: Er gibt an, welche Version er hat und auf
+welche er geht, und die Seite zeigt genau die Schritte für dieses Update, als Checkliste.
+
+![Ein Update-Leitfaden im Portal: die Auswahl neben der Seite, die Schritte des Updates nach vor, während und nach dem Update gruppiert, zwei davon abgehakt](/images/guide/de/portal-update-guide.webp)
+
+## Ihn finden
+
+Ein Update-Leitfaden steht bei den Anleitungen seines Produkts auf der Startseite und unter **Alle
+Anleitungen**, markiert mit **Update-Leitfaden**. Er hat eine Seite je Sprache, unter
+`https://<team>.openfolia.com/<sprache>/<produkt>/<leitfaden>/` bei einem Portal, das Ihr Anbieter
+betreibt, oder unter Ihrer eigenen Adresse bei einem Portal, das Sie selbst betreiben.
+
+## Das Update wählen
+
+Der Bereich **Ihr Update** (auf breiten Bildschirmen neben der Seite, auf dem Telefon über den
+Schritten) enthält:
+
+- **Von Version** und **Auf Version**: die Version, die jetzt installiert ist, und die, auf die Sie
+  gehen. **Auf Version** bietet nur die Versionen nach **Von Version** an. Die Seite öffnet mit dem
+  Update von der zweitneuesten auf die neueste Version.
+- **Stufe**: wessen Schritte gezeigt werden, aus den Zielgruppenstufen, für die der Leitfaden
+  geschrieben ist (zum Beispiel Kunden, oder auch Ihr Servicepersonal). Das Feld erscheint nur,
+  wenn der Leitfaden mehr als eine anbietet. Ein Schritt für eine Stufe erscheint für diese Stufe
+  und die stärker eingeschränkten.
+- **Ihre Einrichtung**: die Optionen, von denen Schritte abhängen, zum Beispiel ob das Produkt als
+  Cluster läuft, jede eine Liste ihrer Werte. Bis Sie einen Wert wählen, erscheinen nur die
+  Schritte für jede Einrichtung.
+
+Die Schritte ändern sich mit Ihrer Auswahl, ohne dass die Seite neu lädt.
+
+## Die Checkliste
+
+- Die Schritte sind gruppiert in **Vor dem Update**, **Während des Updates** und **Nach dem
+  Update**. In jeder Gruppe stehen sie nach Version geordnet, und jeder Schritt zeigt die Version,
+  die ihn gebracht hat, als kleines Etikett.
+- Die Zeile über den Schritten sagt, wie viele es sind („12 Schritte“); Screenreader lesen sie vor,
+  wenn sie sich ändert.
+- Haken Sie einen Schritt ab, wenn er erledigt ist. Die Haken bleiben in Ihrem Browser gespeichert,
+  für diesen Leitfaden und diesen Bereich (von und auf): Schließen Sie die Seite, kommen Sie später
+  wieder, und sie sind noch da. Ein anderer Browser oder ein anderes Gerät hat eigene.
+  **Zurücksetzen** entfernt die Haken des gezeigten Bereichs.
+- Gilt nichts („Zwischen 3.0 und 3.1 ist für diese Einrichtung nichts zu tun.“), sagt die Seite das.
+- Beim Drucken erscheinen die Schritte des gezeigten Bereichs mit Kästchen zum Abhaken auf Papier,
+  ohne den Auswahlbereich.
+
+## Das Update weitergeben
+
+Die Adresse der Seite enthält Ihre Auswahl, zum Beispiel
+`…/software-update/?from=2.0&to=4.0&level=internal&opt=cluster:yes`. Schicken Sie sie weiter, und der
+Empfänger öffnet dasselbe Update. Eine Adresse, die eine Version, Stufe oder Option verlangt, die
+der Leitfaden nicht hat, öffnet das Standard-Update mit einem kurzen Hinweis darauf. Die Haken sind
+nicht Teil der Adresse.
+
+## Suche
+
+Die Suche findet die Schritte eines Update-Leitfadens wie die Abschnitte jeder Anleitung. Ein
+Schritt öffnet den Leitfaden mit dem Update, das bei der Version des Schritts endet, in der Stufe
+des Schritts und mit der Einrichtung, die seine Bedingung nennt, sodass der Schritt in der Liste steht.
+
+## Ohne JavaScript
+
+Ohne JavaScript zeigt die Seite den ganzen Leitfaden, Version für Version, jede mit ihren Schritten
+vor, während und nach dem Update, und einen Hinweis, dass die Auswahl JavaScript braucht.

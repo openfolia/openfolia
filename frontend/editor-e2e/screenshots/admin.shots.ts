@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { type Page, request } from '@playwright/test';
 import { exampleBundle } from '../src/import-bundle.ts';
 import { type Api, expect, signIn, test, USERS } from './fixtures.ts';
 
@@ -286,6 +286,65 @@ test.describe('the user guide: admin', () => {
       .click();
     await expect(page.getByRole('menu')).toBeVisible();
     await save('admin-audit');
+  });
+
+  // #877: the reads of a service account, as an MCP server's tools make them.
+  test('audit log reads', async ({ page, save, lang, l, as }) => {
+    const ex = examples(lang);
+    // One account per run (a service account cannot be deleted): only this run's reads show.
+    const accountId = `${ex.serviceId}-mcp-${Date.now().toString(36)}`;
+    const admin = await as(USERS.admin);
+    await admin.json(
+      admin.send('POST', '/service-accounts', {
+        data: {
+          type: 'ServiceAccount',
+          id: accountId,
+          attributes: { name: `${ex.service} MCP`, description: null },
+          relationships: {
+            roles: { data: [{ type: 'Role', id: 'reader' }] },
+          },
+        },
+      }),
+      201,
+    );
+    const issued = await admin.json<{ meta: { token: string } }>(
+      admin.send('POST', `/service-accounts/${accountId}/tokens`, {
+        data: { type: 'ServiceToken', attributes: { name: 'MCP' } },
+      }),
+      201,
+    );
+    const reads = await request.newContext({
+      baseURL: process.env['E2E_API_URL'],
+      extraHTTPHeaders: {
+        Authorization: `Bearer ${issued.meta.token}`,
+        Accept: 'application/vnd.api+json',
+      },
+    });
+    try {
+      for (const [client, path] of [
+        ['mcp', '/me'],
+        ['mcp/search', '/search?filter[q]=battery&ref=main'],
+        ['mcp/read_module', '/modules/en/no-such-module?ref=main'],
+        ['mcp/list_manuals', '/manuals?ref=main'],
+      ] as const) {
+        await reads.get(path, { headers: { 'X-OpenFolia-Client': client } });
+      }
+    } finally {
+      await reads.dispose();
+    }
+    await signIn(page, USERS.admin);
+    await page.goto(
+      `/admin/audit?kind=read&actor=${encodeURIComponent(`service/${accountId}`)}`,
+    );
+    const rows = page.locator('[data-slot="audit-row"]');
+    await expect(async () => {
+      await page.reload();
+      await expect(rows).toHaveCount(4);
+    }).toPass({ timeout: 15_000 });
+    await expect(
+      rows.first().getByText(l('admin.audit.actions.apiRead')),
+    ).toBeVisible();
+    await save('admin-audit-reads');
   });
 
   test('backups', async ({ page, save, l }) => {

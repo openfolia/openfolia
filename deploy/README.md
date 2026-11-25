@@ -785,7 +785,8 @@ they run in the worker (or the single `all` process). Details: `backend/api/READ
 | `CCMS_AUDIT_SINK_CA_FILE`    | A PEM file of certificates to trust instead of the system's (a private CA), mounted into the worker (the process that sends). |
 | `CCMS_AUDIT_SINK_POLL_MS`    | How often new events go out (default 3000 ms).                                                                                |
 | `CCMS_AUDIT_SINK_TIMEOUT_MS` | One delivery's whole time (default 10000 ms).                                                                                 |
-| `CCMS_AUDIT_KEEP_DAYS`       | Remove events older than this many days (1 to 36500). Unset: kept for ever.                                                   |
+| `CCMS_AUDIT_KEEP_DAYS`       | Remove changes older than this many days (1 to 36500). Unset: kept for ever.                                                  |
+| `CCMS_AUDIT_READ_KEEP_DAYS`  | Remove reads of service accounts (#877) older than this many days (1 to 36500). Default: 90.                                  |
 
 **What the sink guarantees.** Every event at least once, in order: by ID within one transaction, the
 transactions in the order they got their ID (their first write). The position is kept in the database, so a restart goes on
@@ -802,10 +803,10 @@ installation with history sends the whole log first.
   counts as delivered once it is written to the connection. Raise the collector's message size limit
   (some cut at 8 KiB) if events carry large details.
 
-**Retention** removes events older than `CCMS_AUDIT_KEEP_DAYS` at start-up and daily (sooner while it catches up), 5,000 at a time
+**Retention** removes changes older than `CCMS_AUDIT_KEEP_DAYS` and reads older than `CCMS_AUDIT_READ_KEEP_DAYS` at start-up and daily (sooner while it catches up), 5,000 at a time
 (up to 100,000 a day), and records each removal in the log itself (`audit-log.prune`: the cut-off,
 how many, the first and last ID). With a sink set it never removes an event the sink has not sent.
-It goes through a database function (`audit_events_prune`); any other delete is refused by the
+It goes through database functions (`audit_events_prune`, and `audit_events_prune_reads` for reads); any other delete is refused by the
 database. To have the grants hold too, run the API as a database role of its own without `DELETE`
 on `audit_events` (`backend/api/README.md`, "Audit log", "Database roles").
 
@@ -1260,11 +1261,24 @@ terminal for the `api` service, or the commands in "Content repository" on the s
 ## The MCP server
 
 ```sh
-# in deploy/.env: a service account token whose roles hold content.read only, and a random HTTP token
-CCMS_MCP_API_TOKEN=ccms_sat_...
-CCMS_MCP_HTTP_TOKEN=<openssl rand -hex 32>
-docker compose --profile mcp up -d --wait
+docker compose --profile mcp up -d --wait   # or COMPOSE_PROFILES=mcp in deploy/.env
 ```
+
+It needs no token of its own (#861). Each caller brings one: a service account whose role holds
+`content.read` alone (in the scope that caller may read), and a token of it, made in the editor
+(Admin › Service accounts) or with `service-token.main.js`; the caller sends it as
+`Authorization: Bearer ccms_sat_…`. The server checks it with the API (`GET /me`, kept for a
+minute) and forwards it on every read, so the API applies that account's scope, revocation and
+expiry, and records its last use. A token that may do more than read is refused with 403
+`token-not-read-only`.
+
+**Migrating from the shared token (deprecated, removed in v0.0.5).** Until v0.0.3 every caller
+sent one `CCMS_MCP_HTTP_TOKEN` and read as the server's `CCMS_MCP_API_TOKEN`. Both still work for
+one release (the server warns at start): a caller sending the shared token reads as before,
+beside callers with their own. To move: give each caller a service account token of its own
+(the one in `CCMS_MCP_API_TOKEN` will do for one caller), change the callers' `Authorization`
+header to it, then remove `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` from deploy/.env and
+run `docker compose up -d`.
 
 The editor serves it at its own address plus `/mcp` (`CCMS_EDITOR_MCP_URL`, which `compose.yaml`
 sets to the `mcp` service), so behind your reverse proxy its address is
@@ -1490,7 +1504,8 @@ docker build --target sandbox -t openfolia/sandbox:local .   # one public demo s
 - **Two architectures** (#827): every image is built for `linux/amd64` and `linux/arm64`, each
   on a runner of its own architecture (`ubuntu-24.04` and `ubuntu-24.04-arm`), never emulated.
   Each leg is pushed by its digest alone, then one job joins the two into a multi-platform image
-  index (`docker buildx imagetools create`) and checks that it holds both. The tags (`main`, the
+  index (`docker buildx imagetools create`) and checks that it holds both (a registry that answers
+  `not found` just after the push is asked again, up to 5 times, #866). The tags (`main`, the
   SHA, `vX.Y.Z`) name the index, so `docker pull` fetches the host's own image.
 - **CI** (`.github/workflows/images.yml`):
   - On a pull request, CI builds the affected images on both architectures, and runs the smoke
@@ -1653,8 +1668,9 @@ content, with random secrets. It checks:
 - a PDF, rendered both directly and through the editor;
 - the editor still reaching the API after the API container is recreated;
 - the MCP server, on its port and through the editor's `/mcp` (404 before it runs): refused without
-  its token, `tools/list` with it, an `Origin` it does not allow refused, and wrong tokens locked
-  out by the address the editor saw, whatever `X-Forwarded-For` they name;
+  a token, `tools/list` with a caller's own read-only service account token, a token that may do
+  more than read refused (403 `token-not-read-only`), an `Origin` it does not allow refused, and
+  wrong tokens locked out by the address the editor saw, whatever `X-Forwarded-For` they name;
 - the reader portal (`--profile portal`, a read-only token up to `public`): healthy, its start
   page 200 with the Content Security Policy (`frame-ancestors 'none'`) and `nosniff`, a manual
   page of the release, the German 404 page for a missing German path, no file of its volume or

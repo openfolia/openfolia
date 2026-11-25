@@ -63,6 +63,9 @@ export function manifestNamesModule(manifest: Manifest, id: string): boolean {
       [rule.exclude, rule.front, rule.back].some((ids) => ids.includes(id))
     );
   }
+  // An update guide's entries are its steps (#906), and may not be filled in yet (a draft).
+  if (manifest.kind === 'update-guide' && manifest.guide)
+    return manifest.guide.steps.some((step) => step.module === id);
   return renamedEntries(manifest.entries, id, id, false) !== manifest.entries;
 }
 
@@ -88,6 +91,20 @@ export function renameManifestModule(
         front: rename(rule.front),
         back: rename(rule.back),
       },
+    };
+  }
+  const guide = manifest.kind === 'update-guide' ? manifest.guide : undefined;
+  if (guide) {
+    if (!manifestNamesModule(manifest, from)) return manifest;
+    return {
+      ...manifest,
+      guide: {
+        ...guide,
+        steps: guide.steps.map((step) =>
+          step.module === from ? { ...step, module: to } : step,
+        ),
+      },
+      entries: renamedEntries(manifest.entries, from, to, true),
     };
   }
   const entries = renamedEntries(manifest.entries, from, to, true);

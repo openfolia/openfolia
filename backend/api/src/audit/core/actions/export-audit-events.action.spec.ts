@@ -17,6 +17,7 @@ const admin = actor(['admin.roles']);
 const event = (id: number, over: Partial<AuditEvent> = {}): AuditEvent => ({
   id: String(id),
   at: new Date(Date.UTC(2026, 0, id)),
+  kind: 'write',
   actor: { kind: 'user', id: 'sample-admin' },
   action: 'role.assign',
   subject: { type: 'user', id: 'sample-reader' },

@@ -619,26 +619,46 @@ docs site (`off`) or an index, no link shows, and a failed index is read again o
 at, its screen (the guide article ID the route names in `data.help`, or `*` for any screen),
 its title and text keys, an optional guide article for "Learn more" (an address from
 `HelpService.link`, so none while help links are off) and an optional condition (a permission,
-or `after-first-change-set`). `TOUR_STEPS` are the tour's steps over the shell: content, the
-editor (centred, no anchor), revisions, review and search.
+or `after-first-change-set`). The tour is task-led (#869), data too: `WRITER_TOUR` (a centred
+welcome, open a module, change a sentence, the revision picker, send it for review) for a person
+with `content.edit`, `READER_TOUR` (welcome, open a module, the revision picker, the manuals) for
+one without. The picker's step (`shell.revision`, on `of-change-set-control` for whoever has the
+picker) is left out for a contributor and a reader of the released content only. A task step (`task`) moves on
+when the person does it: arriving on its `doneOn` screen, or the page calling
+`TipsController.stepDone(id)`; its main button does it for them (follows the row's link, or puts
+the caret in the text). `target` lights up a part of the anchor (the text's first paragraph).
 
 - **Scheduling** (`tip-rules.ts`, pure, unit-tested): the tour first while it is due (tips on,
   not finished or skipped); then at most one tip per visit of a screen, the first in catalogue
-  order that is not dismissed, on its screen, whose condition holds and whose anchor shows. A
-  tour step whose anchor is missing is left out.
+  order that is not dismissed, on its screen, whose condition holds and whose anchor shows.
+  `tourFor` picks the person's tour (a step about the shell they have not got is left out);
+  `resumeAt` says where a paused tour picks up on this screen: its step, or the nearest before it
+  this screen can show (never the welcome again), or nothing yet.
+- **The tour's way** (`TipsController`): leaving it pauses the tour (another screen, a click
+  outside the card and the step's anchor, a dialog, a menu or the palette, the focus in another
+  field) and it comes back at the same step once the page is free; the step is kept per tab
+  (`openfolia.tour:<id>` in session storage), so a reload picks up there. `tourStep` is the step
+  it is at: the module editor starts a revision named after the module ("Suggest a change") when
+  it is `tour.edit` and none is open (or chooses again the one a past tour typed into, kept in
+  `openfolia.tour-kept:<id>`, while it is still the person's draft), and calls
+  `stepDone('tour.edit')` once a typed change is saved. Done on the last step shows a toast with
+  the palette's key. → and ← drive the tour from the card or with nothing focused (a presenter);
+  the steps are found again each time a step shows, so an anchor that came late is not left out.
 - **`TipsController`** (provided by the shell, so it runs only there): looks once a screen has
   settled (1.2 s) and when the preferences change, only while the page is free (`pageBusy` of
   `@openfolia/ui/tip`: no modal, no open menu, select or popover, the focus in no field), else again
-  every second, 30 times at most. The focus moving into a field, a dialog or a menu closes an open
-  tip or the tour, not counted as seen. A tip counts as seen on "Got it", "Turn off tips",
-  Escape or leaving the screen; the tour on Done, Skip or Escape.
+  every second, 30 times at most for a tip and as long as it waits for the tour. The focus moving into a field, a dialog or a menu closes an open
+  tip (not counted as seen) or pauses the tour. A tip counts as seen on "Got it", "Turn off tips",
+  Escape or leaving the screen; the tour on Done, Not now, × or Escape.
 - **`PreferencesService`**: `GET`/`PATCH /me/preferences` for the person `GET /me` names, read
   again for each new person. A change shows at once and is sent after, one at a time in order;
   the browser keeps a copy per person (`openfolia.tips:<id>`), used when the API cannot be read.
 - **Account menu** (`of-help-menu-items`): "Show tips" (a checkbox item), "Take the tour" and
   "Reset tips" (dismissed tips cleared and tips on, with a toast).
 - **Anchors:** `nav.<section>` on the sidebar's links, `shell.search`, `shell.change-set`,
-  `shell.notifications`, `content.new-module`, `module-editor.preview`, `review.filters`. Keep a
+  `shell.notifications`, `content.new-module`, `content.module` (each row of the module list),
+  `module-editor.text` (the text, while it can be edited), `module-editor.preview`,
+  `review.filters`. Keep a
   `data-tip` where a tip points: the catalogue test checks each tip's screen and article against
   the guide index, not the anchors.
 

@@ -16,6 +16,7 @@ export const AUDIT_CSV_COLUMNS = [
   'subject id',
   'comment',
   'data',
+  'kind',
 ] as const;
 
 /** One CSV line: the cells through `csvCell` (the shared formula guard), ending in CRLF. */
@@ -44,6 +45,7 @@ export function auditCsvLine(event: AuditEvent): string {
     event.subject.id,
     event.comment ?? '',
     JSON.stringify(event.data),
+    event.kind,
   ]);
 }
 
@@ -55,6 +57,7 @@ export function auditEventJson(event: AuditEvent): Record<string, unknown> {
   return {
     id: event.id,
     at: event.at.toISOString(),
+    kind: event.kind,
     actor: event.actor,
     action: event.action,
     subject: event.subject,
@@ -86,7 +89,7 @@ export function auditJsonLine(event: AuditEvent): string {
 export function describeAuditFilter(
   filter: AuditFilter,
 ): Record<string, string> {
-  const { subject, actor, action, from, to } = filter;
+  const { subject, actor, action, kind, from, to } = filter;
   return {
     ...(subject && {
       subject:
@@ -98,6 +101,7 @@ export function describeAuditFilter(
       actor: actor.id === undefined ? actor.kind : `${actor.kind}/${actor.id}`,
     }),
     ...(action !== undefined && { action }),
+    ...(kind !== undefined && { kind }),
     ...(from && { from: from.toISOString() }),
     ...(to && { to: to.toISOString() }),
   };

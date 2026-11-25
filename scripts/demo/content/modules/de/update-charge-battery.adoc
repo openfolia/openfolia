@@ -1,0 +1,10 @@
+= Hochvoltbatterie laden
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Laden Sie die Hochvoltbatterie auf mindestens 50 %, bevor Sie das Update starten.

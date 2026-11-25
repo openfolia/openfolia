@@ -1,0 +1,10 @@
+= Softwareversion prüfen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Öffnen Sie Einstellungen › Software-Update und prüfen Sie, ob die neue Version angezeigt wird.

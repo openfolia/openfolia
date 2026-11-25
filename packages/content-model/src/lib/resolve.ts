@@ -24,6 +24,7 @@ import type { Term, TermDefinition, TermStatus } from './term.js';
 import { linkedTermIds } from './term-links.js';
 import { crossReferencedModules } from './module-references.js';
 import { textIn } from './localized-text.js';
+import { byVersionAndPhase, type UpdatePhase } from './update-guide.js';
 
 export interface ResolveInput {
   manifest: Manifest;
@@ -113,6 +114,24 @@ export interface ResolvedManual {
    * absent (a manual made by hand): none.
    */
   xrefTitles?: Record<string, string>;
+  /**
+   * An update guide's steps (#906), as `entries` holds them: per step the reader may see (its
+   * module resolved), in the PDF's order (by version, then phase, then manifest order), with what
+   * the step says of itself and its module entry (the same object as in `entries`). Set only for
+   * an update guide.
+   */
+  updateSteps?: ResolvedUpdateStep[];
+}
+
+/** A step of a resolved update guide (#906, `ResolvedManual.updateSteps`). */
+export interface ResolvedUpdateStep {
+  /** Its place among the guide's steps (manifest order), from 0. */
+  index: number;
+  version: string;
+  phase: UpdatePhase;
+  level?: string;
+  when?: Condition;
+  entry: Extract<ResolvedEntry, { kind: 'module' }>;
 }
 
 export type ResolvedEntry =
@@ -973,7 +992,59 @@ export function resolveManual(input: ResolveInput): ResolveResult {
     });
 
   const outputLabels = resolveOutputLabels(lang, config.outputLabels);
+  const updateSteps: ResolvedUpdateStep[] = [];
+  const phaseLabels: Record<UpdatePhase, string> = {
+    before: outputLabels.labels.updateBefore,
+    during: outputLabels.labels.updateDuring,
+    after: outputLabels.labels.updateAfter,
+  };
   const assemble = (): ResolvedEntry[] => {
+    const guide = manifest.kind === 'update-guide' ? manifest.guide : undefined;
+    if (guide) {
+      // An update guide (#906): the whole guide, every step whatever its condition
+      // (the reader's choice picks among them), a group per version, in it a group per phase.
+      // A step's level is an audience level: one above the manual's audience, or not configured,
+      // is for no reader of it (fails closed, as an audience does).
+      const forReaders = (level: string | undefined) => {
+        if (level === undefined) return true;
+        const rank = audienceRank(level);
+        return rank !== undefined && rank <= maxAudience;
+      };
+      return byVersionAndPhase(guide.steps).flatMap(
+        ({ version, phases }): ResolvedEntry[] => {
+          const under = phases.flatMap(({ phase, steps }): ResolvedEntry[] => {
+            const modules = steps.flatMap(({ step, index }) =>
+              !forReaders(step.level)
+                ? []
+                : resolveEntries([{ module: step.module }]).flatMap((entry) => {
+                    if (entry.kind !== 'module') return [];
+                    updateSteps.push({
+                      index,
+                      version,
+                      phase,
+                      ...(step.level !== undefined && { level: step.level }),
+                      ...(step.when !== undefined && { when: step.when }),
+                      entry,
+                    });
+                    return [entry];
+                  }),
+            );
+            return modules.length > 0
+              ? [{ kind: 'group', title: phaseLabels[phase], entries: modules }]
+              : [];
+          });
+          return under.length > 0
+            ? [
+                {
+                  kind: 'group',
+                  title: `${outputLabels.labels.updateVersion} ${version}`,
+                  entries: under,
+                },
+              ]
+            : [];
+        },
+      );
+    }
     if (notices?.groupBy === 'level' && rule) {
       // A group per level, in the rule's order, titled with its output label; under it, per
       // source module, that module's notices of the level. The front and back matter around them.
@@ -1077,6 +1148,7 @@ export function resolveManual(input: ResolveInput): ResolveResult {
       },
       callouts: calloutTable,
       xrefTitles,
+      ...(manifest.kind === 'update-guide' && { updateSteps }),
     },
     issues,
     hidden,

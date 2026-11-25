@@ -17,7 +17,7 @@ const CONFIG = {
     { id: 'public', label: 'Public' },
     { id: 'internal', label: 'Internal' },
   ],
-  variantAttributes: [],
+  variantAttributes: [{ id: 'software', label: 'Software', kind: 'version' }],
   moduleTypes: [
     { id: 'concept', label: 'Concept' },
     { id: 'hazard', label: 'Hazard', safety: true },
@@ -228,6 +228,65 @@ describe('NewManualDialogComponent', () => {
         copyFrom: undefined,
         derivedFrom: 'guide',
         moduleTypes: undefined,
+      },
+    ]);
+  });
+
+  it('makes an update guide: its product, version attribute and versions (#908)', async () => {
+    const t = await setup();
+    await t.open();
+    await t.type('Software update');
+    document
+      .querySelector<HTMLElement>(
+        '[data-kind=update-guide] [role=radio], [data-kind=update-guide] input',
+      )
+      ?.click();
+    await t.settle();
+    const versions = document.querySelector<HTMLInputElement>(
+      '#new-manual-versions',
+    ) as HTMLInputElement;
+    versions.value = '2.0, v3';
+    versions.dispatchEvent(new Event('input'));
+    await t.settle();
+    // An invalid version is said while typing.
+    expect(
+      document.querySelector('#new-manual-versions-hint')?.textContent,
+    ).toContain('“v3” is not a dotted version');
+    versions.value = '2.0';
+    versions.dispatchEvent(new Event('input'));
+    await t.submit();
+    expect(
+      document.querySelector('#new-manual-versions-hint')?.textContent,
+    ).toContain('at least two versions');
+    expect(t.host.created).toEqual([]);
+    versions.value = '3.0, 1.0, 2.0';
+    versions.dispatchEvent(new Event('input'));
+    await t.settle();
+    // The product: assembled manuals only, none deleted.
+    document
+      .querySelector<HTMLElement>('[data-testid=new-manual-product] button')
+      ?.click();
+    await t.settle();
+    const offered = Array.from(
+      document.querySelectorAll<HTMLElement>('z-select-item'),
+    ).map((o) => o.textContent?.trim());
+    expect(offered).toContain('Guide');
+    expect(offered).not.toContain('Leaflet');
+    expect(offered).not.toContain('Old');
+    Array.from(document.querySelectorAll<HTMLElement>('z-select-item'))
+      .find((o) => o.textContent?.trim() === 'Guide')
+      ?.click();
+    await t.settle();
+    await t.submit();
+    // The only version attribute is chosen at once.
+    expect(t.host.created).toEqual([
+      {
+        id: 'software-update',
+        title: 'Software update',
+        audience: undefined,
+        copyFrom: undefined,
+        updateGuide: { attribute: 'software', versions: ['1.0', '2.0', '3.0'] },
+        productFrom: 'guide',
       },
     ]);
   });

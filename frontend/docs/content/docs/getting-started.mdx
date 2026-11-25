@@ -48,8 +48,10 @@ describes the routes a portal or an integration reads, and the [API reference](/
 ### Connect an agent
 
 The [MCP server](/guides/mcp) lets AI assistants and agents search and read the released content.
-Connect a client to the address plus `/mcp` (`https://<team>.openfolia.com/mcp`), with the MCP
-token your provider or your admin gives you. It only reads.
+Connect a client to the address plus `/mcp` (`https://<team>.openfolia.com/mcp`), with a service
+account token of your own whose role holds `content.read` alone, made in the editor (Admin, Service
+accounts) as for the API: [Make a service account and token for
+MCP](/guides/mcp#make-a-service-account-and-token-for-mcp). It only reads.
 
 ## Run it yourself
 

@@ -35,10 +35,24 @@ describe('HttpContentApi', () => {
       'http://api.test/chunks?ref=main&filter%5Bfacet%5D=a%3Ab&filter%5Bfacet%5D=c%3Ad',
     );
     expect(f.calls[0]?.init).toMatchObject({
-      headers: { Authorization: 'Bearer ccms_sat_secret', Accept: JSON_API },
+      headers: {
+        Authorization: 'Bearer ccms_sat_secret',
+        Accept: JSON_API,
+        'X-OpenFolia-Client': 'mcp',
+      },
       redirect: 'error',
     });
     expect(f.calls[0]?.init.method ?? 'GET').toBe('GET');
+  });
+
+  // #877: the API records each read of the account with what it was for.
+  it('names what a read is for in X-OpenFolia-Client', async () => {
+    const f = fakeFetch(() => new Response('{}', { status: 200 }));
+    const api = new HttpContentApi('http://api.test', 'ccms_sat_secret', f.fn);
+    await api.get('/search', {}, undefined, 'mcp/search');
+    expect(f.calls[0]?.init.headers).toMatchObject({
+      'X-OpenFolia-Client': 'mcp/search',
+    });
   });
 
   it('turns a JSON:API error into a ToolError with its code, status and retry time', async () => {

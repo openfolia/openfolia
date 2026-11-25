@@ -93,6 +93,18 @@ place, every file is searched for the token and its secret, and the build fails 
 - **Scripts** are files, never inline: each page carries a Content Security Policy without
   `'unsafe-inline'` for scripts. In the browser the manual page loads `@openfolia/render-html/browser`
   (term popovers, callout highlighting), not the renderer.
+- **Update guides** (#907, `kind: update-guide`): a page per guide (`<product>/<guide>/`, in
+  `src/pages/[product]/[manual]/index.astro`), built from `GET /manuals/{id}/update-guide/{lang}`
+  and its `…/steps` plus the guide's first variant resolved (the steps' text, its modules'
+  audiences checked as any manual's; a step whose module is not among them refuses the build,
+  and the pages check it again). The page holds every step, grouped by version, which is what it
+  shows without script; `src/scripts/update-guide.ts` moves them into the phases and shows those
+  of the reader's jump (`resolveUpdateGuide` of `@openfolia/content-model/core`). The choice is in
+  the address (`?from=&to=&level=&opt=<option>:<value>`, `src/lib/update-guide.ts`; each option a list of
+  its values, none set at first), the ticked steps in `localStorage` per guide and range. A
+  search result's step opens the jump that shows it. `theme.js` marks the page `has-script`
+  before it paints, so what only works with script shows at once, and the steps are revealed
+  once moved: nothing shifts in view.
 - **Search** is Pagefind's index of the manual pages (`data-pagefind-body`), with product and
   variant attribute filters, built per language. Results group a manual's variants and show its
   matching sections (every heading carries an ID, `@openfolia/render-html`), a few per page; the
@@ -146,7 +158,8 @@ examples for nginx and Caddy.
 ## Targets
 
 - `portal:build` builds the fixture sites into `dist-fixture/` (a public build in English and
-  German with the branding off, an internal one in English with the fixture's brand) from the
+  German with the branding off, an internal one in English and German with the fixture's brand
+  and an update guide) from the
   API booted in process over `testing/`.
 - `portal:e2e` checks them: no internal or restricted text in the public files or its search
   index, no token anywhere, no inline script, the pages in a browser at desktop and phone width

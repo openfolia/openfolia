@@ -37,9 +37,11 @@ import {
   SNAPSHOT_FORMAT,
   type Snapshot,
   type SnapshotBranding,
+  type SnapshotGuide,
   type SnapshotManual,
   type SnapshotPdf,
   type SnapshotRelease,
+  type SnapshotStep,
   LANGUAGE_TAG,
 } from '../src/lib/snapshot.ts';
 
@@ -442,11 +444,14 @@ async function readManuals(
       config.audiences,
       audience,
     );
-    const variants = (manual.meta?.['variants'] ?? []) as {
+    const isGuide = manual.attributes['kind'] === 'update-guide';
+    const listed = (manual.meta?.['variants'] ?? []) as {
       slug: string;
       label: string;
       values: Record<string, string>;
     }[];
+    // An update guide's steps are its first variant's (the API's), and its page is one.
+    const variants = isGuide ? listed.slice(0, 1) : listed;
     const out: SnapshotManual['variants'] = [];
     for (const variant of variants) {
       const slug = segment(variant.slug, 'variant');
@@ -480,19 +485,111 @@ async function readManuals(
         pdf: null,
       });
     }
-    if (out.length > 0)
-      manuals.push({
-        id,
-        title: textIn(
-          localized(manual.attributes['title'], 'title'),
-          lang,
-          config.languages.source,
-        ),
-        audience: manualAudience,
-        variants: out,
-      });
+    if (out.length === 0) continue;
+    const guide = isGuide
+      ? await readGuide(client, id, tag, lang, out[0]!.moduleAudiences, {
+          levels: config.audiences,
+          audience,
+          log,
+        })
+      : undefined;
+    manuals.push({
+      id,
+      title: textIn(
+        localized(manual.attributes['title'], 'title'),
+        lang,
+        config.languages.source,
+      ),
+      audience: manualAudience,
+      variants: out,
+      ...(guide && { guide }),
+    });
   }
   return manuals;
+}
+
+const labels = (value: unknown, what: string): SnapshotGuide['levels'] => {
+  if (!Array.isArray(value))
+    throw new ApiError(`${what}: not a list`, 200, undefined);
+  return value.map((item: { id?: unknown; label?: unknown }) => ({
+    id: str(item?.id, `${what} ID`),
+    label: str(item?.label, `${what} label`),
+  }));
+};
+
+/**
+ * An update guide's versions, levels, options and steps (#907): `GET /manuals/{id}/update-guide/{lang}`
+ * and its `…/steps`, at the release's tag. Each step shows a module of the guide's resolved
+ * first variant, whose audiences are already checked (`checked`): a step whose module is not
+ * among them refuses the build, as a module the token cannot list would. A step written for a
+ * level above the build's audience (or for no configured level) is for no reader of this site:
+ * it is left out, so neither its text nor its level reaches the files.
+ */
+async function readGuide(
+  client: ApiClient,
+  id: string,
+  tag: string,
+  lang: string,
+  checked: Readonly<Record<string, string>>,
+  build: {
+    levels: Config['audiences'];
+    audience: string;
+    log: (line: string) => void;
+  },
+): Promise<SnapshotGuide> {
+  const limit = audienceRank(build.levels, build.audience)!;
+  const path = `/manuals/${id}/update-guide/${lang}`;
+  const a = (await client.resource(path, { ref: tag })).attributes;
+  const attribute = a['attribute'] as { id?: unknown; label?: unknown };
+  const steps = (await client.list(`${path}/steps`, { ref: tag })).flatMap(
+    (step): SnapshotStep[] => {
+      const s = step.attributes;
+      const level = s['level'] == null ? null : str(s['level'], 'step level');
+      if (level !== null) {
+        const rank = audienceRank(build.levels, level);
+        if (rank === undefined || rank > limit) {
+          build.log(
+            `${id} ${lang}: a step for the level "${level}" left out, above the build's audience or not configured`,
+          );
+          return [];
+        }
+      }
+      const module = segment(str(s['module'], 'step module'), 'module');
+      if (!Object.hasOwn(checked, module))
+        throw new AudienceError(
+          `update guide ${id} has a step of module ${module}, whose audience the token cannot read`,
+        );
+      return [
+        {
+          id: step.id,
+          module,
+          title: str(s['title'], 'step title'),
+          version: str(s['version'], 'step version'),
+          phase: s['phase'] as SnapshotStep['phase'],
+          level,
+          when: (s['when'] ?? null) as SnapshotStep['when'],
+        },
+      ];
+    },
+  );
+  return {
+    attribute: {
+      id: str(attribute?.id, 'guide attribute'),
+      label: str(attribute?.label, 'guide attribute label'),
+    },
+    versions: (Array.isArray(a['versions']) ? a['versions'] : []).map((v) =>
+      str(v, 'guide version'),
+    ),
+    levels: labels(a['levels'], 'guide level'),
+    options: (Array.isArray(a['options']) ? a['options'] : []).map(
+      (o: { id?: unknown; label?: unknown; values?: unknown }) => ({
+        id: str(o?.id, 'guide option ID'),
+        label: str(o?.label, 'guide option label'),
+        values: labels(o?.values, 'guide option value'),
+      }),
+    ),
+    steps,
+  };
 }
 
 const BRANDING_IMAGES = [

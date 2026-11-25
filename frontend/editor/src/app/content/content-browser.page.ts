@@ -640,10 +640,12 @@ const SEARCH_DEBOUNCE_MS = 300;
                     </tr>
                   } @else {
                     @let s = row.summary;
+                    <!-- The tour's "Open a module" step lights up the first row (issue 869). -->
                     <tr
                       z-table-row
                       [ofListItem]="row"
                       class="hover:bg-muted/50 cursor-pointer"
+                      data-tip="content.module"
                       (click)="open(s)"
                     >
                       <td

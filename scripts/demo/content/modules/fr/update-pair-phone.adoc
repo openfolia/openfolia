@@ -1,0 +1,10 @@
+= Associer à nouveau votre téléphone
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+La mise à jour supprime les téléphones associés. Associez à nouveau votre téléphone sous Réglages › Bluetooth.

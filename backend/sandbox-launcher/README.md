@@ -67,7 +67,15 @@ Path=/`, `Max-Age` the maximum lifetime. The launcher keeps only its SHA-256. Th
   own does not count: `/api/sandbox`, `/api/me/notifications/unread-count` and the health checks,
   the same list as the API's) and `CCMS_LAUNCHER_MAX_MINUTES` after its
   start; token buckets per address for the launcher's pages, per address and per sandbox for a
-  sandbox's requests, and a slower one for challenges and starts.
+  sandbox's requests, and a slower one for challenges and starts. A sandbox's files (a GET or HEAD
+  of a plain path outside `/api`, `/d` and `/mcp`: the editor's code, styles, fonts, translations,
+  about 76 on a cold load) use a bucket of their own per sandbox, ten times the rate with a
+  hundred seconds' worth in a burst, so 20 editor loads at once fit (#870: before, three or more
+  tabs opened together ran out and a chunk answered 429, which left the editor blank). A sandbox
+  may also have at most `CCMS_LAUNCHER_MAX_IN_FLIGHT` requests under way at once (default 256; 20
+  tabs at six connections each need about 120), whatever their kind: past it, 429 `rate-limited`
+  with `Retry-After: 1` until one ends, so a burst of slow downloads cannot hold the launcher's
+  sockets (#876). No ceiling across sandboxes: their number is bounded by `MAX_SANDBOXES`.
 - **Clean-up.** Every 15 seconds: sandboxes past their time, the daily counts older than 24 h,
   and any sandbox the agent lists that the launcher does not know (not while a start is under
   way). At start, every sandbox of the instance; at SIGTERM, every one it started.
@@ -105,20 +113,20 @@ removes only containers and networks labelled with its `CCMS_LAUNCHER_INSTANCE`.
 
 ## Threat model
 
-| Threat                                                 | What stops it                                                                                                                                                  |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A visitor reaches another visitor's sandbox            | The route is chosen by the cookie alone (a random 32-byte key, only its hash kept); a sandbox address without it shows the start page; one network per sandbox |
-| A request target sends the proxy elsewhere (SSRF)      | Only origin-form targets, put on the sandbox's own origin and checked against it; 400 otherwise                                                                |
-| A shared cache serves one visitor's page to another    | Every proxied answer is `Cache-Control: private` with `Vary: Cookie`                                                                                           |
-| A sandbox reaches another, the agent or the internet   | Internal networks without a route out; the agent only on the control network; the launcher the only other member of a sandbox's network                        |
-| A sandbox poses as a visitor (forged X-Forwarded-For)  | The launcher listens on its edge address only, and reads X-Forwarded-For only from the configured proxy; any other peer is refused                             |
-| A page elsewhere starts a sandbox for a visitor (CSRF) | The API is same-origin only (Origin and Sec-Fetch-Site), the cookie is SameSite=Strict                                                                         |
-| A page elsewhere, or another visitor, ends a sandbox   | The end route is same-origin only like a start; it ends the cookie's own sandbox and takes no ID, so no request can name another's                             |
-| Bulk starts exhaust the host                           | The cap, per-address limits, the proof of work, rate limits, and each sandbox's memory, CPU, process, tmpfs and log limits                                     |
-| The launcher is compromised                            | It has no container runtime access: the agent starts only the configured image with fixed limits, removes only its instance's sandboxes                        |
-| The page is framed, or injected script runs            | CSP without inline script, `frame-ancestors 'none'`, everything escaped on the server                                                                          |
-| A visitor's sandbox becomes an admin elsewhere         | The shared portal is built from a normal instance at image build, never from a sandbox's API                                                                   |
-| Personal data kept longer than needed                  | A keyed hash of the address for 24 h in memory; no addresses in logs or sandboxes; the cookie expires with the sandbox                                         |
+| Threat                                                 | What stops it                                                                                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A visitor reaches another visitor's sandbox            | The route is chosen by the cookie alone (a random 32-byte key, only its hash kept); a sandbox address without it shows the start page; one network per sandbox      |
+| A request target sends the proxy elsewhere (SSRF)      | Only origin-form targets, put on the sandbox's own origin and checked against it; 400 otherwise                                                                     |
+| A shared cache serves one visitor's page to another    | Every proxied answer is `Cache-Control: private` with `Vary: Cookie`                                                                                                |
+| A sandbox reaches another, the agent or the internet   | Internal networks without a route out; the agent only on the control network; the launcher the only other member of a sandbox's network                             |
+| A sandbox poses as a visitor (forged X-Forwarded-For)  | The launcher listens on its edge address only, and reads X-Forwarded-For only from the configured proxy; any other peer is refused                                  |
+| A page elsewhere starts a sandbox for a visitor (CSRF) | The API is same-origin only (Origin and Sec-Fetch-Site), the cookie is SameSite=Strict                                                                              |
+| A page elsewhere, or another visitor, ends a sandbox   | The end route is same-origin only like a start; it ends the cookie's own sandbox and takes no ID, so no request can name another's                                  |
+| Bulk starts exhaust the host                           | The cap, per-address limits, the proof of work, rate limits, a cap on a sandbox's requests in flight, and each sandbox's memory, CPU, process, tmpfs and log limits |
+| The launcher is compromised                            | It has no container runtime access: the agent starts only the configured image with fixed limits, removes only its instance's sandboxes                             |
+| The page is framed, or injected script runs            | CSP without inline script, `frame-ancestors 'none'`, everything escaped on the server                                                                               |
+| A visitor's sandbox becomes an admin elsewhere         | The shared portal is built from a normal instance at image build, never from a sandbox's API                                                                        |
+| Personal data kept longer than needed                  | A keyed hash of the address for 24 h in memory; no addresses in logs or sandboxes; the cookie expires with the sandbox                                              |
 
 ## Tests
 

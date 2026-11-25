@@ -34,6 +34,7 @@ export * from './lib/snippet.js';
 export * from './lib/style-pattern.js';
 export * from './lib/writing-check.js';
 export * from './lib/derive.js';
+export * from './lib/update-guide.js';
 export * from './lib/safety.js';
 export * from './lib/structure.js';
 export * from './lib/table-limits.js';

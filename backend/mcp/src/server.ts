@@ -7,7 +7,7 @@ import {
   ReadResourceRequestSchema,
   type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
-import { ToolError, type ContentApi } from './api-client.js';
+import { MCP_CLIENT, ToolError, type ContentApi } from './api-client.js';
 import {
   checkRefForm,
   RELEASED_BRANCH,
@@ -124,12 +124,20 @@ export interface McpContext extends ToolContext {
   readonly limiter: Limiter;
 }
 
-export function createContext(api: ContentApi): McpContext {
+/**
+ * A context reading the API through `api`: its own token check and lists of
+ * tags and releases, so one per token (#861: one per HTTP caller), and the
+ * process's `limiter`, shared by every caller.
+ */
+export function createContext(
+  api: ContentApi,
+  limiter: Limiter = new Limiter(),
+): McpContext {
   return {
     api,
     refs: new ReleasedRefs(api),
     token: new TokenCheck(api),
-    limiter: new Limiter(),
+    limiter,
   };
 }
 
@@ -159,21 +167,24 @@ export function errorResult(error: unknown): CallToolResult {
 export const CALL_TIMEOUT_MS = 120_000;
 
 /**
- * Runs a call: within the limiter, after checking the server's own token
+ * Runs a call: within the limiter, after checking the context's token
  * holds `content.read` alone, with the API read through `signal` (the
  * client's cancellation, or closing the HTTP request) and the call's
- * deadline, so a call given up stops reading and frees its place.
+ * deadline, so a call given up stops reading and frees its place. Its reads
+ * name `client` (`mcp/<tool>`, #877), so the API's read events say which
+ * tool read what.
  */
 async function guarded<T>(
   context: McpContext,
   signal: AbortSignal | undefined,
+  client: string,
   task: (api: ContentApi, signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   const deadline = AbortSignal.timeout(CALL_TIMEOUT_MS);
   const until = signal ? AbortSignal.any([signal, deadline]) : deadline;
   const api: ContentApi = {
     baseUrl: context.api.baseUrl,
-    get: (path, query) => context.api.get(path, query, until),
+    get: (path, query) => context.api.get(path, query, until, client),
   };
   return context.limiter.run(async () => {
     await context.token.ensure(until);
@@ -184,7 +195,8 @@ async function guarded<T>(
 /**
  * The MCP server over the released content: the tools in `TOOLS` and each
  * manual as a resource (`openfolia://manuals/<id>/<variant>/<lang>`). Read-only:
- * every call is a GET to the API with the server's service account token.
+ * every call is a GET to the API with the context's service account token
+ * (the caller's own over HTTP, #861).
  */
 export function createMcpServer(context: McpContext): McpServer {
   const server = new McpServer(SERVER_INFO, {
@@ -212,8 +224,12 @@ export function createMcpServer(context: McpContext): McpServer {
         try {
           // A ref that can never be released content is refused before any API call.
           if (typeof args['ref'] === 'string') checkRefForm(args['ref']);
-          const output = await guarded(context, extra.signal, (api, signal) =>
-            tool.run({ ...context, api, signal }, args as never),
+          const output = await guarded(
+            context,
+            extra.signal,
+            `${MCP_CLIENT}/${tool.name}`,
+            (api, signal) =>
+              tool.run({ ...context, api, signal }, args as never),
           );
           return {
             content: [
@@ -303,33 +319,38 @@ function registerManualResources(server: McpServer, context: McpContext) {
         );
       }
       try {
-        return await guarded(context, extra.signal, async (api) => {
-          const [{ body }, languages] = await Promise.all([
-            api.get('/manuals', {
-              ref: RELEASED_BRANCH,
-              'page[number]': String(pageOf(cursor.data)),
-              'page[size]': String(RESOURCES_PAGE_SIZE),
-            }),
-            languagesAt(api, RELEASED_BRANCH),
-          ]);
-          const page = parseAnswer(ManualPage, body);
-          const next = nextPage(page.meta.page);
-          return {
-            resources: page.data.flatMap((m) =>
-              !m.attributes
-                ? []
-                : (m.meta?.variants ?? []).flatMap((v) =>
-                    languages.map((lang) => ({
-                      uri: manualUri(m.id, v.slug, lang),
-                      name: `${m.id}/${v.slug}/${lang}`,
-                      title: `${titleIn(m.attributes?.title, lang, languages[0]) ?? m.id} (${v.label}, ${lang})`,
-                      mimeType: 'text/markdown',
-                    })),
-                  ),
-            ),
-            ...(next !== null && { nextCursor: next }),
-          };
-        });
+        return await guarded(
+          context,
+          extra.signal,
+          `${MCP_CLIENT}/resources/list`,
+          async (api) => {
+            const [{ body }, languages] = await Promise.all([
+              api.get('/manuals', {
+                ref: RELEASED_BRANCH,
+                'page[number]': String(pageOf(cursor.data)),
+                'page[size]': String(RESOURCES_PAGE_SIZE),
+              }),
+              languagesAt(api, RELEASED_BRANCH),
+            ]);
+            const page = parseAnswer(ManualPage, body);
+            const next = nextPage(page.meta.page);
+            return {
+              resources: page.data.flatMap((m) =>
+                !m.attributes
+                  ? []
+                  : (m.meta?.variants ?? []).flatMap((v) =>
+                      languages.map((lang) => ({
+                        uri: manualUri(m.id, v.slug, lang),
+                        name: `${m.id}/${v.slug}/${lang}`,
+                        title: `${titleIn(m.attributes?.title, lang, languages[0]) ?? m.id} (${v.label}, ${lang})`,
+                        mimeType: 'text/markdown',
+                      })),
+                    ),
+              ),
+              ...(next !== null && { nextCursor: next }),
+            };
+          },
+        );
       } catch (error) {
         throw toMcpError(error);
       }
@@ -340,33 +361,38 @@ function registerManualResources(server: McpServer, context: McpContext) {
     async (request, extra) => {
       const { id, variant, lang } = parseManualUri(request.params.uri);
       try {
-        return await guarded(context, extra.signal, async (api) => {
-          const manual = await manualMarkdown(
-            api,
-            RELEASED_BRANCH,
-            id,
-            variant,
-            lang,
-          );
-          const slice = sliceText(
-            manual.markdown,
-            undefined,
-            RESOURCE_TEXT_LIMIT,
-          );
-          return {
-            contents: [
-              {
-                uri: request.params.uri,
-                mimeType: 'text/markdown',
-                text: slice.text,
-                _meta: {
-                  commit: manual.commit,
-                  truncated: slice.nextCursor !== null,
+        return await guarded(
+          context,
+          extra.signal,
+          `${MCP_CLIENT}/resources/read`,
+          async (api) => {
+            const manual = await manualMarkdown(
+              api,
+              RELEASED_BRANCH,
+              id,
+              variant,
+              lang,
+            );
+            const slice = sliceText(
+              manual.markdown,
+              undefined,
+              RESOURCE_TEXT_LIMIT,
+            );
+            return {
+              contents: [
+                {
+                  uri: request.params.uri,
+                  mimeType: 'text/markdown',
+                  text: slice.text,
+                  _meta: {
+                    commit: manual.commit,
+                    truncated: slice.nextCursor !== null,
+                  },
                 },
-              },
-            ],
-          };
-        });
+              ],
+            };
+          },
+        );
       } catch (error) {
         throw toMcpError(error);
       }

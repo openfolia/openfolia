@@ -8,7 +8,7 @@ Closes #
 
 ## Docs
 
-<!-- The line this change adds or updates in `docs/features.md` (the docs inventory), or "none" and why (a fix with no visible change, tests only). -->
+<!-- The docs pages this change adds or updates (EN and DE, hosted path first), and its line in `docs/features.md` (the docs inventory); or "none" and why (a fix with no visible change, tests only). -->
 
 ## Checks
 

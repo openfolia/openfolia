@@ -3,6 +3,16 @@ import { z } from 'zod';
 /** The JSON:API media type the API speaks. */
 export const JSON_API = 'application/vnd.api+json';
 
+/**
+ * The header naming what a request is for (#877): `mcp` for this server's own
+ * lookups (the token check, the lists of releases), `mcp/<tool>` for a tool's
+ * reads, `mcp/resources/list` and `mcp/resources/read`. The API records it in
+ * the service account's read events, beside the account the token names.
+ */
+export const CLIENT_HEADER = 'X-OpenFolia-Client';
+/** What this server's own requests are named by. */
+export const MCP_CLIENT = 'mcp';
+
 /** How long one API request may take before it is given up. */
 export const API_TIMEOUT_MS = 30_000;
 /** The largest API response read; a longer one is an error, never read on. */
@@ -57,9 +67,15 @@ export interface ContentApi {
   /**
    * A GET of `path` (segments already encoded) with `query`; JSON:API
    * errors become `ToolError`s. `signal` gives it up (the call was
-   * cancelled, or ran past its deadline).
+   * cancelled, or ran past its deadline). `client` names what it is for
+   * (`CLIENT_HEADER`; default `mcp`).
    */
-  get(path: string, query?: Query, signal?: AbortSignal): Promise<ApiResponse>;
+  get(
+    path: string,
+    query?: Query,
+    signal?: AbortSignal,
+    client?: string,
+  ): Promise<ApiResponse>;
 }
 
 /**
@@ -82,6 +98,7 @@ export class HttpContentApi implements ContentApi {
     path: string,
     query: Query = {},
     signal?: AbortSignal,
+    client: string = MCP_CLIENT,
   ): Promise<ApiResponse> {
     if (signal?.aborted) throw cancelled();
     const url = new URL(this.baseUrl + path);
@@ -94,7 +111,11 @@ export class HttpContentApi implements ContentApi {
     let res: Response;
     try {
       res = await this.fetchFn(url, {
-        headers: { Authorization: `Bearer ${this.token}`, Accept: JSON_API },
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Accept: JSON_API,
+          [CLIENT_HEADER]: client,
+        },
         // A redirect would carry the token elsewhere: the API never answers with one.
         redirect: 'error',
         signal: signal

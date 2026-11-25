@@ -61,7 +61,7 @@ beforeAll(() => {
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('the demo content', () => {
-  it('is about thirty modules, three manuals, terms, images and snippets', () => {
+  it('is about thirty modules, three manuals and an update guide, terms, images and snippets', () => {
     const content = readDemoContent();
     const source = Object.values(content.modules[SOURCE_LANG]);
     expect(source.length).toBeGreaterThanOrEqual(30);
@@ -69,6 +69,8 @@ describe('the demo content', () => {
       'owners',
       'quick-start',
       'service',
+      // An update guide (#906): the portal's and the editor's real data.
+      'software-update',
     ]);
     expect(Object.keys(content.terms).length).toBeGreaterThanOrEqual(5);
     expect(Object.keys(content.images).length).toBeGreaterThanOrEqual(3);

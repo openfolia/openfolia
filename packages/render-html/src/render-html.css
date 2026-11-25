@@ -400,7 +400,6 @@
   border: 2px solid var(--of-safety-colour);
   border-radius: var(--radius);
   margin: 0 0 1em;
-  overflow: hidden;
 }
 .of-content .of-safety--danger {
   --of-safety-colour: var(--safety-danger);
@@ -425,6 +424,10 @@
   color: var(--of-safety-on-colour);
   font-weight: 700;
   letter-spacing: 0.05em;
+  /* The notice does not clip (a term's tooltip stands out of it, #891): the bar follows the
+     rounded corners itself, the border's radius less its width. */
+  border-start-start-radius: calc(var(--radius) - 2px);
+  border-start-end-radius: calc(var(--radius) - 2px);
 }
 /* The safety alert symbol precedes DANGER, WARNING and CAUTION, never NOTICE. */
 .of-content .of-safety--danger .of-safety__signal::before,
@@ -577,6 +580,30 @@
 }
 .of-content .of-term.of-term--dismissed > .of-term__definition {
   display: none;
+}
+/*
+ * Where the browser supports anchor positioning the tooltip is fixed to the viewport, anchored to
+ * its term, so no ancestor that clips or scrolls (a table's wrapper, an FAQ sliding open, #891)
+ * cuts it off; it flips above the term when there is no room below, and to the term's other
+ * side when it would leave the viewport. Elsewhere it stays under the term, as before.
+ */
+@supports (position-area: block-end) and (anchor-scope: --of-term) {
+  .of-content .of-term {
+    anchor-scope: --of-term;
+  }
+  .of-content .of-term__link {
+    anchor-name: --of-term;
+  }
+  .of-content .of-term__definition {
+    position: fixed;
+    position-anchor: --of-term;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    inset: auto;
+  }
 }
 .of-content .of-term--unresolved {
   color: inherit;

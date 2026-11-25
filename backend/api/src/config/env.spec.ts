@@ -110,6 +110,7 @@ describe('settings', () => {
         CCMS_EMAIL_CODE_MINUTES: 10,
         CCMS_AUDIT_SINK_POLL_MS: 3_000,
         CCMS_AUDIT_SINK_TIMEOUT_MS: 10_000,
+        CCMS_AUDIT_READ_KEEP_DAYS: 90,
         CCMS_ROLE: 'all',
         CCMS_WORKER_NICE: 10,
       },

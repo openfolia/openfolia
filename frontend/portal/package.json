@@ -45,6 +45,7 @@
             "transitive": true
           },
           "{workspaceRoot}/backend/api/scripts/in-process-api.mjs",
+          "{workspaceRoot}/backend/sandbox/src/database.ts",
           "{workspaceRoot}/pnpm-lock.yaml"
         ],
         "outputs": [
@@ -94,6 +95,7 @@
           "default",
           "^production",
           "{workspaceRoot}/backend/api/scripts/in-process-api.mjs",
+          "{workspaceRoot}/backend/sandbox/src/database.ts",
           "{workspaceRoot}/.env.example"
         ]
       },

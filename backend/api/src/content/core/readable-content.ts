@@ -1770,6 +1770,7 @@ export class ReadableContent {
       ...new Set([
         ...manifestModules(manifest.entries),
         ...(rule ? [...rule.front, ...rule.exclude, ...rule.back] : []),
+        ...(manifest.guide?.steps.map((step) => step.module) ?? []),
       ]),
     ];
     const nameable = new Map(
@@ -1787,10 +1788,18 @@ export class ReadableContent {
       });
     const named = (list: readonly string[]) =>
       list.filter((id) => nameable.get(id));
+    // An update guide's steps name modules as its entries do (#906).
+    const guide = manifest.guide;
     return {
       manifest: {
         ...manifest,
         entries: keep(manifest.entries),
+        ...(guide && {
+          guide: {
+            ...guide,
+            steps: guide.steps.filter((step) => nameable.get(step.module)),
+          },
+        }),
         ...(rule && {
           rule: {
             ...rule,

@@ -29,6 +29,26 @@ describe('loadSettings', () => {
     });
   });
 
+  it('needs no token of its own over HTTP (#861): callers bring theirs; the deprecated shared one needs the API token', () => {
+    expect(
+      loadSettings('http', { CCMS_MCP_API_URL: API.CCMS_MCP_API_URL }),
+    ).toMatchObject({
+      CCMS_MCP_API_URL: API.CCMS_MCP_API_URL,
+      CCMS_MCP_HTTP_PORT: 3200,
+    });
+    const http = loadSettings('http', {
+      CCMS_MCP_API_URL: API.CCMS_MCP_API_URL,
+    });
+    expect(http.CCMS_MCP_API_TOKEN).toBeUndefined();
+    expect(http.CCMS_MCP_HTTP_TOKEN).toBeUndefined();
+    expect(() =>
+      loadSettings('http', {
+        CCMS_MCP_API_URL: API.CCMS_MCP_API_URL,
+        CCMS_MCP_HTTP_TOKEN: '9f3c2a71e04b8d65c1a7f0e93b42d8a6',
+      }),
+    ).toThrow(/CCMS_MCP_API_TOKEN: required with CCMS_MCP_HTTP_TOKEN/);
+  });
+
   it('takes none or a hop count from 1 to 10 for CCMS_MCP_HTTP_TRUST_PROXY, with the proxies named', () => {
     const http = (env: Record<string, string>) =>
       loadSettings('http', {

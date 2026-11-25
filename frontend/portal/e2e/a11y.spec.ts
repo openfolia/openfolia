@@ -47,6 +47,29 @@ for (const lang of ['en', 'de'])
       expect(await violations(page)).toEqual([]);
     });
 
+// An update guide (#907, internal): the pickers and checklist, many steps, and the empty state.
+for (const lang of ['en', 'de'])
+  for (const [name, query] of [
+    ['update guide', ''],
+    [
+      'update guide with many steps, one ticked',
+      '?from=1.0&to=4.0&level=internal&opt=cluster:yes',
+    ],
+    ['update guide with nothing to change', '?from=3.0&to=3.1'],
+  ] as const)
+    test(`${name} (${lang}) meets WCAG 2.1 AA`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(
+        site('internal', `${lang}/alpha/software-update/${query}`),
+      );
+      await expect(
+        page.locator('[data-update-guide][data-ready]'),
+      ).toBeAttached();
+      if (name.includes('ticked'))
+        await page.locator('li.step:visible [data-step-check]').first().check();
+      expect(await violations(page)).toEqual([]);
+    });
+
 // The typeahead open under the start page's field, a row selected (#845).
 for (const lang of ['en', 'de'])
   test(`the open typeahead (${lang}) meets WCAG 2.1 AA`, async ({ page }) => {

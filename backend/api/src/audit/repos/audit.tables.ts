@@ -19,7 +19,9 @@ import { xid8 } from '../../change-sets/repos/outbox.tables.js';
  * that runs the API as a role without ownership closes that too). Since
  * `0050_audit_sink_retention` one way removes rows: the
  * `audit_events_prune` function (retention, SECURITY DEFINER), which
- * records each removal itself; every other DELETE is still refused.
+ * records each removal itself, and since `0063_audit_read_events` its twin
+ * for reads, `audit_events_prune_reads`; every other DELETE is still
+ * refused.
  * No foreign keys: an event outlives the user or role it names.
  * The formats are `core/audit-event.ts`'s, held here too.
  */
@@ -50,6 +52,12 @@ export const auditEvents = pgTable(
     txId: xid8('tx_id')
       .notNull()
       .default(sql`pg_current_xact_id()`),
+    /**
+     * `write` (a change) or `read` (#877: a service account's read), each
+     * removed by retention after its own period; rows from before the
+     * column was added are changes.
+     */
+    kind: text('kind').notNull().default('write'),
   },
   (t) => [
     check(
@@ -77,10 +85,18 @@ export const auditEvents = pgTable(
       sql`${t.comment} is null or char_length(${t.comment}) between 1 and 10000`,
     ),
     check('audit_events_data_object', sql`jsonb_typeof(${t.data}) = 'object'`),
+    // A read is one of `READ_ACTIONS`, and only a read is (#877): read retention can never reach a change.
+    check(
+      'audit_events_kind',
+      sql`${t.kind} in ('write', 'read') and (${t.kind} = 'read') = (${t.action} in ('api.read', 'api.read-gap'))`,
+    ),
     // The filters, each with the order (newest first).
     index('audit_events_subject_idx').on(t.subjectType, t.subjectId, t.id),
     index('audit_events_actor_idx').on(t.actorKind, t.actorId, t.id),
     index('audit_events_action_idx').on(t.action, t.id),
+    index('audit_events_kind_idx').on(t.kind, t.id),
+    // Retention's per kind (#877): the oldest of one kind, without walking the other's.
+    index('audit_events_kind_at_idx').on(t.kind, t.at, t.id),
     // The sink's order, and retention's (and the date filters').
     index('audit_events_tx_id_idx').on(t.txId, t.id),
     index('audit_events_at_idx').on(t.at),

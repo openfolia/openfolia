@@ -5,9 +5,11 @@ import type { Transaction } from '../../base/core/unit-of-work.js';
 import {
   AuditActor,
   type AuditEvent,
+  type AuditKind,
   type AuditFilter,
   type CheckedAuditEvent,
   NewAuditEvent,
+  READ_ACTIONS,
 } from './audit-event.js';
 import type { AuditPosition } from './audit-sink.js';
 
@@ -34,6 +36,16 @@ export abstract class AuditLog {
   ): Promise<void> {
     const who = AuditActor.safeParse({ kind: actor.kind, id: actor.id });
     const what = NewAuditEvent.safeParse(event);
+    // A read is one of `READ_ACTIONS` and nothing else is (#877): read
+    // retention removes reads after their own period, so a change must never be one.
+    if (
+      what.success &&
+      (what.data.kind === 'read') !== READ_ACTIONS.includes(what.data.action)
+    ) {
+      throw new Error(
+        `Invalid audit event: kind "read" goes with the actions ${READ_ACTIONS.join(', ')}, and only with them`,
+      );
+    }
     if (!who.success || !what.success) {
       const error = who.error ?? what.error;
       throw new Error(
@@ -41,6 +53,7 @@ export abstract class AuditLog {
       );
     }
     await this.append(tx, {
+      kind: what.data.kind ?? 'write',
       actor: who.data,
       action: what.data.action,
       subject: what.data.subject,
@@ -73,15 +86,18 @@ export abstract class AuditLog {
 
   /**
    * Retention (#379): removes up to `maxRows` (1 to `MAX_PRUNE_ROWS`) of the
-   * oldest events recorded before `before`, none after `keptAfter` when it
+   * oldest events of `kind` (#877: changes and reads are kept apart, each
+   * for its own period) recorded before `before`, none after `keptAfter` when it
    * is given (events the sink has not sent yet), and when it removed any,
    * records that (`audit-log.prune`, with `before`, how many and the first
-   * and last ID) in the same transaction. Answers how many it removed.
+   * and last ID, and `kind: "read"` for reads) in the same transaction.
+   * `kind` is `write` when not given. Answers how many it removed.
    * `before` lies at least a day back: the database refuses a later one.
    */
   abstract prune(
     before: Date,
     maxRows: number,
     keptAfter?: AuditPosition,
+    kind?: AuditKind,
   ): Promise<number>;
 }

@@ -91,7 +91,11 @@ import { MaintenanceLines } from './maintenance-lines';
       lucideTriangleAlert,
     }),
   ],
-  host: { class: 'flex min-w-0 flex-wrap items-center gap-2' },
+  host: {
+    class: 'flex min-w-0 flex-wrap items-center gap-2',
+    // The tour's revision step (issue 869) points here, for whoever has the picker.
+    '[attr.data-tip]': "visible() ? 'shell.revision' : null",
+  },
   template: `
     @if (visible()) {
       @switch (view()) {

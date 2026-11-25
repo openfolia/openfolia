@@ -71,6 +71,7 @@ describe('GET /audit-events', () => {
       id: expect.stringMatching(/^\d+$/),
       attributes: {
         at: expect.any(String),
+        kind: 'write',
         actor: { kind: 'user', id: 'sample-admin' },
         action: 'role.assign',
         subject: { type: 'user', id: 'sample-author' },
@@ -358,6 +359,7 @@ describe('GET /audit-events/export', () => {
       yield {
         id: one!.id,
         at: new Date(one!.attributes.at),
+        kind: one!.attributes.kind,
         actor: one!.attributes.actor,
         action: one!.attributes.action,
         subject: one!.attributes.subject,

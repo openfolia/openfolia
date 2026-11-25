@@ -1,0 +1,10 @@
+= Lancer l'installation
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Sur l'écran central, ouvrez Réglages › Mise à jour logicielle et appuyez sur Installer maintenant.

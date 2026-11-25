@@ -1,0 +1,10 @@
+= Free storage space
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Delete downloaded maps you no longer need so that the update has at least 4 GB of space.

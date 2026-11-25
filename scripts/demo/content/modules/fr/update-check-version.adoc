@@ -1,0 +1,10 @@
+= Vérifier la version du logiciel
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+Ouvrez Réglages › Mise à jour logicielle et vérifiez que la nouvelle version s'affiche.

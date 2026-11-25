@@ -95,8 +95,13 @@ export interface LauncherSettings extends SharedSettings {
   readonly trustProxy: number;
   /** The addresses of those proxies: X-Forwarded-For is read only from them; anyone else is refused. */
   readonly proxyAddresses: BlockList | undefined;
-  /** Requests a second per address, on average; twice as many in a burst of 10 seconds. */
+  /**
+   * Requests a second per address and per sandbox, on average; ten seconds' worth in a burst. A
+   * sandbox's files have ten times this, a hundred seconds' worth in a burst (server.ts).
+   */
   readonly ratePerSecond: number;
+  /** Requests one sandbox may have in flight at once; past it, 429 until one ends (#876). */
+  readonly maxInFlight: number;
   /** How long a start may take before it is given up. */
   readonly startTimeoutSeconds: number;
   /** An email address or https:// address for abuse reports; unset, the start page shows none. */
@@ -271,6 +276,7 @@ export function launcherSettings(env: Env = process.env): LauncherSettings {
     trustProxy,
     proxyAddresses: proxies(env, trustProxy),
     ratePerSecond: int(env, 'CCMS_LAUNCHER_RATE', 20, 1, 10000),
+    maxInFlight: int(env, 'CCMS_LAUNCHER_MAX_IN_FLIGHT', 256, 1, 100000),
     startTimeoutSeconds: int(env, 'CCMS_LAUNCHER_START_TIMEOUT', 30, 5, 300),
     abuseContact: contact(env),
     filmsDir: env['CCMS_LAUNCHER_FILMS_DIR']?.trim() || undefined,

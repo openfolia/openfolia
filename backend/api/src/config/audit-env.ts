@@ -7,6 +7,8 @@ import { field, text, wholeNumber } from './fields.js';
 /** `CCMS_AUDIT_*` defaults (#379). */
 export const DEFAULT_AUDIT_SINK_POLL_MS = 3_000;
 export const DEFAULT_AUDIT_SINK_TIMEOUT_MS = 10_000;
+/** How many days read events are kept (#877). */
+export const DEFAULT_AUDIT_READ_KEEP_DAYS = 90;
 /** The syslog port for TLS (RFC 5425), when the URL names none. */
 export const DEFAULT_SYSLOG_TLS_PORT = 6514;
 
@@ -80,6 +82,10 @@ export const AuditEnv = z.object({
   ),
   /** How many days events are kept (1 to 36,500); unset: for ever. */
   CCMS_AUDIT_KEEP_DAYS: field(wholeNumber(1, 36_500).optional()),
+  /** How many days read events (#877, a service account's reads) are kept (1 to 36,500; default 90). */
+  CCMS_AUDIT_READ_KEEP_DAYS: field(
+    wholeNumber(1, 36_500).default(DEFAULT_AUDIT_READ_KEEP_DAYS),
+  ),
 });
 export type AuditEnvSettings = z.infer<typeof AuditEnv>;
 

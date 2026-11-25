@@ -1,0 +1,10 @@
+= Diagnosetester anschließen
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: technician
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Schließen Sie den Diagnosetester an die OBD-Buchse an und lassen Sie ihn angeschlossen, bis das Update Erfolg meldet.

@@ -4,7 +4,11 @@ import type { PageRequest, Paginated } from '../../base/core/paging.js';
 import type { Transaction } from '../../base/core/unit-of-work.js';
 import { Database } from '../../database/database.js';
 import { drizzleOf } from '../../database/drizzle-unit-of-work.js';
-import type { AuditEvent, AuditFilter } from '../core/audit-event.js';
+import type {
+  AuditEvent,
+  AuditFilter,
+  AuditKind,
+} from '../core/audit-event.js';
 import {
   AuditLog,
   type CheckedAuditEvent,
@@ -30,6 +34,7 @@ export class DrizzleAuditLog extends AuditLog {
     event: CheckedAuditEvent,
   ): Promise<void> {
     await drizzleOf(tx).insert(auditEvents).values({
+      kind: event.kind,
       actorKind: event.actor.kind,
       actorId: event.actor.id,
       action: event.action,
@@ -89,18 +94,27 @@ export class DrizzleAuditLog extends AuditLog {
     }
   }
 
-  /** Through `audit_events_prune` (migration `0050`): the only way rows leave the table. */
+  /**
+   * Through `audit_events_prune` (migration `0050`) for changes and
+   * `audit_events_prune_reads` (`0063`) for reads: the only ways rows leave
+   * the table.
+   */
   async prune(
     before: Date,
     maxRows: number,
     keptAfter?: AuditPosition,
+    kind: AuditKind = 'write',
   ): Promise<number> {
+    const fn =
+      kind === 'read'
+        ? sql.raw('audit_events_prune_reads')
+        : sql.raw('audit_events_prune');
     const rows = Math.max(1, Math.min(MAX_PRUNE_ROWS, Math.trunc(maxRows)));
     const kept = keptAfter
       ? sql`${keptAfter.tx}::xid8, ${keptAfter.id}::bigint`
       : sql`null, null`;
     const result = await this.database.db.execute<{ removed: number }>(
-      sql`select audit_events_prune(${before.toISOString()}::timestamptz, ${rows}::integer, ${kept}) as removed`,
+      sql`select ${fn}(${before.toISOString()}::timestamptz, ${rows}::integer, ${kept}) as removed`,
     );
     return Number(result.rows[0]?.removed ?? 0);
   }
@@ -110,6 +124,7 @@ export function toEvent(row: AuditRow): AuditEvent {
   return {
     id: String(row.id),
     at: row.at,
+    kind: row.kind as AuditKind,
     actor: {
       kind: row.actorKind as AuditEvent['actor']['kind'],
       id: row.actorId,
@@ -121,7 +136,14 @@ export function toEvent(row: AuditRow): AuditEvent {
   };
 }
 
-function conditions({ subject, actor, action, from, to }: AuditFilter): SQL[] {
+function conditions({
+  subject,
+  actor,
+  action,
+  kind,
+  from,
+  to,
+}: AuditFilter): SQL[] {
   const all: SQL[] = [];
   if (subject) {
     all.push(eq(auditEvents.subjectType, subject.type));
@@ -134,6 +156,7 @@ function conditions({ subject, actor, action, from, to }: AuditFilter): SQL[] {
     if (actor.id !== undefined) all.push(eq(auditEvents.actorId, actor.id));
   }
   if (action !== undefined) all.push(eq(auditEvents.action, action));
+  if (kind !== undefined) all.push(eq(auditEvents.kind, kind));
   if (from !== undefined) all.push(gte(auditEvents.at, from));
   if (to !== undefined) all.push(lt(auditEvents.at, to));
   return all;

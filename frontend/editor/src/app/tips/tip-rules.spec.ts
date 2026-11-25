@@ -3,10 +3,12 @@ import {
   conditionHolds,
   nextTip,
   type TipContext,
+  resumeAt,
+  screenTipPending,
   tourDue,
-  tourSteps,
+  tourFor,
 } from './tip-rules';
-import { TIPS, TOUR_STEPS, type Tip } from './tips';
+import { READER_TOUR, TIPS, type Tip, WRITER_TOUR } from './tips';
 
 const tips: readonly Tip[] = [
   {
@@ -110,22 +112,156 @@ describe('the tour', () => {
     expect(tourDue({ showTips: false, tourDone: false })).toBe(false);
   });
 
-  it('leaves out the steps whose anchor is missing, keeps the centred ones', () => {
-    const steps = tourSteps(TOUR_STEPS, (anchor) => anchor !== 'nav.review');
-    expect(steps.map((s) => s.id)).toEqual([
-      'tour.content',
-      'tour.editor',
-      'tour.change-sets',
-      'tour.search',
+  it('is due with tips off once the person asked for it, until it is done (#868)', () => {
+    expect(tourDue({ showTips: false, tourDone: false, requested: true })).toBe(
+      true,
+    );
+    expect(tourDue({ showTips: false, tourDone: true, requested: true })).toBe(
+      false,
+    );
+  });
+
+  it('is the writer’s for a person who may change content, else the reader’s (#869)', () => {
+    const all = () => true;
+    expect(tourFor(new Set(['content.edit']), all).map((s) => s.id)).toEqual([
+      'tour.welcome',
+      'tour.open-module',
+      'tour.edit',
+      'tour.revision',
+      'tour.review',
     ]);
-    expect(tourSteps(TOUR_STEPS, () => false).map((s) => s.id)).toEqual([
-      'tour.editor',
+    expect(tourFor(new Set(['content.read']), all).map((s) => s.id)).toEqual([
+      'tour.welcome',
+      'tour.open-module',
+      'tour.revision',
+      'tour.manuals',
     ]);
   });
 
-  it('has four to six steps over the shell', () => {
-    expect(TOUR_STEPS.length).toBeGreaterThanOrEqual(4);
-    expect(TOUR_STEPS.length).toBeLessThanOrEqual(6);
+  it('goes without the revision picker’s step for someone who has no picker: a contributor, a reader of the released content only (#869)', () => {
+    const noPicker = (anchor: string) => anchor !== 'shell.revision';
+    expect(
+      tourFor(new Set(['content.edit']), noPicker).map((s) => s.id),
+    ).toEqual(['tour.welcome', 'tour.open-module', 'tour.edit', 'tour.review']);
+    expect(
+      tourFor(new Set(['content.read']), noPicker).map((s) => s.id),
+    ).toEqual(['tour.welcome', 'tour.open-module', 'tour.manuals']);
+  });
+
+  it('leaves out a step about the shell the person has not got, never a task (#869)', () => {
+    const steps = tourFor(
+      new Set(['content.edit']),
+      (anchor) => anchor === 'nav.content',
+    );
+    expect(steps.map((s) => s.id)).toEqual([
+      'tour.welcome',
+      'tour.open-module',
+      'tour.edit',
+    ]);
+  });
+
+  it('resumes at the step it was at, or the nearest before it this screen shows; never the welcome again (#869)', () => {
+    const on =
+      (...anchors: string[]) =>
+      (anchor: string) =>
+        anchors.includes(anchor);
+    // On the module editor: the step it was at.
+    expect(
+      resumeAt(WRITER_TOUR, 2, on('module-editor.text', 'nav.review')),
+    ).toBe(2);
+    // Back on the list before typing: open a module again.
+    expect(resumeAt(WRITER_TOUR, 2, on('content.module', 'nav.review'))).toBe(
+      1,
+    );
+    // Elsewhere: wait.
+    expect(resumeAt(WRITER_TOUR, 2, on('nav.review'))).toBeNull();
+    expect(resumeAt(WRITER_TOUR, 1, on())).toBeNull();
+    // The welcome is centred: shown anywhere, while it is the step.
+    expect(resumeAt(WRITER_TOUR, 0, on())).toBe(0);
+    // Review is in the shell: on every screen.
+    expect(resumeAt(WRITER_TOUR, 4, on('nav.review'))).toBe(4);
+    expect(resumeAt(READER_TOUR, 3, on('nav.manuals'))).toBe(3);
+    // The revision picker is in the top bar: on every screen too.
+    expect(resumeAt(WRITER_TOUR, 3, on('shell.revision'))).toBe(3);
+    expect(resumeAt(WRITER_TOUR, 9, on())).toBeNull();
+  });
+});
+
+describe('the tour’s steps (#869)', () => {
+  it('end the writer’s tour on Review and the reader’s on the manuals, with a guide page', () => {
+    const articles = new Set(guideIndex.articles.map((a) => a.id));
+    for (const steps of [WRITER_TOUR, READER_TOUR]) {
+      expect(steps.length).toBeGreaterThanOrEqual(3);
+      expect(steps.length).toBeLessThanOrEqual(5);
+      const last = steps.at(-1)!;
+      expect(last.task).toBeUndefined();
+      expect(articles).toContain(last.article);
+      for (const step of steps) {
+        if (step.doneOn) expect(articles, step.id).toContain(step.doneOn);
+      }
+    }
+    expect(WRITER_TOUR.at(-1)!.anchor).toBe('nav.review');
+    expect(READER_TOUR.at(-1)!.anchor).toBe('nav.manuals');
+  });
+});
+
+describe('the variant tip (#892)', () => {
+  const variant = TIPS.find((t) => t.id === 'module-editor.variant')!;
+  const here = context({ screen: 'guide.writing.edit-a-module' });
+  const only = (c: TipContext) => nextTip([variant], c)?.id ?? null;
+
+  it('shows in the module editor, once its block is on screen, to a person who may edit', () => {
+    expect(only(here)).toBe('module-editor.variant');
+    expect(only({ ...here, anchored: () => false })).toBeNull();
+    expect(
+      only({ ...here, screen: 'guide.writing.content-browser' }),
+    ).toBeNull();
+  });
+
+  it('is not for a reader, nor during the tour, nor once dismissed or with tips off', () => {
+    expect(
+      only({ ...here, permissions: new Set(['content.read']) }),
+    ).toBeNull();
+    expect(only({ ...here, tourDone: false })).toBeNull();
+    expect(only({ ...here, dismissed: new Set([variant.id]) })).toBeNull();
+    expect(only({ ...here, showTips: false })).toBeNull();
+  });
+});
+
+describe('screenTipPending', () => {
+  const none = (a: string) => a === 'c';
+
+  it('waits while a tip of this screen lacks only its anchor', () => {
+    expect(screenTipPending(tips, context({ anchored: none }))).toBe(true);
+  });
+
+  it('does not wait for a tip that is dismissed, not allowed, of another screen, or anchored', () => {
+    const base = { anchored: none };
+    expect(
+      screenTipPending(tips, context({ ...base, anchored: () => true })),
+    ).toBe(false);
+    expect(
+      screenTipPending(
+        tips,
+        context({ ...base, dismissed: new Set(['a', 'b']) }),
+      ),
+    ).toBe(false);
+    expect(
+      screenTipPending(
+        tips,
+        context({
+          ...base,
+          permissions: new Set(['content.read']),
+          dismissed: new Set(['b']),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      screenTipPending(tips, context({ ...base, screen: 'guide.review.list' })),
+    ).toBe(false);
+    expect(screenTipPending(tips, context({ ...base, showTips: false }))).toBe(
+      false,
+    );
   });
 });
 

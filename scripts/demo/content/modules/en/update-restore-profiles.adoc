@@ -1,0 +1,10 @@
+= Restore your driver profiles
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Import your driver profiles from your account under Settings › Profiles.

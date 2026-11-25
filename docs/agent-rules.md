@@ -121,6 +121,13 @@ in `docs/internal/workflow-improvements.md`, the board skill's "After a merge").
   and the guide page it belongs on. Mark a line `(generated)` when a generated reference (the
   API, the settings, the permissions, the shortcuts) covers it fully. The PR's "Docs" section
   names the line, or says "none" and why.
+- **The docs themselves are part of every issue**, in the same PR, never a follow-up: the
+  pages a reader needs for the change, under `frontend/docs/content/docs/` (user guide,
+  integrations, admin, API or self-hosting), in English and German. A page a hosted reader
+  uses gives the hosted path first and marks server settings with `<ServerSetting>`; addresses
+  are `https://<team>.openfolia.com` for hosted and "your own address" for self-hosted, never a
+  localhost default. Update screenshots on the pages whose screen changed. The PR's "Docs"
+  section lists the pages, or says "none" and why.
 - **One PR per issue**, from the latest base branch, in the given order. Stack on your
   previous branch only if the issue depends on it, and say so in the PR.
 - **The machine is shared:** run the affected projects' tests while iterating

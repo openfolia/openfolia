@@ -49,7 +49,7 @@ export function audienceLevel(
 /** A manual as the source picker knows it. */
 export interface SourceCandidate {
   readonly id: string;
-  readonly kind?: 'derived' | undefined;
+  readonly kind?: 'derived' | 'update-guide' | undefined;
   readonly audience?: string | undefined;
 }
 
@@ -63,7 +63,7 @@ export function mayGatherFrom(
   manual: { readonly id: string; readonly audience?: string | undefined },
   config: Pick<ProjectConfig, 'audiences'>,
 ): boolean {
-  if (source.id === manual.id || source.kind === 'derived') return false;
+  if (source.id === manual.id || source.kind !== undefined) return false;
   return (
     audienceLevel(manual.audience, config) >=
     audienceLevel(source.audience, config)

@@ -1,0 +1,10 @@
+= Charge the high-voltage battery
+:schema-version: 1
+:module-type: procedure
+:lang: en
+:audience: owner
+:facet-product: fenna
+:keywords: software, update
+
+[#intro]
+Charge the high-voltage battery to at least 50 % before you start the update.

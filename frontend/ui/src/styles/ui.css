@@ -322,3 +322,31 @@ tr.of-list-moving > td {
     opacity: 0;
   }
 }
+
+/*
+ * The tour's spotlight (#868, `TipOverlay`): a soft cut-out over what a step explains, the rest
+ * of the page dimmed. Its colours are utilities on the element (`SPOTLIGHT_CLASSES`: the theme's
+ * scrim as a wide ring, an edge in the accent); here only what is not a colour. It takes no
+ * clicks, fades in and out, and between steps glides to the next anchor. Under reduced motion it
+ * appears, moves and goes at once.
+ */
+.of-tour-spotlight {
+  position: fixed;
+  pointer-events: none;
+  border-radius: calc(var(--radius) + 2px);
+  opacity: 0;
+}
+.of-tour-spotlight[data-open] {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .of-tour-spotlight {
+    transition:
+      opacity 150ms ease-out,
+      top 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      left 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 320ms ease-out;
+  }
+}

@@ -10,10 +10,16 @@ import {
  * - a menu, select, popover or other panel is open in the overlay container (one playing its exit
  *   animation does not count, nor the tip itself);
  * - the focus is in a text field or editor: the person is typing, and a tip would cover the caret
- *   or take the keys.
+ *   or take the keys. Not inside `typingIn`: a tour step that asks the person to type there
+ *   (#869) is shown while they do.
  */
-export function pageBusy(doc: Document = document): boolean {
-  if (isEditable(doc.activeElement)) return true;
+export function pageBusy(
+  doc: Document = document,
+  typingIn: Element | null = null,
+): boolean {
+  const active = doc.activeElement;
+  if (isEditable(active) && !(typingIn && active && typingIn.contains(active)))
+    return true;
   if (openModal()) return true;
   const container = doc.querySelector('.cdk-overlay-container');
   if (!container) return false;

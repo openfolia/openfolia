@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { Condition } from './condition.js';
+import { Condition, Version } from './condition.js';
+import { compareVersions } from './condition-eval.js';
 import { Deprecation } from './deprecation.js';
 import {
   AssetRef,
@@ -203,6 +204,66 @@ export const DerivedRule = z.strictObject({
 });
 export type DerivedRule = z.output<typeof DerivedRule>;
 
+/** The most steps an update guide holds. */
+export const MAX_UPDATE_STEPS = 2000;
+
+/** The most versions an update guide offers. */
+export const MAX_UPDATE_VERSIONS = 500;
+
+/**
+ * A step of an update guide (#906, `UpdateGuide.steps`): a module, the release that needs it, when
+ * it is done and, optionally, for which readers. `version` and `phase` are checked by
+ * `validateManifest` rather than here, so a draft with a step not filled in yet still saves:
+ * a step without a dotted version is `update-step-version`, one with another phase than
+ * `UPDATE_PHASES` `update-step-phase` (both errors).
+ */
+export const UpdateStep = z.strictObject({
+  /** The module holding the step's text (its title and body). */
+  module: ModuleId,
+  /**
+   * The release that needs it, a dotted version of the guide's version attribute (`2.3`). It
+   * applies to a jump from `from` to `to` when `from < version <= to`.
+   */
+  version: z.string().max(64).optional(),
+  /** `before`, `during` or `after` the update (`UPDATE_PHASES`). */
+  phase: z.string().max(64),
+  /**
+   * The least restricted audience level it is for (a configured `audiences` ID): a reader who
+   * picks that level or a more restricted one sees it. Absent: every level.
+   */
+  level: ConfigKey.optional(),
+  /** A condition on the reader's options (enum variant attributes). Absent: every setup. */
+  when: Condition.optional(),
+});
+export type UpdateStep = z.infer<typeof UpdateStep>;
+
+/**
+ * An update guide's own part (#906, `kind: update-guide`): the version attribute it follows, the
+ * versions a reader picks from and to, and its steps in the order written. Its entries are made
+ * from the steps when it is read (`updateGuideEntries`).
+ */
+export const UpdateGuide = z.strictObject({
+  /** The configured version attribute (`variantAttributes`, `kind: version`) it follows. */
+  attribute: ConfigKey,
+  /** The versions a reader picks from, oldest first (at least two, each once, numerically). */
+  versions: z
+    .array(Version.max(64))
+    .min(2)
+    .max(MAX_UPDATE_VERSIONS)
+    .refine(
+      (vs) =>
+        vs.every(
+          (v, i) => i === 0 || compareVersions(vs[i - 1] as string, v) < 0,
+        ),
+      'versions listed oldest first, each once',
+    ),
+  steps: z.array(UpdateStep).max(MAX_UPDATE_STEPS).default([]),
+});
+export type UpdateGuide = z.output<typeof UpdateGuide>;
+
+/** The kinds of manual besides an assembled one (no `kind`). */
+export const MANUAL_KINDS = ['derived', 'update-guide'] as const;
+
 /**
  * A manual: which modules, in which order, for which variants. Stored as
  * YAML next to the modules; the ID is the file name.
@@ -212,9 +273,10 @@ export const Manifest = z.strictObject({
   id: ModuleId,
   /**
    * `derived` (#451): its entries come from `rule`, gathered from another manual, never written
-   * by hand. Absent: an assembled manual, its entries its own.
+   * by hand. `update-guide` (#906): its entries are its `guide`'s steps. Absent: an assembled
+   * manual, its entries its own.
    */
-  kind: z.literal('derived').optional(),
+  kind: z.enum(MANUAL_KINDS).optional(),
   /** One line, or one per language (#731, `ManualTitle`). */
   title: ManualTitle,
   /** The audience this manual is published for; modules above it are left out. */
@@ -278,6 +340,11 @@ export const Manifest = z.strictObject({
    */
   rule: DerivedRule.optional(),
   /**
+   * An update guide's versions and steps (`UpdateGuide`); only with `kind: update-guide`, which
+   * needs one.
+   */
+  guide: UpdateGuide.optional(),
+  /**
    * The modules in order. A stored assembled manual has at least one (`StoredManifest`). A
    * derived manual's file has none: they are gathered when it is read (`deriveManifest`), and
    * never printed.
@@ -292,14 +359,38 @@ export type Manifest = z.infer<typeof Manifest>;
  * `Manifest` so that schema can still be extended and picked from.
  */
 export function storedManifestProblems(
-  manifest: Pick<Manifest, 'kind' | 'rule' | 'entries'>,
+  manifest: Pick<Manifest, 'kind' | 'rule' | 'guide' | 'entries'>,
 ): { path: string; message: string }[] {
+  const guide =
+    manifest.guide && manifest.kind !== 'update-guide'
+      ? [
+          {
+            path: 'kind',
+            message:
+              'a manual with a guide is an update guide (`kind: update-guide`)',
+          },
+        ]
+      : [];
   if (manifest.kind === 'derived') {
-    return manifest.rule
-      ? []
-      : [{ path: 'rule', message: 'a derived manual needs its rule' }];
+    return [
+      ...guide,
+      ...(manifest.rule
+        ? []
+        : [{ path: 'rule', message: 'a derived manual needs its rule' }]),
+    ];
+  }
+  if (manifest.kind === 'update-guide') {
+    return [
+      ...(manifest.guide
+        ? []
+        : [{ path: 'guide', message: 'an update guide needs its guide' }]),
+      ...(manifest.rule
+        ? [{ path: 'rule', message: 'an update guide has no rule' }]
+        : []),
+    ];
   }
   return [
+    ...guide,
     ...(manifest.rule
       ? [
           {

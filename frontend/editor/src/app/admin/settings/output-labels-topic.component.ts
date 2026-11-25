@@ -38,6 +38,10 @@ const LABEL_TEXTS: Readonly<Record<OutputLabelKey, string>> = {
   attachment: 'editor.admin.settings.outputLabels.keys.attachment',
   attachmentNote: 'editor.admin.settings.outputLabels.keys.attachmentNote',
   glossary: 'editor.admin.settings.outputLabels.keys.glossary',
+  updateVersion: 'editor.admin.settings.outputLabels.keys.updateVersion',
+  updateBefore: 'editor.admin.settings.outputLabels.keys.updateBefore',
+  updateDuring: 'editor.admin.settings.outputLabels.keys.updateDuring',
+  updateAfter: 'editor.admin.settings.outputLabels.keys.updateAfter',
 };
 
 /** The output labels in groups, each a heading over its fields. */
@@ -56,6 +60,10 @@ const GROUPS: readonly {
   {
     title: 'editor.admin.settings.outputLabels.groups.captions',
     keys: ['figure', 'table', 'contents', 'glossary'],
+  },
+  {
+    title: 'editor.admin.settings.outputLabels.groups.updateGuides',
+    keys: ['updateVersion', 'updateBefore', 'updateDuring', 'updateAfter'],
   },
   {
     title: 'editor.admin.settings.outputLabels.groups.other',

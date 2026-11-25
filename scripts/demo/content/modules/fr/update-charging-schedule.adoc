@@ -1,0 +1,10 @@
+= Régler à nouveau la programmation de charge
+:schema-version: 1
+:module-type: procedure
+:lang: fr
+:audience: owner
+:facet-product: fenna
+:keywords: logiciel, mise à jour
+
+[#intro]
+La mise à jour efface la programmation de charge. Réglez-la à nouveau sous Réglages › Charge.

@@ -22,8 +22,264 @@
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
       })();
     </script>
+    <script>
+      // The start-up's error state (#870): when a file the editor starts from does not load (a
+      // script, a stylesheet), the start fails or its first screen cannot be opened (main.ts
+      // sends `of-boot-failed`), the page shows #of-boot-error instead of staying empty. It must
+      // work with nothing else loaded, so its texts (English and German: the remembered choice,
+      // else the browser's first of the two, else English; LanguageService also weighs the
+      // instance's configured languages, which are not known here), styles and icons are all in
+      // this file. Once the first screen is open (`of-booted`) it is not shown again, and gives
+      // way to it if shown: later failures are the screens' own.
+      (function () {
+        var TEXTS = {
+          en: {
+            title: 'The editor didn’t load',
+            body: 'Part of it couldn’t be fetched, perhaps only for a moment. Nothing you saved is lost.',
+            retry: 'Try again',
+          },
+          de: {
+            title: 'Der Editor wurde nicht geladen',
+            body: 'Ein Teil davon ließ sich nicht abrufen, vielleicht nur kurz. Was Sie gespeichert haben, bleibt erhalten.',
+            retry: 'Erneut versuchen',
+          },
+        };
+        function has(lang) {
+          return Object.prototype.hasOwnProperty.call(TEXTS, lang);
+        }
+        function language() {
+          var chosen = null;
+          try {
+            chosen = localStorage.getItem('of-language');
+          } catch (e) {}
+          if (chosen && has(chosen)) return chosen;
+          var asked = navigator.languages || [navigator.language || ''];
+          for (var i = 0; i < asked.length; i++) {
+            var tag = String(asked[i]).toLowerCase().split('-')[0];
+            if (has(tag)) return tag;
+          }
+          return 'en';
+        }
+        var booted = false;
+        var shown = false;
+        function show() {
+          if (booted || shown) return;
+          var panel = document.getElementById('of-boot-error');
+          if (!panel) {
+            document.addEventListener('DOMContentLoaded', show, { once: true });
+            return;
+          }
+          shown = true;
+          var lang = language();
+          var texts = TEXTS[lang];
+          panel.lang = lang;
+          panel.querySelector('[data-text=title]').textContent = texts.title;
+          panel.querySelector('[data-text=body]').textContent = texts.body;
+          panel.querySelector('[data-text=retry]').textContent = texts.retry;
+          var root = document.querySelector('of-root');
+          if (root) root.hidden = true;
+          panel.hidden = false;
+          panel.querySelector('h1').focus();
+        }
+        // A start-up file that failed: `error` does not bubble, so it is caught on its way down.
+        window.addEventListener(
+          'error',
+          function (event) {
+            var el = event.target;
+            if (!el || !el.tagName) return;
+            var tag = el.tagName.toLowerCase();
+            if (
+              tag === 'script' ||
+              (tag === 'link' && /^(stylesheet|modulepreload)$/i.test(el.rel))
+            )
+              show();
+          },
+          true,
+        );
+        window.addEventListener('of-boot-failed', show);
+        // The first screen opened after all (a failed preload the import fetched again, say):
+        // the error state gives way to it.
+        window.addEventListener('of-booted', function () {
+          booted = true;
+          if (!shown) return;
+          shown = false;
+          document.getElementById('of-boot-error').hidden = true;
+          var root = document.querySelector('of-root');
+          if (root) root.hidden = false;
+        });
+        document.addEventListener('click', function (event) {
+          var button =
+            event.target.closest && event.target.closest('#of-boot-retry');
+          if (button) location.reload();
+        });
+      })();
+    </script>
+    <style>
+      /* The error state's own styles: the theme's tokens (styles.css, light and dark). Should
+         styles.css itself not have loaded, the browser's own colours for the page's colour
+         scheme (set above), so it stays legible in either theme. */
+      #of-boot-error {
+        --boot-bg: var(--background, Canvas);
+        --boot-fg: var(--foreground, CanvasText);
+        --boot-muted: var(--muted-foreground, CanvasText);
+        --boot-border: var(--border, GrayText);
+        --boot-hover: var(--muted, Canvas);
+        --boot-ring: var(--ring, Highlight);
+        --boot-danger: var(--destructive, CanvasText);
+        --boot-danger-muted: var(--destructive-muted, Canvas);
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        /* A little above the middle, where the eye expects it. */
+        padding: 1.5rem 1rem 8vh;
+        background: var(--boot-bg);
+        color: var(--boot-fg);
+        font-family: var(
+          --font-sans,
+          'Geist',
+          ui-sans-serif,
+          system-ui,
+          sans-serif
+        );
+        -webkit-font-smoothing: antialiased;
+        animation: of-boot-in 240ms ease-out both;
+      }
+      .dark #of-boot-error {
+        --boot-border: var(--input, GrayText);
+        --boot-hover: var(--accent, Canvas);
+      }
+      #of-boot-error[hidden] {
+        display: none;
+      }
+      #of-boot-error .boot-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.625rem;
+        max-width: 26rem;
+        text-align: center;
+      }
+      #of-boot-error .boot-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 0.375rem;
+        border-radius: 0.75rem;
+        background: var(--boot-danger-muted);
+        color: var(--boot-danger);
+      }
+      #of-boot-error h1 {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.25rem;
+        font-weight: 500;
+        letter-spacing: -0.005em;
+        text-wrap: balance;
+        outline: none;
+      }
+      #of-boot-error p {
+        margin: 0;
+        max-width: 22rem;
+        font-size: 0.875rem;
+        line-height: 1.375rem;
+        color: var(--boot-muted);
+        text-wrap: pretty;
+        overflow-wrap: break-word;
+      }
+      #of-boot-error button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        height: 2rem;
+        margin-top: 0.625rem;
+        padding: 0 0.75rem 0 0.625rem;
+        border: 1px solid var(--boot-border);
+        border-radius: calc(var(--radius, 0.625rem) - 2px);
+        background: var(--boot-bg);
+        color: var(--boot-fg);
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background-color 150ms ease,
+          box-shadow 150ms ease,
+          border-color 150ms ease;
+      }
+      #of-boot-error button:hover {
+        background: var(--boot-hover);
+      }
+      #of-boot-error button:active {
+        transform: translateY(1px);
+      }
+      #of-boot-error button:focus-visible {
+        outline: 2px solid var(--boot-ring);
+        outline-offset: 2px;
+        border-color: var(--boot-ring);
+      }
+      @keyframes of-boot-in {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #of-boot-error {
+          animation: none;
+        }
+        #of-boot-error button {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <of-root></of-root>
+    <div id="of-boot-error" role="alert" hidden>
+      <div class="boot-card">
+        <span class="boot-icon" aria-hidden="true">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m2 2 20 20" />
+            <path
+              d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"
+            />
+            <path
+              d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"
+            />
+          </svg>
+        </span>
+        <h1 data-text="title" tabindex="-1"></h1>
+        <p data-text="body"></p>
+        <button id="of-boot-retry" type="button">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          <span data-text="retry"></span>
+        </button>
+      </div>
+    </div>
   </body>
 </html>

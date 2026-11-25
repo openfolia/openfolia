@@ -44,7 +44,8 @@ Beispielinhalten. Es prüft:
   einer Anfrage von einer anderen Herkunft dort;
 - ein PDF, direkt und über den Editor erzeugt;
 - dass der Editor die API erreicht, nachdem ihr Container neu erstellt wurde;
-- den MCP-Server: abgelehnt ohne sein Token, seine Werkzeuge aufgelistet mit ihm;
+- den MCP-Server: abgelehnt ohne Token, seine Werkzeuge aufgelistet mit dem eigenen, nur lesenden
+  Token eines Service-Accounts, ein Token, das mehr als lesen darf, abgelehnt (`token-not-read-only`);
 - Backups: einen Backup-Schlüssel, einen S3-Speicherort, ein geprüftes Backup und eine
   Wiederherstellung in einen neuen Stack, der ein PDF erzeugt und seine versiegelten Geheimnisse
   noch öffnet;

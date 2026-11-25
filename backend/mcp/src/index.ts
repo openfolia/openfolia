@@ -4,6 +4,7 @@ export {
   type ContentApi,
   type Query,
 } from './api-client.js';
+export { Callers, SERVICE_TOKEN } from './callers.js';
 export {
   createHttpHandler,
   MCP_PATH,

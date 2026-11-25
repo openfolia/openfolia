@@ -106,6 +106,8 @@ export abstract class AuditSettings {
   abstract readonly sinkEnabled: boolean;
   /** How many days events are kept (`CCMS_AUDIT_KEEP_DAYS`); undefined: for ever. */
   abstract readonly keepDays: number | undefined;
+  /** How many days read events are kept (`CCMS_AUDIT_READ_KEEP_DAYS`, #877). */
+  abstract readonly readKeepDays: number;
 }
 
 /** Whether `a` lies before `b` in the sink's order. */

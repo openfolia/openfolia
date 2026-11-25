@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   type LocalizedText,
   sameText,
+  updateGuideEntries,
   withTextIn,
 } from '@openfolia/content-model/core';
 
@@ -17,6 +18,7 @@ import { injectFailureText } from '../session/failure-text';
 import { toEntries, toRows, type OutlineRow } from './manual-outline';
 import type { ManualSettings, SettingsPatch } from './manual-settings';
 import { summarizeVariants } from './manual-variants';
+import type { UpdateGuide } from './update-guide';
 
 type DraftManifest = Schema<'DraftManifest'>;
 /** A derived manual's rule (#451): where it gathers from, what and between which modules. */
@@ -108,6 +110,13 @@ export class ManualDraft {
   readonly rule = signal<DerivedRule | null>(null);
   /** Whether the manual is a derived one (its rule may still be missing in a broken draft). */
   readonly derived = signal(false);
+  /**
+   * Whether the manual is an update guide (#906): its outline is its steps, made by the API, so
+   * nothing is added, removed or moved here (its own screen edits the steps, #908).
+   */
+  readonly updateGuide = signal(false);
+  /** An update guide's versions and steps as shown (#908); null for another kind. */
+  readonly guide = signal<UpdateGuide | null>(null);
   /** What a derived manual gathers is being read again after a change of its rule. */
   readonly gathering = signal(false);
   /** Reading what a derived manual gathers failed (its last outline stays); null otherwise. */
@@ -177,6 +186,8 @@ export class ManualDraft {
       this.settings.set(null);
       this.rule.set(null);
       this.derived.set(false);
+      this.updateGuide.set(false);
+      this.guide.set(null);
     }
     const stale = () => generation !== this.generation;
     try {
@@ -223,7 +234,9 @@ export class ManualDraft {
       };
       const committedKind = {
         derived: doc.data.attributes.kind === 'derived',
+        updateGuide: doc.data.attributes.kind === 'update-guide',
         rule: doc.data.attributes.rule ?? null,
+        guide: doc.data.attributes.guide ?? null,
       };
       if (reason !== undefined || !changeSet) {
         this.header = null;
@@ -295,7 +308,7 @@ export class ManualDraft {
       this.show(
         { ...info, title: header.title },
         toRows(
-          gathered?.data.attributes.entries ?? entries,
+          gathered?.data.attributes.entries ?? entriesOf(header, entries),
           undefined,
           this.source,
         ),
@@ -358,7 +371,7 @@ export class ManualDraft {
         committed: false,
       },
       toRows(
-        gathered?.data.attributes.entries ?? entries,
+        gathered?.data.attributes.entries ?? entriesOf(header, entries),
         undefined,
         this.source,
       ),
@@ -433,6 +446,8 @@ export class ManualDraft {
     this.settings.set(null);
     this.rule.set(null);
     this.derived.set(false);
+    this.updateGuide.set(false);
+    this.guide.set(null);
     this.gathers++;
     this.gathering.set(false);
     this.gatherError.set(null);
@@ -450,8 +465,10 @@ export class ManualDraft {
     return this.enqueue(async () => {
       if (generation !== this.generation || !this.confirmedHeader) return null;
       // A derived manual's rows are gathered by its rule: never written as entries (#669).
+      // An update guide's are its steps (#906): the API makes them.
       const entries =
-        this.confirmedHeader.kind === 'derived'
+        this.confirmedHeader.kind === 'derived' ||
+        this.confirmedHeader.kind === 'update-guide'
           ? []
           : toEntries(this.confirmed);
       return { ...this.confirmedHeader, entries };
@@ -497,7 +514,8 @@ export class ManualDraft {
    * derived manual's outline is what its rule gathers: never changed as entries (#669).
    */
   change(next: readonly OutlineRow[]): void {
-    if (this.derived()) return;
+    // An update guide's outline is its steps (#906): its own screen edits them (#908).
+    if (this.derived() || this.updateGuide()) return;
     this.save(next);
   }
 
@@ -510,6 +528,19 @@ export class ManualDraft {
     if (this.mode().kind !== 'edit' || !this.header || !this.derived()) return;
     this.showHeader({ ...this.header, rule });
     this.save(this.rows());
+  }
+
+  /**
+   * Changes an update guide's versions and steps (#908) and saves them like the outline: its
+   * outline is then its steps' modules, in the guide's order. Nothing for another kind.
+   */
+  changeGuide(guide: UpdateGuide): void {
+    if (this.destroyed || this.status() !== 'ready') return;
+    if (this.mode().kind !== 'edit' || !this.header) return;
+    if (!this.updateGuide()) return;
+    const next = { ...this.header, guide };
+    this.showHeader(next);
+    this.save(toRows(entriesOf(next, []), undefined, this.source));
   }
 
   /** Shows `next` and saves it with the header shown now. */
@@ -595,7 +626,9 @@ export class ManualDraft {
     this.header = header;
     this.showKind({
       derived: header.kind === 'derived',
+      updateGuide: header.kind === 'update-guide',
       rule: header.rule ?? null,
+      guide: header.guide ?? null,
     });
     const variantsChanged =
       JSON.stringify(this.manual()?.variants.map((v) => v.values)) !==
@@ -622,9 +655,16 @@ export class ManualDraft {
     });
   }
 
-  private showKind(kind: { derived: boolean; rule: DerivedRule | null }): void {
+  private showKind(kind: {
+    derived: boolean;
+    updateGuide: boolean;
+    rule: DerivedRule | null;
+    guide: UpdateGuide | null;
+  }): void {
     this.derived.set(kind.derived);
+    this.updateGuide.set(kind.updateGuide);
     this.rule.set(kind.derived ? kind.rule : null);
+    this.guide.set(kind.updateGuide ? kind.guide : null);
   }
 
   /** Makes the saved working copy a save point now (after the saves before it); resolves whether there is nothing left uncommitted. */
@@ -673,7 +713,10 @@ export class ManualDraft {
                   content: {
                     ...header,
                     entries:
-                      header.kind === 'derived' ? [] : toEntries(sending),
+                      header.kind === 'derived' ||
+                      header.kind === 'update-guide'
+                        ? []
+                        : toEntries(sending),
                   },
                 },
               },
@@ -854,4 +897,17 @@ export class ManualDraft {
       title: this.titleText(),
     });
   }
+}
+
+/**
+ * A working copy's entries as the outline shows them: an update guide's are its steps' modules
+ * (#906, made from the steps as the API does; its working copy sends none), any other's its own.
+ */
+function entriesOf(
+  header: Omit<DraftManifest, 'entries'>,
+  entries: DraftManifest['entries'],
+): DraftManifest['entries'] {
+  return header.kind === 'update-guide' && header.guide
+    ? updateGuideEntries(header.guide.steps)
+    : entries;
 }

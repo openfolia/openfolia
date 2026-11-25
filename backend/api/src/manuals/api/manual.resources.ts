@@ -43,7 +43,7 @@ export const ManualAttributes = z
   .object({
     schemaVersion: Manifest.shape.schemaVersion,
     kind: Manifest.shape.kind.describe(
-      '`derived` (#451): its entries are gathered from another manual by `rule`, never written by hand. Absent: an assembled manual.',
+      '`derived` (#451): its entries are gathered from another manual by `rule`, never written by hand. `update-guide` (#906): its entries are its `guide`’s steps. Absent: an assembled manual.',
     ),
     title: Manifest.shape.title,
     audience: Manifest.shape.audience,
@@ -58,10 +58,13 @@ export const ManualAttributes = z
     rule: Manifest.shape.rule.describe(
       'A derived manual’s rule (#451): `source`, the manual it gathers from; `moduleTypes`, the types it gathers (absent: the configured safety types); `exclude`, modules left out; `front` and `back`, its own modules before and after. Absent for an assembled manual.',
     ),
+    guide: Manifest.shape.guide.describe(
+      'An update guide’s own part (#906): `attribute`, the version attribute it follows; `versions`, the versions a reader picks from, oldest first; `steps`, each a `module` with the `version` that needs it, its `phase` (`before`, `during`, `after`) and optionally a `level` (an audience ID) and a `when` condition on the reader’s options. Only the steps whose module the reader may see. Absent for other kinds.',
+    ),
     entries: z
       .array(ManifestEntry)
       .describe(
-        'Only the modules the reader may see (groups left empty go too), so it can be empty. A derived manual’s are the ones its rule gathers, front matter first, back matter last.',
+        'Only the modules the reader may see (groups left empty go too), so it can be empty. A derived manual’s are the ones its rule gathers, front matter first, back matter last; an update guide’s one per step, by version and phase.',
       ),
   })
   .meta({ id: 'ManualAttributes' });
@@ -132,6 +135,7 @@ export function toManualAttributes(
       ? {}
       : { coverImage: manifest.coverImage }),
     ...(manifest.rule === undefined ? {} : { rule: manifest.rule }),
+    ...(manifest.guide === undefined ? {} : { guide: manifest.guide }),
     entries: manifest.entries,
   };
 }
@@ -248,7 +252,8 @@ export function toResolvedManualResource(
   variant: string,
   { manual, issues }: ManualResolution,
 ): z.infer<typeof ResolvedManualResource> {
-  const { id, ...attributes } = manual;
+  // An update guide's steps (#906) are their own route's, and hold the entries again.
+  const { id, updateSteps: _steps, ...attributes } = manual;
   return {
     type: 'ResolvedManual',
     id: `${id}/${variant}/${manual.lang}`,

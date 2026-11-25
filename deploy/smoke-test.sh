@@ -2,7 +2,7 @@
 # Starts the compose stack from scratch on the sample content, checks it, and removes it again
 # (containers and volumes): the API's health, the editor, the editor's /api proxy and its host and
 # origin checks, a PDF rendered through each, the editor after the API is recreated, the MCP
-# server on its port and at the editor's /mcp (its token, origin check and lockout), a release's files rendered by two separate workers, none twice and within the
+# server on its port and at the editor's /mcp (callers' own tokens, a wider one refused, origin check and lockout), a release's files rendered by two separate workers, none twice and within the
 # per-release cap, with the workers' health, the reader portal (--profile portal: built from that
 # release with a read-only token, its headers, a new release shown without a restart, no file
 # holding the token), and the backups: a verified backup to an S3 server
@@ -172,37 +172,45 @@ echo "GET /api/me through the editor after recreating the API -> $code"
 
 step "the MCP server"
 compose exec -T api node dist/database/seed.main.js --example >/dev/null
-CCMS_MCP_API_TOKEN=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp --role reader | tail -n 1)
-CCMS_MCP_HTTP_TOKEN=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
-export CCMS_MCP_API_TOKEN CCMS_MCP_HTTP_TOKEN OPENFOLIA_MCP_PORT="$mcp_port"
+# The server needs no token of its own (#861): each caller sends its own service account token,
+# here one whose role (`reader`) holds content.read alone, and one that may do more (`publisher`).
+unset CCMS_MCP_API_TOKEN CCMS_MCP_HTTP_TOKEN
+mcp_token=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp --role reader | tail -n 1)
+mcp_wide_token=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp-wide --role publisher | tail -n 1)
+export OPENFOLIA_MCP_PORT="$mcp_port"
 code=$(status -X POST "$editor/mcp")
 [ "$code" = 404 ] || fail "POST /mcp through the editor without the MCP service answered $code"
 echo "POST /mcp through the editor, no MCP service yet -> $code"
 up --profile mcp --no-deps mcp
 code=$(status -X POST "$mcp/mcp")
-[ "$code" = 401 ] || fail "POST /mcp without the token answered $code"
-echo "POST /mcp without the token -> $code"
-code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Content-Type: application/json' \
+[ "$code" = 401 ] || fail "POST /mcp without a token answered $code"
+echo "POST /mcp without a token -> $code"
+code=$(status -X POST -H "Authorization: Bearer $mcp_token" -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$mcp/mcp")
 [ "$code" = 200 ] && grep -q '"tools"' "$work/body" || fail "tools/list answered $code: $(head -c 300 "$work/body")"
-echo "POST /mcp tools/list -> $code, $(grep -o '"name":"[a-z_-]*"' "$work/body" | wc -l | tr -d ' ') tools"
+echo "POST /mcp tools/list with a caller's own read-only token -> $code, $(grep -o '"name":"[a-z_-]*"' "$work/body" | wc -l | tr -d ' ') tools"
+# A token that may do more than read (drafts, releases) is refused, never served.
+code=$(status -X POST -H "Authorization: Bearer $mcp_wide_token" -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$mcp/mcp")
+[ "$code" = 403 ] && grep -q 'token-not-read-only' "$work/body" || fail "a token holding more than content.read answered $code: $(head -c 300 "$work/body")"
+echo "POST /mcp with a token holding more than content.read -> $code token-not-read-only"
 
 step "the MCP server at the editor's address (/mcp, #860)"
-# The editor's own CCMS_EDITOR_API_TOKEN never reaches /mcp: without the MCP token, 401. The
+# The editor's own CCMS_EDITOR_API_TOKEN never reaches /mcp: without a token, 401. The
 # editor keeps the name's failed lookup (before the service ran) for up to 10 s: wait that out.
 for wait in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
   code=$(status -X POST "$editor/mcp")
   [ "$code" = 404 ] || break
   sleep 1
 done
-[ "$code" = 401 ] || fail "POST /mcp through the editor without the token answered $code"
-echo "POST /mcp through the editor without the token -> $code"
-code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Content-Type: application/json' \
+[ "$code" = 401 ] || fail "POST /mcp through the editor without a token answered $code"
+echo "POST /mcp through the editor without a token -> $code"
+code=$(status -X POST -H "Authorization: Bearer $mcp_token" -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$editor/mcp")
 [ "$code" = 200 ] && grep -q '"tools"' "$work/body" || fail "tools/list through the editor answered $code: $(head -c 300 "$work/body")"
 echo "POST /mcp tools/list through the editor -> $code, $(grep -o '"name":"[a-z_-]*"' "$work/body" | wc -l | tr -d ' ') tools"
 # The server's origin allowlist (none here) still applies behind the proxy, the editor's own too.
-code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H "Origin: $editor" "$editor/mcp")
+code=$(status -X POST -H "Authorization: Bearer $mcp_token" -H "Origin: $editor" "$editor/mcp")
 [ "$code" = 403 ] || fail "POST /mcp through the editor with an Origin not allowed answered $code"
 echo "POST /mcp through the editor with an Origin not allowed -> $code"
 # A caller on the MCP port is never believed about its address (CCMS_MCP_HTTP_PROXY_ADDRESSES is
@@ -230,7 +238,7 @@ code=$(compose exec -T editor wget -q -S -O /dev/null --header 'Authorization: B
   http://127.0.0.1:8080/mcp 2>&1 | sed -n 's/^ *HTTP\/1\.[01] \([0-9]*\).*/\1/p' | tail -n 1)
 [ "$code" = 401 ] || fail "a wrong token from another address through the editor answered $code"
 echo "a wrong token from another address (inside the editor's container) -> $code"
-code=$(status -X POST -H "Authorization: Bearer $CCMS_MCP_HTTP_TOKEN" -H 'Content-Type: application/json' \
+code=$(status -X POST -H "Authorization: Bearer $mcp_token" -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' --data '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' "$editor/mcp")
 [ "$code" = 200 ] || fail "the token through the editor from a locked-out address answered $code"
 echo "the token from the locked-out address -> $code"

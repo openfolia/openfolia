@@ -30,7 +30,10 @@ import { parseArgs } from 'node:util';
 import { buildDemoRepo } from './content.mjs';
 import { ROOT } from './paths.mjs';
 import { DEMO_PEOPLE, demoSeed } from './people.mjs';
-import { Client, populate } from './populate.mjs';
+import { Client, populate, TIPS_FIRST_VISIT } from './populate.mjs';
+
+/** A sandbox's people start as first-time visitors: the tour opens on their first screen (#868). */
+export const SANDBOX_TIPS = TIPS_FIRST_VISIT;
 
 export const API_DIST = join(ROOT, 'backend/api/dist');
 export const DB_SERVER = join(ROOT, 'backend/sandbox/dist/db-server.js');
@@ -186,7 +189,13 @@ export async function bake({ lang, out }) {
     await waitForReady(`${apiUrl}/health/ready`, api);
 
     log('the demo state, through the API');
-    const made = await populate({ apiUrl, token, lang, log });
+    const made = await populate({
+      apiUrl,
+      token,
+      lang,
+      log,
+      tips: SANDBOX_TIPS,
+    });
     for (const [revision, summary] of Object.entries(made.outputs)) {
       if (summary.state !== 'done')
         throw new Error(

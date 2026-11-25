@@ -1,14 +1,15 @@
 # @openfolia/mcp
 
 An [MCP](https://modelcontextprotocol.io) server over the **released** documentation (#53): AI
-assistants and internal agents search and read it, seeing exactly what one service account may
-read and nothing else. Built on the official MCP TypeScript SDK (`@modelcontextprotocol/sdk`
+assistants and internal agents search and read it, each seeing exactly what its own service
+account may read and nothing else (#861). Built on the official MCP TypeScript SDK (`@modelcontextprotocol/sdk`
 1.32.2, MIT; protocol versions up to 2025-11-25).
 
 It is only a **client of the content API** (`backend/api`): no Git, no database, no content
-reads of its own. Every tool call is one or more `GET`s to the API with the server's service
-account token, so the API checks that token, its account's roles and their scope on every
-request, and filters every list before paging and counting. Nothing writes.
+reads of its own. Every tool call is one or more `GET`s to the API with the caller's service
+account token (over stdio, the one in `CCMS_MCP_API_TOKEN`), so the API checks that token, its
+account's roles and their scope on every request, and filters every list before paging and
+counting. Nothing writes.
 
 ## Running it
 
@@ -19,32 +20,64 @@ Installed as a package, the command is `openfolia-mcp` (`--http` for Streamable 
 pnpm nx build mcp
 # stdio (a desktop assistant starts it):
 CCMS_MCP_API_URL=http://127.0.0.1:3100 CCMS_MCP_API_TOKEN=ccms_sat_… node backend/mcp/dist/main.js
-# Streamable HTTP on 127.0.0.1:3200/mcp:
-CCMS_MCP_API_URL=… CCMS_MCP_API_TOKEN=… CCMS_MCP_HTTP_TOKEN=$(openssl rand -hex 32) node backend/mcp/dist/main.js --http
+# Streamable HTTP on 127.0.0.1:3200/mcp; each caller sends its own ccms_sat_… token:
+CCMS_MCP_API_URL=… node backend/mcp/dist/main.js --http
 ```
 
-| Setting                         | What                                                                                            |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `CCMS_MCP_API_URL`              | the API's base URL (required)                                                                   |
-| `CCMS_MCP_API_TOKEN`            | a service account token whose roles hold `content.read` alone (required)                        |
-| `CCMS_MCP_HTTP_HOST`            | `--http`: the address to listen on (default `127.0.0.1`; anything else warns: put TLS in front) |
-| `CCMS_MCP_HTTP_PORT`            | `--http`: the port (default 3200)                                                               |
-| `CCMS_MCP_HTTP_TOKEN`           | `--http`: the bearer token callers send, at least 32 characters, not the API token (required)   |
-| `CCMS_MCP_HTTP_ALLOWED_ORIGINS` | `--http`: comma-separated `Origin`s a browser-based caller may send (default none)              |
-| `CCMS_MCP_HTTP_TRUST_PROXY`     | `--http`: proxies to believe about the caller's address, `none` (default) or 1-10 hops          |
-| `CCMS_MCP_HTTP_PROXY_ADDRESSES` | `--http`: the peers believed (addresses, subnets, host names); required with a hop count        |
+| Setting                         | What                                                                                                                                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_MCP_API_URL`              | the API's base URL (required)                                                                                                                                                                 |
+| `CCMS_MCP_API_TOKEN`            | a service account token whose roles hold `content.read` alone (stdio: required; `--http`: only with the deprecated `CCMS_MCP_HTTP_TOKEN`)                                                     |
+| `CCMS_MCP_HTTP_HOST`            | `--http`: the address to listen on (default `127.0.0.1`; anything else warns: put TLS in front)                                                                                               |
+| `CCMS_MCP_HTTP_PORT`            | `--http`: the port (default 3200)                                                                                                                                                             |
+| `CCMS_MCP_HTTP_TOKEN`           | `--http`, **deprecated** (#861, removed in v0.0.5): one bearer token shared by every caller, who then read as `CCMS_MCP_API_TOKEN`; at least 32 characters, not the API token (default unset) |
+| `CCMS_MCP_HTTP_ALLOWED_ORIGINS` | `--http`: comma-separated `Origin`s a browser-based caller may send (default none)                                                                                                            |
+| `CCMS_MCP_HTTP_TRUST_PROXY`     | `--http`: proxies to believe about the caller's address, `none` (default) or 1-10 hops                                                                                                        |
+| `CCMS_MCP_HTTP_PROXY_ADDRESSES` | `--http`: the peers believed (addresses, subnets, host names); required with a hop count                                                                                                      |
 
 Settings come from the environment (`.env.example`, "MCP server"); a missing or malformed one
 stops the start with its name, never its value. Logs go to stderr (on stdio, stdout is the
 protocol).
 
 **The token.** Make a service account with a role holding only `content.read` (in the scope the
-agents may read: languages, module types, audience, facets) and give it a token:
+caller may read: languages, module types, audience, facets) and give it a token, in the editor
+(Admin › Service accounts) or with
 `pnpm nx run api:service-token -- docs-agent --role <role> --name mcp`. Before any call, and again
 at most once a minute, the server checks `GET /me`: a token whose roles hold anything besides
-`content.read` (drafts, editing, …) makes every call fail with `token-not-read-only`, so a
-misconfigured token never widens what an agent reads. The shared `CCMS_API_TOKEN` of a local
-run is refused for that reason (it reads drafts).
+`content.read` (drafts, editing, …) is refused with `token-not-read-only` (over HTTP a 403 before
+any MCP work, over stdio every call), so a misconfigured token never widens what an agent reads.
+The shared `CCMS_API_TOKEN` of a local run is refused for that reason (it reads drafts), and over
+HTTP before the API is asked, as it is no service account's.
+
+**Callers' own tokens (#861).** Over HTTP each caller sends its own service account token as the
+bearer token, and the server forwards it to the API on every read: revocation, expiry, scope and
+the token's last use are per caller, from the editor's existing service-account screens. Per token
+(`src/callers.ts`, kept by the token's SHA-256) the server keeps a context of its own: the API
+client sending that token, the token's check and the lists of tags and releases. So nothing one
+caller's token read is ever served to another, whatever their scopes (keyed by token, finer than by
+scope: no scope has to be worked out from `GET /me` to be sure). At most 256 callers are kept, each
+for 15 idle minutes; only a token that passed its check is kept, so wrong tokens cannot push real
+callers out; a refused token is refused again for 10 s without asking the API, and checks of
+one token at once share one. A token revoked or expired is refused by the API on its next read;
+the server lets it in no more once its check (a minute) is due. A check the API cannot answer (down, a 5xx,
+a timeout) is a 503 with `Retry-After`, never counted as a failed attempt. Tokens are never
+logged or put in an answer: errors name the API's code and keep its status (401 `unauthorized`, `token-revoked`,
+`token-expired`; 403 `service-account-deactivated`). Only those codes (and
+`too-many-failed-attempts`, `token-not-read-only`) count as a refusal: a bare 401 or 403 of
+something in front of the API is a 503 like any failure to check.
+The calls at once (`Limiter`) stay bounded for the whole process.
+
+**Reads are audited per token (#877).** Every API request sends `X-OpenFolia-Client`
+(`CLIENT_HEADER`): `mcp/<tool>` for a tool's reads, `mcp/resources/list` and `mcp/resources/read`
+for the resources, `mcp` for the server's own lookups (the token check, the lists of tags and
+releases). The API records each read of a service account's token as an `api.read` event naming
+the account, the token's ID, the route and that client (`backend/api/README.md`, "Audit log",
+"Reads"). Nothing of the caller's request beyond that, and never the token.
+
+**Migrating from the shared token.** Until v0.0.3 every HTTP caller sent one
+`CCMS_MCP_HTTP_TOKEN` and read as `CCMS_MCP_API_TOKEN`. Set together they still work for one
+release (a warning at start), beside callers' own tokens; compared in constant time as before.
+Give each caller a service account token of its own, change its client, then unset both.
 
 ### In a container deployment
 
@@ -57,14 +90,13 @@ check):
 
 1. A role holding `content.read` alone, from a seed (it replaces a role with that ID, so pick an
    unused one): `echo '{"roles":[{"id":"agent-reader","name":"Agent reader","permissions":["content.read"],"scope":{}}],"users":[]}' | docker compose exec -T api node dist/database/seed.main.js /dev/stdin`.
-2. A service account's token with that role, and this server's own token, into the Compose
-   settings file without showing them: `CCMS_MCP_API_TOKEN` from
-   `docker compose exec -T api node dist/database/service-token.main.js agent --role agent-reader --name mcp`,
-   `CCMS_MCP_HTTP_TOKEN` from `openssl rand -hex 32`, and `COMPOSE_PROFILES=mcp` so every later
-   `docker compose up` starts it.
+2. A service account's token with that role, into a file of its own without showing it
+   (`docker compose exec -T api node dist/database/service-token.main.js agent --role agent-reader --name mcp`),
+   and `COMPOSE_PROFILES=mcp` in the Compose settings so every later `docker compose up` starts
+   it. The server itself needs no token.
 3. `docker compose up -d --wait`, then the agent's MCP configuration: a Streamable HTTP server at
-   the editor's address plus `/mcp` (`http://127.0.0.1:8080/mcp`) with the header `Authorization: Bearer <CCMS_MCP_HTTP_TOKEN>`.
-   Verify with `list_manuals`.
+   the editor's address plus `/mcp` (`http://127.0.0.1:8080/mcp`) with the header
+   `Authorization: Bearer <the agent's token>`. Verify with `list_manuals`.
 
 ### A desktop assistant over stdio
 
@@ -91,10 +123,18 @@ In the assistant's MCP configuration (the usual `mcpServers` shape):
 sessions, JSON answers (no SSE stream, so `GET` and `DELETE` are 405). Each request is checked
 in this order: the path; `Origin` (absent, or one of `CCMS_MCP_HTTP_ALLOWED_ORIGINS`, else 403:
 DNS rebinding); `Host` naming a loopback address while it listens on one (else 403); the
-bearer token (scheme case aside), compared in constant time (401 with `WWW-Authenticate:
-Bearer`; a caller sending the token is always served; past 10 failures a minute from one address, or 100
-from all addresses together, every wrong token gets the same 429 with `Retry-After` until the
-window ends, so a guess then learns only that it is not the token); the client address's rate (600 requests a minute, 429 with
+bearer token (scheme case aside): the deprecated shared token compared in constant time, else a
+service account token of the API's form (`ccms_sat_` + 16 + 64 hex), checked with the API (401
+with `WWW-Authenticate: Bearer` and the API's code, 403 `token-not-read-only`, 503 when the API
+cannot say); anything else is 401 at once. Failures count per address: past 10 a minute from one
+address, or 100 from all addresses together, every token that is no service account's gets the
+same 429 with `Retry-After` until the window ends, so a guess then learns only that it is not a
+token. A service account token not yet admitted counts as a failure of its address up front,
+taken back once the API accepts it or cannot say (so checks under way count too), and is bounded
+by its address alone, never by the global budget, so wrong tokens from many addresses cannot lock
+a new real caller out: its address's 10 failures, its rate, 4 checks under way at once (429 past
+it), and 16 checks under way for everyone, the rest queued (up to 256, then 503); a caller already
+admitted is always served, even from a locked address; the client address's rate (600 requests a minute, 429 with
 `Retry-After`; the address is the connection's, or, when the connection comes from one of
 `CCMS_MCP_HTTP_PROXY_ADDRESSES`, the one the outermost of `CCMS_MCP_HTTP_TRUST_PROXY` hops appended
 to `X-Forwarded-For`, as the editor's `/mcp` does: entries a client wrote further left are never
@@ -109,9 +149,10 @@ take, still has 128 bits. They cannot tell a typed passphrase from a random one,
 token is unsafe even when it is accepted. Against a random token, a correct guess during a
 lockout is as unlikely as on any request, while refusing the token there would let anyone sharing
 the address (a NAT, a proxy, this machine) lock every real caller out. The API's service tokens are 256-bit
-secrets too (`ccms_sat_…`, 64 hex digits). The caller's token only lets a caller in; what is read is always the API token's scope, the same
-for every caller. No OAuth: the spec's authorization is optional, and a static bearer token suits
-a server on the same machine or behind a gateway.
+secrets too (`ccms_sat_…`, 64 hex digits). With the shared token, what is read is the API token's scope, the
+same for every caller sending it; with their own, each caller's. No OAuth yet: the spec's
+authorization is optional, and bearer tokens suit a server on the same machine or behind a
+gateway.
 
 ## Tools
 

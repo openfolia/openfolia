@@ -36,6 +36,7 @@ import {
   addSampleTemplates,
   addSampleNoticeLeaflet,
   addSampleSafetyLeaflet,
+  addSampleUpdateGuide,
   addSampleSnippets,
   addSampleTerms,
   createBareSampleRepo,
@@ -102,8 +103,10 @@ if (existsSync(contentDir)) {
   await addSampleSafetyLeaflet(contentDir);
   // A leaflet of the operating manual's safety notices, grouped by hazard level (#670).
   await addSampleNoticeLeaflet(contentDir);
+  // An update guide for versions 1.0 to 4.0: twelve steps, two levels, one option (#906).
+  await addSampleUpdateGuide(contentDir);
   console.log(
-    `Sample content: created ${relative(root, contentDir)} (bare; branches main and draft, tag v1; snippets, terms, right-to-left languages, page designs and templates, a safety leaflet and a leaflet of safety notices on main)`,
+    `Sample content: created ${relative(root, contentDir)} (bare; branches main and draft, tag v1; snippets, terms, right-to-left languages, page designs and templates, a safety leaflet, a leaflet of safety notices and an update guide on main)`,
   );
 }
 

@@ -74,6 +74,15 @@ Versionen vor der Worker-Rolle haben alles im Dienst `api` ausgeführt. Jetzt st
 Verschieben Sie es mit `CCMS_RENDER_CONCURRENCY` in `deploy/worker.env`. Siehe
 [Worker](/de/guide/self-hosting/workers).
 
+## Umstieg vom geteilten MCP-Token
+
+Bis v0.0.3 hatte der MCP-Server ein Token für alle Aufrufer, `CCMS_MCP_HTTP_TOKEN`, und alle lasen
+als sein `CCMS_MCP_API_TOKEN`. Jetzt sendet jeder Aufrufer das eigene Token eines Service-Accounts
+(#861), und der Server braucht keines der beiden. Beide Einstellungen funktionieren noch eine
+Version lang, mit einer Warnung beim Start; mit v0.0.5 entfallen sie. Geben Sie jedem Aufrufer ein
+eigenes Token, stellen Sie seinen Client um, entfernen Sie dann beide aus `deploy/.env` und führen Sie
+`docker compose up -d` aus: [Vom geteilten Token umsteigen](/de/guides/mcp#vom-geteilten-token-umsteigen).
+
 ## Von einer Version vor dem Namen OpenFolia
 
 Installationen einer Version vor dem Namen OpenFolia arbeiten nach dem Upgrade weiter, mit diesen

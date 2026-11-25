@@ -12,6 +12,7 @@ import {
   Paged,
 } from '../../base/api/json-api.decorators.js';
 import { toPagedDocument } from '../../base/api/json-api.js';
+import type { AuditKind } from '../core/audit-event.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
   ListAuditEventsAction,
@@ -40,7 +41,7 @@ export class AuditEventsController {
   @Filters(...AUDIT_FILTER_DOCS)
   @ApiOperation({
     summary: 'List audit events',
-    description: `The append-only audit log, newest first: who changed what, when, and why. \`GET /audit-events/export\` downloads every event the same filters select. Needs the \`${READ_AUDIT_LOG}\` permission.`,
+    description: `The append-only audit log, newest first: who changed what, when, and why, and (kind \`read\`, #877) which service account read what over the API. \`GET /audit-events/export\` downloads every event the same filters select. Needs the \`${READ_AUDIT_LOG}\` permission.`,
   })
   @ApiOkResponse({ standardSchema: AuditEventPageDocument })
   @ApiPermission(READ_AUDIT_LOG)
@@ -54,6 +55,8 @@ export class AuditEventsController {
     by?: Parsed<'actor'>,
     @Query('filter[action]', { schema: auditFilters.action.optional() })
     action?: string,
+    @Query('filter[kind]', { schema: auditFilters.kind.optional() })
+    kind?: AuditKind,
     @Query('filter[from]', { schema: auditFilters.from.optional() })
     from?: Date,
     @Query('filter[to]', { schema: auditFilters.to.optional() })
@@ -62,7 +65,7 @@ export class AuditEventsController {
     const result = await this.listAuditEvents.handle({
       actor,
       page,
-      filter: toAuditFilter({ subject, actor: by, action, from, to }),
+      filter: toAuditFilter({ subject, actor: by, action, kind, from, to }),
     });
     return toPagedDocument(req, page, result, toAuditEventResource);
   }

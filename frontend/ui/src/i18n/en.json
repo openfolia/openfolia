@@ -504,10 +504,12 @@
   "tip": {
     "learnMore": "Learn more",
     "learnMoreLabel": "Learn more: {title} (opens in a new tab)",
+    "read": "Read “{title}”",
+    "readLabel": "Read “{title}” (opens in a new tab)",
     "gotIt": "Got it",
     "turnOff": "Turn off tips",
     "step": "{index} of {total}",
-    "skip": "Skip",
+    "close": "End the tour",
     "back": "Back",
     "next": "Next",
     "done": "Done"

@@ -779,6 +779,50 @@ describe('ManualBuilderPage', () => {
     answerGathered(t);
   });
 
+  it('shows an update guide’s steps by version and phase in place of the outline, and saves nothing on its own (#906, #908)', async () => {
+    const guide = {
+      attribute: 'software',
+      versions: ['1.0', '2.0'],
+      steps: [
+        { module: 'intro', version: '2.0', phase: 'before' },
+        { module: 'safety', version: '2.0', phase: 'after' },
+      ],
+    };
+    const doc = {
+      data: {
+        ...manualDoc.data,
+        attributes: {
+          ...manualDoc.data.attributes,
+          kind: 'update-guide',
+          guide,
+          entries: GATHERED,
+        },
+      },
+    };
+    const t = await render('/manuals?manual=guide', true);
+    t.answer('/api/manuals/guide', doc);
+    await lists(t, {});
+    await draftReads(t, {
+      ...HEADER,
+      kind: 'update-guide',
+      guide,
+      entries: GATHERED,
+    });
+    await t.settle();
+    // The steps, each in its version and phase: no outline row, nothing to drag between them.
+    const steps = Array.from(
+      t.el.querySelectorAll<HTMLElement>('[data-testid=guide-step]'),
+    );
+    expect(steps.map((s) => s.dataset['module'])).toEqual(['intro', 'safety']);
+    expect(
+      steps.map((s) => s.closest('[data-phase]')?.getAttribute('data-phase')),
+    ).toEqual(['before', 'after']);
+    expect(t.el.querySelector('[data-testid=manual-outline]')).toBeNull();
+    expect(
+      t.http.match((r) => r.method !== 'GET' && !r.url.includes('/pdf/pages/')),
+    ).toEqual([]);
+  });
+
   it('leaves a gathered module out by its rule: saves the rule, never entries, and reads what it gathers again (#669)', async () => {
     const t = await render('/manuals?manual=guide', true);
     t.answer('/api/manuals/guide', derivedDoc);

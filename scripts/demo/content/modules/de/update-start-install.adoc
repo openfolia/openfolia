@@ -1,0 +1,10 @@
+= Installation starten
+:schema-version: 1
+:module-type: procedure
+:lang: de
+:audience: owner
+:facet-product: fenna
+:keywords: Software, Update
+
+[#intro]
+Öffnen Sie im zentralen Display Einstellungen › Software-Update und tippen Sie auf Jetzt installieren.

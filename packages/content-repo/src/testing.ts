@@ -962,6 +962,268 @@ export async function addSampleNoticeLeaflet(dir: string): Promise<string> {
   return commit;
 }
 
+/** The update guide `addSampleUpdateGuide` adds (#906): `manuals/<id>.yaml`. */
+export const SAMPLE_UPDATE_GUIDE_ID = 'software-update';
+
+/** The versions of `SAMPLE_UPDATE_GUIDE_ID`, oldest first. */
+export const SAMPLE_UPDATE_VERSIONS = [
+  '1.0',
+  '1.1',
+  '2.0',
+  '2.1',
+  '3.0',
+  '3.1',
+  '4.0',
+] as const;
+
+/**
+ * The steps of `SAMPLE_UPDATE_GUIDE_ID`, in manifest order: module ID, version, phase, level,
+ * condition, then the module's title and text in English and German.
+ */
+export const SAMPLE_UPDATE_STEPS: readonly (readonly [
+  string,
+  string,
+  'before' | 'during' | 'after',
+  string | undefined,
+  string | undefined,
+  string,
+  string,
+  string,
+  string,
+])[] = [
+  [
+    'install-package',
+    '1.1',
+    'during',
+    undefined,
+    undefined,
+    'Install the update package',
+    'Run the update package on the server and follow the prompts.',
+    'Das Update-Paket installieren',
+    'Führen Sie das Update-Paket auf dem Server aus und folgen Sie den Anweisungen.',
+  ],
+  [
+    'check-version',
+    '1.1',
+    'after',
+    undefined,
+    undefined,
+    'Check the installed version',
+    'Open About and check that the new version is shown.',
+    'Installierte Version prüfen',
+    'Öffnen Sie „Info“ und prüfen Sie, ob die neue Version angezeigt wird.',
+  ],
+  [
+    'back-up-settings',
+    '2.0',
+    'before',
+    undefined,
+    undefined,
+    'Back up the settings',
+    'Export the settings to a file and keep it until the update is done.',
+    'Einstellungen sichern',
+    'Exportieren Sie die Einstellungen in eine Datei und bewahren Sie sie bis nach dem Update auf.',
+  ],
+  [
+    'stop-service',
+    '2.0',
+    'before',
+    undefined,
+    undefined,
+    'Stop the service',
+    'Stop the service so that no data changes during the update.',
+    'Dienst anhalten',
+    'Halten Sie den Dienst an, damit sich während des Updates keine Daten ändern.',
+  ],
+  [
+    'migrate-database',
+    '2.0',
+    'during',
+    'internal',
+    undefined,
+    'Migrate the database',
+    'Run the migration tool once and wait until it reports success.',
+    'Datenbank migrieren',
+    'Führen Sie das Migrationswerkzeug einmal aus und warten Sie, bis es Erfolg meldet.',
+  ],
+  [
+    'renew-licence',
+    '2.0',
+    'after',
+    undefined,
+    undefined,
+    'Renew the licence key',
+    'Enter the new licence key under Settings.',
+    'Lizenzschlüssel erneuern',
+    'Geben Sie den neuen Lizenzschlüssel unter „Einstellungen“ ein.',
+  ],
+  [
+    'reconnect-nodes',
+    '2.1',
+    'after',
+    undefined,
+    'cluster in (yes)',
+    'Reconnect the cluster nodes',
+    'Restart each node one after the other and check that it joins the cluster.',
+    'Cluster-Knoten neu verbinden',
+    'Starten Sie die Knoten nacheinander neu und prüfen Sie, ob jeder dem Cluster beitritt.',
+  ],
+  [
+    'check-requirements',
+    '3.0',
+    'before',
+    undefined,
+    undefined,
+    'Check the system requirements',
+    'Make sure the server has at least 8 GB of memory.',
+    'Systemvoraussetzungen prüfen',
+    'Stellen Sie sicher, dass der Server mindestens 8 GB Arbeitsspeicher hat.',
+  ],
+  [
+    'convert-configuration',
+    '3.0',
+    'during',
+    'internal',
+    undefined,
+    'Convert the configuration',
+    'Run the converter on the old configuration file.',
+    'Konfiguration umwandeln',
+    'Wenden Sie den Konverter auf die alte Konfigurationsdatei an.',
+  ],
+  [
+    'sign-in-again',
+    '3.0',
+    'after',
+    undefined,
+    undefined,
+    'Sign in again',
+    'Every user signs in again once after the update.',
+    'Erneut anmelden',
+    'Alle Benutzer melden sich nach dem Update einmal neu an.',
+  ],
+  [
+    'drain-cluster',
+    '4.0',
+    'before',
+    undefined,
+    'cluster in (yes)',
+    'Drain the cluster',
+    'Move the work off each node before you update it.',
+    'Cluster leeren',
+    'Verlagern Sie die Arbeit von jedem Knoten, bevor Sie ihn aktualisieren.',
+  ],
+  [
+    'remove-old-files',
+    '4.0',
+    'after',
+    undefined,
+    undefined,
+    'Remove the old files',
+    'Delete the folder of the previous version once everything works.',
+    'Alte Dateien entfernen',
+    'Löschen Sie den Ordner der vorigen Version, sobald alles funktioniert.',
+  ],
+];
+
+/**
+ * Adds an update guide (#906) to a sample repository (bare or not) in one commit on `main`: a
+ * version attribute `software` and an enum attribute `cluster` (`yes`, `no`: the reader's option)
+ * in `openfolia.yaml`, a procedure module per step in English and German, and the update guide
+ * `software-update` for versions 1.0 to 4.0 with twelve steps over the three phases, two of them
+ * for the `internal` level only and two for a cluster setup only (`SAMPLE_UPDATE_STEPS`). Kept out
+ * of `createSampleRepo`, whose content many tests count. Resolves to the new commit.
+ */
+export async function addSampleUpdateGuide(dir: string): Promise<string> {
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-C', dir, ...args], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GIT_CONFIG_GLOBAL: '/dev/null',
+        GIT_CONFIG_SYSTEM: '/dev/null',
+      },
+    }).trim();
+  const config = git('show', 'main:openfolia.yaml');
+  const before = 'textAttributes:\n';
+  if (!config.includes(before)) throw new Error('not the sample configuration');
+  const attributes = [
+    '  - { id: software, label: Software, kind: version }',
+    '  - id: cluster',
+    '    label: Cluster setup',
+    '    kind: enum',
+    '    values:',
+    '      - { id: "yes", label: "Yes" }',
+    '      - { id: "no", label: "No" }',
+    '',
+  ].join('\n');
+  const module = (
+    id: string,
+    lang: string,
+    title: string,
+    text: string,
+  ): { path: string; content: string } => ({
+    path: `modules/${lang}/${id}.adoc`,
+    content: printModule({
+      schemaVersion: 1,
+      id,
+      meta: { title, type: 'procedure', lang, audience: 'public', facets: {} },
+      blocks: [
+        { type: 'paragraph', id: 'text', content: [{ type: 'text', text }] },
+      ],
+    }),
+  });
+  const step = ([
+    id,
+    version,
+    phase,
+    level,
+    when,
+  ]: (typeof SAMPLE_UPDATE_STEPS)[number]) =>
+    [
+      `    - module: ${id}`,
+      `      version: "${version}"`,
+      `      phase: ${phase}`,
+      ...(level ? [`      level: ${level}`] : []),
+      ...(when ? [`      when: ${when}`] : []),
+    ].join('\n');
+  const { commit } = sampleCommit(dir, {
+    branch: 'main',
+    parent: git('rev-parse', 'refs/heads/main'),
+    changes: [
+      {
+        path: 'openfolia.yaml',
+        content: config.replace(before, attributes + before) + '\n',
+      },
+      ...SAMPLE_UPDATE_STEPS.flatMap((s) => [
+        module(s[0], 'en', s[5], s[6]),
+        module(s[0], 'de', s[7], s[8]),
+      ]),
+      {
+        path: `manuals/${SAMPLE_UPDATE_GUIDE_ID}.yaml`,
+        content: [
+          'schemaVersion: 1',
+          'kind: update-guide',
+          'title: { en: Software update guide, de: Leitfaden für Software-Updates }',
+          'audience: internal',
+          'variants:',
+          '  - model: large',
+          'attributes:',
+          '  product-name: Model A',
+          'guide:',
+          '  attribute: software',
+          `  versions: [${SAMPLE_UPDATE_VERSIONS.map((v) => `"${v}"`).join(', ')}]`,
+          '  steps:',
+          ...SAMPLE_UPDATE_STEPS.map(step),
+          '',
+        ].join('\n'),
+      },
+    ],
+    message: 'Add an update guide',
+    author: { name: 'Test', email: 'test@example.com' },
+  });
+  return commit;
+}
+
 /**
  * Adds a commit on `main` with the page designs of `SAMPLE_PAGE_DESIGNS` (`design/<id>.yaml`,
  * #390), kept out of the base sample whose content many tests count. Returns the commit.

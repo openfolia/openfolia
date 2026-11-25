@@ -259,14 +259,15 @@ export function deriveManifest(input: DeriveInput): DeriveResult {
     });
     return done([]);
   }
-  if (source.kind === 'derived' || source.id === manifest.id) {
+  // An update guide's entries are its steps (#906): no assembled manual to gather from either.
+  if (source.kind !== undefined || source.id === manifest.id) {
     issues.push({
       severity: 'error',
       code: 'derived-source',
       message:
         source.id === manifest.id
           ? 'the manual is derived from itself; nothing is gathered'
-          : `the source manual "${rule.source}" is a derived manual itself; a derived manual is made from an assembled one, so nothing is gathered`,
+          : `the source manual "${rule.source}" is ${source.kind === 'derived' ? 'a derived manual itself' : 'an update guide'}; a derived manual is made from an assembled one, so nothing is gathered`,
     });
     return done([]);
   }

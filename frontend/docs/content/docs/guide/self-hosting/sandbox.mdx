@@ -84,8 +84,14 @@ visitor's browser is in the editor of their own sandbox, at the demo's own addre
   `SameSite=Strict`. The same address in another browser shows the start page, never the sandbox.
 - **Limits:** at most `CCMS_LAUNCHER_MAX_SANDBOXES` at once (default 5, for 8 GB), one at a time
   and three a day per address, a sandbox ends after 30 minutes without activity and after 90 at
-  the latest, and every address and sandbox has a request rate. When all are taken, the start
-  page shows the demo's films and tries again by itself.
+  the latest, and every address and sandbox has a request rate (`CCMS_LAUNCHER_RATE`, default 20
+  a second, ten seconds' worth at once). The editor's own files (its code, styles, fonts and
+  translations, about 80 on a first load) have a budget of their own per sandbox, ten times as
+  large, so a visitor opening the editor in many tabs at once never runs out. A sandbox may also
+  have at most `CCMS_LAUNCHER_MAX_IN_FLIGHT` requests under way at once (default 256, enough for
+  about 40 tabs); past that the launcher answers 429 until one ends, so a burst of slow downloads
+  cannot tie up the launcher for everyone else. When all are taken,
+  the start page shows the demo's films and tries again by itself.
 - **Clean-up:** a sandbox is removed when its time is up, every sandbox when the launcher stops,
   and any it does not know when it starts.
 - **Kept apart:** each sandbox has an internal network of its own, which only the launcher joins.
@@ -114,6 +120,16 @@ policy can link to it:
 
 The header's logo and the footer link your homepage, imprint and privacy policy when you set
 `CCMS_LAUNCHER_HOMEPAGE_URL`, `CCMS_LAUNCHER_IMPRINT_URL` and `CCMS_LAUNCHER_PRIVACY_URL`.
+
+### If the editor doesn't load
+
+When a file the editor starts from cannot be fetched (a dropped connection, a refused request),
+the page says **The editor didn't load** with **Try again**, in the visitor's language, instead of
+staying empty. Nothing saved in the sandbox is lost. If it keeps coming back, the browser's
+developer tools show the request that failed (a 429 `rate-limited` is the launcher's request
+rate); `node deploy/launcher-parallel-loads.mjs
+https://<your demo host>` opens the editor in 20 tabs at once and lists every request that failed
+(it starts a sandbox, which counts toward your address's daily limit, and ends it afterwards).
 
 ### When a sandbox ends
 

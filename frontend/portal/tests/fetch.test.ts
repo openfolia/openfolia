@@ -666,6 +666,146 @@ describe('the fetch step', () => {
     );
   });
 
+  describe('update guides (#907)', () => {
+    const guideApi = (steps: unknown[]) =>
+      api({
+        '/manuals': {
+          data: [
+            {
+              type: 'Manual',
+              id: 'g',
+              attributes: {
+                kind: 'update-guide',
+                title: 'G',
+                audience: 'public',
+              },
+              meta: {
+                variants: [
+                  { slug: 'one', label: 'One', values: {} },
+                  { slug: 'two', label: 'Two', values: {} },
+                ],
+              },
+            },
+          ],
+          meta: { page: { lastPage: 1 } },
+        },
+        '/manuals/g/variants/one/en': {
+          data: {
+            type: 'ResolvedManual',
+            id: 'g/one/en',
+            attributes: {
+              title: 'G',
+              lang: 'en',
+              variant: {},
+              entries: [
+                {
+                  kind: 'module',
+                  module: 'a',
+                  title: 'A',
+                  lang: 'en',
+                  blocks: [],
+                },
+              ],
+              origins: {},
+              anchors: {},
+            },
+          },
+        },
+        '/manuals/g/update-guide/en': {
+          data: {
+            type: 'UpdateGuide',
+            id: 'g/en',
+            attributes: {
+              title: 'G',
+              lang: 'en',
+              attribute: { id: 'software', label: 'Software' },
+              versions: ['1.0', '2.0'],
+              levels: [{ id: 'public', label: 'Public' }],
+              options: [
+                {
+                  id: 'cluster',
+                  label: 'Cluster',
+                  values: [
+                    { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        '/manuals/g/update-guide/en/steps': {
+          data: steps,
+          meta: { page: { lastPage: 1 } },
+        },
+      });
+    const step = (module: string, level: string | null = null) => ({
+      type: 'UpdateGuideStep',
+      id: level === null ? module : `${module}--2`,
+      attributes: {
+        module,
+        title: module.toUpperCase(),
+        lang: 'en',
+        version: '2.0',
+        phase: 'before',
+        level,
+        when: { op: 'in', attr: 'cluster', values: ['yes'] },
+        condition: 'cluster in (yes)',
+        blocks: [],
+      },
+    });
+
+    it('reads the guide and its steps, and only its first variant', async () => {
+      const [build] = await run(guideApi([step('a')]));
+      const manual = build!.snapshot.releases[0]!.manuals[0]!;
+      expect(manual.variants.map((v) => v.slug)).toEqual(['one']);
+      expect(manual.guide).toEqual({
+        attribute: { id: 'software', label: 'Software' },
+        versions: ['1.0', '2.0'],
+        levels: [{ id: 'public', label: 'Public' }],
+        options: [
+          {
+            id: 'cluster',
+            label: 'Cluster',
+            values: [
+              { id: 'yes', label: 'Yes' },
+              { id: 'no', label: 'No' },
+            ],
+          },
+        ],
+        steps: [
+          {
+            id: 'a',
+            module: 'a',
+            title: 'A',
+            version: '2.0',
+            phase: 'before',
+            level: null,
+            when: { op: 'in', attr: 'cluster', values: ['yes'] },
+          },
+        ],
+      });
+      expect(asked).not.toContain('/manuals/g/variants/two/en');
+    });
+
+    it('leaves out a step for a level above the build’s audience, or for no configured level', async () => {
+      const lines: string[] = [];
+      const [build] = await run(
+        guideApi([step('a'), step('a', 'internal'), step('a', 'nobody')]),
+        { log: (line) => lines.push(line) },
+      );
+      const guide = build!.snapshot.releases[0]!.manuals[0]!.guide!;
+      expect(guide.steps.map((s) => s.level)).toEqual([null]);
+      expect(lines.filter((l) => l.includes('left out, above'))).toHaveLength(
+        2,
+      );
+    });
+
+    it('refuses a step whose module the resolved guide does not hold', async () => {
+      await expect(run(guideApi([step('b')]))).rejects.toThrow(AudienceError);
+    });
+  });
+
   describe('the branding (#784)', () => {
     const PNG = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',

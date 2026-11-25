@@ -287,6 +287,69 @@ test('an excerpt around a glossary term reads as the page does (#852)', async ({
   await expect(excerpt.first()).not.toContainText('rechargeable');
 });
 
+/** Whether the tooltip's four corners (inside its radius) and its middle are what a pointer would hit: nothing clips it. */
+const tooltipWhole = (definition: Locator) =>
+  definition.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const inset = 6; // inside the rounded corners
+    const points = [
+      [r.left + inset, r.top + inset],
+      [r.right - inset, r.top + inset],
+      [r.left + inset, r.bottom - inset],
+      [r.right - inset, r.bottom - inset],
+      [(r.left + r.right) / 2, (r.top + r.bottom) / 2],
+    ] as const;
+    return {
+      hit: points.every(([x, y]) =>
+        el.contains(document.elementFromPoint(x, y)),
+      ),
+      inViewport:
+        r.left >= 0 &&
+        r.top >= 0 &&
+        r.right <= window.innerWidth &&
+        r.bottom <= window.innerHeight,
+    };
+  });
+
+for (const [where, selector] of [
+  ['a safety notice', '.of-safety--danger'],
+  ['the last row of a table', '.of-table tr:last-child'],
+  ['an FAQ answer', '.of-faq'],
+] as const)
+  test(`a term's tooltip is whole inside ${where} (#891)`, async ({ page }) => {
+    await page.goto(site('public', OPERATING('en')));
+    if (selector === '.of-faq')
+      await page.locator('.of-faq__question').first().click();
+    const term = page.locator(`${selector} .of-term`).first();
+    await term.scrollIntoViewIfNeeded();
+    await term.locator('.of-term__link').hover();
+    const definition = term.locator('.of-term__definition');
+    await expect(definition).toBeVisible();
+    // Past the FAQ's slide and the tooltip's own placement.
+    await expect
+      .poll(() => tooltipWhole(definition), { timeout: 3_000 })
+      .toEqual({ hit: true, inViewport: true });
+    // Escape hides it, and the keyboard focus shows it again.
+    await page.keyboard.press('Escape');
+    await expect(definition).toBeHidden();
+    await page.mouse.move(0, 0);
+    await term.locator('.of-term__link').focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(definition).toBeVisible();
+    await expect
+      .poll(() => tooltipWhole(definition), { timeout: 3_000 })
+      .toEqual({ hit: true, inViewport: true });
+    // The page never widens for it.
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+
 test('search finds public text and nothing above the audience', async ({
   page,
 }) => {
@@ -413,6 +476,60 @@ test('the running head’s typeahead finds a passage from a manual page', async 
   await field.press('Enter');
   await expect(page).toHaveURL(/\/en\/search\/\?q=contacts$/);
   await expect(page.locator('.result').first()).toBeVisible();
+});
+
+test('focusing and typing in the running head’s search leaves the page where it is', async ({
+  page,
+}, info) => {
+  test.skip(
+    info.project.name.startsWith('phone'),
+    'the running head has no search field on narrow screens',
+  );
+  await page.goto(site('public', OPERATING('en')));
+  const scrollY = () => page.evaluate(() => window.scrollY);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollHeight),
+  ).toBeGreaterThan((await page.viewportSize())!.height);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  const before = await scrollY();
+  expect(before).toBeGreaterThan(0);
+  const field = page.getByRole('combobox', { name: 'Search all manuals' });
+  await field.focus();
+  expect(await scrollY()).toBe(before);
+  await field.pressSequentially('contacts');
+  await expect(
+    page
+      .getByRole('listbox', { name: 'Suggestions' })
+      .getByRole('option')
+      .first(),
+  ).toBeVisible();
+  expect(await scrollY()).toBe(before);
+});
+
+test('a contents link lands its heading below the running head', async ({
+  page,
+}) => {
+  await page.goto(site('public', OPERATING('en')));
+  await openDisclosure(page.locator('[data-toc]'));
+  const link = page
+    .getByRole('navigation', { name: 'Contents' })
+    .getByRole('link', { name: 'Glossary' });
+  const id = decodeURIComponent(
+    (await link.getAttribute('href'))!.split('#')[1] ?? '',
+  );
+  await link.click();
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+  const { top, head } = await page.evaluate((target) => {
+    const el = document.getElementById(target)!;
+    const header = document.querySelector('.runhead')!;
+    return {
+      top: el.getBoundingClientRect().top,
+      head: header.getBoundingClientRect().bottom,
+    };
+  }, id);
+  expect(top).toBeGreaterThanOrEqual(head);
 });
 
 test('a page that does not exist offers search and the way back', async ({
