@@ -4,6 +4,42 @@ Every release, newest first: what is new, improved and fixed, the security fixes
 when you upgrade. `scripts/release.mjs` writes this file on each release tag, with the same notes
 as the release on GitHub (CONTRIBUTING.md, "Releases"); don't edit it by hand.
 
+<!-- release v0.0.4 2026-11-25 -->
+## [v0.0.4](https://github.com/openfolia/openfolia/releases/tag/v0.0.4) (2026-11-25)
+
+OpenFolia now writes update guides: one manual that tells a reader what to do before, during and after an update, filtered to the versions they update between. A new tour ends in the reader's own first edit, and every MCP caller brings their own token, so the audit log names who read what.
+
+- Update guides: a new kind of manual. It follows a version attribute, and each step is a module with the version that needs it, a phase (before, during or after the update), and optionally an audience level and a condition on the product's options. The editor creates one from "New manual", lists the steps by version and phase, reorders and edits them in a revision, and previews any from/to range as a reader will see it. The API serves the guide and its steps for a range, the PDF groups them by version and phase, and the checks flag a step without a valid version or phase.
+- Portal: an update guide's page has from/to pickers and option filters, and shows the steps for that range as a checklist that remembers its ticks. The address keeps the choice, so a link opens on the same steps. Without JavaScript it shows every step.
+- Portal: code blocks have a copy button that copies the exact text, says so, and selects the text when the clipboard is refused. Searching from the header no longer scrolls the manual page.
+- Tour: the first-run tour is task-led. It opens a module, makes a first edit in a revision of the reader's own, explains the revision picker and ends at review. Its card points at what it explains and stays beside it when the list moves. It can be replayed, and steps through with the arrow keys. A tip explains variant blocks the first time one is shown.
+- Editor: the module editor's columns follow the room the window leaves: three columns on a wide screen, two with the outline as a tab of the side panel, stacked below that. At phone width the toolbar sticks to the top and the caret stays clear of it.
+- Manuals: a glossary term's tooltip shows whole inside a safety notice, a table or an FAQ.
+- MCP: every HTTP caller sends its own service account token (a role holding content.read only), made in Admin › Service accounts and checked by the API on every read. The shared CCMS\_MCP\_HTTP\_TOKEN still works in this release and is removed in v0.0.5.
+- Audit: reads by service accounts (MCP and API tokens) are recorded as api.read events naming the caller, kept for CCMS\_AUDIT\_READ\_KEEP\_DAYS (default 90) days.
+- Demo: the sandbox launcher caps a sandbox's requests in flight (CCMS\_LAUNCHER\_MAX\_IN\_FLIGHT), and an editor's own files no longer use up a sandbox's request rate. A sandbox that fails to start shows an error instead of a blank page.
+- Images: the release's merge step retries a registry that hasn't caught up with its push.
+
+To upgrade from v0.0.3, follow "Upgrades" in [deploy/README.md](https://github.com/openfolia/openfolia/blob/v0.0.4/deploy/README.md); the database migration runs at start-up. If an MCP service uses CCMS\_MCP\_HTTP\_TOKEN, move each caller to its own service account token before v0.0.5.
+
+### Docs
+
+- The changelog of v0.0.3 ([#3](https://github.com/openfolia/openfolia/pull/3))
+
+### Upgrade notes
+
+From v0.0.3: take a backup first and follow [Upgrades](https://github.com/openfolia/openfolia/blob/v0.0.4/deploy/README.md#upgrades) in deploy/README.md.
+
+**Database migrations** (the API applies them when it starts, unless `CCMS_DATABASE_MIGRATE=false`; see [Upgrades](https://github.com/openfolia/openfolia/blob/v0.0.4/deploy/README.md#upgrades)):
+
+- `0063_audit_read_events`
+
+**Settings** (see [.env.example](https://github.com/openfolia/openfolia/blob/v0.0.4/.env.example)):
+
+- New: `CCMS_LAUNCHER_MAX_IN_FLIGHT`, `CCMS_AUDIT_READ_KEEP_DAYS`
+- Changed description or example: `CCMS_LAUNCHER_RATE`, `CCMS_AUDIT_KEEP_DAYS`, `CCMS_MCP_API_TOKEN`, `CCMS_MCP_HTTP_TOKEN`
+<!-- /release v0.0.4 -->
+
 <!-- release v0.0.3 2026-11-24 -->
 ## [v0.0.3](https://github.com/openfolia/openfolia/releases/tag/v0.0.3) (2026-11-24)
 

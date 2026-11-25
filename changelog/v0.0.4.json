@@ -1,0 +1,42 @@
+{
+  "version": "v0.0.4",
+  "date": "2026-11-25",
+  "repository": "https://github.com/openfolia/openfolia",
+  "previous": "v0.0.3",
+  "summary": {
+    "en": "OpenFolia now writes update guides: one manual that tells a reader what to do before, during and\nafter an update, filtered to the versions they update between. A new tour ends in the reader's own\nfirst edit, and every MCP caller brings their own token, so the audit log names who read what.\n\n- Update guides: a new kind of manual. It follows a version attribute, and each step is a module\n  with the version that needs it, a phase (before, during or after the update), and optionally an\n  audience level and a condition on the product's options. The editor creates one from\n  \"New manual\", lists the steps by version and phase, reorders and edits them in a revision, and\n  previews any from/to range as a reader will see it. The API serves the guide and its steps for\n  a range, the PDF groups them by version and phase, and the checks flag a step without a valid\n  version or phase.\n- Portal: an update guide's page has from/to pickers and option filters, and shows the steps for\n  that range as a checklist that remembers its ticks. The address keeps the choice, so a link opens\n  on the same steps. Without JavaScript it shows every step.\n- Portal: code blocks have a copy button that copies the exact text, says so, and selects the\n  text when the clipboard is refused. Searching from the header no longer scrolls the manual page.\n- Tour: the first-run tour is task-led. It opens a module, makes a first edit in a revision of the\n  reader's own, explains the revision picker and ends at review. Its card points at what it\n  explains and stays beside it when the list moves. It can be replayed, and steps through with the\n  arrow keys. A tip explains variant blocks the first time one is shown.\n- Editor: the module editor's columns follow the room the window leaves: three columns on a wide\n  screen, two with the outline as a tab of the side panel, stacked below that. At phone width the\n  toolbar sticks to the top and the caret stays clear of it.\n- Manuals: a glossary term's tooltip shows whole inside a safety notice, a table or an FAQ.\n- MCP: every HTTP caller sends its own service account token (a role holding content.read only),\n  made in Admin › Service accounts and checked by the API on every read. The shared\n  CCMS_MCP_HTTP_TOKEN still works in this release and is removed in v0.0.5.\n- Audit: reads by service accounts (MCP and API tokens) are recorded as api.read events naming the\n  caller, kept for CCMS_AUDIT_READ_KEEP_DAYS (default 90) days.\n- Demo: the sandbox launcher caps a sandbox's requests in flight (CCMS_LAUNCHER_MAX_IN_FLIGHT), and\n  an editor's own files no longer use up a sandbox's request rate. A sandbox that fails to start\n  shows an error instead of a blank page.\n- Images: the release's merge step retries a registry that hasn't caught up with its push.\n\nTo upgrade from v0.0.3, follow \"Upgrades\" in deploy/README.md; the database migration runs at\nstart-up. If an MCP service uses CCMS_MCP_HTTP_TOKEN, move each caller to its own service account\ntoken before v0.0.5.",
+    "de": "OpenFolia schreibt jetzt Update-Leitfäden: eine Anleitung, die sagt, was vor, während und nach\neinem Update zu tun ist, gefiltert auf die Versionen, zwischen denen jemand aktualisiert. Eine neue\nTour endet mit der ersten eigenen Änderung, und jeder MCP-Client bringt sein eigenes Token mit,\nsodass das Audit-Protokoll nennt, wer was gelesen hat.\n\n- Update-Leitfäden: eine neue Art von Anleitung. Sie folgt einem Versionsmerkmal, und jeder\n  Schritt ist ein Modul mit der Version, die ihn braucht, einer Phase (vor, während oder nach dem\n  Update) und auf Wunsch einer Zielgruppenstufe und einer Bedingung an die Optionen des Produkts.\n  Der Editor legt sie unter „Neue Anleitung“ an, listet die Schritte nach Version und Phase,\n  ordnet und bearbeitet sie in einer Überarbeitung und zeigt für jeden Bereich von/nach eine\n  Vorschau, wie Leser ihn sehen. Die API liefert den Leitfaden und seine Schritte für einen\n  Bereich, das PDF gliedert sie nach Version und Phase, und die Prüfungen melden einen Schritt ohne\n  gültige Version oder Phase.\n- Portal: Die Seite eines Update-Leitfadens hat Auswahlfelder für von/nach und Filter für die\n  Optionen und zeigt die Schritte dieses Bereichs als Checkliste, die sich ihre Häkchen merkt. Die\n  Adresse behält die Auswahl, sodass ein Link dieselben Schritte öffnet. Ohne JavaScript zeigt sie\n  alle Schritte.\n- Portal: Codeblöcke haben eine Schaltfläche zum Kopieren, die den Text genau kopiert, das meldet\n  und den Text markiert, wenn die Zwischenablage nicht erlaubt ist. Die Suche in der Kopfzeile\n  scrollt die Seite einer Anleitung nicht mehr.\n- Tour: Die Einführungstour ist jetzt an Aufgaben entlang gebaut. Sie öffnet ein Modul, macht eine\n  erste Änderung in einer eigenen Überarbeitung, erklärt die Auswahl der Überarbeitungen und endet\n  bei der Prüfung. Ihre Karte zeigt auf das, was sie erklärt, und bleibt daneben, wenn sich die\n  Liste bewegt. Sie lässt sich wiederholen und mit den Pfeiltasten durchgehen. Ein Tipp erklärt\n  Variantenblöcke, wenn zum ersten Mal einer erscheint.\n- Editor: Die Spalten des Moduleditors richten sich nach dem Platz, den das Fenster lässt: drei auf\n  einem breiten Bildschirm, zwei mit der Gliederung als Reiter der Seitenleiste, darunter\n  untereinander. Auf dem Telefon bleibt die Werkzeugleiste oben stehen, und die Schreibmarke bleibt\n  frei davon.\n- Anleitungen: Die Erklärung eines Glossarbegriffs erscheint vollständig, auch in einem\n  Sicherheitshinweis, einer Tabelle oder einer FAQ.\n- MCP: Jeder HTTP-Client sendet sein eigenes Token eines Service-Accounts (eine Rolle nur mit\n  content.read), angelegt unter Verwaltung › Service-Accounts und bei jedem Lesen von der API geprüft. Das\n  gemeinsame CCMS_MCP_HTTP_TOKEN funktioniert in dieser Version noch und entfällt in v0.0.5.\n- Audit: Lesezugriffe von Service-Accounts (MCP- und API-Tokens) werden als api.read-Ereignisse mit dem\n  Namen des Aufrufers festgehalten und CCMS_AUDIT_READ_KEEP_DAYS Tage (Standard 90) aufbewahrt.\n- Demo: Der Sandbox-Launcher begrenzt die gleichzeitigen Anfragen einer Sandbox\n  (CCMS_LAUNCHER_MAX_IN_FLIGHT), und die eigenen Dateien des Editors verbrauchen das Anfragelimit\n  einer Sandbox nicht mehr. Eine Sandbox, die nicht startet, zeigt einen Fehler statt einer leeren\n  Seite.\n- Images: Der Schritt, der die Images zusammenführt, versucht es erneut, wenn die Registry ihren\n  Push noch nicht kennt.\n\nFür das Upgrade von v0.0.3 folgen Sie „Upgrades“ in deploy/README.md; die Datenbankmigration läuft\nbeim Start. Nutzt ein MCP-Dienst CCMS_MCP_HTTP_TOKEN, stellen Sie jeden Client vor v0.0.5 auf ein\neigenes Token eines Service-Accounts um."
+  },
+  "groups": [
+    {
+      "title": "Docs",
+      "items": [
+        {
+          "number": 3,
+          "scope": null,
+          "text": "The changelog of v0.0.3"
+        }
+      ]
+    }
+  ],
+  "upgrade": {
+    "breaking": [],
+    "migrations": [
+      "0063_audit_read_events"
+    ],
+    "settings": {
+      "added": [
+        "CCMS_LAUNCHER_MAX_IN_FLIGHT",
+        "CCMS_AUDIT_READ_KEEP_DAYS"
+      ],
+      "changed": [
+        "CCMS_LAUNCHER_RATE",
+        "CCMS_AUDIT_KEEP_DAYS",
+        "CCMS_MCP_API_TOKEN",
+        "CCMS_MCP_HTTP_TOKEN"
+      ],
+      "removed": []
+    },
+    "notes": []
+  }
+}
