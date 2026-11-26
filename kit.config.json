@@ -1,0 +1,21 @@
+{
+  "mainBranch": "main",
+  "ownPort": 3100,
+  "check": [
+    {
+      "targets": ["test", "lint", "typecheck", "build"],
+      "output": "static-failures-only"
+    },
+    { "targets": ["e2e"], "output": "static", "affectedEnv": "CCMS_E2E" },
+    { "targets": ["perf"], "output": "static" }
+  ],
+  "slot": {
+    "setup": ["pnpm", "nx", "run", "api:setup-local"],
+    "brief": [
+      "- API: cd {worktree} && pnpm nx run api:serve-local (reads that .env.local; http://127.0.0.1:{port}/docs). Database tests run in memory in the test process: nothing to start.",
+      "- Databases: serve-local uses the slot's own (ccms_{key}, made by setup-local). A throwaway database you make (a test's) you drop yourself; a perf benchmark run drops its profile's unless --keep; pnpm slot remove drops the slot's own."
+    ],
+    "bucketScript": "backend/api/scripts/local-bucket.ts",
+    "databasesScript": "scripts/slot-databases.mjs"
+  }
+}

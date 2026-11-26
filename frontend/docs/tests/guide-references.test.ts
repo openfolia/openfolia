@@ -185,9 +185,7 @@ describe('the roles reference', () => {
   });
 
   it('reads the API’s own example roles against its permissions', () => {
-    const { permissions: all } = parsePermissions(
-      repo('backend/api/src/access/core/permissions.ts'),
-    );
+    const { permissions: all } = parsePermissions(repo);
     const { roles, problems } = parseRoles(
       repo('backend/api/src/access/repos/example-seed.ts'),
       all,

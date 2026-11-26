@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import type { Actor } from '../../../access/core/actor.js';
-import { allowsUnrestricted } from '../../../access/core/allows.js';
 import { ActorAction } from '../../../access/core/policy.js';
 import { AuditLog } from '../../../audit/core/audit-log.js';
 import {
@@ -41,9 +40,10 @@ import {
   isSecret,
   type StoredHeader,
 } from '../webhook-headers.js';
+import { WebhookEventHandlers } from '../webhook-event-handler.js';
 import { WebhookSecrets, WebhookSettings } from '../webhook-ports.js';
 import { mintWebhookSecret } from '../webhook-signature.js';
-import { WebhookStore, type WebhookVisibility } from '../webhook-store.js';
+import { WebhookStore } from '../webhook-store.js';
 import { checkWebhookUrl } from '../webhook-url.js';
 import { Sandbox } from '../../../sandbox/core/sandbox.js';
 
@@ -55,12 +55,13 @@ const notFound = (id: string) => new NotFoundError(`No webhook "${id}".`);
  */
 export async function existing(
   store: WebhookStore,
+  handlers: WebhookEventHandlers,
   id: string,
   actor: Actor,
   tx?: Parameters<WebhookStore['find']>[1],
 ): Promise<Webhook> {
   const found = isWebhookId(id) ? await store.find(id, tx) : undefined;
-  if (!found || !seesWebhook(actor, found)) throw notFound(id);
+  if (!found || !seesWebhook(handlers, actor, found)) throw notFound(id);
   return found;
 }
 
@@ -72,24 +73,19 @@ export const ownerOf = (actor: Actor): WebhookOwner => ({
 /**
  * Whether `actor` may see a subscriber, its URL, events and delivery log:
  * its owner, or a reader whose scope covers any owner of one with its
- * events (`coversAnyOwner`). Its events can be changed only by a reader
- * covering both the old and the new ones, so nobody reshapes them to see
- * more.
+ * events (`WebhookEventHandlers.coversAnyOwner`). Its events can be
+ * changed only by a reader covering both the old and the new ones, so
+ * nobody reshapes them to see more.
  */
-export function seesWebhook(actor: Actor, webhook: Webhook): boolean {
+export function seesWebhook(
+  handlers: WebhookEventHandlers,
+  actor: Actor,
+  webhook: Webhook,
+): boolean {
   return (
     sameOwner(webhook.owner, ownerOf(actor)) ||
-    coversAnyOwner(actor, webhook.events)
+    handlers.coversAnyOwner(actor, webhook.events)
   );
-}
-
-/** The subscribers `actor` sees, as a store filter matching `seesWebhook`. */
-function visibleTo(actor: Actor): WebhookVisibility {
-  if (coversAnyOwner(actor, WEBHOOK_EVENTS)) return 'all';
-  const owner = ownerOf(actor);
-  return coversAnyOwner(actor, [])
-    ? { owner, orWithout: 'translation.imported' }
-    : { owner };
 }
 
 /** 404 `not-configured` while there is no key to seal secrets with. */
@@ -157,7 +153,10 @@ export class ListWebhooksAction extends ActorAction<
 > {
   readonly policy = 'webhook.manage';
 
-  constructor(private readonly store: WebhookStore) {
+  constructor(
+    private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
+  ) {
     super();
   }
 
@@ -168,7 +167,10 @@ export class ListWebhooksAction extends ActorAction<
     actor: Actor;
     page: PageRequest;
   }): Promise<Paginated<ListedWebhook>> {
-    const result = await this.store.list(page, visibleTo(actor));
+    const result = await this.store.list(
+      page,
+      this.handlers.visibleTo(actor, ownerOf(actor)),
+    );
     return {
       total: result.total,
       items: await withLastDelivery(this.store, result.items),
@@ -187,7 +189,10 @@ export class GetWebhookAction extends ActorAction<
 > {
   readonly policy = 'webhook.manage';
 
-  constructor(private readonly store: WebhookStore) {
+  constructor(
+    private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
+  ) {
     super();
   }
 
@@ -199,7 +204,7 @@ export class GetWebhookAction extends ActorAction<
     id: string;
   }): Promise<ListedWebhook> {
     const [listed] = await withLastDelivery(this.store, [
-      await existing(this.store, id, actor),
+      await existing(this.store, this.handlers, id, actor),
     ]);
     return listed!;
   }
@@ -361,6 +366,7 @@ export class UpdateWebhookAction extends ActorAction<
 
   constructor(
     private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
     private readonly secrets: WebhookSecrets,
     private readonly settings: WebhookSettings,
     private readonly auditLog: AuditLog,
@@ -396,7 +402,7 @@ export class UpdateWebhookAction extends ActorAction<
     return runContended(
       this.unit,
       async (tx) => {
-        const old = await existing(this.store, id, actor, tx);
+        const old = await existing(this.store, this.handlers, id, actor, tx);
         const owns = sameOwner(old.owner, owner);
         const newUrl = url !== undefined && url !== old.url;
         const newEvents =
@@ -411,7 +417,10 @@ export class UpdateWebhookAction extends ActorAction<
         if (
           !owns &&
           (newUrl || newEvents || newAudience) &&
-          !coversAnyOwner(actor, [...old.events, ...(events ?? [])])
+          !this.handlers.coversAnyOwner(actor, [
+            ...old.events,
+            ...(events ?? []),
+          ])
         ) {
           throw new ForbiddenError(
             'Changing the URL, the events or the audience limit of a webhook someone else owns needs a reading scope that covers what it is sent, before and after.',
@@ -421,7 +430,11 @@ export class UpdateWebhookAction extends ActorAction<
         // Its custom headers authenticate deliveries to the owner's
         // receiver, as its secret signs them: only those who may rotate the
         // secret may change them.
-        if (headers?.write && !owns && !coversAnyOwner(actor, WEBHOOK_EVENTS)) {
+        if (
+          headers?.write &&
+          !owns &&
+          !this.handlers.coversAnyOwner(actor, WEBHOOK_EVENTS)
+        ) {
           throw new ForbiddenError(
             'Changing the custom headers of a webhook someone else owns needs a reading scope that restricts nothing.',
           );
@@ -544,24 +557,6 @@ const sameEvents = (
 };
 
 /**
- * Whether `actor` reads at least what any owner of a subscriber to
- * `events` could: `content.read` restricting nothing, and for
- * `translation.imported` also `content.read.draft` and
- * `translation.manage` restricting nothing.
- */
-export function coversAnyOwner(
-  actor: Actor,
-  events: readonly WebhookEvent[],
-): boolean {
-  return (
-    allowsUnrestricted(actor, 'content.read') &&
-    (!events.includes('translation.imported') ||
-      (allowsUnrestricted(actor, 'content.read.draft') &&
-        allowsUnrestricted(actor, 'translation.manage')))
-  );
-}
-
-/**
  * Deletes a subscriber and its delivery log; deliveries still waiting are
  * not sent. 404 `not-found`. Recorded as `webhook.delete`. Needs
  * `webhook.manage`.
@@ -575,6 +570,7 @@ export class DeleteWebhookAction extends ActorAction<
 
   constructor(
     private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
   ) {
@@ -585,7 +581,13 @@ export class DeleteWebhookAction extends ActorAction<
     await runContended(
       this.unit,
       async (tx) => {
-        const webhook = await existing(this.store, id, actor, tx);
+        const webhook = await existing(
+          this.store,
+          this.handlers,
+          id,
+          actor,
+          tx,
+        );
         await this.store.delete(tx, id);
         await this.auditLog.record(tx, actor, {
           action: 'webhook.delete',
@@ -620,6 +622,7 @@ export class RotateWebhookSecretAction extends ActorAction<
 
   constructor(
     private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
     private readonly secrets: WebhookSecrets,
     private readonly settings: WebhookSettings,
     private readonly auditLog: AuditLog,
@@ -644,13 +647,13 @@ export class RotateWebhookSecretAction extends ActorAction<
     const webhook = await runContended(
       this.unit,
       async (tx) => {
-        const old = await existing(this.store, id, actor, tx);
+        const old = await existing(this.store, this.handlers, id, actor, tx);
         // The secret signs what goes to the owner's receiver: only they, or
         // a manager covering any owner of any subscriber (not judged by its
         // events, which could be reshaped first), may hold a new one.
         if (
           !sameOwner(old.owner, ownerOf(actor)) &&
-          !coversAnyOwner(actor, WEBHOOK_EVENTS)
+          !this.handlers.coversAnyOwner(actor, WEBHOOK_EVENTS)
         ) {
           throw new ForbiddenError(
             'Rotating the secret of a webhook someone else owns needs a reading scope that restricts nothing.',
@@ -681,17 +684,18 @@ export interface LoggedDelivery extends Omit<Delivery, 'body'> {
  * `owner` (the subscriber's owner when the delivery was made, not its
  * owner now): what it holds was filtered by that owner's reading scope, so
  * only that owner themselves, or a reader whose scope
- * covers any owner's (`coversAnyOwner`).
+ * covers any owner's (`WebhookEventHandlers.coversAnyOwner`).
  * Fails closed: scopes are not compared otherwise.
  */
 export function seesPayload(
+  handlers: WebhookEventHandlers,
   actor: Actor,
   owner: WebhookOwner,
   event: DeliveryEvent,
 ): boolean {
   return (
     sameOwner(actor, owner) ||
-    coversAnyOwner(actor, event === PING ? [] : [event])
+    handlers.coversAnyOwner(actor, event === PING ? [] : [event])
   );
 }
 
@@ -709,7 +713,10 @@ export class ListWebhookDeliveriesAction extends ActorAction<
 > {
   readonly policy = 'webhook.manage';
 
-  constructor(private readonly store: WebhookStore) {
+  constructor(
+    private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
+  ) {
     super();
   }
 
@@ -724,13 +731,15 @@ export class ListWebhookDeliveriesAction extends ActorAction<
     filter: DeliveryFilter;
     page: PageRequest;
   }): Promise<Paginated<LoggedDelivery>> {
-    await existing(this.store, id, actor);
+    await existing(this.store, this.handlers, id, actor);
     const result = await this.store.listDeliveries(id, filter, page);
     return {
       total: result.total,
       items: result.items.map((d) => ({
         ...d,
-        body: seesPayload(actor, d.owner, d.event) ? d.body : null,
+        body: seesPayload(this.handlers, actor, d.owner, d.event)
+          ? d.body
+          : null,
       })),
     };
   }

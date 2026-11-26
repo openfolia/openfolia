@@ -19,22 +19,22 @@ here-document.
 
 ## Goal
 
-1. Read `backend/api/README.md` ("Notes": the PDF worker pool, deadlines, caching) and the
-   READMEs of the packages the range touches.
-2. **Git reads:** for every route the range added or changed, count the repository reads a
-   request makes; a whole-tree walk where one path would do, the same blob read twice in a
-   request, a ref resolved more than once, results that could be cached per commit but
-   aren't.
+1. Read the READMEs of the projects the range touches (their notes on worker pools, deadlines
+   and caching) and `docs/agent-rules.md`.
+2. **Reads per request:** for every route the range added or changed, count the storage reads
+   a request makes; a whole walk where one lookup would do, the same item read twice in a
+   request, results that could be cached but aren't.
 3. **Blocking work:** anything synchronous and slow on the request path (parsing, compiling,
    file system walks) that should go to the worker pool or be cached; unbounded queues,
    missing deadlines.
 4. **Lists:** every list paged before it is built, not sliced after reading everything when
    the source can page; `page[size]` capped.
-5. **The database** (once there is one): read each new query's plan on PGlite with realistic
-   row counts; sequential scans on growing tables, a missing index on a foreign key, a query
-   per row (N+1).
-6. Measure where it matters: start the API on your `PORT` (`pnpm nx run api:serve-local`) and
-   time the changed routes against the sample content; stop it by its port when done.
+5. **The database** (once there is one): read each new query's plan on the test database with
+   realistic row counts; sequential scans on growing tables, a missing index on a foreign key,
+   a query per row (N+1).
+6. Measure where it matters: start the project's server on your `PORT` (the slot brief names
+   the command) and time the changed routes against sample data; stop it by its port when
+   done.
 
 ## Ending
 

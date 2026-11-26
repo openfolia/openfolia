@@ -20,7 +20,10 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { clientAddress } from '../../base/api/client-address.js';
+import {
+  clientAddress,
+  networkAddress,
+} from '../../base/api/client-address.js';
 import { AcceptsCrossSiteForm } from '../../base/api/cross-site.guard.js';
 import { Public } from '../../base/api/public.decorator.js';
 import { NotFoundError } from '../../base/core/errors.js';
@@ -34,7 +37,10 @@ import {
   type PendingSignIn,
   SignInFailedError,
 } from '../core/identity-provider.js';
-import { FailedAuthentications } from './failed-authentications.js';
+import {
+  FailedAuthentications,
+  NetworkAnswers,
+} from './failed-authentications.js';
 import {
   clearCookie,
   cookieOf,
@@ -120,6 +126,7 @@ export class SignInController implements OnApplicationBootstrap {
     private readonly sealer: SecretSealer,
     private readonly settings: SignInSettings,
     private readonly failures: FailedAuthentications,
+    private readonly networks: NetworkAnswers,
     private readonly answer: SignInAnswer,
   ) {}
 
@@ -219,7 +226,7 @@ export class SignInController implements OnApplicationBootstrap {
   @ApiOperation({
     summary: 'Finish signing in, posted (browser)',
     description:
-      "Where an identity provider that answers with a form posts the browser back (SAML's HTTP-POST binding, the assertion consumer service: `SAMLResponse`). Checks the answer (with the sealed cookie, here `SameSite=None`, when the sign-in began here; without it only when IdP-initiated sign-in is allowed) and answers as `GET /auth/{provider}/callback` does. Refused answers count against the client's address (`CCMS_AUTH_FAILURES_*`, apart from its other failed authentications); past the limit, a 303 to the sign-in page with `?error=too-many-failed-attempts`. 404 for a provider that answers with a redirect.",
+      "Where an identity provider that answers with a form posts the browser back (SAML's HTTP-POST binding, the assertion consumer service: `SAMLResponse`). Checks the answer (with the sealed cookie, here `SameSite=None`, when the sign-in began here; without it only when IdP-initiated sign-in is allowed) and answers as `GET /auth/{provider}/callback` does. Refused answers count against the client's address (`CCMS_AUTH_FAILURES_*`, apart from its other failed authentications); past the limit, a 303 to the sign-in page with `?error=too-many-failed-attempts`; a network (IPv4 /24, IPv6 /48) has its answers checked one at a time, and past 8 in turn gets `?error=provider-unavailable`, not counted. 404 for a provider that answers with a redirect.",
   })
   @ApiParam({ name: 'provider', example: 'saml' })
   @ApiConsumes(FORM)
@@ -248,6 +255,7 @@ export class SignInController implements OnApplicationBootstrap {
       offered,
       answer,
       `sign-in-answer:${clientAddress(req, 64)}`,
+      networkAddress(req),
     );
   }
 
@@ -296,6 +304,8 @@ export class SignInController implements OnApplicationBootstrap {
    * an answer refused counts against it, and past its limit none is checked: anyone can post one,
    * and checking it costs far more than posting it (#934). Counted before the check and taken back
    * unless the provider's check refuses it, so answers at once cannot all pass the limit.
+   * With `network` too, the answers of one network take turns (#965, `NetworkAnswers`): one past
+   * what the network's queue holds is not checked (`provider-unavailable`, not counted).
    */
   private async finish(
     req: Request,
@@ -303,6 +313,7 @@ export class SignInController implements OnApplicationBootstrap {
     provider: IdentityProvider,
     answer: URLSearchParams,
     client?: string,
+    network?: string,
   ): Promise<void> {
     const sealed = cookieOf(req, SIGN_IN_COOKIE);
     const kept =
@@ -328,6 +339,21 @@ export class SignInController implements OnApplicationBootstrap {
         return;
       }
       this.failures.fail(client);
+    }
+    // One answer of a network in the workers at a time, the others in turn (#965).
+    let endTurn: (() => void) | undefined;
+    if (network !== undefined && client !== undefined) {
+      endTurn = await this.networks.enter(network, client);
+      if (!endTurn) {
+        this.failures.forgive(client);
+        if (this.networks.firstRefusal(network)) {
+          this.log.warn(
+            `SAML answers from ${network} are not checked: too many wait.`,
+          );
+        }
+        this.toSignInPage(res, 'provider-unavailable');
+        return;
+      }
     }
     let refused = false;
     try {
@@ -357,6 +383,7 @@ export class SignInController implements OnApplicationBootstrap {
         error.reason !== 'provider-unavailable';
       this.failed(res, error);
     } finally {
+      endTurn?.();
       if (client !== undefined && !refused) this.failures.forgive(client);
     }
   }

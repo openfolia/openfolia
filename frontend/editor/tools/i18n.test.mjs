@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -198,10 +199,21 @@ describe('the editor translations', () => {
 
   it('name every action the API writes to the audit log (#692)', async () => {
     // The API's catalogue (`AuditLog.record` takes only its actions) against the audit log's
-    // `ACTION_TEXTS`, whose keys the checks above find in every language.
+    // `ACTION_TEXTS`, whose keys the checks above find in every language. The catalogue reads
+    // what each component registers (`backend/api/src/audit-actions.ts`), and the API's sources
+    // import each other as `.js`: Node strips the types, and this resolves those to the `.ts`.
+    const hooks = registerHooks({
+      resolve: (specifier, context, next) =>
+        specifier.startsWith('.') &&
+        specifier.endsWith('.js') &&
+        context.parentURL?.includes('/backend/api/src/')
+          ? next(specifier.replace(/\.js$/, '.ts'), context)
+          : next(specifier, context),
+    });
     const { AUDIT_ACTIONS } = await import(
       at('../../../backend/api/src/audit/core/audit-actions.ts')
     );
+    hooks.deregister();
     const model = readFileSync(
       at('../src/app/admin/audit/audit-model.ts'),
       'utf8',

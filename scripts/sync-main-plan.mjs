@@ -2,6 +2,9 @@
 // whether a checkout is clean, whether it may fast-forward to origin/<base>, and the steps
 // .githooks/post-merge runs afterwards. scripts/merge-pr-flow.mjs uses the same checks before a
 // merge, so a merge never ends on a checkout that can't be synced or a slot that can't be removed.
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
+
+const { mainBranch } = readKitConfig();
 
 /**
  * The paths `git status --porcelain` lists (tracked changes and untracked, non-ignored files).
@@ -27,9 +30,12 @@ export function dirtyReason({ where, dir, porcelain }) {
   );
 }
 
-/** `main`, `origin/main` and `refs/heads/main` all name the base branch `main`. */
+/**
+ * `main`, `origin/main` and `refs/heads/main` all name the base branch `main`; no value means
+ * the main branch (kit.config.json `mainBranch`).
+ */
 export function baseName(value) {
-  return String(value ?? 'main')
+  return String(value ?? mainBranch)
     .replace(/^refs\/heads\//, '')
     .replace(/^origin\//, '');
 }

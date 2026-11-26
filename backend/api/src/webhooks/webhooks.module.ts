@@ -4,9 +4,7 @@ import { AccessModule } from '../access/access.module.js';
 import { AuditModule } from '../audit/audit.module.js';
 import { SecretSealer } from '../base/core/secret-sealer.js';
 import type { Env } from '../config/env.js';
-import { ContentModule } from '../content/content.module.js';
 import { OutboxModule } from '../outbox/outbox.module.js';
-import { ReleasesModule } from '../releases/releases.module.js';
 import { DeliverWebhookJobHandler } from './api/deliver-webhook.handler.js';
 import { WebhooksConsumer } from './api/webhooks-consumer.js';
 import { WebhooksController } from './api/webhooks.controller.js';
@@ -29,7 +27,6 @@ import {
   TestWebhookAction,
 } from './core/actions/test-webhook.action.js';
 import { PruneWebhookDeliveriesAction } from './core/actions/prune-webhook-deliveries.action.js';
-import { WebhookEventBuilder } from './core/webhook-events.js';
 import {
   WebhookOwners,
   WebhookSecrets,
@@ -43,6 +40,7 @@ import { NodeWebhookSender } from './repos/node-webhook-sender.js';
 import { SealedWebhookSecrets } from './repos/sealed-webhook-secrets.js';
 import { Sandbox } from '../sandbox/core/sandbox.js';
 import { SandboxWebhookSender } from './repos/sandbox-webhook-sender.js';
+import { WebhookEventsModule } from './webhook-events.module.js';
 
 /**
  * Webhooks (#42): subscribers (`webhook.manage`), a second outbox consumer
@@ -53,13 +51,8 @@ import { SandboxWebhookSender } from './repos/sandbox-webhook-sender.js';
  * secret key (`SecretSealer`, #470); off only when there is none.
  */
 @Module({
-  imports: [
-    AccessModule,
-    AuditModule,
-    ContentModule,
-    OutboxModule,
-    ReleasesModule,
-  ],
+  // `WebhookEventsModule`: the events, as each component's handler makes them (#974).
+  imports: [AccessModule, AuditModule, OutboxModule, WebhookEventsModule],
   controllers: [WebhooksController],
   providers: [
     {
@@ -103,7 +96,6 @@ import { SandboxWebhookSender } from './repos/sandbox-webhook-sender.js';
     },
     { provide: WebhookStore, useClass: DrizzleWebhookStore },
     { provide: WebhookOwners, useClass: DrizzleWebhookOwners },
-    WebhookEventBuilder,
     ListWebhooksAction,
     GetWebhookAction,
     CreateWebhookAction,

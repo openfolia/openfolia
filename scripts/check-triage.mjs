@@ -41,7 +41,7 @@ function failedTasksAfter(lines, summaryAt) {
  * when anything else failed (another target, an assertion, a file that didn't load, a failed
  * test task with no timed-out file, or nothing to read). A task's output is read wherever it
  * is, after Nx's closing summary too: a streamed task can still be writing when Nx prints it
- * (#627), so its FAIL blocks and vitest's count may follow the summary.
+ * (as a loaded run has shown), so its FAIL blocks and vitest's count may follow the summary.
  */
 export function timeoutOnlyFailures(output) {
   const text = stripVTControlCharacters(String(output ?? ''));

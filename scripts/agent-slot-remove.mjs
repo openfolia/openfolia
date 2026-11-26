@@ -2,6 +2,7 @@
 // on a temporary repository.
 import { existsSync, rmSync } from 'node:fs';
 
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
 import {
   dropLocalBucket,
   dropSlotDatabases,
@@ -13,11 +14,14 @@ import { slotPaths } from './agent-slot-plan.mjs';
 import { withRegistryLock } from './registry-lock.mjs';
 import { readSlots } from './slot-file.mjs';
 
+const { slot: slotConfig } = readKitConfig();
+
 /**
  * Stops whatever listens on that slot's PORT (by port, never by name), removes the worktree
- * (refuses uncommitted changes without `force`), its bucket on the local S3 service, its own
- * databases on the local Postgres (`dropDatabases`; one in use stays, with a note) and the
- * slot's record. The branch stays. `dryRun`: changes nothing, says which databases it would drop.
+ * (refuses uncommitted changes without `force`), its bucket on a local storage service and its
+ * own databases on a local database server where the project has them (`dropBucket`,
+ * `dropDatabases`: kit.config.json `slot`; one in use stays, with a note) and the slot's
+ * record. The branch stays. `dryRun`: changes nothing, says which databases it would drop.
  */
 export function remove(
   root,
@@ -25,7 +29,7 @@ export function remove(
   {
     force = false,
     dryRun = false,
-    dropBucket = dropLocalBucket,
+    dropBucket = slotConfig.bucketScript ? dropLocalBucket : null,
     dropDatabases = dropSlotDatabases,
   } = {},
 ) {
@@ -67,19 +71,23 @@ export function remove(
       );
     }
     // Inside the lock, after that check: never the bucket a new slot of this name just made.
-    // As local-bucket.ts names buckets: `abc-`, `a--bc` and `abc` can share one; then it stays.
+    // As the bucket script names buckets: `abc-`, `a--bc` and `abc` can share one; then it
+    // stays. Only where there are buckets (`dropBucket`, null without `slot.bucketScript`).
     const bucketOf = (slotName) =>
       slotName.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
-    const shared = readSlots(root).some(
-      (other) => other.name !== name && bucketOf(other.name) === bucketOf(name),
-    );
+    const shared =
+      dropBucket &&
+      readSlots(root).some(
+        (other) =>
+          other.name !== name && bucketOf(other.name) === bucketOf(name),
+      );
     if (shared) {
       console.log(
         `The slot's bucket stays: another slot's name gives the same bucket.`,
       );
-    } else if (dropBucket(root, paths.worktree) === false) {
+    } else if (dropBucket && dropBucket(root, paths.worktree) === false) {
       console.log(
-        `The slot's bucket on the local S3 service was not deleted; later: node backend/api/scripts/local-bucket.ts drop ${paths.worktree}`,
+        `The slot's bucket was not deleted; later: node ${slotConfig.bucketScript} drop ${paths.worktree}`,
       );
     }
     // Before the worktree goes: its settings name the server. The port is stopped above and its

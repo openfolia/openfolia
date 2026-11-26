@@ -6,8 +6,8 @@
 //   - `content/api/{delivery,management}/`: a page per operation (fumadocs-openapi), by tag;
 //   - `content/reference/`: the catalogues: error codes (`backend/api/error-codes.yaml`; in German
 //     with the editor's German messages, `lib/error-texts.mjs`),
-//     permissions (`backend/api/src/access/core/permissions.ts` and the routes'
-//     `x-required-permission`), settings (`.env.example`), the project configuration (`openfolia.yaml`,
+//     permissions (each component's, as `backend/api/src/permissions.ts` registers them, and the
+//     routes' `x-required-permission`), settings (`.env.example`), the project configuration (`openfolia.yaml`,
 //     the content model's schema), the import format (`import-format.schema.json`) and the MCP
 //     tools (`backend/mcp`), each with its German page: the permissions and the error codes in
 //     German, the others in English under a German note (#750);
@@ -22,9 +22,9 @@
 //
 // Nothing generated is committed, so nothing can drift: every build makes it again from the files.
 // The build fails (exit 1) for what the references cannot describe: an operation without a summary
-// or a description, a setting without a comment, a permission without one, a openfolia.yaml key
-// without a description (`.describe()` on the content model's schema), a shortcut without its
-// English or German text or with a key the reference cannot name, an example role holding a
+// or a description, a setting without a comment, a permission without its description or text
+// key (or with a member the reference cannot read), an openfolia.yaml key without a description
+// (`.describe()` on the content model's schema), a shortcut without its English or German text or with a key the reference cannot name, an example role holding a
 // permission that does not exist, a permission without the editor's English or German text, an
 // error code without the editor's German text that the editor's i18n test does not exempt (#750),
 // and a generated German page with English prose or a table cell equal to the English page's
@@ -262,9 +262,7 @@ page(
   'Jeder Fehlercode, mit dem die API antwortet, sein HTTP-Status und was er meldet.',
   renderErrorCodes(errorCatalogue, 'de', germanErrors),
 );
-const parsedPermissions = parsePermissions(
-  repoFile('backend/api/src/access/core/permissions.ts'),
-);
+const parsedPermissions = parsePermissions(repoFile);
 problems.push(...parsedPermissions.problems);
 const permissions = withPermissionTexts(
   parsedPermissions.permissions,

@@ -1,31 +1,15 @@
 import { z } from 'zod';
-import { field, text, wholeNumber } from './fields.js';
+import { endpoint, isLoopback } from '../config/endpoint.js';
+import { field, text, wholeNumber } from '../config/fields.js';
+import { defineSettings } from '../config/settings-registry.js';
 
 /** `CCMS_STYLE_REVIEW_*` defaults (#248). */
 export const DEFAULT_STYLE_REVIEW_PER_MINUTE = 6;
 export const DEFAULT_STYLE_REVIEW_TIMEOUT_MS = 30_000;
 
-/** An `http://` or `https://` URL without credentials, query or fragment; the message never repeats the value. */
-export const endpoint = z
-  .string()
-  .trim()
-  .refine((value) => {
-    if (!URL.canParse(value)) return false;
-    const url = new URL(value);
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      url.hostname !== '' &&
-      url.username === '' &&
-      url.password === '' &&
-      url.search === '' &&
-      url.hash === ''
-    );
-  }, 'must be an http:// or https:// URL without credentials, query or fragment');
-
 /**
- * The model-based style review's settings (`StyleReviewer`,
- * `src/style-review/`): part of `Env`. Off unless `CCMS_STYLE_REVIEW_URL`
- * is set; `checkStyleReviewEnv` says what goes with it.
+ * The model-based style review's settings (`StyleReviewer`): part of `Env`. Off unless
+ * `CCMS_STYLE_REVIEW_URL` is set; `checkStyleReviewEnv` says what goes with it.
  */
 export const StyleReviewEnv = z.object({
   /** A chat-completions style endpoint (the full URL a request is posted to). */
@@ -44,15 +28,6 @@ export const StyleReviewEnv = z.object({
   ),
 });
 export type StyleReviewSettings = z.infer<typeof StyleReviewEnv>;
-
-/** Whether `hostname` (as `URL` gives it) is this machine. */
-export function isLoopback(hostname: string): boolean {
-  return (
-    hostname === 'localhost' ||
-    hostname === '[::1]' ||
-    /^127(?:\.\d{1,3}){3}$/.test(hostname)
-  );
-}
 
 /**
  * The checks across fields, for `Env.superRefine`: a model with the URL,
@@ -95,3 +70,10 @@ export function checkStyleReviewEnv(
     );
   }
 }
+
+/** The style review's settings (`src/settings.ts` registers them). */
+export const STYLE_REVIEW_SETTINGS = defineSettings(
+  'style-review',
+  StyleReviewEnv,
+  checkStyleReviewEnv,
+);

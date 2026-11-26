@@ -1,49 +1,48 @@
 import { z } from 'zod';
+import {
+  NOTIFICATION_SUBJECTS,
+  REGISTERED_NOTIFICATION_KINDS,
+} from '../../notification-kinds.js';
+import type { ChosenKindDefinition } from './notification-kind-registry.js';
 
 /**
- * What a notification is about: its kind is the outbox topic it came from.
- * A topic not listed here notifies nobody.
+ * What a notification is about: its kind is the outbox topic it came from,
+ * in the order the components registered them (`src/notification-kinds.ts`,
+ * each component's `<component>.notification-kinds.ts`). A topic not
+ * registered notifies nobody.
  */
-export const NOTIFICATION_KINDS = [
-  'change-set.submit',
-  'change-set.return',
-  'change-set.approve',
-  'change-set.sign-off',
-  'change-set.merge',
-  'lock.break',
-  'translation.imported',
-  'translation.import-failed',
-  'release.published',
-  'release.output-failed',
-  'release.output-recovered',
-  'backup.failed',
-  'backup.overdue',
-  'sign-in.break-glass',
-] as const;
-/** The kinds nobody chooses about: their email goes out on its own (`OutboxSignInEvents`, #378). */
-const UNCHOSEN_KINDS = ['sign-in.break-glass'] as const;
+export const NOTIFICATION_KINDS = Object.freeze(
+  REGISTERED_NOTIFICATION_KINDS.map((k) => k.kind),
+);
 
-/** The kinds a person chooses how to hear of (#884). */
-export const CHOSEN_KINDS = NOTIFICATION_KINDS.filter(
-  (kind) => !(UNCHOSEN_KINDS as readonly string[]).includes(kind),
-) as Exclude<
-  (typeof NOTIFICATION_KINDS)[number],
-  (typeof UNCHOSEN_KINDS)[number]
->[];
+type Registered = (typeof REGISTERED_NOTIFICATION_KINDS)[number];
+/** A registered kind a person chooses about. */
+export type RegisteredChosenKind = Extract<Registered, ChosenKindDefinition>;
+
+/** Whether a person chooses about the kind (else it cannot be turned off). */
+const isChosen = (k: Registered): k is RegisteredChosenKind =>
+  !Object.hasOwn(k, 'chosen');
+
+/** The registered kinds a person chooses about, in order, with their section and default. */
+export const REGISTERED_CHOSEN_KINDS = Object.freeze(
+  REGISTERED_NOTIFICATION_KINDS.filter(isChosen),
+);
+
+/**
+ * The kinds a person chooses how to hear of (#884). The others nobody
+ * chooses about: their email goes out on its own (`OutboxSignInEvents`, #378).
+ */
+export const CHOSEN_KINDS = Object.freeze(
+  REGISTERED_CHOSEN_KINDS.map((k) => k.kind),
+);
 export const ChosenKind = z.enum(CHOSEN_KINDS);
 export type ChosenKind = z.infer<typeof ChosenKind>;
 
 export const NotificationKind = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKind>;
 
-/** The kinds of thing a notification opens. */
-export const SUBJECT_TYPES = [
-  'change-set',
-  'release',
-  'import',
-  'backup',
-  'user',
-] as const;
+/** The kinds of thing a notification opens (`src/notification-kinds.ts`). */
+export const SUBJECT_TYPES = NOTIFICATION_SUBJECTS;
 export const NotificationSubjectType = z.enum(SUBJECT_TYPES);
 export type NotificationSubjectType = z.infer<typeof NotificationSubjectType>;
 

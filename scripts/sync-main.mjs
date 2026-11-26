@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // `pnpm sync:main [--base <branch>]`: brings the main checkout up to origin/<base> (default
-// main) by a fast-forward only, then runs what .githooks/post-merge runs (`pnpm check:changed`
+// the main branch, kit.config.json `mainBranch`) by a fast-forward only, then runs what .githooks/post-merge runs (`pnpm check:changed`
 // over what the fast-forward brought in). It refuses, saying why, when the main checkout has
 // local changes (tracked or untracked, not ignored), isn't on <base> or can't fast-forward, and
 // stops when fetching origin/<base> fails; it never stashes, merges, rebases or discards
@@ -40,7 +40,7 @@ const at = args.findIndex(
 );
 const base = baseName(
   at === -1
-    ? 'main'
+    ? undefined
     : args[at].includes('=')
       ? args[at].split('=')[1]
       : args[at + 1],

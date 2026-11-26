@@ -178,8 +178,12 @@ These limits apply to every answer:
 - **Tries:** refused answers count per client address, under `CCMS_AUTH_FAILURES_MAX` (default 20 a
   minute, counted apart from other failed sign-ins). Past it, the sign-in page says **Too many
   sign-ins from your network failed** until the window ends. A sign-in stops counting once it succeeds.
-  Behind a proxy, the address is the one `CCMS_TRUST_PROXY` lets the API believe:
-  [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
+  So that many addresses of one network can't keep other people from signing in, the answers of
+  one network (an IPv4 /24, an IPv6 /48) are checked one at a time, which usually takes a few
+  milliseconds each. When 8 answers of one network are waiting for their turn (at most 3 from one
+  address), the next is not checked and the page says the sign-in service could not be reached;
+  a try a moment later works. Behind a proxy, set `CCMS_TRUST_PROXY`: without it every person is
+  the same network. The address is then the one `CCMS_TRUST_PROXY` lets the API believe: [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
 
 ## Sessions and signing out
 

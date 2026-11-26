@@ -35,7 +35,28 @@
           "licences"
         ]
       },
+      "kit-smoke": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "default",
+          "{workspaceRoot}/.claude/**/*",
+          "{workspaceRoot}/.githooks/**/*",
+          "{workspaceRoot}/docs/handover-template.md",
+          "{workspaceRoot}/kit.config.json",
+          "{workspaceRoot}/package.json"
+        ],
+        "outputs": [],
+        "options": {
+          "cwd": "{workspaceRoot}",
+          "command": "node scripts/kit/smoke.mjs"
+        }
+      },
       "test": {
+        "dependsOn": [
+          "^build",
+          "kit-smoke"
+        ],
         "inputs": [
           "default",
           "^production",

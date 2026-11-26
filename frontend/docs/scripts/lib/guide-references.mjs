@@ -256,19 +256,15 @@ export function renderShortcuts({ shortcuts, areas, translations }, lang) {
 
 // --- Permissions' texts ---------------------------------------------------------------------------
 
-/** A permission's key in the editor's translations: `content.read.draft` → `admin.permissions.contentReadDraft`. */
-export const permissionKey = (name) =>
-  `admin.permissions.${name.replace(/\.([a-z])/g, (_, c) => c.toUpperCase())}`;
-
 /**
- * The permissions (`parsePermissions`) with their texts per language (`text: { en, de }`), from the
- * editor's translations (`{ en, de }`, its JSON files), which name them on Admin › Roles. Problems: a
- * permission without a text in a language.
+ * The permissions (`parsePermissions`) with their texts per language (`text: { en, de }`), by the
+ * text key each registers (`labelKey`), from the editor's translations (`{ en, de }`, its JSON
+ * files), which name them on Admin › Roles. Problems: a permission without a text in a language.
  */
 export function withPermissionTexts(permissions, translations) {
   const problems = [];
   const out = permissions.map((p) => {
-    const key = permissionKey(p.name);
+    const key = p.labelKey;
     const text = {};
     for (const lang of GUIDE_LANGUAGES) {
       text[lang] = translationText(translations[lang], key);

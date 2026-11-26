@@ -10,24 +10,23 @@
 // the local branch when it exists, else one made from origin/<branch> when GitHub has it
 // (git ls-remote, then fetched; a stale remote-tracking ref never counts; a failed ls-remote
 // stops create unless --offline), else a new branch from the base (--base <ref> or
-// --base=<ref>, BASE_BRANCH, else origin/main, fetched first); dependencies from pnpm's store
-// (`pnpm install --frozen-lockfile --prefer-offline`); the worktree's own sample content and
-// .env.local (`pnpm nx run api:setup-local`) with its own PORT, unique among slots, from
-// 3101 and never 3100 (the person's own). Database tests run in memory in the test process, but
-// setup-local also makes the slot its own database on the compose Postgres (`ccms_<slot>`, when
-// Postgres answers), which `serve-local` uses, and `perf:seed` in the slot makes
-// `ccms_perf_<slot>_<profile>` (names: scripts/slot-databases-plan.mjs). The PORT and the slot's record (.claude/stacks/<name>/slot.json,
+// --base=<ref>, BASE_BRANCH, else origin/<mainBranch>, fetched first); dependencies from pnpm's
+// store (`pnpm install --frozen-lockfile --prefer-offline`); the project's own setup in the
+// worktree (kit.config.json `slot.setup`: its .env.local, sample data, a database of its own)
+// and the worktree's PORT in its .env.local, unique among slots, from `ownPort` + 1 and never
+// `ownPort` (the person's own). The PORT and the slot's record (.claude/stacks/<name>/slot.json,
 // scripts/slot-file.mjs) are written under an exclusive lock (.claude/stacks/.lock,
 // scripts/registry-lock.mjs), so concurrent creates never share a PORT; a create that died
 // before its worktree existed (`creating` pid gone) is ignored and replaced. Prints a summary
 // and the slot's brief (scripts/agent-slot-brief.mjs) for the agent's prompt; warns, never
 // refuses, when the machine looks loaded.
 // remove: stops whatever listens on that slot's PORT (by port, never by name), drops the slot's
-// own databases (exactly the names derived from its name, never `ccms`, `postgres`, a template
-// or another live slot's; one in use stays, with a note; scripts/slot-databases.mjs), removes
-// the worktree (refuses uncommitted changes without --force), its bucket and the record. The
-// branch stays. --dry-run changes nothing and says which databases it would drop.
-// prune-databases: lists the databases of slots that are gone; drops them only with --yes.
+// own databases and bucket where the project has them (`slot.databasesScript`,
+// `slot.bucketScript`; one in use stays, with a note), removes the worktree (refuses
+// uncommitted changes without --force) and the record. The branch stays. --dry-run changes
+// nothing and says which databases it would drop.
+// prune-databases: lists the databases of slots that are gone (`slot.databasesScript`); drops
+// them only with --yes.
 import path from 'node:path';
 
 import { create } from './agent-slot-create.mjs';

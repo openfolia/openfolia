@@ -1,7 +1,10 @@
 // What `pnpm merge:pr <N>` (scripts/merge-pr.mjs) decides, as plain functions a test can pin:
 // the checks a PR must pass before the coordinator merges it, and the steps after them.
 // scripts/merge-pr-flow.mjs runs them through injected gh/git callers.
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
 import { BASE_BRANCH } from '../.claude/hooks/subagent-rules.mjs';
+
+const { mainBranch } = readKitConfig();
 
 /** The fields `gh pr view --json` reads. */
 export const PR_FIELDS =
@@ -145,7 +148,7 @@ export function closedIssues(pr) {
 }
 
 /**
- * Whether a PR's head branch is one merge:pr never deletes: `main`, the repository's default
+ * Whether a PR's head branch is one merge:pr never deletes: the main branch, the repository's default
  * branch (`defaultBranch`, null when unknown) or a base branch (`sprint-*`, the guard's
  * BASE_BRANCH): a `sprint-3` → `main` PR leaves `sprint-3` where it is.
  */
@@ -199,7 +202,7 @@ export function mergeSteps({
     steps.push({
       key: 'branch',
       label: 'branch',
-      note: `${pr.headRefName} is a base branch (main, sprint-*, or the default): left on GitHub.`,
+      note: `${pr.headRefName} is a base branch (${mainBranch}, sprint-*, or the default): left on GitHub.`,
     });
   } else if (!pr.isCrossRepository) {
     steps.push({

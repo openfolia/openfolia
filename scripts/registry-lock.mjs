@@ -1,6 +1,6 @@
 // The slot registry's lock (agent-slot.mjs): an exclusive mkdir of .claude/stacks/.lock with the
 // holder's pid inside. It is held across slow steps (a worktree add or remove writes
-// .git/config, #327), so its age says nothing on its own: a lock whose holder is alive is never
+// .git/config), so its age says nothing on its own: a lock whose holder is alive is never
 // taken over, however long it runs; one whose holder is gone is a crash's and taken over at once. Only a lock that
 // names no holder (the moment between the mkdir and the pid write, or a lock of an older script)
 // falls back to its age. A waiter says who holds it after NOTICE_MS and gives up after

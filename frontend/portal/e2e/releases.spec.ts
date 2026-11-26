@@ -8,7 +8,7 @@ import {
 } from '../testing/fixture-repo.ts';
 import { DWELL_MS } from '../src/scripts/release-switch.ts';
 import { BRAND_NAME } from '../testing/fixture-brand.ts';
-import { OPERATING, site } from './sites.ts';
+import { OPERATING, site, watchErrors } from './sites.ts';
 
 /**
  * Older releases (#896) on the internal fixture site, built with alpha's three newest releases
@@ -26,12 +26,7 @@ const LARGE = 'model=large,power=battery';
 
 const errors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
-  const seen: string[] = [];
-  errors.set(page, seen);
-  page.on('console', (m) => {
-    if (m.type() === 'error') seen.push(m.text());
-  });
-  page.on('pageerror', (e) => seen.push(e.message));
+  errors.set(page, watchErrors(page));
 });
 test.afterEach(async ({ page }) => {
   expect(errors.get(page)).toEqual([]);

@@ -2,11 +2,14 @@
 // test can pin. /code-review and /security-review run from a worktree can read the main
 // checkout's (empty) diff instead of the worktree's: a file holding the worktree's own diff is
 // a target they can't resolve elsewhere.
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
+
+const { mainBranch } = readKitConfig();
 
 /**
  * The base ref to diff against and where it came from: `--base <ref>` / `--base=<ref>` (`arg`),
  * BASE_BRANCH (`env`), the base the branch's agent slot names (`slot`: its slot.json `base`, read
- * through scripts/slot-file.mjs), else origin/main (`default`). Throws for a `--base` without a
+ * through scripts/slot-file.mjs), else origin/<mainBranch> (`default`, kit.config.json). Throws for a `--base` without a
  * ref, or a ref starting with `-` (git would read it as an option).
  * @param {string[]} args
  * @param {Record<string, string | undefined>} env
@@ -30,7 +33,7 @@ export function pickBase(args, env, slotBase = null) {
       ? { ref: env.BASE_BRANCH, source: 'env' }
       : slotBase
         ? { ref: slotBase, source: 'slot' }
-        : { ref: 'origin/main', source: 'default' };
+        : { ref: `origin/${mainBranch}`, source: 'default' };
   if (base.ref.startsWith('-'))
     throw new Error(`The base ${base.ref} is not a ref.`);
   return base;

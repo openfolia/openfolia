@@ -4,34 +4,25 @@ import {
   isChangeSetId,
   newChangeSetId,
 } from '../../change-sets/core/change-set.js';
+import { REGISTERED_WEBHOOK_EVENTS } from '../../webhook-events.js';
+import { RESERVED_WEBHOOK_EVENT } from './webhook-event-registry.js';
 import type { StoredHeader, WebhookHeader } from './webhook-headers.js';
 
 /**
- * The events a subscriber may subscribe to (#42). Only released or
- * imported content fires one: drafts, reviews and the workflow never do.
- *
- * - `manual.released`: a manual a release changed (one per manual, with
- *   its languages), from the outbox row `release.published`.
- * - `module.released`: a module a release changed, per language, from the
- *   same row.
- * - `module.deprecated`: a module deprecated on `main`, from the outbox row
- *   `module.deprecated` (written once deprecation exists, #266).
- * - `manual.deprecated`: a manual deprecated on `main`, from the outbox row
- *   `manual.deprecated` (#266, sent since #558).
- * - `release.withdrawn`: a release withdrawn, from `release.withdrawn`.
- * - `translation.imported`: a translation import committed, from
- *   `translation.imported` (written by a translation import, #51).
+ * The events a subscriber may subscribe to (#42), in the order the
+ * components registered them (`src/webhook-events.ts`, each component's
+ * `<component>.webhook-events.ts`, each event with the outbox topic it is
+ * made from). Only released or imported content fires one: drafts,
+ * reviews and the workflow never do.
  */
-export const WEBHOOK_EVENTS = [
-  'manual.released',
-  'module.released',
-  'module.deprecated',
-  'manual.deprecated',
-  'release.withdrawn',
-  'translation.imported',
-] as const;
+export const WEBHOOK_EVENTS = Object.freeze(
+  REGISTERED_WEBHOOK_EVENTS.map((e) => e.type),
+);
 export const WebhookEvent = z.enum(WEBHOOK_EVENTS);
 export type WebhookEvent = z.infer<typeof WebhookEvent>;
+
+/** The test event's type. */
+export const PING = RESERVED_WEBHOOK_EVENT;
 
 /**
  * What a delivery may be of: an event a subscriber subscribes to, or
@@ -39,12 +30,12 @@ export type WebhookEvent = z.infer<typeof WebhookEvent>;
  * (`POST /webhooks/{id}/test`), to every subscriber whatever its events,
  * never from the outbox and never retried.
  */
-export const DELIVERY_EVENTS = [...WEBHOOK_EVENTS, 'ping'] as const;
+export const DELIVERY_EVENTS = Object.freeze([
+  ...WEBHOOK_EVENTS,
+  PING,
+] as const);
 export const DeliveryEvent = z.enum(DELIVERY_EVENTS);
 export type DeliveryEvent = z.infer<typeof DeliveryEvent>;
-
-/** The test event's type. */
-export const PING = 'ping' satisfies DeliveryEvent;
 
 /** The most subscribers there may be. */
 export const MAX_WEBHOOKS = 100;

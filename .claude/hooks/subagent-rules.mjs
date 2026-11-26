@@ -3,7 +3,7 @@
 // in their own worktree (`.claude/worktrees/<name>`, branch `agent/<name>`); helper subagents
 // (forks, review finders, Explore) may read anywhere.
 // - push only from inside a worktree, only its own branch, by name: no force, no `src:dest`,
-//   never a base branch (`main`, `sprint-*`);
+//   never a base branch (the main branch, `mainBranch` in kit.config.json, or `sprint-*`);
 // - never delete a branch (`git branch -d|-D`, `git push --delete`, a DELETE of a ref through
 //   `gh api`): the coordinator cleans up after a merge;
 // - never merge a PR: the coordinator (in a factory run, the lead) does, after the review loop
@@ -38,7 +38,11 @@ import {
   isSecretEnvFile,
   worktreeOf,
 } from './guard-rules.mjs';
+import { guardConfig, literalPattern } from './kit-config.mjs';
 import { managerOptionTakesValue } from './package-scripts.mjs';
+
+/** The project's main branch (kit.config.json): a base branch, with every `sprint-*`. */
+const { mainBranch } = guardConfig();
 
 const BLOCKED =
   'If you need it, report what you needed (factory: blocked <what it needed>).';
@@ -48,7 +52,7 @@ const REASONS = {
     "Blocked (subagent): can't tell which checkout this runs in (a cd, pushd, env -C or git -C to a path built from a variable, `~`, `-` or a command substitution); use a literal path: cd <your worktree> && git push [-u] origin <its branch>.",
   config:
     "Blocked (subagent): never change git's configuration or remotes (`git config` writes, `git remote add/set-url/rename/remove`, `git config --file`): they can redirect a push. Read with `git config --get`/`--list`; anything else ends with `factory: blocked <what it needed>`.",
-  push: "Blocked (subagent): push only your worktree's own branch, by name, from inside it: cd <your worktree> && git push [-u] origin <its branch>. Never another branch, a base branch (main, sprint-*), a `src:dest` refspec, --force (-f, +ref) or --delete.",
+  push: `Blocked (subagent): push only your worktree's own branch, by name, from inside it: cd <your worktree> && git push [-u] origin <its branch>. Never another branch, a base branch (${mainBranch}, sprint-*), a \`src:dest\` refspec, --force (-f, +ref) or --delete.`,
   deleteBranch: `Blocked (subagent): never delete a branch; the coordinator cleans up after the merge. ${BLOCKED}`,
   merge:
     'Blocked (subagent): only the coordinator (in a factory run, the lead) merges, after the review loop. Push your branch, open or update the PR, and report.',
@@ -79,7 +83,9 @@ const PUSH_FLAGS = new Set([
  * Branches a subagent never pushes, whatever its worktree has checked out (and merge:pr never
  * deletes: scripts/merge-pr-plan.mjs).
  */
-export const BASE_BRANCH = /^(main|sprint-.*)$/;
+export const BASE_BRANCH = new RegExp(
+  `^(${literalPattern(mainBranch)}|sprint-.*)$`,
+);
 
 /** GraphQL mutations that merge a PR, or set it to merge itself. */
 const MERGE_MUTATION = /mergePullRequest|enablePullRequestAutoMerge/i;

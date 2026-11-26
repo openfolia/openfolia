@@ -18,37 +18,144 @@ const repo = (path: string) =>
   readFileSync(join(import.meta.dirname, '../../..', path), 'utf8');
 
 describe('the permissions reference', () => {
-  const source = `
-    export const PERMISSIONS = [
-      /** Read released content. */
-      'content.read',
-      /** Configure webhooks. */
-      'webhook.manage',
-      'undescribed',
-    ] as const;
-    export const GLOBAL_PERMISSIONS: ReadonlySet<Permission> = new Set(['webhook.manage']);
-    export const READ_PERMISSIONS: ReadonlySet<Permission> = new Set(['content.read']);
-  `;
+  const files: Record<string, string> = {
+    'backend/api/src/permissions.ts': `
+      import { registerPermissions } from './access/core/permission-registry.js';
+      import { CONTENT_PERMISSIONS } from './content/content.permissions.js';
+      import { WEBHOOK_PERMISSIONS } from './webhooks/webhooks.permissions.js';
+      export const REGISTERED_PERMISSIONS = registerPermissions([
+        CONTENT_PERMISSIONS,
+        WEBHOOK_PERMISSIONS,
+      ]);
+    `,
+    'backend/api/src/content/content.permissions.ts': `
+      function decoy() {
+        const CONTENT_PERMISSIONS = definePermissions('decoy', [{ key: 'decoy.all' }]);
+      }
+      export const CONTENT_PERMISSIONS = definePermissions('content', [
+        {
+          key: 'content.read',
+          labelKey: 'editor.admin.permissions.contentRead',
+          description: 'Read released content.',
+          read: true,
+        },
+      ]);
+    `,
+    'backend/api/src/webhooks/webhooks.permissions.ts': `
+      export const WEBHOOK_PERMISSIONS = definePermissions('webhooks', [
+        {
+          key: 'webhook.manage',
+          labelKey: 'editor.admin.permissions.webhookManage',
+          description: 'Configure webhooks.',
+          global: true,
+        },
+        { key: 'undescribed', labelKey: 'editor.admin.permissions.undescribed' },
+      ]);
+    `,
+  };
+  const read = (path: string) => files[path];
 
-  it('reads each permission with its comment, and refuses one without', () => {
-    const { permissions, problems } = parsePermissions(source);
+  it('reads each registered permission in order, and refuses one without a description', () => {
+    const { permissions, problems } = parsePermissions(read);
     expect(permissions).toEqual([
       {
         name: 'content.read',
+        labelKey: 'editor.admin.permissions.contentRead',
         description: 'Read released content.',
         global: false,
         read: true,
       },
       {
         name: 'webhook.manage',
+        labelKey: 'editor.admin.permissions.webhookManage',
         description: 'Configure webhooks.',
         global: true,
         read: false,
       },
-      { name: 'undescribed', description: '', global: false, read: false },
+      {
+        name: 'undescribed',
+        labelKey: 'editor.admin.permissions.undescribed',
+        description: '',
+        global: false,
+        read: false,
+      },
     ]);
     expect(problems).toEqual([
-      'permissions.ts: undescribed has no /** comment */ describing it',
+      'backend/api/src/webhooks/webhooks.permissions.ts: undescribed needs a key, a labelKey and a description, each a string',
+    ]);
+  });
+
+  it('refuses a flag or member it cannot read, so nothing is documented otherwise than enforced', () => {
+    const odd: Record<string, string> = {
+      ...files,
+      'backend/api/src/webhooks/webhooks.permissions.ts': `
+        export const WEBHOOK_PERMISSIONS = definePermissions('webhooks', [
+          {
+            key: 'webhook.manage',
+            labelKey: 'editor.admin.permissions.webhookManage',
+            description: 'Configure webhooks.',
+            global: IS_GLOBAL,
+            'read': true,
+            ...more,
+          },
+        ]);
+      `,
+    };
+    const { permissions, problems } = parsePermissions(
+      (path: string) => odd[path],
+    );
+    expect(permissions[1]).toMatchObject({ global: false, read: false });
+    const where = 'backend/api/src/webhooks/webhooks.permissions.ts';
+    const why =
+      'which the reference cannot read (texts are string literals, global and read only true)';
+    expect(problems).toEqual([
+      `${where}: webhook.manage has global: IS_GLOBAL, ${why}`,
+      `${where}: webhook.manage has 'read': true, ${why}`,
+      `${where}: webhook.manage has ...more, ${why}`,
+    ]);
+  });
+
+  it('refuses a second registerPermissions, nested or not, and a group that is not an export const', () => {
+    const registry = 'backend/api/src/permissions.ts';
+    const decoy: Record<string, string> = {
+      ...files,
+      [registry]: `function decoy() { return registerPermissions([DECOY]); }\n${files[registry]}`,
+    };
+    expect(parsePermissions((path: string) => decoy[path])).toEqual({
+      permissions: [],
+      problems: [
+        `${registry}: needs exactly one registerPermissions([...]), as export const REGISTERED_PERMISSIONS (what the API reads)`,
+      ],
+    });
+    const renamed: Record<string, string> = {
+      ...files,
+      [registry]: (files[registry] ?? '').replace(
+        'export const REGISTERED_PERMISSIONS',
+        'export const OTHER',
+      ),
+    };
+    expect(
+      parsePermissions((path: string) => renamed[path]).permissions,
+    ).toEqual([]);
+    const group = 'backend/api/src/content/content.permissions.ts';
+    const mutable: Record<string, string> = {
+      ...files,
+      [group]: (files[group] ?? '').replace('export const', 'export let'),
+    };
+    expect(parsePermissions((path: string) => mutable[path]).problems).toEqual([
+      `${registry}: CONTENT_PERMISSIONS is no definePermissions(group, [...]) imported from a file`,
+      'backend/api/src/webhooks/webhooks.permissions.ts: undescribed needs a key, a labelKey and a description, each a string',
+    ]);
+  });
+
+  it('refuses a registered group it cannot read', () => {
+    const { problems } = parsePermissions((path: string) =>
+      path === 'backend/api/src/permissions.ts'
+        ? 'export const REGISTERED_PERMISSIONS = registerPermissions([NOWHERE]);'
+        : '',
+    );
+    expect(problems).toEqual([
+      'backend/api/src/permissions.ts: NOWHERE is no definePermissions(group, [...]) imported from a file',
     ]);
   });
 
@@ -88,7 +195,7 @@ describe('the permissions reference', () => {
 
   it('lists the routes needing each permission, and those needing none', () => {
     const { permissions } = withPermissionTexts(
-      parsePermissions(source).permissions.slice(0, 2),
+      parsePermissions(read).permissions.slice(0, 2),
       texts,
     );
     const body = renderPermissions(permissions, apis, pageOf);
@@ -106,7 +213,7 @@ describe('the permissions reference', () => {
 
   it('writes the German page with the editor’s German texts, the routes without their English summaries', () => {
     const { permissions } = withPermissionTexts(
-      parsePermissions(source).permissions.slice(0, 2),
+      parsePermissions(read).permissions.slice(0, 2),
       texts,
     );
     const body = renderPermissions(permissions, apis, pageOf, 'de');
@@ -122,19 +229,18 @@ describe('the permissions reference', () => {
 
   it('refuses a permission without the editor’s text in a language', () => {
     const { problems } = withPermissionTexts(
-      parsePermissions(source).permissions.slice(0, 2),
+      parsePermissions(read).permissions.slice(0, 2),
       { en: texts.en, de: { admin: { permissions: {} } } },
     );
     expect(problems).toEqual([
-      "the editor's de.json has no text for the permission content.read (admin.permissions.contentRead)",
-      "the editor's de.json has no text for the permission webhook.manage (admin.permissions.webhookManage)",
+      "the editor's de.json has no text for the permission content.read (editor.admin.permissions.contentRead)",
+      "the editor's de.json has no text for the permission webhook.manage (editor.admin.permissions.webhookManage)",
     ]);
   });
 
   it('finds the editor’s texts for every permission of the API', () => {
     const { problems } = withPermissionTexts(
-      parsePermissions(repo('backend/api/src/access/core/permissions.ts'))
-        .permissions,
+      parsePermissions(repo).permissions,
       {
         en: JSON.parse(repo('frontend/editor/src/i18n/en.json')),
         de: JSON.parse(repo('frontend/editor/src/i18n/de.json')),
@@ -144,11 +250,22 @@ describe('the permissions reference', () => {
   });
 
   it('finds every permission of the API described', () => {
-    const { permissions, problems } = parsePermissions(
-      repo('backend/api/src/access/core/permissions.ts'),
-    );
+    const { permissions, problems } = parsePermissions(repo);
     expect(problems).toEqual([]);
-    expect(permissions.map((p) => p.name)).toContain('content.read');
+    expect(permissions.map((p) => p.name)).toEqual([
+      'content.read',
+      'content.read.draft',
+      'content.edit',
+      'content.review',
+      'content.approve',
+      'release.publish',
+      'translation.manage',
+      'webhook.manage',
+      'admin.roles',
+      'admin.branding',
+      'admin.backups',
+      'scim.provision',
+    ]);
   });
 });
 

@@ -1,6 +1,7 @@
 // The generated reference pages' bodies: error codes, permissions, MCP tools, the project
 // configuration and the import format. Each takes what the generator read from the repository and
 // returns MDX (front matter is added by the generator).
+import { posix } from 'node:path';
 import ts from 'typescript';
 import { anchor, breakableCode, cell, code, mdx, table } from './markdown.mjs';
 import { fieldsTable, fields } from './json-schema.mjs';
@@ -108,74 +109,148 @@ export function renderErrorCodes(catalogue, lang = 'en', german) {
   ].join('\n');
 }
 
-/** A JSDoc comment's text (`/** Read released content. *\/` → `Read released content.`). */
-function jsDoc(sourceText, node) {
-  const ranges = ts.getLeadingCommentRanges(sourceText, node.pos) ?? [];
-  const last = ranges.filter((r) => sourceText.startsWith('/**', r.pos)).at(-1);
-  if (!last) return '';
-  return sourceText
-    .slice(last.pos + 3, last.end - 2)
-    .split('\n')
-    .map((l) => l.replace(/^\s*\*\s?/, ''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+/** Where the API registers every component's permissions, in their order. */
+export const PERMISSION_REGISTRY = 'backend/api/src/permissions.ts';
 
-function stringsOf(node) {
-  return node && ts.isArrayLiteralExpression(node)
-    ? node.elements.filter(ts.isStringLiteral)
-    : [];
-}
-
-/**
- * The permissions from `backend/api/src/access/core/permissions.ts`: `PERMISSIONS` with each
- * one's JSDoc, and which are global and which only read.
- */
-export function parsePermissions(sourceText) {
-  const file = ts.createSourceFile(
-    'permissions.ts',
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-  );
-  const lists = {};
+const nodesOf = (file, test) => {
+  const found = [];
   const visit = (node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      let init = node.initializer;
-      while (ts.isAsExpression(init) || ts.isSatisfiesExpression(init))
-        init = init.expression;
-      if (ts.isArrayLiteralExpression(init)) lists[node.name.text] = init;
-      else if (ts.isNewExpression(init) && init.arguments?.[0])
-        lists[node.name.text] = init.arguments[0];
-    }
+    if (test(node)) found.push(node);
     ts.forEachChild(node, visit);
   };
   visit(file);
-  const global = new Set(
-    stringsOf(lists.GLOBAL_PERMISSIONS).map((s) => s.text),
-  );
-  const read = new Set(stringsOf(lists.READ_PERMISSIONS).map((s) => s.text));
-  const permissions = stringsOf(lists.PERMISSIONS).map((s) => ({
-    name: s.text,
-    description: jsDoc(sourceText, s),
-    global: global.has(s.text),
-    read: read.has(s.text),
-  }));
-  const problems = [
-    ...(permissions.length === 0
-      ? ['permissions.ts: no PERMISSIONS list found']
-      : []),
-    ...permissions
-      .filter((p) => !p.description)
-      .map(
-        (p) => `permissions.ts: ${p.name} has no /** comment */ describing it`,
-      ),
-  ];
+  return found;
+};
+
+const callOf = (name) => (node) =>
+  ts.isCallExpression(node) &&
+  ts.isIdentifier(node.expression) &&
+  node.expression.text === name;
+
+/** A file's top-level `export const <name> = <callee>(...)` declarations, never nested ones. */
+const exportedCalls = (file, callee) =>
+  file.statements
+    .filter(
+      (s) =>
+        ts.isVariableStatement(s) &&
+        s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) &&
+        (s.declarationList.flags & ts.NodeFlags.Const) !== 0,
+    )
+    .flatMap((s) => s.declarationList.declarations)
+    .filter(
+      (d) =>
+        ts.isIdentifier(d.name) &&
+        !!d.initializer &&
+        callOf(callee)(d.initializer),
+    )
+    .map((d) => ({ name: d.name.text, call: d.initializer }));
+
+const TEXT_MEMBERS = new Set(['key', 'labelKey', 'description']);
+const FLAG_MEMBERS = new Set(['global', 'read']);
+
+/**
+ * An object literal's members (`{ key: 'a', global: true }`): the texts as string literals, the
+ * flags as `true` (as `registerPermissions` holds them). Anything else (another member, a spread, a computed or quoted name,
+ * a value the reference cannot read) is in `odd`, so the build fails instead of documenting a
+ * permission otherwise than the API enforces it.
+ */
+function literalMembers(node) {
+  const members = {};
+  const odd = [];
+  for (const p of node.properties) {
+    const name =
+      ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) ? p.name.text : '';
+    const v = name ? p.initializer : undefined;
+    if (TEXT_MEMBERS.has(name) && ts.isStringLiteralLike(v))
+      members[name] = v.text;
+    else if (FLAG_MEMBERS.has(name) && v.kind === ts.SyntaxKind.TrueKeyword)
+      members[name] = true;
+    else odd.push(p.getText());
+  }
+  return { members, odd };
+}
+
+/**
+ * The permissions the API registers, in their order: the groups `registerPermissions([...])`
+ * lists in `PERMISSION_REGISTRY`, each read from the component's file it is imported from (its
+ * `definePermissions(group, [...])`), with each permission's text key and description and which
+ * are global and which only read. `read(path)` gives a repository file's text.
+ */
+export function parsePermissions(read, registry = PERMISSION_REGISTRY) {
+  const parse = (path) =>
+    ts.createSourceFile(path, read(path), ts.ScriptTarget.Latest, true);
+  const root = parse(registry);
+  const from = new Map();
+  for (const node of nodesOf(root, ts.isImportDeclaration)) {
+    const named = node.importClause?.namedBindings;
+    if (
+      named &&
+      ts.isNamedImports(named) &&
+      node.moduleSpecifier.text.startsWith('.')
+    )
+      for (const element of named.elements)
+        from.set(
+          element.name.text,
+          posix.join(
+            posix.dirname(registry),
+            node.moduleSpecifier.text.replace(/\.js$/, '.ts'),
+          ),
+        );
+  }
+  // Exactly one call, the file's `export const … = registerPermissions([...])`: a second one,
+  // nested or not, could be documented instead of what the API registers.
+  const exported = exportedCalls(root, 'registerPermissions');
+  const listed =
+    exported.length === 1 &&
+    exported[0].name === 'REGISTERED_PERMISSIONS' &&
+    nodesOf(root, callOf('registerPermissions')).length === 1
+      ? exported[0].call.arguments[0]
+      : undefined;
+  if (!listed || !ts.isArrayLiteralExpression(listed))
+    return {
+      permissions: [],
+      problems: [
+        `${registry}: needs exactly one registerPermissions([...]), as export const REGISTERED_PERMISSIONS (what the API reads)`,
+      ],
+    };
+  const permissions = [];
+  const problems = [];
+  for (const element of listed.elements) {
+    const name = ts.isIdentifier(element) ? element.text : '';
+    const path = from.get(name);
+    const defined = path
+      ? exportedCalls(parse(path), 'definePermissions').find(
+          (d) => d.name === name,
+        )?.call.arguments[1]
+      : undefined;
+    if (!defined || !ts.isArrayLiteralExpression(defined)) {
+      problems.push(
+        `${registry}: ${name || element.getText()} is no definePermissions(group, [...]) imported from a file`,
+      );
+      continue;
+    }
+    for (const entry of defined.elements) {
+      const { members: m, odd } = ts.isObjectLiteralExpression(entry)
+        ? literalMembers(entry)
+        : { members: {}, odd: [] };
+      const permission = {
+        name: m.key ?? '',
+        labelKey: m.labelKey ?? '',
+        description: m.description ?? '',
+        global: m.global === true,
+        read: m.read === true,
+      };
+      if (!permission.name || !permission.labelKey || !permission.description)
+        problems.push(
+          `${path}: ${permission.name || entry.getText()} needs a key, a labelKey and a description, each a string`,
+        );
+      for (const member of odd)
+        problems.push(
+          `${path}: ${permission.name || entry.getText()} has ${member}, which the reference cannot read (texts are string literals, global and read only true)`,
+        );
+      permissions.push(permission);
+    }
+  }
   return { permissions, problems };
 }
 

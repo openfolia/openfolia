@@ -34,7 +34,37 @@ import {
   WebhookStore,
   type WebhookVisibility,
 } from '../../src/webhooks/core/webhook-store.js';
+import { WebhookEventHandlers } from '../../src/webhooks/core/webhook-event-handler.js';
+import { DeprecationWebhookHandler } from '../../src/change-sets/core/deprecation-webhook-handler.js';
+import type { OpenSnapshotAction } from '../../src/content/core/actions/open-snapshot.action.js';
+import type { ReleaseChangeReader } from '../../src/releases/core/actions/release-changes.action.js';
+import type { ReleaseStore } from '../../src/releases/core/release-store.js';
+import { ReleaseWebhookHandler } from '../../src/releases/core/release-webhook-handler.js';
+import { TranslationWebhookHandler } from '../../src/translations/core/translation-webhook-handler.js';
 import { fakeOf } from './fake-unit-of-work.js';
+
+/**
+ * Every component's webhook event handler, as the app loads them, over what is given (nothing
+ * by default: enough for who may see a subscriber, which reads none of it).
+ */
+export function webhookEventHandlers(
+  deps: {
+    releases?: ReleaseStore;
+    changes?: ReleaseChangeReader;
+    openSnapshot?: OpenSnapshotAction;
+  } = {},
+): WebhookEventHandlers {
+  const none = {} as never;
+  return new WebhookEventHandlers([
+    new ReleaseWebhookHandler(
+      deps.releases ?? none,
+      deps.changes ?? none,
+      deps.openSnapshot ?? none,
+    ),
+    new DeprecationWebhookHandler(deps.openSnapshot ?? none),
+    new TranslationWebhookHandler(),
+  ]);
+}
 
 type Stored = DeliveryTarget & {
   readonly sendingUntil: Date | null;
@@ -58,7 +88,7 @@ export class FakeWebhookStore extends WebhookStore {
             (w.owner.kind === visible.owner.kind &&
               w.owner.id === visible.owner.id) ||
             (visible.orWithout !== undefined &&
-              !w.events.includes(visible.orWithout)),
+              !w.events.some((e) => visible.orWithout!.includes(e))),
         )
         .map(strip),
       page,

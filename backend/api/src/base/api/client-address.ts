@@ -1,4 +1,4 @@
-import { isIPv4, isIPv6 } from 'node:net';
+import { isIP, isIPv4, isIPv6 } from 'node:net';
 import type { Request } from 'express';
 
 /** An IPv4 address mapped into IPv6 (`::ffff:192.0.2.1`), as a dual-stack socket reports one. */
@@ -51,9 +51,9 @@ const embeddedIpv4 = (g: readonly number[]): string | undefined => {
  * How wide a key an IPv6 client gets: `/64` (one host's network) for the limit on failed
  * authentications, which locks a key out, so a key must not hold other people's addresses;
  * `/56` (the block a provider commonly hands one home or site) for the anonymous reads under
- * `/d/`, where a shared budget only slows a neighbour down.
+ * `/d/`, where a shared budget only slows a neighbour down; `/48` (a whole site) for `networkAddress`.
  */
-export type Ipv6Prefix = 56 | 64;
+export type Ipv6Prefix = 48 | 56 | 64;
 
 /**
  * The key of a client's address for a rate limit: an IPv4 address as it is, an IPv6 address
@@ -70,7 +70,7 @@ export const addressKey = (ip: string, prefix: Ipv6Prefix): string => {
   if (!groups) return ip;
   const embedded = embeddedIpv4(groups);
   if (embedded !== undefined) return embedded;
-  const kept = groups.slice(0, 4);
+  const kept = groups.slice(0, prefix === 48 ? 3 : 4);
   if (prefix === 56) kept[3] = (kept[3] ?? 0) & 0xff00;
   return `${kept.map((group) => group.toString(16)).join(':')}::/${prefix}`;
 };
@@ -83,3 +83,16 @@ export const addressKey = (ip: string, prefix: Ipv6Prefix): string => {
  */
 export const clientAddress = (req: Request, prefix: Ipv6Prefix): string =>
   addressKey(req.ip ?? req.socket.remoteAddress ?? 'unknown', prefix);
+
+/**
+ * The client's network, as a key for a limit on what many addresses of one network do together
+ * (#965): an IPv4 address by its /24, an IPv6 one by its /48 (`addressKey`, so one that embeds an
+ * IPv4 address counts as that address's /24).
+ */
+export const networkAddress = (req: Request): string => {
+  const host = (req.ip ?? req.socket.remoteAddress ?? '').split('%')[0] ?? '';
+  // Anything that is no address (a proxy's header passed on as it is): one bucket, never a key or a log line of its own.
+  if (!isIP(host)) return 'unknown';
+  const key = addressKey(host, 48);
+  return isIPv4(key) ? key.replace(/\.\d+$/, '.0/24') : key;
+};

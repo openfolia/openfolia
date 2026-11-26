@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { field, text, wholeNumber } from './fields.js';
-import { endpoint, isLoopback } from './style-review-env.js';
+import { endpoint, isLoopback } from './endpoint.js';
 
 /** `CCMS_EMBEDDER_*` defaults (#54). */
 export const DEFAULT_EMBEDDER_TIMEOUT_MS = 10_000;

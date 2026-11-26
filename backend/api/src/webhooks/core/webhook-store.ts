@@ -18,10 +18,14 @@ import type { StoredHeader } from './webhook-headers.js';
 
 /**
  * Which subscribers a list holds: every one, or those of `owner` and, with
- * `orWithout`, also those not subscribed to that event.
+ * `orWithout`, also those subscribed to none of those events.
  */
 export type WebhookVisibility =
-  'all' | { readonly owner: WebhookOwner; readonly orWithout?: WebhookEvent };
+  | 'all'
+  | {
+      readonly owner: WebhookOwner;
+      readonly orWithout?: readonly WebhookEvent[];
+    };
 
 /** A claim to send: its token, or when to try again. */
 export type SendClaim = { readonly token: Date } | { readonly retryAt: Date };

@@ -18,6 +18,7 @@ import { TranslationJobPackageAction } from './core/actions/translation-job-pack
 import { TranslationExchange } from './core/translation-exchange.js';
 import { TranslationReads } from './core/translation-index.js';
 import { TranslationJobs } from './core/translation-jobs.js';
+import { TranslationWebhookHandler } from './core/translation-webhook-handler.js';
 import { CotiPackageExchange } from './repos/coti-package-exchange.js';
 import { DrizzleTranslationJobs } from './repos/drizzle-translation-jobs.js';
 
@@ -34,6 +35,8 @@ import { DrizzleTranslationJobs } from './repos/drizzle-translation-jobs.js';
     TranslationJobFileController,
   ],
   providers: [
+    // How the translations' webhook event is made, and who may know of it (#974).
+    TranslationWebhookHandler,
     ListTranslationStatusesAction,
     GetTranslationStatusAction,
     ExportTranslationsAction,

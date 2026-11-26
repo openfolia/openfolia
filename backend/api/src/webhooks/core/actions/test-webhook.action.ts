@@ -14,6 +14,7 @@ import {
 } from '../../../base/core/unit-of-work.js';
 import { JobQueue } from '../../../jobs/core/job-queue.js';
 import { isWebhookId, newWebhookId, PING } from '../webhook.js';
+import { WebhookEventHandlers } from '../webhook-event-handler.js';
 import { idempotencyKey } from '../webhook-events.js';
 import { DELIVER_WEBHOOK, deliveryBody } from '../webhook-job.js';
 import { WebhookSettings } from '../webhook-ports.js';
@@ -46,11 +47,12 @@ const notRetryable = (reason: NotRetryableReason, detail: string) =>
 
 /** A delivery as the log shows it to `actor`. */
 const logged = (
+  handlers: WebhookEventHandlers,
   actor: Actor,
   delivery: Awaited<ReturnType<WebhookStore['delivery']>> & object,
 ): LoggedDelivery => ({
   ...delivery,
-  body: seesPayload(actor, delivery.owner, delivery.event)
+  body: seesPayload(handlers, actor, delivery.owner, delivery.event)
     ? delivery.body
     : null,
 });
@@ -79,6 +81,7 @@ export class TestWebhookAction extends ActorAction<
 
   constructor(
     private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
     private readonly settings: WebhookSettings,
     private readonly deliver: DeliverWebhookAction,
     private readonly auditLog: AuditLog,
@@ -97,7 +100,7 @@ export class TestWebhookAction extends ActorAction<
   }): Promise<LoggedDelivery> {
     this.sandbox.refuse('webhooks');
     configured(this.settings);
-    const webhook = await existing(this.store, id, actor);
+    const webhook = await existing(this.store, this.handlers, id, actor);
     const claim = await this.store.claimSend(
       webhook.id,
       webhook.owner,
@@ -161,7 +164,7 @@ export class TestWebhookAction extends ActorAction<
       }
       const settled = await this.store.delivery(deliveryId);
       if (!settled) throw new NotFoundError(`No webhook "${id}".`);
-      return logged(actor, settled);
+      return logged(this.handlers, actor, settled);
     } finally {
       await this.store.releaseSend(webhook.id, claim.token);
     }
@@ -189,6 +192,7 @@ export class RetryWebhookDeliveryAction extends ActorAction<
 
   constructor(
     private readonly store: WebhookStore,
+    private readonly handlers: WebhookEventHandlers,
     private readonly settings: WebhookSettings,
     private readonly jobs: JobQueue,
     private readonly auditLog: AuditLog,
@@ -217,7 +221,13 @@ export class RetryWebhookDeliveryAction extends ActorAction<
     await runContended(
       this.unit,
       async (tx) => {
-        const webhook = await existing(this.store, id, actor, tx);
+        const webhook = await existing(
+          this.store,
+          this.handlers,
+          id,
+          actor,
+          tx,
+        );
         if (delivery?.webhookId !== webhook.id) {
           throw new NotFoundError(
             `No delivery "${deliveryId}" of this webhook.`,
@@ -283,6 +293,6 @@ export class RetryWebhookDeliveryAction extends ActorAction<
     if (!requeued) {
       throw new NotFoundError(`No delivery "${deliveryId}" of this webhook.`);
     }
-    return logged(actor, requeued);
+    return logged(this.handlers, actor, requeued);
   }
 }

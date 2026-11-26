@@ -23,8 +23,12 @@
 // the ctx, and the tests pin each by its case; splitting it is its own change.
 import path from 'node:path';
 
+import { guardConfig } from './kit-config.mjs';
 import { simpleCommands } from './shell-words.mjs';
 import { subagentFileReason, subagentReason } from './subagent-rules.mjs';
+
+/** The project's main branch (kit.config.json), named in a reason; no rule reads it. */
+const { mainBranch } = guardConfig();
 
 /**
  * @typedef {object} GuardContext
@@ -73,8 +77,7 @@ const REASONS = {
     "Blocked: never `pkill -f` (it kills other sessions' servers, and the person's own). Stop your own server by its port: kill $(lsof -tiTCP:<port> -sTCP:LISTEN).",
   unknownDir:
     "Blocked: can't tell which checkout this runs in (a cd, pushd, env -C, git -C or --git-dir to a path built from a variable, `~`, `-` or a command substitution), and agents are working in .claude/worktrees/, so a git checkout/switch/merge/pull may hit the person's main checkout. Use a literal path.",
-  mainCheckoutGit:
-    "Blocked: agents are working in .claude/worktrees/, so the main checkout is the person's own: no git checkout/switch/merge/pull there. To bring it up to origin/main, run `pnpm sync:main` (a fast-forward only, refusing local changes, then `pnpm check:changed` on what it brought in; `--base <branch>` for another base). Otherwise work in your worktree (`pnpm slot create <name>`); to check a base branch, use a worktree of it.",
+  mainCheckoutGit: `Blocked: agents are working in .claude/worktrees/, so the main checkout is the person's own: no git checkout/switch/merge/pull there. To bring it up to origin/${mainBranch}, run \`pnpm sync:main\` (a fast-forward only, refusing local changes, then \`pnpm check:changed\` on what it brought in; \`--base <branch>\` for another base). Otherwise work in your worktree (\`pnpm slot create <name>\`); to check a base branch, use a worktree of it.`,
   heredocBody:
     'Blocked: a PR or issue text never goes through a here-document. Write it with the Write tool to <your worktree>/.factory-tmp/<name>.md (git-ignored), then pass `--body-file <that file>`.',
   pipedShell:

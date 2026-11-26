@@ -5,15 +5,14 @@
 // than letters and digits turned into `_` (backend/api/scripts/setup-local.ts,
 // scripts/perf/paths.mjs). `slot remove` drops a slot's own, `slot prune-databases` those of
 // slots that are gone (scripts/slot-databases.mjs does the talking to Postgres).
+import { slotKey } from './agent-slot-plan.mjs';
 import { PROFILES } from './perf/profiles.mjs';
+
+/** The part of a database name that stands for a checkout: `a-b` → `a_b` (the slot tool's). */
+export { slotKey };
 
 /** The perf profiles (`small`, `large`, `xl`): each may have a database per checkout. */
 export const PERF_PROFILES = Object.keys(PROFILES);
-
-/** The part of a database name that stands for a checkout: `a-b` → `a_b`. */
-export function slotKey(slot) {
-  return slot.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-}
 
 /** The API's database of a checkout: `ccms` for the main checkout (`slot` undefined), else `ccms_<slot>`. */
 export function apiDatabaseName(slot) {

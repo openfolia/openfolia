@@ -1,49 +1,30 @@
 /**
- * The database schema: every Drizzle table, re-exported from its
- * component's `repos/` folder (e.g. `export * from '../audit/repos/audit.tables.js'`).
- * drizzle-kit reads this file to generate migrations; `Database` passes it
- * to Drizzle so relational queries know the tables.
+ * The database schema: every component's tables, re-exported from its schema file
+ * (`src/<component>/<component>.schema.ts`, which re-exports the component's
+ * `repos/<name>.tables.ts`). drizzle-kit reads this file to generate migrations; `Database`
+ * passes it to Drizzle so relational queries know the tables. A component listed here is listed
+ * in `component-schemas.ts` too (a test holds both the same), which the baseline migration reads.
  */
-export * from '../access/repos/access.tables.js';
-export * from '../access/repos/service-accounts.tables.js';
-export * from '../access/repos/sign-in.tables.js';
-export * from '../access/repos/passwords.tables.js';
-export * from '../access/repos/email-codes.tables.js';
-export * from '../access/repos/second-factors.tables.js';
-export * from '../access/repos/saml.tables.js';
-export * from '../audit/repos/audit.tables.js';
-export * from '../change-sets/repos/change-sets.tables.js';
-export * from '../change-sets/repos/locks.tables.js';
-export * from '../change-sets/repos/working-copies.tables.js';
-export * from '../change-sets/repos/outbox.tables.js';
-export * from '../change-sets/repos/change-set-approvals.tables.js';
-export * from '../change-sets/repos/commit-intents.tables.js';
-export * from '../change-sets/repos/carry-forwards.tables.js';
-export * from '../change-sets/repos/supersessions.tables.js';
-export * from '../change-sets/repos/refresh-conflicts.tables.js';
-export * from '../assets/repos/asset-uploads.tables.js';
-export * from '../assets/repos/asset-renditions.tables.js';
-export * from '../assets/repos/asset-deletions.tables.js';
-export * from '../assets/repos/asset-references.tables.js';
-export * from '../comments/repos/comments.tables.js';
-export * from '../outbox/repos/outbox-consumers.tables.js';
-export * from '../notifications/repos/notifications.tables.js';
-export * from '../notifications/repos/notification-emails.tables.js';
-export * from '../releases/repos/releases.tables.js';
-export * from '../releases/repos/maintenance-lines.tables.js';
-export * from '../modules/repos/module-index.tables.js';
-export * from '../translations/repos/translations.tables.js';
-export * from '../imports/repos/imports.tables.js';
-export * from '../webhooks/repos/webhooks.tables.js';
-export * from '../storage-usage/repos/storage-usage.tables.js';
-export * from '../secrets/repos/secrets.tables.js';
-export * from '../releases/repos/release-diffs.tables.js';
-export * from '../branding/repos/branding.tables.js';
-export * from '../changes/repos/change-feed.tables.js';
-export * from '../jobs/repos/job-consumers.tables.js';
-export * from '../search/repos/search-index.tables.js';
-export * from '../backups/repos/backups.tables.js';
-export * from '../settings/repos/installation-settings.tables.js';
-export * from '../mail/repos/mail.tables.js';
-export * from '../preferences/repos/preferences.tables.js';
-export * from '../scim/repos/scim.tables.js';
+export * from '../access/access.schema.js';
+export * from '../audit/audit.schema.js';
+export * from '../change-sets/change-sets.schema.js';
+export * from '../assets/assets.schema.js';
+export * from '../comments/comments.schema.js';
+export * from '../outbox/outbox.schema.js';
+export * from '../notifications/notifications.schema.js';
+export * from '../releases/releases.schema.js';
+export * from '../modules/modules.schema.js';
+export * from '../translations/translations.schema.js';
+export * from '../imports/imports.schema.js';
+export * from '../webhooks/webhooks.schema.js';
+export * from '../storage-usage/storage-usage.schema.js';
+export * from '../secrets/secrets.schema.js';
+export * from '../branding/branding.schema.js';
+export * from '../changes/changes.schema.js';
+export * from '../jobs/jobs.schema.js';
+export * from '../search/search.schema.js';
+export * from '../backups/backups.schema.js';
+export * from '../settings/settings.schema.js';
+export * from '../mail/mail.schema.js';
+export * from '../preferences/preferences.schema.js';
+export * from '../scim/scim.schema.js';

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   and,
-  arrayContains,
+  arrayOverlaps,
   asc,
   count,
   desc,
@@ -111,7 +111,7 @@ export class DrizzleWebhookStore extends WebhookStore {
             ),
             visible.orWithout === undefined
               ? undefined
-              : not(arrayContains(webhooks.events, [visible.orWithout])),
+              : not(arrayOverlaps(webhooks.events, [...visible.orWithout])),
           );
     return this.database.db.transaction(
       async (tx) => {

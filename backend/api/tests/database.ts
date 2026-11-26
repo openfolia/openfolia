@@ -42,9 +42,10 @@ export class PgliteDatabase extends Database {
     this.db = drizzle({ client, schema });
   }
 
-  async migrate(): Promise<void> {
+  /** Applies the migrations of `folder`: the committed ones, or a baseline (`database/baseline.ts`). */
+  async migrate(folder = MIGRATIONS_FOLDER): Promise<void> {
     await migrate(drizzle({ client: this.client }), {
-      migrationsFolder: MIGRATIONS_FOLDER,
+      migrationsFolder: folder,
       migrationsSchema: MIGRATIONS_TABLE.schema,
       migrationsTable: MIGRATIONS_TABLE.table,
     });
@@ -56,13 +57,14 @@ export class PgliteDatabase extends Database {
 }
 
 /**
- * An empty database with every migration applied and the job queue's
- * schema installed (pg-boss, as `db-migrate` does), as a data directory dump.
+ * An empty database with every migration of `folder` applied (the committed
+ * ones unless given) and the job queue's schema installed (pg-boss, as
+ * `db-migrate` does), as a data directory dump.
  */
-export async function migratedDataDir(): Promise<Blob> {
+export async function migratedDataDir(folder?: string): Promise<Blob> {
   const database = new PgliteDatabase();
   try {
-    await database.migrate();
+    await database.migrate(folder);
     await installJobQueue({
       db: fromPglite(database.client),
       backend: 'pglite',

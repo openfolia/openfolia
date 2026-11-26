@@ -1,5 +1,11 @@
 # Rules for parallel build agents
 
+The tooling these rules run on (slots, the guard hooks, `review:diff`, `merge:pr`,
+`sync:main`, the board and backlog scripts, the skills) is a reusable kit, configured by
+`kit.config.json`: [scripts/kit/README.md](../scripts/kit/README.md) has how it installs, the
+config file, the coordinator's flow and the kit's agent rules. This file is this project's
+rulebook on top of it.
+
 When a coordinating session hands issues to several build agents working at the same time,
 start each as the `build-agent` agent type (`.claude/agents/build-agent.md`: it holds the
 standing rules once and points here), with a brief of only:
@@ -135,6 +141,55 @@ in `docs/internal/workflow-improvements.md`, the board skill's "After a merge").
   the end.
 - **Bugs outside your issue:** file them as issues in the current milestone and carry on;
   don't widen the PR.
+
+## Project checks
+
+This project's items of the `verify-before-done` checklist, on top of the kit's own.
+
+Completeness:
+
+- [ ] New behaviour is an action in `core/actions/` with its unit test against an in-memory
+      fake; a new or changed route has its end-to-end test.
+- [ ] Every new response has its Zod schema in the resource (so it is in the generated OpenAPI
+      and the tests check responses against it); every new error has a stable `code` and is
+      mapped from a domain error.
+- [ ] Every list you added or touched is paged (`page[number]`/`page[size]`, `meta.page`,
+      `links`), even a short one. In a UI: rows scroll inside their own container, pagination
+      outside it, long values wrap; fix an existing list you touch in this change.
+- [ ] **The editor's browser flows** (`frontend/editor-e2e/README.md`): a new or changed
+      screen feature adds or extends a flow in `frontend/editor-e2e/specs/` (its main path and
+      an error path, tagged with the areas and API components it covers); an editor bug fix
+      starts with an e2e flow or a spec test that fails before the fix. The PR names the flows
+      it added or changed. `pnpm check` runs them all; the API they start uses ports of its
+      own, never your `PORT`.
+- [ ] Once there is a database: a schema change has its drizzle-kit migration committed, one
+      per issue, on top of the base's newest.
+- [ ] Images: a rendered PDF page for a page design or renderer change.
+
+Risky areas, before review round 1:
+
+- [ ] **The `core/` boundary:** no HTTP, Nest HTTP exceptions, configuration, Git, renderer or
+      database import in `core/` (lint holds it; don't silence the rule); the action throws a
+      domain error, the API maps it.
+- [ ] **JSON:API shape:** media type exact, camelCase attributes, `id`/`type` not reused as
+      attribute names, an unsupported query parameter a 400, errors as error objects on every
+      route including binary ones.
+- [ ] **Git and refs:** reads pinned to the commit they resolved (`X-Ccms-Commit`); a write
+      moves a ref only by compare-and-swap; a path from a request never leaves the repository.
+- [ ] **Tests that assume a clean state:** each test its own sample repository and its own
+      PGlite database.
+- [ ] Security: no token or personal data in the audit log; every new route behind the token
+      guard unless it is deliberately public.
+
+The checks (`kit.config.json` `check`): `pnpm check:changed` is `nx affected -t test lint
+typecheck build`, then `-t e2e` with only the browser flows the change touches, then `-t perf`;
+`pnpm check` the same on every project, every flow.
+
+- [ ] One flow while you work: `pnpm nx run editor-e2e:e2e -- specs/<area>.spec.ts`; a
+      failure's trace, screenshot and console are under `.local/editor-e2e/results/`.
+- [ ] Trying the API by hand: `pnpm nx run api:serve-local` from your worktree, on your slot's
+      `PORT`; stop it by its port, never `pkill -f`. Database tests run in memory (PGlite):
+      nothing to start.
 
 ## Review loop (required)
 

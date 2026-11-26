@@ -129,10 +129,11 @@ In a factory run only the lead merges, one PR at a time, by
 - [ ] At most 3–4 background agents at a time on one laptop (each runs its own installs,
       builds, test suites and API); queue the rest. Test-flake fixes go last.
 - [ ] Make each agent's slot from the main checkout: `pnpm slot create <name>` (worktree on
-      `agent/<name>`, `pnpm install`, its own `.env.local`, sample content and `PORT`);
-      `pnpm slot list` shows them, `pnpm slot remove <name>` stops what listens on that
-      `PORT` only, drops the slot's own databases and removes the worktree
-      (`pnpm slot prune-databases` lists those of slots already gone; `--yes` drops them).
+      `agent/<name>`, `pnpm install`, the project's setup from `kit.config.json` `slot.setup`,
+      its own `.env.local` and `PORT`); `pnpm slot list` shows them, `pnpm slot remove <name>`
+      stops what listens on that `PORT` only, drops the slot's own databases where the
+      project has them and removes the worktree (`pnpm slot prune-databases` lists those of
+      slots already gone; `--yes` drops them).
       Note each slot in the handover.
 - [ ] Start each agent as the `build-agent` agent type (`.claude/agents/build-agent.md`, which
       holds the standing rules and points at `docs/agent-rules.md`): the brief is its issue
@@ -140,7 +141,7 @@ In a factory run only the lead merges, one PR at a time, by
       the main checkout: the guard blocks git checkout/switch/merge/pull there for subagents
       (`pnpm sync:main` updates it); check a base branch in a worktree of it.
 - [ ] Stop servers only by port (`kill $(lsof -tiTCP:<port> -sTCP:LISTEN)`), never
-      `pkill -f`; never touch the person's own server (port 3100).
+      `pkill -f`; never touch the person's own server (`ownPort` in `kit.config.json`).
 
 ## Sessions and handover
 

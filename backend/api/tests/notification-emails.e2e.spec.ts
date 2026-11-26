@@ -83,6 +83,21 @@ const addressOf = (a: Actor) => `${a.id}@example.com`;
 let server: TestMailServer;
 let t: TestApp;
 
+// The wall clock the whole spec runs on, whatever the time it is run: the API writes its rows
+// at this time too, so a summary's due time (08:00 UTC) is never reached by the minutes the
+// sender's clock moves on.
+beforeAll(() => {
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: Date.parse('2026-06-10T12:00:00Z'),
+    shouldAdvanceTime: true,
+  });
+  clock = Date.now();
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
+
 beforeAll(async () => {
   server = await startMailServer();
   t = await createTestApp({
@@ -114,7 +129,7 @@ afterAll(async () => {
 afterEach(() => t?.actAs(undefined));
 
 /** The clock the sender is run with: moved on by each test. */
-let clock = Date.now();
+let clock = 0;
 const deliver = () => t.app.get(NotificationsConsumer).runOnce();
 /** Runs the sender at `clock` (past the burst's gathering), then the email jobs. */
 async function send(at = (clock += COALESCE_MS + 61_000)) {
@@ -491,7 +506,8 @@ describe('notification emails', () => {
     await preferences(quiet, { choices: { 'change-set.submit': 'email' } });
     const id = await submitted('Over the cap');
     await deliver();
-    const at = (clock += COALESCE_MS + 61_000);
+    // A day on, so the summary is due.
+    const at = (clock += 86_400_000 + COALESCE_MS + 61_000);
     // 20 emails (the default cap) went to them in the last hour.
     await t.database.db.insert(notificationEmailSends).values(
       Array.from({ length: 20 }, (_, i) => ({
@@ -503,7 +519,7 @@ describe('notification emails', () => {
     );
     const report = await send(at);
     expect(report.deferred).toBeGreaterThanOrEqual(1);
-    // Not on its own: in the summary (due at once here, the test's clock being days ahead).
+    // Not on its own: in the summary (due: the clock is a day on).
     const about = to(quiet).filter((m) => textOf(m.raw).includes(id));
     expect(about.map((m) => headersOf(m.raw).get('subject'))).toEqual([
       expect.stringMatching(/^Your daily summary/),

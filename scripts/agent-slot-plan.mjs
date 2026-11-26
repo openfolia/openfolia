@@ -2,12 +2,15 @@
 // the arguments, which branch and base a new slot starts from, which PORT it gets, the
 // worktree's .env.local line and whether the machine looks loaded. The git, pnpm and lsof work
 // is in agent-slot-io.mjs and agent-slot-create.mjs; the slot's brief is in agent-slot-brief.mjs.
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
 import { slotFileIn } from './slot-file.mjs';
 
-/** The default base of a new branch. */
-export const DEFAULT_BASE = 'origin/main';
-/** The API's own port in a person's checkout: a slot never takes it. */
-export const OWN_PORT = 3100;
+const config = readKitConfig();
+
+/** The default base of a new branch: the main branch on origin (kit.config.json). */
+export const DEFAULT_BASE = `origin/${config.mainBranch}`;
+/** The port of the person's own server (kit.config.json `ownPort`): a slot never takes it. */
+export const OWN_PORT = config.ownPort;
 /** The first of the block of ports slots draw from, and how many it holds. */
 export const PORT_START = OWN_PORT + 1;
 export const PORT_COUNT = 100;
@@ -22,6 +25,11 @@ export function slotName(name) {
   return name;
 }
 
+/** The part of a name (a database's, say) that stands for a slot: `a-b` → `a_b`. */
+export function slotKey(slot) {
+  return slot.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+}
+
 /** The value of `--key value` or `--key=value` in `args`, or undefined. */
 export function optionValue(args, key) {
   const equals = args.find((arg) => arg.startsWith(`${key}=`));
@@ -34,7 +42,7 @@ export function optionValue(args, key) {
 
 /**
  * The ref a new branch starts from: `--base <ref>` (or `--base=<ref>`), else BASE_BRANCH, else
- * origin/main. `source` says which, so a message can name where a missing base came from.
+ * DEFAULT_BASE. `source` says which, so a message can name where a missing base came from.
  */
 export function resolveBase(args, env = {}) {
   const arg = optionValue(args, '--base');
@@ -86,8 +94,9 @@ export function slotPaths(root, name) {
 }
 
 /**
- * The API PORT for a new slot: the first of 3101–3200 that no other slot has and nothing
- * listens on. Never 3100, the person's own. `busy(port)`: whether something listens there now.
+ * The PORT for a new slot: the first of the PORT_COUNT after OWN_PORT that no other slot has and
+ * nothing listens on. Never OWN_PORT, the person's own. `busy(port)`: whether something listens
+ * there now.
  */
 export function pickPort(otherPorts, busy) {
   const taken = new Set([OWN_PORT, ...otherPorts]);
@@ -116,7 +125,7 @@ export function withPort(envText, port) {
 }
 
 /**
- * The Nx settings of a slot's `.env.local`, which Nx reads before it starts (#615). No daemon: in a
+ * The Nx settings of a slot's `.env.local`, which Nx reads before it starts. No daemon: in a
  * worktree under the main checkout the daemon's file watcher sees no change to a tracked file,
  * so it hashes every task as the files were when it started. A change then gets the outputs of
  * the old files from the cache (a stale `dist`), and since every worktree of the repository

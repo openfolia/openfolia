@@ -3,7 +3,7 @@
 // diff, `git diff <merge-base of the base and HEAD>...HEAD` plus every untracked new file, to
 // .review/diff.patch in that checkout (git-ignored) and prints how to point /code-review and
 // /security-review at it. Base: --base, BASE_BRANCH, the base the branch's agent slot names,
-// else origin/main (review-diff-plan.mjs, pickBase); fetched first when it is a remote ref.
+// else the main branch on origin (review-diff-plan.mjs, pickBase); fetched first when it is a remote ref.
 import { lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -44,7 +44,7 @@ try {
   slotBase =
     typeof slot?.base === 'string' && slot.base !== '' ? slot.base : null;
 } catch {
-  // An unreadable registry: the other sources (or origin/main) decide.
+  // An unreadable registry: the other sources (or the main branch) decide.
 }
 let base;
 try {

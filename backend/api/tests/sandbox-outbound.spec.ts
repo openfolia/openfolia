@@ -163,6 +163,9 @@ const PACKAGES: Record<string, 'network' | 'none'> = {
   'age-encryption': 'none',
   busboy: 'none',
   croner: 'none',
+  // Only the baseline migration command imports it (`database/baseline.ts`, never loaded by the
+  // API): `generateDrizzleJson` and `generateMigration` work on objects, with no connection.
+  'drizzle-kit': 'none',
   'drizzle-orm': 'none',
   express: 'none',
   fflate: 'none',

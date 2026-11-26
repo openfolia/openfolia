@@ -5,7 +5,7 @@ import {
   RESTRICTED_CANARY,
 } from '../testing/fixture-repo.ts';
 import { BRAND_NAME, BRAND_PRIMARY } from '../testing/fixture-brand.ts';
-import { OPERATING, site } from './sites.ts';
+import { OPERATING, site, watchErrors } from './sites.ts';
 
 /**
  * The portal in the browser, on the built fixture sites: the manual list and its filters, a
@@ -17,12 +17,7 @@ import { OPERATING, site } from './sites.ts';
 const errors = new WeakMap<Page, string[]>();
 
 test.beforeEach(({ page }) => {
-  const seen: string[] = [];
-  errors.set(page, seen);
-  page.on('console', (message) => {
-    if (message.type() === 'error') seen.push(message.text());
-  });
-  page.on('pageerror', (error) => seen.push(error.message));
+  errors.set(page, watchErrors(page));
 });
 
 /** Opens a `details` that starts closed on narrow screens. */

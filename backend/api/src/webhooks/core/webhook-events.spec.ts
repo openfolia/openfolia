@@ -1,8 +1,7 @@
 import { actorWith } from '../../../tests/fakes/actors.js';
+import { webhookEventHandlers } from '../../../tests/fakes/fake-webhooks.js';
 import type { OpenSnapshotAction } from '../../content/core/actions/open-snapshot.action.js';
 import type { OutboxEvent } from '../../outbox/core/outbox-feed.js';
-import type { ReleaseChangeReader } from '../../releases/core/actions/release-changes.action.js';
-import type { ReleaseStore } from '../../releases/core/release-store.js';
 import type { WebhookEvent } from './webhook.js';
 import { WebhookEventBuilder } from './webhook-events.js';
 
@@ -37,11 +36,7 @@ const openSnapshot = {
   }),
 } as unknown as OpenSnapshotAction;
 
-const builder = new WebhookEventBuilder(
-  {} as ReleaseStore,
-  {} as ReleaseChangeReader,
-  openSnapshot,
-);
+const builder = new WebhookEventBuilder(webhookEventHandlers({ openSnapshot }));
 
 const deprecated = (replacedBy: string | null): OutboxEvent => ({
   position: { tx: '1', id: 1 },

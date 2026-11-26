@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { addressKey, clientAddress } from './client-address.js';
+import { addressKey, clientAddress, networkAddress } from './client-address.js';
 
 describe('addressKey (#574)', () => {
   it('keys an IPv4 address as it is, a mapped one unwrapped', () => {
@@ -66,5 +66,20 @@ describe('clientAddress (#574)', () => {
     );
     expect(clientAddress(request({}), 56)).toBe('2001:db8:0:0::/56');
     expect(clientAddress(request({}), 64)).toBe('2001:db8:0:0::/64');
+  });
+});
+
+describe('networkAddress (#965)', () => {
+  const of = (ip: string) => networkAddress({ ip } as unknown as Request);
+  it('is the /24 of an IPv4 address, mapped or embedded ones too, and the /48 of an IPv6 one', () => {
+    expect(of('203.0.113.7')).toBe('203.0.113.0/24');
+    expect(of('::ffff:203.0.113.200')).toBe('203.0.113.0/24');
+    expect(of('2001:db8:1:2::1')).toBe('2001:db8:1::/48');
+    expect(of('2001:db8:1:ffff:1:2:3:4')).toBe('2001:db8:1::/48');
+    expect(of('unknown')).toBe('unknown');
+    expect(of('1.2.3.4%x')).toBe('1.2.3.0/24');
+    expect(of('fe80::1%eth0')).toBe('fe80:0:0::/48');
+    expect(of('dead/48')).toBe('unknown');
+    expect(of('dead:1::/48')).toBe('unknown');
   });
 });

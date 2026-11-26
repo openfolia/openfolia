@@ -54,9 +54,8 @@ If you're a **Sonnet** implementer: stop with `factory: blocked escalate <why>` 
 continuing when any of these happens; don't push past them hoping the next round fixes it:
 
 - the same check-or-build step fails twice in a row;
-- your diff turns out to touch an Opus area (`models.md`'s list: authentication and tokens,
-  roles and permissions, Git write paths, workflow transitions and approvals, the audit log,
-  template and PDF sandboxing, a migration changing an existing table, the guard hooks or the
+- your diff turns out to touch an Opus area (`models.md`'s list: the security-sensitive areas
+  of `docs/agent-rules.md`, a migration changing an existing table, the guard hooks or the
   coordinator scripts);
 - your `/code-review` loop still has critical or major findings after **3 rounds**.
 

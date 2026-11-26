@@ -196,8 +196,13 @@ Für jede Antwort gelten diese Grenzen:
 - **Versuche:** Abgelehnte Antworten zählen je Client-Adresse, unter `CCMS_AUTH_FAILURES_MAX`
   (Standard 20 pro Minute, getrennt von anderen fehlgeschlagenen Anmeldungen). Darüber sagt die
   Anmeldeseite bis zum Ende des Zeitfensters **Zu viele Anmeldungen aus Ihrem Netzwerk sind
-  fehlgeschlagen**. Eine Anmeldung zählt nicht mehr, sobald sie gelingt. Hinter einem Proxy ist die Adresse die,
-  die `CCMS_TRUST_PROXY` die API glauben lässt:
+  fehlgeschlagen**. Eine Anmeldung zählt nicht mehr, sobald sie gelingt. Damit viele Adressen eines Netzwerks andere
+  nicht an der Anmeldung hindern, werden die Antworten eines Netzwerks (ein IPv4-/24, ein
+  IPv6-/48) nacheinander geprüft, meist wenige Millisekunden je Antwort. Warten 8 Antworten eines
+  Netzwerks auf ihre Reihe (höchstens 3 von einer Adresse), wird die nächste nicht geprüft, und die
+  Seite sagt, dass der Anmeldedienst nicht erreichbar war; ein Versuch einen Moment später klappt.
+  Setzen Sie hinter einem Proxy `CCMS_TRUST_PROXY`: Ohne ist jede Person dasselbe Netzwerk. Die
+  Adresse ist dann die, die `CCMS_TRUST_PROXY` die API glauben lässt:
   [Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy).
 
 ## Sitzungen und Abmelden

@@ -1,56 +1,49 @@
 import { z } from 'zod';
+import { NOTIFICATION_SECTIONS } from '../../notification-kinds.js';
 import {
   CHOSEN_KINDS,
   ChosenKind,
   type NotificationKind,
+  REGISTERED_CHOSEN_KINDS,
 } from '../../notifications/core/notification.js';
+import { DELIVERY_CHOICES } from '../../notifications/core/notification-kind-registry.js';
 
-/**
- * How a person hears of one kind of notification (#884): `off` (neither the bell nor email),
- * `app` (the bell only), `email` (the bell and an email at once) or `digest` (the bell and the
- * daily summary email).
- */
-export const DELIVERY_CHOICES = ['off', 'app', 'email', 'digest'] as const;
+export { DELIVERY_CHOICES };
 export const DeliveryChoice = z.enum(DELIVERY_CHOICES);
 export type DeliveryChoice = z.infer<typeof DeliveryChoice>;
 
-/** The groups the settings page shows the kinds in, in order. */
-export const NOTIFICATION_GROUPS = {
-  review: [
-    'change-set.submit',
-    'change-set.return',
-    'change-set.approve',
-    'change-set.sign-off',
-    'change-set.merge',
-    'lock.break',
-  ],
-  releases: ['release.published', 'release.output-recovered'],
-  translations: ['translation.imported', 'translation.import-failed'],
-  // The alerts an administrator acts on.
-  admin: ['release.output-failed', 'backup.failed', 'backup.overdue'],
-} as const satisfies Record<string, readonly ChosenKind[]>;
+/**
+ * The groups the settings page shows the kinds in, in order (`src/notification-kinds.ts`), each
+ * with the kinds registered for it, in their order.
+ */
+export const NOTIFICATION_GROUPS: Readonly<
+  Record<(typeof NOTIFICATION_SECTIONS)[number], readonly ChosenKind[]>
+> = Object.freeze(
+  Object.fromEntries(
+    NOTIFICATION_SECTIONS.map((section) => [
+      section,
+      Object.freeze(
+        REGISTERED_CHOSEN_KINDS.filter((k) => k.section === section).map(
+          (k) => k.kind,
+        ),
+      ),
+    ]),
+  ) as Record<(typeof NOTIFICATION_SECTIONS)[number], readonly ChosenKind[]>,
+);
 
 /**
- * What a person who chose nothing gets: what is addressed to them in review (a request, a
- * decision on their change set) by email at once; releases and translations in the daily
- * summary; alerts an administrator acts on (a release's file failed, a backup failed or is
- * overdue) by email at once. The fan-out sends those only to people who hold the permission.
+ * What a person who chose nothing gets, as each kind's component registered it: what is
+ * addressed to them in review (a request, a decision on their change set) by email at once;
+ * releases and translations in the daily summary; alerts an administrator acts on (a release's
+ * file failed, a backup failed or is overdue) by email at once. The fan-out sends those only to
+ * people who hold the permission.
  */
-export const DEFAULT_CHOICES: Readonly<Record<ChosenKind, DeliveryChoice>> = {
-  'change-set.submit': 'email',
-  'change-set.return': 'email',
-  'change-set.approve': 'email',
-  'change-set.sign-off': 'email',
-  'change-set.merge': 'email',
-  'lock.break': 'app',
-  'release.published': 'digest',
-  'release.output-failed': 'email',
-  'release.output-recovered': 'digest',
-  'translation.imported': 'digest',
-  'translation.import-failed': 'digest',
-  'backup.failed': 'email',
-  'backup.overdue': 'email',
-};
+export const DEFAULT_CHOICES: Readonly<Record<ChosenKind, DeliveryChoice>> =
+  Object.freeze(
+    Object.fromEntries(
+      REGISTERED_CHOSEN_KINDS.map((k) => [k.kind, k.defaultChoice]),
+    ) as Record<ChosenKind, DeliveryChoice>,
+  );
 
 /** The languages a person's email is written in: the editor's. */
 export const NotificationLanguage = z.enum(['en', 'de']);

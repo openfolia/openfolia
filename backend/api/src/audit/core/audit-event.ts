@@ -103,7 +103,7 @@ export const NewAuditEvent = z.strictObject({
   /** `write` when not given; `read` for `READ_ACTIONS`, and only for them. */
   kind: AuditKind.optional(),
 });
-/** Its `action` one of the catalogue's (`AUDIT_ACTIONS`): a new action is listed there first. */
+/** Its `action` one of the catalogue's (`AUDIT_ACTIONS`): a new action is registered first, in its component's `<component>.audit-actions.ts`. */
 export type NewAuditEvent = Omit<z.input<typeof NewAuditEvent>, 'action'> & {
   action: AuditActionName;
 };

@@ -18,29 +18,18 @@ also finishes without a person: the report (section 5) is the PR body plus a com
 issue ending in the status line the factory prompts define (`factory: done #<pr>`,
 `factory: blocked <what it needed>` when something was refused, or `factory: failed <step>`).
 
+**The project's own checks** are in `docs/agent-rules.md`, "Project checks": go through them
+with sections 1 to 3 below.
+
 ## 1. Completeness (before running anything)
 
 - [ ] Every new `process.env.*` read (or configuration schema entry) is in `.env.example` with
       a comment: what it is for, its format, range and default.
-- [ ] New behaviour is an action in `core/actions/` with its unit test against an in-memory
-      fake; a new or changed route has its end-to-end test.
-- [ ] Every new response has its Zod schema in the resource (so it is in the generated OpenAPI
-      and the tests check responses against it); every new error has a stable `code` and is
-      mapped from a domain error.
-- [ ] Every list you added or touched is paged (`page[number]`/`page[size]`, `meta.page`,
-      `links`), even a short one. In a UI: rows scroll inside their own container, pagination
-      outside it, long values wrap; fix an existing list you touch in this change.
-- [ ] **The editor's browser flows** (`frontend/editor-e2e/README.md`): a new or changed
-      screen feature adds or extends a flow in `frontend/editor-e2e/specs/` (its main path and
-      an error path, tagged with the areas and API components it covers); an editor bug fix
-      starts with an e2e flow or a spec test that fails before the fix. The PR names the flows
-      it added or changed.
-- [ ] Once there is a database: a schema change has its drizzle-kit migration committed, one
-      per issue, on top of the base's newest.
+- [ ] New behaviour has its tests; a bug fix starts with a test that fails before the fix.
 - [ ] Nothing organisation-specific (names of an organisation, client or person) in code,
       tests, fixtures, commits or the PR.
-- [ ] Images for the PR where they help (a rendered PDF page for a template or renderer
-      change, a screenshot for a UI change): once the PR is open (after the review loop),
+- [ ] Images for the PR where they help (a rendered page, a screenshot for a UI change): once
+      the PR is open (after the review loop),
       `pnpm pr:assets <PR> <files>` (or `--dir <dir>`; `--dry-run` first) uploads them to the
       `pr-assets` branch as one commit through GitHub's API (no git push, so a build agent may
       run it; that one ref only, never force, images only) and prints the Markdown image links
@@ -48,40 +37,27 @@ issue ending in the status line the factory prompts define (`factory: done #<pr>
 
 ## 2. Self-check the risky areas (before review round 1)
 
-Read your own diff for these first; they cause most review rounds:
+Read your own diff for these first (and the project's own in "Project checks"); they cause
+most review rounds:
 
-- [ ] **The `core/` boundary:** no HTTP, Nest HTTP exceptions, configuration, Git, renderer or
-      database import in `core/` (lint holds it; don't silence the rule); the action throws a
-      domain error, the API maps it.
-- [ ] **JSON:API shape:** media type exact, camelCase attributes, `id`/`type` not reused as
-      attribute names, an unsupported query parameter a 400, errors as error objects on every
-      route including binary ones.
-- [ ] **Git and refs:** reads pinned to the commit they resolved (`X-Ccms-Commit`); a write
-      moves a ref only by compare-and-swap; a path from a request never leaves the repository.
 - [ ] **Concurrency and shutdown:** a job with a deadline, a queue with a bound, nothing that
       blocks the event loop; resources released on failure and on shutdown.
 - [ ] **Tests that assume a clean state:** each test makes and asserts on its own fixtures
-      (its own sample repository, its own PGlite database); no order between test files.
-- [ ] Security: no token or personal data in logs, errors or the audit log; every new route
-      behind the token guard unless it is deliberately public; the areas listed in
+      (its own data, its own database); no order between test files.
+- [ ] Security: no token or personal data in logs or errors; the areas listed in
       `docs/agent-rules.md`, "Security-sensitive areas".
 
 ## 3. Run the checks
 
 - [ ] Fix-and-retry rounds (after a failing check or a review's findings):
-      `pnpm check:changed` (`nx affected -t test lint typecheck build`, then `-t e2e` with only the
-      browser flows the change touches, then `-t perf`: only the projects the
-      branch changed and those depending on them), or a single target
-      (`pnpm nx test api`, `pnpm nx lint api`). It never replaces the full run below before the
-      PR.
-- [ ] `pnpm check` (`nx run-many -t test lint typecheck build`, then `-t e2e`, every browser
-      flow, then `-t perf`: every project) on the final
-      head, after merging the base. Prettier on the files you changed:
-      `pnpm prettier --check <files>`.
-- [ ] One flow while you work: `pnpm nx run editor-e2e:e2e -- specs/<area>.spec.ts`; a
-      failure's trace, screenshot and console are under `.local/editor-e2e/results/`.
-- [ ] Trying the API by hand: `pnpm nx run api:serve-local` from your worktree, on your slot's
-      `PORT`; stop it by its port, never `pkill -f`.
+      `pnpm check:changed` (the Nx runs `check` in kit.config.json lists, on only the projects
+      the branch changed and those depending on them), or a single target
+      (`pnpm nx test <project>`, `pnpm nx lint <project>`). It never replaces the full run
+      below before the PR.
+- [ ] `pnpm check` (the same runs on every project) on the final head, after merging the
+      base. Prettier on the files you changed: `pnpm prettier --check <files>`.
+- [ ] Trying the project's server by hand: from your worktree, on your slot's `PORT` (the
+      slot brief names the command); stop it by its port, never `pkill -f`.
 
 ## 4. Review loop
 
@@ -109,7 +85,7 @@ Read your own diff for these first; they cause most review rounds:
 
 ## 5. Report
 
-- [ ] The browser flows the change added or changed (by spec file and test name).
+- [ ] The tests the change added or changed (browser flows by spec file and test name).
 - [ ] Which checks ran and their result (with the SHA `pnpm check` ran on), which didn't run
       and why, the review rounds and their outcome, the security review's outcome, known minor
       points, defaults chosen for open questions (and the open-questions issue they were added

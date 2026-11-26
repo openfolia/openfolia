@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ChunksModule } from '../chunks/chunks.module.js';
 import { ContentModule } from '../content/content.module.js';
 import { ReleasesModule } from '../releases/releases.module.js';
-import { WebhookEventBuilder } from '../webhooks/core/webhook-events.js';
+import { WebhookEventsModule } from '../webhooks/webhook-events.module.js';
 import { ChangesController } from './api/changes.controller.js';
 import { ReadChangesAction } from './core/actions/read-changes.action.js';
 import { ChangeFeedSource } from './core/change-feed-source.js';
@@ -18,11 +18,11 @@ import { DrizzleFeedScopes } from './repos/drizzle-feed-scopes.js';
  * to the reader.
  */
 @Module({
-  imports: [ChunksModule, ContentModule, ReleasesModule],
+  // `WebhookEventsModule`: `WebhookEventBuilder`, with every component's handler.
+  imports: [ChunksModule, ContentModule, ReleasesModule, WebhookEventsModule],
   controllers: [ChangesController],
   providers: [
     ReadChangesAction,
-    WebhookEventBuilder,
     { provide: ChangeFeedSource, useClass: DrizzleChangeFeedSource },
     { provide: FeedScopes, useClass: DrizzleFeedScopes },
     { provide: ChunkStates, useClass: ReleasedChunkStates },

@@ -1,4 +1,13 @@
 import baseConfig from '../../eslint.config.mjs';
+// The documentation domain's components and the platform's, listed once: the baseline migration
+// (`src/database/baseline.ts`) reads them too.
+import { DOMAIN_COMPONENTS, PLATFORM_FOLDERS } from './src/components.ts';
+
+const noConnectors = {
+  group: ['@openfolia/connector-*', '**/connectors/**'],
+  message:
+    'The API never imports a connector: connectors produce the import format.',
+};
 
 export default [
   ...baseConfig,
@@ -13,6 +22,10 @@ export default [
           // read by file at run time, never imported.
           ignoredDependencies: ['express', '@openfolia/theme'],
           ignoredFiles: [
+            // The baseline migration command, a development tool: it imports drizzle-kit (a
+            // devDependency), which the API itself never does.
+            '{projectRoot}/src/database/baseline.ts',
+            '{projectRoot}/src/database/baseline.main.ts',
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
             '{projectRoot}/vitest.perf.config.{js,ts,mjs,mts}',
@@ -91,14 +104,22 @@ export default [
     // import format. Its tests may drive one against the real API (tests/import-connectors.e2e.spec.ts).
     files: ['src/**/*.ts'],
     rules: {
+      'no-restricted-imports': ['error', { patterns: [noConnectors] }],
+    },
+  },
+  {
+    // Same rule, so the connector pattern is repeated: a later block replaces its options.
+    files: PLATFORM_FOLDERS.map((folder) => `src/${folder}/**/*.ts`),
+    rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
+            noConnectors,
             {
-              group: ['@openfolia/connector-*', '**/connectors/**'],
+              group: DOMAIN_COMPONENTS.map((name) => `**/${name}/**`),
               message:
-                'The API never imports a connector: connectors produce the import format.',
+                'The platform imports no component of the documentation domain: each component registers its own types (src/permissions.ts, src/webhook-events.ts, src/audit-actions.ts, src/notification-kinds.ts, src/settings.ts).',
             },
           ],
         },

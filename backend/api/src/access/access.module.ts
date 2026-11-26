@@ -39,7 +39,10 @@ import { ListUsersAction } from './core/actions/list-users.action.js';
 import { ResolveActorAction } from './core/actions/resolve-actor.action.js';
 import { ServiceAccountStore } from './core/service-accounts.js';
 import { UserDirectory } from './core/user-directory.js';
-import { FailedAuthentications } from './api/failed-authentications.js';
+import {
+  FailedAuthentications,
+  NetworkAnswers,
+} from './api/failed-authentications.js';
 import { DrizzleServiceAccountStore } from './repos/drizzle-service-accounts.js';
 import { DrizzleUserDirectory } from './repos/drizzle-user-directory.js';
 import { Sandbox } from '../sandbox/core/sandbox.js';
@@ -194,6 +197,7 @@ function samlProvider(
     ResolveActorAction,
     AuthenticateServiceTokenAction,
     FailedAuthentications,
+    NetworkAnswers,
     GetMeAction,
     ListUsersAction,
     ListDemoUsersAction,
@@ -213,6 +217,7 @@ function samlProvider(
     AccessAdmin,
     SignInSettings,
     FailedAuthentications,
+    NetworkAnswers,
   ],
 })
 export class AccessModule {}

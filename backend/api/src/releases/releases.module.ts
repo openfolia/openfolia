@@ -57,6 +57,7 @@ import { ScheduleReleaseOutputsAction } from './core/actions/schedule-release-ou
 import { ReleaseOutputStore } from './core/release-output-store.js';
 import { ReleaseEvents } from './core/release-events.js';
 import { ReleaseStore } from './core/release-store.js';
+import { ReleaseWebhookHandler } from './core/release-webhook-handler.js';
 import { ReleaseDiffStore } from './core/release-diff-store.js';
 import { DrizzleReleaseDiffStore } from './repos/drizzle-release-diff-store.js';
 import { ReleaseTags } from './core/release-tags.js';
@@ -102,6 +103,8 @@ import { GitMaintenanceBranches } from './repos/git-maintenance-branches.js';
     MaintenanceLinesController,
   ],
   providers: [
+    // How the releases' webhook events are made, and who may know of them (#974).
+    ReleaseWebhookHandler,
     ListReleasesAction,
     GetReleaseAction,
     CreateReleaseAction,

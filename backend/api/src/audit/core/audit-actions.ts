@@ -1,130 +1,20 @@
-/**
- * Every action the API writes to the audit log, as `<subject>.<verb>`: the
- * catalogue. `AuditLog.record` takes only these (`NewAuditEvent`), so an
- * action that writes a new one adds it here, and the editor's translation
- * test (`frontend/editor/tools/i18n.test.mjs`) then asks for its label in
- * every language. An action no longer written stays listed: the log keeps
- * the events it wrote. Includes the ones written in SQL (`role.update` by
- * migrations, `audit-log.prune` by retention). The reads (#877, kind `read`,
- * `READ_ACTIONS`): `api.read`, a service account's request that changes
- * nothing, and `api.read-gap`, reads of an account that could not be
- * recorded one by one, with their count.
- */
-export const AUDIT_ACTIONS = [
-  'api.read',
-  'api.read-gap',
-  'asset.delete',
-  'asset.upload',
-  'audit-log.export',
-  'audit-log.prune',
-  'backup-key.create',
-  'backup-key.rotate',
-  'backup-settings.update',
-  'backup.request',
-  'branding.image-delete',
-  'branding.image-upload',
-  'branding.update',
-  'change-set.abandon',
-  'change-set.approve',
-  'change-set.carry-forward',
-  'change-set.commit',
-  'change-set.create',
-  'change-set.edit',
-  'change-set.merge',
-  'change-set.rebase',
-  'change-set.refresh',
-  'change-set.return',
-  'change-set.revert',
-  'change-set.sign-off',
-  'change-set.submit',
-  'comment.create',
-  'comment.delete',
-  'comment.edit',
-  'comment.reopen',
-  'comment.resolve',
-  'config.delete',
-  'config.write',
-  'design.delete',
-  'design.write',
-  'group-mapping.create',
-  'group-mapping.delete',
-  'import.apply',
-  'lock.acquire',
-  'lock.break',
-  'lock.release',
-  'mail.failed',
-  'mail.sent',
-  'mail.test',
-  'maintenance-line.close',
-  'maintenance-line.start',
-  'manual.delete',
-  'manual.write',
-  'module.delete',
-  'module.rename',
-  'module.style-review',
-  'module.write',
-  'notification.unsubscribe',
-  'release.output-retry',
-  'release.outputs-plan',
-  'release.publish',
-  'release.withdraw',
-  'role.assign',
-  'role.create',
-  'role.delete',
-  'role.unassign',
-  'role.update',
-  'scim-group.create',
-  'scim-group.delete',
-  'scim-group.update',
-  'service-account.create',
-  'service-account.deactivate',
-  'service-account.reactivate',
-  'service-account.update',
-  'service-token.issue',
-  'service-token.revoke',
-  'settings.break-glass',
-  'settings.second-factor',
-  'settings.self-approval',
-  'settings.session-limits',
-  'settings.sign-ins-ended',
-  'settings.single-sign-on',
-  'storage.limit-change',
-  'storage.upload-refused',
-  'template.delete',
-  'template.write',
-  'term.delete',
-  'term.write',
-  'translation-job.cancel',
-  'translation-job.export',
-  'translation.import',
-  'translation.mark-current',
-  'user.break-glass-sign-in',
-  'user.create',
-  'user.deactivate',
-  'user.email-code-requested',
-  'user.identity-link',
-  'user.identity-unlink',
-  'user.invite',
-  'user.invite-withdraw',
-  'user.password-changed',
-  'user.password-reset-requested',
-  'user.password-set',
-  'user.reactivate',
-  'user.second-factor-off',
-  'user.second-factor-on',
-  'user.second-factor-recovery-codes',
-  'user.second-factor-reset',
-  'user.sign-in',
-  'user.sign-out',
-  'user.update',
-  'webhook.create',
-  'webhook.delete',
-  'webhook.disable',
-  'webhook.retry',
-  'webhook.rotate-secret',
-  'webhook.test',
-  'webhook.update',
-] as const;
+import { REGISTERED_AUDIT_ACTIONS } from '../../audit-actions.js';
 
 /** An action from the catalogue. */
-export type AuditActionName = (typeof AUDIT_ACTIONS)[number];
+export type AuditActionName =
+  (typeof REGISTERED_AUDIT_ACTIONS)[number]['action'];
+
+/**
+ * Every action the API writes to the audit log, as `<subject>.<verb>`: the
+ * catalogue, sorted. Each component registers the ones it writes
+ * (`src/audit-actions.ts`, each component's `<component>.audit-actions.ts`).
+ * `AuditLog.record` takes only these (`NewAuditEvent`), so an action that
+ * writes a new one registers it first, and the editor's translation test
+ * (`frontend/editor/tools/i18n.test.mjs`) then asks for its label in every
+ * language. An action no longer written stays registered: the log keeps
+ * the events it wrote. Includes the ones written in SQL (`role.update` by
+ * migrations, `audit-log.prune` by retention).
+ */
+export const AUDIT_ACTIONS: readonly AuditActionName[] = Object.freeze(
+  REGISTERED_AUDIT_ACTIONS.map((a) => a.action).sort(),
+);

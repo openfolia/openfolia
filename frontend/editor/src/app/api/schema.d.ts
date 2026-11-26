@@ -2483,7 +2483,7 @@ export interface paths {
         put?: never;
         /**
          * Finish signing in, posted (browser)
-         * @description Where an identity provider that answers with a form posts the browser back (SAML's HTTP-POST binding, the assertion consumer service: `SAMLResponse`). Checks the answer (with the sealed cookie, here `SameSite=None`, when the sign-in began here; without it only when IdP-initiated sign-in is allowed) and answers as `GET /auth/{provider}/callback` does. Refused answers count against the client's address (`CCMS_AUTH_FAILURES_*`, apart from its other failed authentications); past the limit, a 303 to the sign-in page with `?error=too-many-failed-attempts`. 404 for a provider that answers with a redirect.
+         * @description Where an identity provider that answers with a form posts the browser back (SAML's HTTP-POST binding, the assertion consumer service: `SAMLResponse`). Checks the answer (with the sealed cookie, here `SameSite=None`, when the sign-in began here; without it only when IdP-initiated sign-in is allowed) and answers as `GET /auth/{provider}/callback` does. Refused answers count against the client's address (`CCMS_AUTH_FAILURES_*`, apart from its other failed authentications); past the limit, a 303 to the sign-in page with `?error=too-many-failed-attempts`; a network (IPv4 /24, IPv6 /48) has its answers checked one at a time, and past 8 in turn gets `?error=provider-unavailable`, not counted. 404 for a provider that answers with a redirect.
          */
         post: operations["SignIn_postedCallback"];
         delete?: never;

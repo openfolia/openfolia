@@ -58,6 +58,7 @@ import { DrizzleChangeSetSupersessions } from './repos/drizzle-supersessions.js'
 import { CarryForwards } from './core/carry-forwards.js';
 import { DrizzleCarryForwards } from './repos/drizzle-carry-forwards.js';
 import { ListRefreshConflictsAction } from './core/actions/list-refresh-conflicts.action.js';
+import { DeprecationWebhookHandler } from './core/deprecation-webhook-handler.js';
 import { RefreshConflictStore } from './core/refresh-conflicts.js';
 import { DrizzleRefreshConflicts } from './repos/drizzle-refresh-conflicts.js';
 import { ReconcileChangeSetMergesAction } from './core/actions/reconcile-change-set-merges.action.js';
@@ -104,6 +105,8 @@ import { DrizzleChangeSetEvents } from './repos/drizzle-change-set-events.js';
     ChangeSetWorkflowController,
   ],
   providers: [
+    // How the deprecations' webhook events are made, and who may know of them (#974).
+    DeprecationWebhookHandler,
     ListChangeSetsAction,
     GetChangeSetAction,
     CreateChangeSetAction,

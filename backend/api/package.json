@@ -30,6 +30,11 @@
           "build"
         ]
       },
+      "db-baseline": {
+        "dependsOn": [
+          "build"
+        ]
+      },
       "service-token": {
         "dependsOn": [
           "build"
@@ -114,6 +119,14 @@
           "check-openapi-delivery"
         ]
       },
+      "test-baseline": {
+        "executor": "nx:run-commands",
+        "cache": false,
+        "options": {
+          "cwd": "backend/api",
+          "command": "pnpm exec vitest run --config vitest.baseline.config.mts"
+        }
+      },
       "perf": {
         "executor": "nx:run-commands",
         "dependsOn": [
@@ -183,6 +196,7 @@
     "allow-other-sign-ins": "node --env-file-if-exists=../../.env.local dist/database/allow-other-sign-ins.main.js",
     "rotate-secret-key": "node --env-file-if-exists=../../.env.local dist/secrets/rotate-secret-key.main.js",
     "db-generate": "drizzle-kit generate",
+    "db-baseline": "node dist/database/baseline.main.js",
     "blobs-import": "node --env-file-if-exists=../../.env.local dist/blobs/import-git-assets.main.js",
     "index-rebuild": "node --env-file-if-exists=../../.env.local dist/modules/index-rebuild.main.js"
   },

@@ -28,10 +28,7 @@ The planner sets the field when it writes the brief. An issue is **Opus** when a
 holds:
 
 - priority P0, or size L or XL;
-- it touches a security-sensitive area (`docs/agent-rules.md`, "Security-sensitive areas"):
-  authentication and tokens; roles, permissions and policies; Git write paths (refs, commits,
-  compare-and-swap); workflow transitions and approvals; the audit log; template and PDF
-  sandboxing;
+- it touches a security-sensitive area (`docs/agent-rules.md`, "Security-sensitive areas");
 - a migration that changes an existing table;
 - the guard hooks (`.claude/hooks/`) or the coordinator scripts (`merge:pr`, `sync:main`,
   `slot`).

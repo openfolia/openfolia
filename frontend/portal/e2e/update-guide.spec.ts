@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { LONG_STEP_TITLE, UPDATE_GUIDE_ID } from '../testing/fixture-repo.ts';
-import { site } from './sites.ts';
+import { site, watchErrors } from './sites.ts';
 
 /**
  * An update guide's page (#907) on the internal fixture site (the guide is internal, so a reader
@@ -14,12 +14,7 @@ const GUIDE = (lang = 'en', query = '') =>
 
 const errors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
-  const seen: string[] = [];
-  errors.set(page, seen);
-  page.on('console', (m) => {
-    if (m.type() === 'error') seen.push(m.text());
-  });
-  page.on('pageerror', (e) => seen.push(e.message));
+  errors.set(page, watchErrors(page));
 });
 test.afterEach(async ({ page }) => {
   expect(errors.get(page)).toEqual([]);

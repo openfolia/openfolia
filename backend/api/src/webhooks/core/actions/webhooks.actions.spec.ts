@@ -8,6 +8,7 @@ import {
   FakeWebhookSender,
   FakeWebhookStore,
   fakeWebhookSettings,
+  webhookEventHandlers,
 } from '../../../../tests/fakes/fake-webhooks.js';
 import { actorWith, NOBODY } from '../../../../tests/fakes/actors.js';
 import { NotFoundError, UnavailableError } from '../../../base/core/errors.js';
@@ -61,6 +62,7 @@ function setup(settings: WebhookSettings = fakeWebhookSettings()) {
   const feed = new FakeOutboxFeed();
   const jobs = new FakeJobQueue();
   const owners = new FakeWebhookOwners().add(manager);
+  const handlers = webhookEventHandlers();
   const made: OutgoingEvent[] = [];
   let failWith: Error | undefined;
   let refuseFor: string | undefined;
@@ -113,26 +115,48 @@ function setup(settings: WebhookSettings = fakeWebhookSettings()) {
     create,
     deliver,
     audiences,
-    test: new TestWebhookAction(store, settings, deliver, audit, unit),
-    retry: new RetryWebhookDeliveryAction(store, settings, jobs, audit, unit),
+    test: new TestWebhookAction(
+      store,
+      handlers,
+      settings,
+      deliver,
+      audit,
+      unit,
+    ),
+    retry: new RetryWebhookDeliveryAction(
+      store,
+      handlers,
+      settings,
+      jobs,
+      audit,
+      unit,
+    ),
     fail: (error: Error | undefined) => {
       failWith = error;
     },
     refuseFor: (ownerId: string) => {
       refuseFor = ownerId;
     },
-    get: new GetWebhookAction(store),
-    list: new ListWebhooksAction(store),
-    update: new UpdateWebhookAction(store, secrets, settings, audit, unit),
-    remove: new DeleteWebhookAction(store, audit, unit),
-    rotate: new RotateWebhookSecretAction(
+    get: new GetWebhookAction(store, handlers),
+    list: new ListWebhooksAction(store, handlers),
+    update: new UpdateWebhookAction(
       store,
+      handlers,
       secrets,
       settings,
       audit,
       unit,
     ),
-    deliveries: new ListWebhookDeliveriesAction(store),
+    remove: new DeleteWebhookAction(store, handlers, audit, unit),
+    rotate: new RotateWebhookSecretAction(
+      store,
+      handlers,
+      secrets,
+      settings,
+      audit,
+      unit,
+    ),
+    deliveries: new ListWebhookDeliveriesAction(store, handlers),
     failDelivery: new FailWebhookDeliveryAction(store, deliver, unit),
     fanOut: new FanOutWebhooksAction(
       feed,
@@ -1114,9 +1138,14 @@ describe('delivering', () => {
       ]),
       id: 'translator',
     };
-    expect(seesPayload(drafts, owner, 'translation.imported')).toBe(false);
-    expect(seesPayload(drafts, owner, 'manual.released')).toBe(true);
-    expect(seesPayload(translator, owner, 'translation.imported')).toBe(true);
+    const handlers = webhookEventHandlers();
+    expect(seesPayload(handlers, drafts, owner, 'translation.imported')).toBe(
+      false,
+    );
+    expect(seesPayload(handlers, drafts, owner, 'manual.released')).toBe(true);
+    expect(
+      seesPayload(handlers, translator, owner, 'translation.imported'),
+    ).toBe(true);
   });
 
   it('judges a body by the owner it was made for, not the owner now', async () => {

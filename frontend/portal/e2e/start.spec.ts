@@ -6,7 +6,7 @@ import {
   OLDER_REVISIONS,
   START_MANUAL,
 } from '../testing/fixture-repo.ts';
-import { site } from './sites.ts';
+import { site, watchErrors } from './sites.ts';
 
 /**
  * The authored start page (#897): the public and internal sites show the released manual named
@@ -17,12 +17,7 @@ import { site } from './sites.ts';
 const errors = new WeakMap<Page, string[]>();
 
 test.beforeEach(({ page }) => {
-  const seen: string[] = [];
-  errors.set(page, seen);
-  page.on('console', (message) => {
-    if (message.type() === 'error') seen.push(message.text());
-  });
-  page.on('pageerror', (error) => seen.push(error.message));
+  errors.set(page, watchErrors(page));
 });
 
 test.afterEach(async ({ page }) => {

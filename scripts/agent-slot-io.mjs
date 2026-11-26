@@ -1,9 +1,13 @@
 // The processes agent-slot.mjs and its create and remove flows run: git, lsof, pnpm and the
-// API's local setup.
+// project's own slot steps (kit.config.json `slot`: its setup command, and the scripts that
+// drop a slot's bucket and databases).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
+import { readKitConfig } from '../.claude/hooks/kit-config.mjs';
 import { gitEnv } from './run-git.mjs';
+
+const { slot: slotConfig } = readKitConfig();
 
 /** A command's stdout (throws when it fails); git with the hook-safe environment. */
 export function run(cmd, args, opts = {}) {
@@ -82,27 +86,33 @@ export function installDependencies(worktree) {
 }
 
 /**
- * The worktree's own sample content and .env.local: `api:setup-local` (backend/api/scripts/
- * setup-local.ts), through Nx, which builds the packages the script imports first.
+ * The worktree's own local settings (its .env.local) and whatever else the project's servers
+ * need: the command `slot.setup` names, run in the worktree; nothing when it names none.
  */
 export function setupLocal(worktree) {
-  const out = spawnSync('pnpm', ['nx', 'run', 'api:setup-local'], {
-    cwd: worktree,
-    stdio: 'inherit',
-  });
+  if (!slotConfig.setup) return;
+  const [cmd, ...args] = slotConfig.setup;
+  const out = spawnSync(cmd, args, { cwd: worktree, stdio: 'inherit' });
   if (out.status !== 0) {
-    throw new Error(`api:setup-local failed in ${worktree}.`);
+    throw new Error(`${slotConfig.setup.join(' ')} failed in ${worktree}.`);
   }
 }
 
+/** The main checkout's script a slot step runs (`slot.<key>`), or null when there is none. */
+function slotScript(root, key) {
+  const script = slotConfig[key] && `${root}/${slotConfig[key]}`;
+  return script && existsSync(script) ? script : null;
+}
+
 /**
- * Deletes the slot's bucket (and its blobs) on the local compose S3 service, with the main
- * checkout's own script (backend/api/scripts/local-bucket.ts), never the worktree's. Whether it
- * went through (a missing bucket counts); `undefined` when the main checkout has no such script.
+ * Deletes the slot's bucket (and its blobs) on a local storage service, with the main
+ * checkout's own script (`slot.bucketScript`, run as `node <script> drop <worktree>`), never
+ * the worktree's. Whether it went through (a missing bucket counts); `undefined` when there is
+ * no such script.
  */
 export function dropLocalBucket(root, worktree) {
-  const script = `${root}/backend/api/scripts/local-bucket.ts`;
-  if (!existsSync(script)) return undefined;
+  const script = slotScript(root, 'bucketScript');
+  if (!script) return undefined;
   const out = spawnSync('node', [script, 'drop', worktree], {
     cwd: root,
     stdio: 'inherit',
@@ -112,11 +122,11 @@ export function dropLocalBucket(root, worktree) {
 }
 
 /**
- * The slot's own databases on the local compose Postgres (`ccms_<slot>`,
- * `ccms_perf_<slot>_<profile>`), dropped with the main checkout's own script
- * (scripts/slot-databases.mjs), never the worktree's, on the server the slot's settings name.
- * `dryRun`: only says which it would drop. Whether it went through (Postgres down, or a
- * database in use, counts); `undefined` when the main checkout has no such script.
+ * The slot's own databases on a local database server, dropped with the main checkout's own
+ * script (`slot.databasesScript`, run as `node <script> drop <name> --settings
+ * <worktree>/.env.local [--dry-run]`), never the worktree's, on the server the slot's settings
+ * name. `dryRun`: only says which it would drop. Whether it went through (the server down, or
+ * a database in use, counts); `undefined` when there is no such script.
  */
 export function dropSlotDatabases(
   root,
@@ -124,8 +134,8 @@ export function dropSlotDatabases(
   worktree,
   { dryRun = false } = {},
 ) {
-  const script = `${root}/scripts/slot-databases.mjs`;
-  if (!existsSync(script)) return undefined;
+  const script = slotScript(root, 'databasesScript');
+  if (!script) return undefined;
   const args = [script, 'drop', name, '--settings', `${worktree}/.env.local`];
   if (dryRun) args.push('--dry-run');
   const out = spawnSync('node', args, {
@@ -138,12 +148,20 @@ export function dropSlotDatabases(
 
 /**
  * `slot prune-databases`: the databases of slots that are gone, listed, and dropped only with
- * `yes` (scripts/slot-databases.mjs). Whether it went through.
+ * `yes` (`node <slot.databasesScript> prune [--yes]`). Whether it went through.
  */
 export function pruneSlotDatabases(root, { yes = false } = {}) {
-  const script = `${root}/scripts/slot-databases.mjs`;
-  if (!existsSync(script)) {
-    console.error(`${script} is missing: update the main checkout first.`);
+  if (!slotConfig.databasesScript) {
+    console.error(
+      'No slot databases here: kit.config.json names no slot.databasesScript.',
+    );
+    return false;
+  }
+  const script = slotScript(root, 'databasesScript');
+  if (!script) {
+    console.error(
+      `${root}/${slotConfig.databasesScript} is missing: update the main checkout first.`,
+    );
     return false;
   }
   const out = spawnSync('node', [script, 'prune', ...(yes ? ['--yes'] : [])], {

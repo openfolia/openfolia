@@ -28,18 +28,17 @@ Working in your slot, in short (the detail is in `docs/agent-rules.md`):
 
 - Every Bash call starts in the main checkout: begin each with `cd <your worktree> && …`. Never
   work in, or change, the main checkout.
-- The API only on your slot's `PORT` (`pnpm nx run api:serve-local` from the worktree); stop
-  it by its port, never `pkill -f`. Database tests run in memory (PGlite): nothing to start.
+- A server only on your slot's `PORT` (the slot brief names how to start the project's); stop
+  it by its port, never `pkill -f`.
 - Reviews: run `pnpm review:diff`, then give `.review/diff.patch` to a reviewer subagent for the
   code review and again for the security review (the skills tend to review the main checkout
   from a slot; use one only if its summary names your files). A round with a critical or major
   finding is always followed by another round on the fix diff.
 - Push only your own branch, by name. Never merge, never run `pnpm merge:pr` or
   `pnpm sync:main`: the coordinator does (the guard refuses them to you).
-- The editor's browser flows (`frontend/editor-e2e/`): a new or changed screen feature adds or
-  extends a flow; an editor bug fix starts with a flow or spec test that fails before the fix;
-  the PR names the flows it added. `pnpm check` runs them all; the API they start uses ports
-  of its own, never your `PORT`.
+- The project's own rules for tests, browser flows and its server are in
+  `docs/agent-rules.md` ("How to work", "Project checks"): a new or changed feature brings its
+  tests, and a bug fix starts with a test that fails before the fix.
 - Report as `docs/agent-rules.md` "Finish" says: PR number, migration (if any), checks, the
   code-review and the security-review outcome, and the SHA your last `pnpm check` ran on (a
   line naming `pnpm check` and the SHA, in the PR body too: the coordinator's `merge:pr` reads
