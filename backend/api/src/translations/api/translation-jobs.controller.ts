@@ -29,6 +29,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import { RELEASED_BRANCH } from '../../content/core/released.js';
@@ -68,6 +69,7 @@ export const WHO_SEES_JOBS =
 @ApiTags('translations')
 @Controller('translations/exports')
 @JsonApi()
+@NamesPeople()
 export class TranslationJobsController {
   constructor(
     private readonly exportTranslations: ExportTranslationsAction,

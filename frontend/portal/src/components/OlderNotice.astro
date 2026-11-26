@@ -1,0 +1,27 @@
+---
+import { textsFor } from '../lib/i18n.ts';
+import { snapshot, type OlderPage } from '../lib/site.ts';
+
+interface Props {
+  older: OlderPage;
+}
+
+/**
+ * The quiet notice on every page of an older release (#896): which release this is, which is the
+ * latest, and the same page there (or what stands in for it). Part of the page's HTML, so it is
+ * there before anything paints and never moves the page.
+ */
+const { older } = Astro.props;
+const t = textsFor(snapshot().lang);
+const text = t.olderNotice.replace('{release}', () => older.release.revision).replace('{latest}', () => older.latest.revision);
+---
+
+<div class="older-notice" role="note">
+  <div class="older-notice__inner">
+    <svg class="older-notice__icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4.5V9H8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <p class="older-notice__body">
+      <span class="older-notice__text">{text}</span>
+      <a class="older-notice__link arrow-link" href={older.latestHref}>{t.readLatest} <span aria-hidden="true">→</span></a>
+    </p>
+  </div>
+</div>

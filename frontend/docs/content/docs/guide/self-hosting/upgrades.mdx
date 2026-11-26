@@ -74,11 +74,11 @@ into `deploy/worker.env`. See [Workers](/guide/self-hosting/workers).
 ## Moving from the shared MCP token
 
 Until v0.0.3 the MCP server had one token for every caller, `CCMS_MCP_HTTP_TOKEN`, and they all
-read as its `CCMS_MCP_API_TOKEN`. Now each caller sends a service account token of its own
-(#861), and the server needs neither. Both settings still work for one release, with a
-warning at start; they are removed in v0.0.5. Give each caller its own token, change its client,
-then remove both from `deploy/.env` and run `docker compose up -d`:
-[Moving from the shared token](/guides/mcp#moving-from-the-shared-token).
+read as its `CCMS_MCP_API_TOKEN`. Each caller now sends a service account token of its own
+(#861), and v0.0.5 removes the shared one: an MCP server started with `CCMS_MCP_HTTP_TOKEN` set
+refuses to start with a message saying so, and so does the container setup if `deploy/.env` still holds it. Before you upgrade, give each caller its own token, change its client, then
+remove `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` from `deploy/.env` and run
+`docker compose up -d`: [Moving from the shared token](/guides/mcp#moving-from-the-shared-token).
 
 ## From a version before the name OpenFolia
 

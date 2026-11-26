@@ -1,0 +1,41 @@
+---
+import { textsFor } from '../lib/i18n.ts';
+import { href, releaseRoot, releasesOf, snapshot, type BuiltRelease } from '../lib/site.ts';
+
+interface Props {
+  /** A product's newest release, as the start page lists it. */
+  release: BuiltRelease;
+}
+
+/**
+ * A product's older releases on the start page (#896), each linking its own page: the newest few,
+ * then "+n more" to the newest older one, whose release switch lists them all. Nothing when the
+ * product has none built.
+ */
+const { release } = Astro.props;
+const t = textsFor(snapshot().lang);
+const older = releasesOf(release.product).slice(1);
+/** Older releases named before "+n more". */
+const SHOWN = 3;
+const id = `older-${release.product}`;
+---
+
+{
+  older.length > 0 && (
+    <div class="older-releases">
+      <span class="older-releases__label" id={id}>{t.olderReleases}</span>
+      <ul class="older-releases__list" aria-labelledby={id}>
+        {older.slice(0, SHOWN).map((r) => (
+          <li>
+            <a href={href(releaseRoot(r))} title={r.revision}>{r.revision}</a>
+          </li>
+        ))}
+        {older.length > SHOWN && (
+          <li class="older-releases__more">
+            <a href={href(releaseRoot(older[SHOWN]!))}>{t.moreVariants.replace('{n}', String(older.length - SHOWN))}</a>
+          </li>
+        )}
+      </ul>
+    </div>
+  )
+}

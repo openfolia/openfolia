@@ -27,6 +27,20 @@ describe('readXml', () => {
     expect(root.children).toHaveLength(3);
   });
 
+  it('gives the namespaces each element declares, read as values are', () => {
+    const root = readXml(
+      `<a xmlns="urn:a" b=' xmlns:c="urn:c"' xmlns:d='urn:&amp;d'><e xmlns=""/><f/></a>`,
+    );
+    expect([...root.declarations]).toEqual([
+      ['', 'urn:a'],
+      ['d', 'urn:&d'],
+    ]);
+    expect([...(root.children[0] as typeof root).declarations]).toEqual([
+      ['', ''],
+    ]);
+    expect((root.children[1] as typeof root).declarations.size).toBe(0);
+  });
+
   it('refuses a document type declaration and any entity but the predefined ones', () => {
     expect(refusal('<!DOCTYPE a><a/>')).toBe('dtd-forbidden');
     expect(refusal('<a>&nbsp;</a>')).toBe('dtd-forbidden');

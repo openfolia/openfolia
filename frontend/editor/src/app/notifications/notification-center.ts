@@ -164,12 +164,12 @@ export class NotificationCenter {
     void this.load('first');
   }
 
-  /** A person's name, when the editor knows it (themself, or a demo user). */
+  /** A person's name, when the editor knows it (themself, or a demo user, a deactivated one too). */
   nameOf(who: Who): string | null {
     if (who.kind !== 'user') return null;
     const me = this.meService.me();
     if (me.id === who.id && me.name) return me.name;
-    return this.demo.users().find((u) => u.id === who.id)?.name ?? null;
+    return this.demo.nameOf(who.id) ?? null;
   }
 
   /** A release's label ("Product 2.1"), once read; null when it could not be. */

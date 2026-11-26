@@ -29,9 +29,27 @@ export interface MailSettingsReport {
   /** The sender's name: the branding's product name. */
   readonly senderName: string;
   readonly language: MailLanguage;
+  /** Emails that failed for good (`mail.failed`) in the last `FAILURE_WINDOW_MS` (#884). */
+  readonly failures: MailFailures;
 }
 
-/** Email's settings (#609), read-only: they live in the environment. Needs `admin.roles`. */
+/** How far back Admin › System counts the emails that failed. */
+export const FAILURE_WINDOW_MS = 7 * 86_400_000;
+
+/** The emails that failed for good lately, and the newest of them. */
+export interface MailFailures {
+  readonly count: number;
+  readonly last: {
+    readonly at: Date;
+    readonly template: string | null;
+    readonly reason: string | null;
+  } | null;
+}
+
+/**
+ * Email's settings (#609), read-only: they live in the environment; and the emails that failed
+ * for good in the last 7 days (#884), from the audit log. Needs `admin.roles`.
+ */
 @Injectable()
 export class GetMailSettingsAction extends ActorAction<
   { actor: Actor },
@@ -42,17 +60,37 @@ export class GetMailSettingsAction extends ActorAction<
   constructor(
     private readonly settings: MailSettings,
     private readonly brand: MailBrandSource,
+    private readonly auditLog: AuditLog,
   ) {
     super();
   }
 
   protected async run(): Promise<MailSettingsReport> {
+    const failed = await this.auditLog.list(
+      {
+        action: 'mail.failed',
+        from: new Date(Date.now() - FAILURE_WINDOW_MS),
+      },
+      { number: 1, size: 1 },
+    );
+    const last = failed.items[0];
+    const text = (v: unknown) => (typeof v === 'string' ? v : null);
     return {
       state: this.settings.state,
       server: this.settings.server,
       from: this.settings.from,
       senderName: await this.brand.productName(),
       language: this.settings.language,
+      failures: {
+        count: failed.total,
+        last: last
+          ? {
+              at: last.at,
+              template: text(last.data['template']),
+              reason: text(last.data['reason']),
+            }
+          : null,
+      },
     };
   }
 }

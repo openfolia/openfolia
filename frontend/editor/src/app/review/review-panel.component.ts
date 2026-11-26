@@ -13,6 +13,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCircle,
+  lucideCircleAlert,
   lucideCircleCheck,
   lucideCircleDot,
   lucideArrowUpRight,
@@ -30,9 +31,11 @@ import { ZardSkeletonComponent } from '@openfolia/ui/skeleton';
 import { FadeInDirective } from '@openfolia/ui/smooth';
 import { ZardTextareaComponent } from '@openfolia/ui/textarea';
 
+import { type Named, PeopleStates } from '../api';
 import { auditLogLink, READ_AUDIT_LOG } from '../admin/audit/audit-model';
 
 import { ChecksSummaryComponent } from '../checks/checks-summary.component';
+import { injectPersonText } from '../history/history-model';
 import { GuardDirective } from '../permissions/guard.directive';
 import { MeService } from '../permissions/me';
 import {
@@ -54,8 +57,11 @@ import {
 interface Step {
   readonly key: string;
   readonly label: string;
-  /** `done`: met; `current`: what the change set waits for now; `later`: after that. */
-  readonly status: 'done' | 'current' | 'later';
+  /**
+   * `done`: met; `current`: what the change set waits for now; `later`: after that; `blocked`: the
+   * merge, while an approved change set misses an approval it needs (#950).
+   */
+  readonly status: 'done' | 'current' | 'later' | 'blocked';
   readonly detail: string;
   readonly at?: string;
 }
@@ -99,6 +105,7 @@ export const COMMENT_MAX = 10_000;
   viewProviders: [
     provideIcons({
       lucideCircle,
+      lucideCircleAlert,
       lucideCircleCheck,
       lucideCircleDot,
       lucideArrowUpRight,
@@ -236,12 +243,17 @@ export const COMMENT_MAX = 10_000;
       } @else {
         <ol ofFadeIn class="m-0 flex list-none flex-col gap-2.5 p-0">
           @for (step of steps(); track step.key) {
-            <li class="flex gap-2.5">
+            <li
+              class="flex gap-2.5"
+              [attr.data-step]="step.key"
+              [attr.data-status]="step.status"
+            >
               <ng-icon
                 [name]="icon(step.status)"
                 class="mt-0.5 size-4 shrink-0"
                 [class.text-info]="step.status === 'current'"
                 [class.text-success]="step.status === 'done'"
+                [class.text-warning]="step.status === 'blocked'"
                 [class.text-muted-foreground]="step.status === 'later'"
                 aria-hidden="true"
               />
@@ -252,9 +264,9 @@ export const COMMENT_MAX = 10_000;
                 <span
                   class="text-muted-foreground text-xs leading-[1.125rem] break-words"
                 >
-                  {{ step.detail }}
+                  <span>{{ step.detail }}</span>
                   @if (step.at) {
-                    · {{ step.at | ofRelativeTime }}
+                    <span>&nbsp;· {{ step.at | ofRelativeTime }}</span>
                   }
                 </span>
               </div>
@@ -358,6 +370,8 @@ export class ReviewPanelComponent {
   private readonly me = inject(MeService);
   private readonly router = inject(Router);
   private readonly t = injectTranslate();
+  private readonly people = inject(PeopleStates);
+  private readonly personText = injectPersonText();
   private readonly lines = inject(MaintenanceLines);
 
   readonly changeSet = input.required<ChangeSet>();
@@ -428,6 +442,7 @@ export class ReviewPanelComponent {
     const cs = this.changeSet().attributes;
     const review = this.review();
     const required = review?.required ?? ['review'];
+    const pending = review?.pending ?? [];
     const out: Step[] = [];
     let waiting = false;
     for (const requirement of required) {
@@ -460,23 +475,32 @@ export class ReviewPanelComponent {
               ? 'editor.review.panel.approvedBySelf'
               : 'editor.review.panel.approvedBy',
             {
-              name: this.nameOf()(approval.approver.kind, approval.approver.id),
+              name: this.approver(approval),
             },
           ),
           at: approval.at,
         });
         continue;
       }
-      const current: boolean = cs.state === 'in-review' && !waiting;
+      // Approved, yet unmet (#950: its approval lapsed): what it waits for now, as in review.
+      const current: boolean =
+        !waiting &&
+        (cs.state === 'in-review' ||
+          (cs.state === 'approved' && pending.includes(requirement)));
       waiting ||= current;
       out.push({
         key: requirement,
         label,
         status: current ? 'current' : 'later',
         detail: lapsed
-          ? this.t('editor.review.panel.lapsed', {
-              name: this.nameOf()(lapsed.approver.kind, lapsed.approver.id),
-            })
+          ? this.t(
+              this.people.isDeactivated(lapsed.approver)
+                ? 'editor.review.panel.lapsedDeactivated'
+                : 'editor.review.panel.lapsed',
+              {
+                name: this.approver(lapsed),
+              },
+            )
           : this.t(
               cs.state === 'in-review'
                 ? type === undefined
@@ -489,16 +513,26 @@ export class ReviewPanelComponent {
       });
     }
     const merged = cs.state === 'merged';
+    // Approved with an approval missing (#950): the API refuses the merge, so the step says so.
+    const blocked = cs.state === 'approved' && pending.length > 0;
     out.push({
       key: 'merge',
       label: this.t('editor.review.panel.merge'),
-      status: merged ? 'done' : cs.state === 'approved' ? 'current' : 'later',
+      status: merged
+        ? 'done'
+        : blocked
+          ? 'blocked'
+          : cs.state === 'approved'
+            ? 'current'
+            : 'later',
       detail: this.t(
         merged
           ? 'editor.review.panel.merged'
-          : cs.state === 'approved'
-            ? 'editor.review.panel.readyToMerge'
-            : 'editor.review.panel.mergeLater',
+          : blocked
+            ? 'editor.review.panel.mergeBlocked'
+            : cs.state === 'approved'
+              ? 'editor.review.panel.readyToMerge'
+              : 'editor.review.panel.mergeLater',
         { ref: this.lines.label(cs.baseRef) },
       ),
       ...(merged ? { at: cs.updatedAt } : {}),
@@ -555,6 +589,11 @@ export class ReviewPanelComponent {
     void this.router.navigate(commands, { queryParams });
   }
 
+  /** Who gave an approval, in its sentence. */
+  private approver({ approver }: { approver: Named }): string {
+    return this.personText(approver, this.nameOf()(approver.kind, approver.id));
+  }
+
   protected saveRename(change: ChangeSetRename): void {
     this.renaming.set(false);
     this.renamed.emit(change);
@@ -565,7 +604,9 @@ export class ReviewPanelComponent {
       ? 'lucideCircleCheck'
       : status === 'current'
         ? 'lucideCircleDot'
-        : 'lucideCircle';
+        : status === 'blocked'
+          ? 'lucideCircleAlert'
+          : 'lucideCircle';
   }
 
   protected permissionOf(name: TransitionName): string {

@@ -18,10 +18,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import { map, type Observable } from 'rxjs';
+import { concatMap, map, type Observable } from 'rxjs';
+import { GetPeopleAction } from '../../access/core/actions/get-people.action.js';
+import type { Actor } from '../../access/core/actor.js';
 import type { PageRequest } from '../core/paging.js';
 import { JSON_API, REQUEST_HEADER } from './json-api.js';
 import { JsonApiException } from './json-api.exception.js';
+import { NAMES_PEOPLE, peopleIn } from './people.js';
 
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;
@@ -69,11 +72,15 @@ export const AcceptsBodyOf = (...types: string[]) =>
 /**
  * Content negotiation and query checks for JSON:API routes:
  * 406 unless `Accept` allows `application/vnd.api+json`, 415 for a body of
- * another type, 400 for query parameters the route does not support.
+ * another type, 400 for query parameters the route does not support. On a
+ * route marked `@NamesPeople()`, adds `meta.people` to the document.
  */
 @Injectable()
 export class JsonApiInterceptor implements NestInterceptor {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly getPeople: GetPeopleAction,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
@@ -122,19 +129,38 @@ export class JsonApiInterceptor implements NestInterceptor {
         })),
       );
     }
+    const namesPeople = this.reflector.getAllAndOverride<boolean | undefined>(
+      NAMES_PEOPLE,
+      [context.getHandler(), context.getClass()],
+    );
+    const answer = namesPeople
+      ? next.handle().pipe(concatMap((body) => this.withPeople(req, body)))
+      : next.handle();
     // Serialized here: Express would append `; charset=utf-8`, which
     // JSON:API does not allow on its media type. No body stays none on a
     // 204 only: elsewhere a missing body is a bug, and fails loudly.
-    return next
-      .handle()
-      .pipe(
-        map((body: unknown) =>
-          body === undefined &&
-          http.getResponse<Response>().statusCode === HttpStatus.NO_CONTENT
-            ? undefined
-            : jsonApiBody(body),
-        ),
-      );
+    return answer.pipe(
+      map((body: unknown) =>
+        body === undefined &&
+        http.getResponse<Response>().statusCode === HttpStatus.NO_CONTENT
+          ? undefined
+          : jsonApiBody(body),
+      ),
+    );
+  }
+
+  /** The document with `meta.people` (`@NamesPeople()`); no document stays none. */
+  private async withPeople(req: Request, body: unknown): Promise<unknown> {
+    if (typeof body !== 'object' || body === null) return body;
+    const people = await this.getPeople.handle({
+      // Set by `ActorGuard`. Without one (a public route) the action refuses.
+      actor: req.actor as Actor,
+      userIds: peopleIn(body),
+    });
+    return {
+      ...body,
+      meta: { ...('meta' in body ? (body.meta as object) : {}), people },
+    };
   }
 }
 

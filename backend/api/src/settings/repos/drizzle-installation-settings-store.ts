@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
+import type { SecondFactorRuleValue } from '../../access/core/second-factors.js';
+import type { SingleSignOnRule } from '../../access/core/sign-in-rules.js';
 import type { Transaction } from '../../base/core/unit-of-work.js';
 import type { SelfApproval } from '../../change-sets/core/self-approval.js';
 import { Database } from '../../database/database.js';
@@ -20,7 +22,15 @@ type Row = typeof installationSettings.$inferSelect;
 const toStored = (row: Row | undefined): StoredInstallationSettings =>
   row
     ? {
-        settings: { selfApproval: row.selfApproval as SelfApproval },
+        settings: {
+          selfApproval: row.selfApproval as SelfApproval,
+          secondFactor: row.secondFactor as SecondFactorRuleValue,
+          singleSignOn:
+            (row.singleSignOn as SingleSignOnRule | null) ?? 'optional',
+          breakGlassUserId: row.breakGlassUserId,
+          sessionIdleMinutes: row.sessionIdleMinutes,
+          sessionMaxHours: row.sessionMaxHours,
+        },
         version: row.version,
         updatedAt: row.updatedAt,
       }
@@ -77,7 +87,7 @@ export class DrizzleInstallationSettingsStore extends InstallationSettingsStore 
     const [row] = await drizzleOf(tx)
       .update(installationSettings)
       .set({
-        selfApproval: next.selfApproval,
+        ...next,
         version: sql`${installationSettings.version} + 1`,
         updatedAt: sql`now()`,
       })

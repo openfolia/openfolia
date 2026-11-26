@@ -7094,8 +7094,30 @@ components:
           properties:
             page:
               $ref: '#/components/schemas/PageMeta'
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
           required:
             - page
+            - people
           additionalProperties: false
         links:
           $ref: '#/components/schemas/PageLinks'
@@ -10014,9 +10036,31 @@ components:
                 The ref’s first-parent line goes on past the 1,000 newest
                 commits looked at: older versions are not listed, and, when the
                 module existed before them, versions carry no revision number.
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
           required:
             - page
             - truncated
+            - people
           additionalProperties: false
         links:
           $ref: '#/components/schemas/PageLinks'
@@ -11335,9 +11379,31 @@ components:
                 The ref’s first-parent line goes on past the 1,000 newest
                 commits looked at: older versions are not listed, and, when the
                 manual existed before them, versions carry no revision number.
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
           required:
             - page
             - truncated
+            - people
           additionalProperties: false
         links:
           $ref: '#/components/schemas/PageLinks'
@@ -12237,8 +12303,30 @@ components:
           properties:
             page:
               $ref: '#/components/schemas/PageMeta'
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
           required:
             - page
+            - people
           additionalProperties: false
         links:
           $ref: '#/components/schemas/PageLinks'
@@ -12528,8 +12616,35 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ReleaseDetailResource'
+        meta:
+          type: object
+          properties:
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
+          required:
+            - people
       required:
         - data
+        - meta
       additionalProperties: false
     ReleaseChangePageDocument:
       type: object
@@ -12699,9 +12814,31 @@ components:
                 Filtered by manual or language, only the newest releases
                 matching the other filters are looked through; true when there
                 were more.
+            people:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The user’s ID.
+                  deactivated:
+                    type: boolean
+                    description: >-
+                      Whether the user is deactivated now; false for an ID no
+                      user has.
+                required:
+                  - id
+                  - deactivated
+                additionalProperties: false
+              description: >-
+                The users this document names (as `{ kind: "user", id }`), each
+                once, by ID, and whether they are deactivated. Derived, never
+                stored.
           required:
             - page
             - truncated
+            - people
           additionalProperties: false
         links:
           $ref: '#/components/schemas/PageLinks'

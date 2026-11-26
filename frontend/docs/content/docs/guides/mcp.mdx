@@ -292,22 +292,20 @@ or **502** (it is there but did not answer) for up to 10 seconds after it is bac
 
 Until v0.0.3, a self-hosted MCP server had one token for everyone, `CCMS_MCP_HTTP_TOKEN`, and every
 caller read as the server's own service account, `CCMS_MCP_API_TOKEN`. That shared token is
-**deprecated**: it still works in this release, and the server warns about it when it starts. It is
-removed in v0.0.5.
+**removed** in v0.0.5: a server started with `CCMS_MCP_HTTP_TOKEN` set refuses to start and says
+so, and a caller still sending the shared token gets 401.
 
 1. Make a service account and token for each person or agent that connects, as in [Make a
    service account and token for MCP](#make-a-service-account-and-token-for-mcp). The account
    behind `CCMS_MCP_API_TOKEN` already holds `content.read` alone, so you can also issue more
    tokens of it, one per caller.
 2. In each client, replace the shared token with the caller's own (in `OPENFOLIA_MCP_TOKEN`, say).
-   Meanwhile, callers with their own tokens and callers still on the shared one are served side by
-   side.
-3. Once every client has moved, remove both settings and restart the server.
+3. Remove both settings, before you upgrade to v0.0.5, and restart the server. (`CCMS_MCP_API_TOKEN` stays
+   for the stdio transport.)
 
 <ServerSetting>
-  Remove [`CCMS_MCP_HTTP_TOKEN`](/reference/settings#ccms_mcp_http_token) and
-  [`CCMS_MCP_API_TOKEN`](/reference/settings#ccms_mcp_api_token) from
-  `deploy/.env`, then run `docker compose up -d`.
+  Remove `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` from `deploy/.env`, then
+  run `docker compose up -d`.
 </ServerSetting>
 
 ## Running it yourself

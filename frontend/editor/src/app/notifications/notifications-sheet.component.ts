@@ -42,6 +42,7 @@ import {
   SkeletonRowsComponent,
 } from '@openfolia/ui/states';
 
+import { injectPersonText } from '../history/history-model';
 import { MeService } from '../permissions/me';
 import { ChangeSetUrl } from '../session/change-set-url';
 import { injectQueryState, oneOfParam } from '../view-state';
@@ -52,6 +53,7 @@ import {
   groupOf,
   type NotificationItem,
   type NotificationView,
+  type Who,
 } from './notification-model';
 
 /** `?notifications=`: the sheet is open, with all notifications or the unread ones only. */
@@ -322,6 +324,7 @@ export class NotificationsSheetComponent {
   private readonly meService = inject(MeService);
   private readonly csLink = inject(ChangeSetUrl);
   private readonly t = injectTranslate();
+  private readonly personText = injectPersonText();
   private readonly view = injectQueryState({
     notifications: oneOfParam(SHOWN),
   });
@@ -349,7 +352,10 @@ export class NotificationsSheetComponent {
 
   protected readonly rows = computed((): Row[] => {
     const context = {
-      nameOf: (who: { kind: string; id: string }) => this.center.nameOf(who),
+      nameOf: (who: Who) => {
+        const name = this.center.nameOf(who);
+        return name && this.personText(who, name);
+      },
       releaseLabel: (id: string) => this.center.releaseLabel(id),
     };
     return this.center.items().map((item) => {

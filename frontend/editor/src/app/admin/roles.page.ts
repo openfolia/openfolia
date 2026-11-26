@@ -87,6 +87,7 @@ const GLOBAL: ReadonlySet<string> = new Set([
   'admin.branding',
   'admin.backups',
   'webhook.manage',
+  'scim.provision',
 ]);
 
 /**

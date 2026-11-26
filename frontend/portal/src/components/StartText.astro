@@ -1,0 +1,20 @@
+---
+import { startHtml } from '../lib/site.ts';
+import type { StartPage, StartSection } from '../lib/start.ts';
+
+interface Props {
+  page: StartPage;
+  section: StartSection;
+  part: 'lead' | 'text';
+}
+
+/** The authored start page's text (#897): its opening paragraph (`lead`) or a section's text. */
+const { page, section, part } = Astro.props;
+---
+
+<div class:list={['manual-body', part === 'lead' ? 'start__intro start__intro--authored' : 'start__text']} set:html={startHtml(page, section, part)} />
+<script>
+  import { dismissTermOnEscape, highlightCallouts } from '@openfolia/render-html/browser';
+  highlightCallouts(document);
+  dismissTermOnEscape(document);
+</script>

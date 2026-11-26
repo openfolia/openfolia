@@ -24,16 +24,15 @@ CCMS_MCP_API_URL=http://127.0.0.1:3100 CCMS_MCP_API_TOKEN=ccms_sat_… node back
 CCMS_MCP_API_URL=… node backend/mcp/dist/main.js --http
 ```
 
-| Setting                         | What                                                                                                                                                                                          |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CCMS_MCP_API_URL`              | the API's base URL (required)                                                                                                                                                                 |
-| `CCMS_MCP_API_TOKEN`            | a service account token whose roles hold `content.read` alone (stdio: required; `--http`: only with the deprecated `CCMS_MCP_HTTP_TOKEN`)                                                     |
-| `CCMS_MCP_HTTP_HOST`            | `--http`: the address to listen on (default `127.0.0.1`; anything else warns: put TLS in front)                                                                                               |
-| `CCMS_MCP_HTTP_PORT`            | `--http`: the port (default 3200)                                                                                                                                                             |
-| `CCMS_MCP_HTTP_TOKEN`           | `--http`, **deprecated** (#861, removed in v0.0.5): one bearer token shared by every caller, who then read as `CCMS_MCP_API_TOKEN`; at least 32 characters, not the API token (default unset) |
-| `CCMS_MCP_HTTP_ALLOWED_ORIGINS` | `--http`: comma-separated `Origin`s a browser-based caller may send (default none)                                                                                                            |
-| `CCMS_MCP_HTTP_TRUST_PROXY`     | `--http`: proxies to believe about the caller's address, `none` (default) or 1-10 hops                                                                                                        |
-| `CCMS_MCP_HTTP_PROXY_ADDRESSES` | `--http`: the peers believed (addresses, subnets, host names); required with a hop count                                                                                                      |
+| Setting                         | What                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `CCMS_MCP_API_URL`              | the API's base URL (required)                                                                                                  |
+| `CCMS_MCP_API_TOKEN`            | a service account token whose roles hold `content.read` alone (stdio: required; `--http`: not used, each caller sends its own) |
+| `CCMS_MCP_HTTP_HOST`            | `--http`: the address to listen on (default `127.0.0.1`; anything else warns: put TLS in front)                                |
+| `CCMS_MCP_HTTP_PORT`            | `--http`: the port (default 3200)                                                                                              |
+| `CCMS_MCP_HTTP_ALLOWED_ORIGINS` | `--http`: comma-separated `Origin`s a browser-based caller may send (default none)                                             |
+| `CCMS_MCP_HTTP_TRUST_PROXY`     | `--http`: proxies to believe about the caller's address, `none` (default) or 1-10 hops                                         |
+| `CCMS_MCP_HTTP_PROXY_ADDRESSES` | `--http`: the peers believed (addresses, subnets, host names); required with a hop count                                       |
 
 Settings come from the environment (`.env.example`, "MCP server"); a missing or malformed one
 stops the start with its name, never its value. Logs go to stderr (on stdio, stdout is the
@@ -74,10 +73,10 @@ releases). The API records each read of a service account's token as an `api.rea
 the account, the token's ID, the route and that client (`backend/api/README.md`, "Audit log",
 "Reads"). Nothing of the caller's request beyond that, and never the token.
 
-**Migrating from the shared token.** Until v0.0.3 every HTTP caller sent one
-`CCMS_MCP_HTTP_TOKEN` and read as `CCMS_MCP_API_TOKEN`. Set together they still work for one
-release (a warning at start), beside callers' own tokens; compared in constant time as before.
-Give each caller a service account token of its own, change its client, then unset both.
+**The shared token is removed (#922).** Until v0.0.3 every HTTP caller sent one
+`CCMS_MCP_HTTP_TOKEN` and read as `CCMS_MCP_API_TOKEN`. Set, the server refuses to start (the
+check is in `src/settings.ts`, for both transports). Give each caller a service account token of
+its own and unset it.
 
 ### In a container deployment
 

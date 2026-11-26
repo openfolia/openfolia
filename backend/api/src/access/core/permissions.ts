@@ -31,6 +31,11 @@ export const PERMISSIONS = [
   'admin.branding',
   /** Configure the instance's backups, see their runs and hold the backup key (#529). */
   'admin.backups',
+  /**
+   * Provision users and groups from a directory over SCIM 2.0 (#377): held by the service
+   * account a directory's token belongs to, and only there (`/scim/v2` refuses anyone else).
+   */
+  'scim.provision',
 ] as const;
 
 export const Permission = z.enum(PERMISSIONS);
@@ -45,6 +50,7 @@ export const GLOBAL_PERMISSIONS: ReadonlySet<Permission> = new Set([
   'admin.roles',
   'admin.branding',
   'admin.backups',
+  'scim.provision',
 ]);
 
 /**

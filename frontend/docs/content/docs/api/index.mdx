@@ -49,6 +49,9 @@ your instance's host after importing them.
 - **JSON:API:** responses are `application/vnd.api+json` documents. Resources are
   `{ type, id, attributes, relationships, meta }`; `attributes` hold stored data and `meta` what
   the server derives from it.
+- **Deactivated people:** where the reference lists `meta.people`, an answer that names people
+  (authors, approvers, commenters) says whether each is deactivated: `[{ "id", "deactivated" }]`,
+  users only. It is the state when the answer was made, also on answers you read at a commit.
 - **Lists are paged:** `page[number]` and `page[size]`, with `meta.page` and `links`. Query
   parameters a route does not document are refused with 400 `unsupported-parameter`.
 - **Errors** are `{ errors: [{ status, title, detail, code, source?, meta? }] }` on every route,

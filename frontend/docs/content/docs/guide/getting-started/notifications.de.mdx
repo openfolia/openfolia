@@ -1,0 +1,117 @@
+---
+title: 'Benachrichtigungen'
+description: 'Wählen Sie je Art der Benachrichtigung: aus, nur in der App, sofort per E-Mail oder in einer täglichen Zusammenfassung. E-Mails pausieren, abbestellen, und warum eine E-Mail ausbleiben kann.'
+articleId: 'guide.getting-started.notifications'
+---
+
+Die Glocke neben dem Überarbeitungsmenü enthält Ihre Benachrichtigungen: Überarbeitungen, die
+Ihnen zur Prüfung eingereicht, zurückgegeben, freigegeben oder veröffentlicht wurden, übernommene
+Sperren, Veröffentlichungen und Übersetzungsimporte. Siehe
+[Orientierung](/de/guide/getting-started/find-your-way#benachrichtigungen).
+
+Sie wählen, welche davon Sie bekommen und welche zusätzlich per E-Mail kommen.
+
+## Die Einstellungen öffnen
+
+1. Wählen Sie Ihren Namen unten in der Seitenleiste.
+2. Wählen Sie **Benachrichtigungen**.
+
+Die Seite listet jede Art von Benachrichtigung, in Gruppen. Ihre Auswahl gehört Ihnen: Eine
+Administratorin oder ein Administrator kann sie nicht für Sie ändern.
+
+## Je Art wählen
+
+Wählen Sie für jede Art eine Möglichkeit:
+
+- **Aus**: nicht in der Glocke, keine E-Mail. Was schon in der Glocke ist, bleibt dort.
+- **Nur in der App**: in der Glocke, keine E-Mail.
+- **App + sofort per E-Mail**: in der Glocke und eine E-Mail, sobald es geschieht.
+- **App + tägliche Zusammenfassung**: in der Glocke und einmal am Tag eine E-Mail mit allem
+  dieses Tages.
+
+Womit jede Art beginnt:
+
+| Gruppe                  | Art                                                                           | Beginnt mit                    |
+| ----------------------- | ----------------------------------------------------------------------------- | ------------------------------ |
+| Prüfung und Ablauf      | Eine Überarbeitung wird Ihnen zur Prüfung eingereicht                         | App + sofort per E-Mail        |
+| Prüfung und Ablauf      | Ihre Überarbeitung wird mit Änderungswünschen zurückgegeben                   | App + sofort per E-Mail        |
+| Prüfung und Ablauf      | Ihre Überarbeitung wird freigegeben                                           | App + sofort per E-Mail        |
+| Prüfung und Ablauf      | Ihre Überarbeitung wird abgezeichnet                                          | App + sofort per E-Mail        |
+| Prüfung und Ablauf      | Ihre Überarbeitung wird veröffentlicht                                        | App + sofort per E-Mail        |
+| Prüfung und Ablauf      | Eine Administratorin oder ein Administrator hat eine Ihrer Sperren aufgehoben | Nur in der App                 |
+| Veröffentlichungen      | Eine Veröffentlichung ist erschienen                                          | App + tägliche Zusammenfassung |
+| Veröffentlichungen      | Eine gescheiterte Datei einer Veröffentlichung ist doch fertig                | App + tägliche Zusammenfassung |
+| Übersetzungen           | Ihr Übersetzungsimport ist abgeschlossen                                      | App + tägliche Zusammenfassung |
+| Übersetzungen           | Ihr Übersetzungsimport ist fehlgeschlagen                                     | App + tägliche Zusammenfassung |
+| Hinweise der Verwaltung | Eine Datei einer Veröffentlichung konnte nicht erstellt werden                | App + sofort per E-Mail        |
+| Hinweise der Verwaltung | Ein Backup ist fehlgeschlagen                                                 | App + sofort per E-Mail        |
+| Hinweise der Verwaltung | Seit längerer Zeit als erwartet kein gutes Backup                             | App + sofort per E-Mail        |
+
+**Hinweise der Verwaltung** erreichen nur Personen, deren Rolle die Berechtigung dafür hat. Sie
+können einen ausschalten, aber die Seite sagt dann, was Ihnen entgeht.
+
+Eines lässt sich nicht wählen: Wird das [Notfallkonto](/de/guide/admin/single-sign-on) verwendet,
+finden es alle Admins in der Glocke und bekommen eine E-Mail, was immer sie eingestellt haben.
+
+## Alles pausieren oder ausschalten
+
+Zwei Schalter oben auf der Seite:
+
+- **Alle E-Mails pausieren**: Die Glocke behält alles, und keine E-Mail wird gesendet. Ihre
+  Auswahl je Art bleibt erhalten und gilt wieder, sobald Sie den Schalter zurücksetzen.
+- **Alle Benachrichtigungen ausschalten**: nichts in der Glocke und nichts per E-Mail. Das gilt
+  nur für Sie.
+
+Beides hält den Hinweis auf die Verwendung des Notfallkontos (oben) nicht auf.
+
+## Die tägliche Zusammenfassung
+
+Die Arten mit **App + tägliche Zusammenfassung** kommen gesammelt in einer E-Mail am Tag.
+
+- Sie kommt zu der Stunde, die Sie wählen, in Ihrer Zeitzone. Die Zeitzone ist zuerst die Ihres
+  Browsers, die Stunde 08:00 Uhr, wenn Ihre Installation keine andere festlegt.
+- An einem Tag ohne Neuigkeiten wird nichts gesendet.
+- Sie ist, wie jede E-Mail, in der Sprache Ihres Editors geschrieben, Englisch oder Deutsch.
+
+<ServerSetting lang="de">
+  Die Standardstunde und die meisten E-Mails pro Stunde werden wie unter
+  [E-Mail](/de/guide/self-hosting/email#benachrichtigungs-e-mails) festgelegt.
+</ServerSetting>
+
+## Was eine E-Mail enthält
+
+Jede E-Mail hat einen klaren Betreff, eine Schaltfläche, die den Gegenstand im Editor öffnet,
+eine Zeile, die sagt, warum Sie sie bekommen, und einen Link zum Abbestellen.
+
+Mehrere Änderungen am selben Gegenstand innerhalb von etwa zwei Minuten kommen als eine E-Mail.
+Höchstens 20 E-Mails kommen sofort in einer Stunde (Ihre Installation kann eine andere Zahl
+festlegen); die übrigen warten auf die tägliche Zusammenfassung.
+
+## Abbestellen
+
+Wählen Sie **Abbestellen** in Ihrem Mailprogramm oder den Link am Ende der E-Mail. Sie müssen
+sich dafür nicht anmelden. Der Link öffnet eine Seite, die die Arten nennt und zuerst fragt: Wählen Sie **Diese
+E-Mails abbestellen**.
+
+Abbestellen betrifft nur die Arten, um die es in dieser E-Mail ging, und nur den Weg, auf dem sie
+kam: Der Link in einer täglichen Zusammenfassung beendet die Zusammenfassung für sie, der Link in
+einer sofortigen E-Mail die sofortige E-Mail. Diese Arten kommen dann **Nur in der App**. Sonst
+ändert sich nichts, und Sie können die E-Mail auf der Seite **Benachrichtigungen** wieder
+einschalten.
+
+## Wenn keine E-Mail kommt
+
+- **E-Mail ist auf dem Server ausgeschaltet.** Die Seite sagt das und nennt den Grund. Ihre
+  Auswahl gilt weiter für die Glocke, und nichts wartet darauf, später gesendet zu werden.
+- **Ihr Konto hat keine E-Mail-Adresse.** Auch das sagt die Seite.
+- **Sie haben den Zugriff verloren.** Der Zugriff wird beim Senden erneut geprüft: Können Sie die
+  Überarbeitung nicht mehr lesen, bekommen Sie keine E-Mail dazu.
+- **Sie haben die Grenze pro Stunde erreicht.** Die übrigen kommen in der täglichen
+  Zusammenfassung.
+- **E-Mails sind pausiert**, oder die Art steht auf **Nur in der App** oder **Aus**.
+
+<ServerSetting lang="de">
+  E-Mail wird wie unter [E-Mail](/de/guide/self-hosting/email) eingerichtet.
+  **Verwaltung › System** zeigt, ob sie eingeschaltet ist, und die letzten
+  gescheiterten E-Mails.
+</ServerSetting>

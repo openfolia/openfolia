@@ -32,6 +32,9 @@ export interface Texts {
   readonly backToManuals: string;
   /** The start page's line under the title. */
   readonly startIntro: string;
+  /** The authored start page (#897): its featured links' list, and a link that leads off the site. */
+  readonly featuredLinks: string;
+  readonly externalLink: string;
   readonly searchLabel: string;
   readonly searchPlaceholder: string;
   /** The running head's compact search field. */
@@ -119,6 +122,28 @@ export interface Texts {
   readonly stepVersion: string;
   /** The range, in print: `{from}`, `{to}`. */
   readonly guideRange: string;
+  /** Older releases (#896): the newest release's mark in the release switch. */
+  readonly latestTag: string;
+  /** The release switch's list: `{product}`. */
+  readonly releasesOf: string;
+  /** A release without the manual the reader is on: it opens the release's manuals. */
+  readonly withoutManual: string;
+  /** An older release's notice: `{release}`, `{latest}`. */
+  readonly olderNotice: string;
+  readonly readLatest: string;
+  /** After a release switch to a release without the section the reader was in. */
+  readonly sectionMissing: string;
+  /** A product's older releases on the start page. */
+  readonly olderReleases: string;
+  /** An older release's own page: its kicker and its list of manuals. */
+  readonly olderRelease: string;
+  readonly releaseManuals: string;
+  readonly releaseNotes: string;
+  /** An older release's page title: `{title}`, `{revision}`. */
+  readonly releaseTitle: string;
+  /** Search within an older release: `{release}`, `{product}`. */
+  readonly searchingRelease: string;
+  readonly searchLatest: string;
 }
 
 const en: Texts = {
@@ -150,6 +175,8 @@ const en: Texts = {
   backToManuals: 'Back to the manuals',
   startIntro:
     'Operating, service and safety manuals for every product, in the variant you have.',
+  featuredLinks: 'Featured links',
+  externalLink: 'External link',
   searchLabel: 'Search all manuals',
   searchPlaceholder: 'Search, for example “battery” or “charging”',
   searchShort: 'Search manuals',
@@ -225,6 +252,21 @@ const en: Texts = {
   versionHeading: 'Version {version}',
   stepVersion: 'Version',
   guideRange: 'From {from} to {to}',
+  latestTag: 'Latest',
+  releasesOf: 'Releases of {product}',
+  withoutManual: 'without this manual',
+  olderNotice:
+    'You are reading release {release}. The latest is release {latest}.',
+  readLatest: 'Read the latest',
+  sectionMissing:
+    'The section you were reading is not in this release, so the manual opens at its start.',
+  olderReleases: 'Older releases',
+  olderRelease: 'Older release',
+  releaseManuals: 'Manuals in this release',
+  releaseNotes: 'Release notes',
+  releaseTitle: '{title}, release {revision}',
+  searchingRelease: 'Searching release {release} of {product} only.',
+  searchLatest: 'Search the latest instead',
 };
 
 const de: Texts = {
@@ -258,6 +300,8 @@ const de: Texts = {
   backToManuals: 'Zurück zu den Anleitungen',
   startIntro:
     'Betriebs-, Service- und Sicherheitsanleitungen für jedes Produkt, in Ihrer Variante.',
+  featuredLinks: 'Empfohlene Links',
+  externalLink: 'Externer Link',
   searchLabel: 'Alle Anleitungen durchsuchen',
   searchPlaceholder: 'Suchen, zum Beispiel „Akku“ oder „Laden“',
   searchShort: 'Anleitungen durchsuchen',
@@ -339,6 +383,21 @@ const de: Texts = {
   versionHeading: 'Version {version}',
   stepVersion: 'Version',
   guideRange: 'Von {from} auf {to}',
+  latestTag: 'Aktuell',
+  releasesOf: 'Versionen von {product}',
+  withoutManual: 'ohne diese Anleitung',
+  olderNotice:
+    'Sie lesen Version {release}. Die aktuelle ist Version {latest}.',
+  readLatest: 'Zur aktuellen Version',
+  sectionMissing:
+    'Den Abschnitt, den Sie gerade gelesen haben, gibt es in dieser Version nicht. Die Anleitung öffnet daher an ihrem Anfang.',
+  olderReleases: 'Ältere Versionen',
+  olderRelease: 'Ältere Version',
+  releaseManuals: 'Anleitungen dieser Version',
+  releaseNotes: 'Versionshinweise',
+  releaseTitle: '{title}, Version {revision}',
+  searchingRelease: 'Sie durchsuchen nur Version {release} von {product}.',
+  searchLatest: 'Stattdessen die aktuelle Version durchsuchen',
 };
 
 /** A count in the build's language, from its `{ one, other }` templates. */
@@ -373,16 +432,25 @@ export interface TypeaheadConfig {
   readonly none: string;
   readonly all: string;
   readonly searching: string;
+  /** In an older release (#896): its index's folder under `base`, and its search page key (`?release=`). */
+  readonly index?: string;
+  readonly release?: string;
 }
 
 export function typeaheadConfig(
   t: Texts,
   lang: string,
   base: string,
+  /** An older release's own index (#896): the field searches only that release. */
+  scope?: {
+    readonly base: string;
+    readonly index: string;
+    readonly key: string;
+  },
 ): TypeaheadConfig {
   return {
     lang,
-    base,
+    base: scope?.base ?? base,
     productKey: t.product,
     variantKey: t.variant,
     label: t.suggestions,
@@ -390,6 +458,7 @@ export function typeaheadConfig(
     none: t.noSuggestion,
     all: t.allResults,
     searching: t.searching,
+    ...(scope && { index: scope.index, release: scope.key }),
   };
 }
 

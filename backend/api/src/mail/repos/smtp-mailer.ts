@@ -29,6 +29,11 @@ export const SMTP_TIMEOUTS = {
 const TLS_CODES =
   /^(ERR_TLS_|ERR_SSL_|CERT_|DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN|UNABLE_TO_(GET|VERIFY)_|HOSTNAME_MISMATCH)/;
 
+/** The domain of a `Message-ID`: the sender's (an address `isMailAddress` checked). */
+function messageIdDomain(from: string): string {
+  return from.slice(from.lastIndexOf('@') + 1);
+}
+
 /** What kind of failure an error from nodemailer is, by its code and reply code only. */
 export function classify(error: unknown): MailSendError {
   const e = (error ?? {}) as { code?: unknown; responseCode?: unknown };
@@ -97,10 +102,21 @@ export class SmtpMailer extends Mailer {
           contentType: image.contentType,
           contentDisposition: 'inline' as const,
         })),
+        ...(mail.id !== undefined && {
+          // The same on every attempt: a resend after a lost reply shows once (RFC 5322).
+          messageId: `<${mail.id}@${messageIdDomain(mail.from.address)}>`,
+        }),
+        ...(mail.listUnsubscribe !== undefined && {
+          list: { unsubscribe: mail.listUnsubscribe },
+        }),
         headers: {
           'Content-Language': mail.language,
           // No out-of-office replies to a message no one reads (RFC 3834).
           'Auto-Submitted': 'auto-generated',
+          // The one-click unsubscribe (RFC 8058): a POST to the URL, nothing to confirm.
+          ...(mail.listUnsubscribe !== undefined && {
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          }),
         },
         disableFileAccess: true,
         disableUrlAccess: true,

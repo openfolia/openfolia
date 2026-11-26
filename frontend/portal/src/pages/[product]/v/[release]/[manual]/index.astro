@@ -1,0 +1,20 @@
+---
+import GuideView from '../../../../../components/GuideView.astro';
+import { guidePages, snapshot, type GuidePage, type SnapshotOlderRelease } from '../../../../../lib/site.ts';
+
+// An update guide's page (#907) of an older release (#896): `<product>/v/<release>/<guide>/`.
+export function getStaticPaths() {
+  return guidePages(snapshot().older).map((page) => ({
+    params: {
+      product: page.release.product,
+      release: (page.release as SnapshotOlderRelease).segment,
+      manual: page.manual.id,
+    },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props as { page: GuidePage };
+---
+
+<GuideView page={page} />

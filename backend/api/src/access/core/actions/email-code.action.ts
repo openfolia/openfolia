@@ -9,7 +9,6 @@ import {
 import { MailOutbox } from '../../../mail/core/mail-outbox.js';
 import { AccessAdmin } from '../access-admin.js';
 import { type Actor, UserEmail } from '../actor.js';
-import { beginSession } from '../begin-session.js';
 import {
   EMAIL_CODE_MAX_FAILURES,
   EMAIL_CODE_LINK_PATTERN,
@@ -27,7 +26,13 @@ import {
 } from '../password-attempts.js';
 import type { UnguardedAction } from '../policy.js';
 import { SessionPolicy } from '../session-policy.js';
-import { SessionStore } from '../sessions.js';
+import {
+  type BrowserTokens,
+  heldBefore,
+  SessionStart,
+  type StartedSignIn,
+} from '../session-start.js';
+import { refuseWhenSingleSignOn } from '../single-sign-on.js';
 import { SignInLinks } from '../sign-in-links.js';
 import { UserIdentities } from '../user-identities.js';
 import { SIGN_IN_ACTOR } from './sign-in-links.action.js';
@@ -101,6 +106,7 @@ export class RequestEmailCodeAction implements UnguardedAction {
     private readonly mail: MailOutbox,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sessionPolicy: SessionPolicy,
   ) {}
 
   /** Whether "Email me a code" is offered: on in the settings, and email going out. */
@@ -119,6 +125,7 @@ export class RequestEmailCodeAction implements UnguardedAction {
     { readonly retryAfter: number } | { readonly sending: Promise<void> }
   > {
     refuseWhenOff(this.offered);
+    await refuseWhenSingleSignOn(this.sessionPolicy);
     const address = input.email.trim();
     const counted = await this.attempts.reserve(codeRequestKey(address));
     if ('retryAfter' in counted) return { retryAfter: counted.retryAfter };
@@ -184,11 +191,7 @@ export type EmailCodeRefusal =
   | 'sign-in-not-allowed';
 
 export type EmailCodeSignInOutcome =
-  | {
-      readonly userId: string;
-      /** The new session's token, for the cookie; never stored or logged. */
-      readonly token: string;
-    }
+  | ({ readonly userId: string } & StartedSignIn)
   | { readonly refused: EmailCodeRefusal }
   /** Past the address's `code-attempt:` budget (the try that used it up revoked the code): try again in this many seconds. */
   | { readonly retryAfter: number };
@@ -221,7 +224,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
     private readonly codes: EmailCodes,
     private readonly attempts: PasswordAttempts,
     private readonly mail: MailOutbox,
-    private readonly sessions: SessionStore,
+    private readonly start: SessionStart,
     private readonly sessionPolicy: SessionPolicy,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
@@ -229,12 +232,12 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
     private readonly links: SignInLinks,
   ) {}
 
-  async handle(input: {
-    readonly email: string;
-    readonly code: string;
-    /** The session the browser held before, if any: ended. */
-    readonly previousToken?: string | undefined;
-  }): Promise<EmailCodeSignInOutcome> {
+  async handle(
+    input: {
+      readonly email: string;
+      readonly code: string;
+    } & BrowserTokens,
+  ): Promise<EmailCodeSignInOutcome> {
     refuseWhenOff(
       offeredBy({
         settings: this.settings,
@@ -242,6 +245,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
         hasher: this.hasher,
       }),
     );
+    await refuseWhenSingleSignOn(this.sessionPolicy);
     const address = input.email.trim();
     const counted = await this.attempts.reserve(codeAttemptKey(address));
     // Locked: nothing is compared, so a code asked for meanwhile stays for when the window
@@ -249,7 +253,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
     if ('retryAfter' in counted) return { retryAfter: counted.retryAfter };
     let outcome: Exclude<EmailCodeSignInOutcome, { retryAfter: number }>;
     try {
-      outcome = await this.check(address, input.code, input.previousToken);
+      outcome = await this.check(address, input.code, input);
     } catch (error) {
       await forgive(this.attempts, counted.attempt);
       throw error;
@@ -266,7 +270,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
   private async check(
     address: string,
     typed: string,
-    previousToken: string | undefined,
+    browser: BrowserTokens,
   ): Promise<Exclude<EmailCodeSignInOutcome, { retryAfter: number }>> {
     const code = readEmailCode(typed);
     const now = this.now();
@@ -296,7 +300,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
       return { refused: 'sign-in-not-allowed' };
     }
     try {
-      const token = await this.unit.run(async (tx) => {
+      const started = await this.unit.run(async (tx) => {
         // The person before their code and their invite (#660), as every change that ends ways
         // in takes them: a password set through the invite at the same moment waits, or is
         // waited for, and never holds the invite while this holds the code.
@@ -315,12 +319,12 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
           this.sessionDeps(),
           tx,
           found.userId,
-          previousToken,
+          browser,
           now,
           'code',
         );
       });
-      return { userId: found.userId, token };
+      return { userId: found.userId, ...started };
     } catch (error) {
       if (error instanceof CodeGone) return { refused: 'invalid-code' };
       throw error;
@@ -329,8 +333,7 @@ export class SignInWithEmailCodeAction implements UnguardedAction {
 
   private sessionDeps() {
     return {
-      sessions: this.sessions,
-      sessionPolicy: this.sessionPolicy,
+      start: this.start,
       auditLog: this.auditLog,
       identities: this.identities,
       links: this.links,
@@ -370,7 +373,7 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
     private readonly codes: EmailCodes,
     private readonly mail: MailOutbox,
     private readonly admin: AccessAdmin,
-    private readonly sessions: SessionStore,
+    private readonly start: SessionStart,
     private readonly sessionPolicy: SessionPolicy,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
@@ -378,11 +381,10 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
     private readonly links: SignInLinks,
   ) {}
 
-  async handle(input: {
-    readonly token: string;
-    readonly previousToken?: string | undefined;
-  }): Promise<
-    | { readonly userId: string; readonly token: string }
+  async handle(
+    input: { readonly token: string } & BrowserTokens,
+  ): Promise<
+    | ({ readonly userId: string } & StartedSignIn)
     | { readonly refused: EmailLinkRefusal }
   > {
     refuseWhenOff(
@@ -392,6 +394,7 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
         hasher: this.hasher,
       }),
     );
+    await refuseWhenSingleSignOn(this.sessionPolicy);
     if (!EMAIL_CODE_LINK_PATTERN.test(input.token)) {
       return { refused: 'link-invalid' };
     }
@@ -412,7 +415,7 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
       return { refused: 'sign-in-not-allowed' };
     }
     try {
-      const token = await this.unit.run(async (tx) => {
+      const started = await this.unit.run(async (tx) => {
         // The person before reading them, their code and their invite (#660), as above.
         await this.codes.holdToEnd(tx, found.userId);
         const current = await this.admin.findUser(tx, found.userId);
@@ -432,12 +435,12 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
           this.sessionDeps(),
           tx,
           found.userId,
-          input.previousToken,
+          input,
           now,
           'link',
         );
       });
-      return { userId: found.userId, token };
+      return { userId: found.userId, ...started };
     } catch (error) {
       if (error instanceof CodeGone) return { refused: 'link-invalid' };
       throw error;
@@ -446,8 +449,7 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
 
   private sessionDeps() {
     return {
-      sessions: this.sessions,
-      sessionPolicy: this.sessionPolicy,
+      start: this.start,
       auditLog: this.auditLog,
       identities: this.identities,
       links: this.links,
@@ -455,26 +457,30 @@ export class SignInWithEmailLinkAction implements UnguardedAction {
   }
 }
 
-/** Starts the session of a sign-in by email code, in `tx`, and records it. */
+/**
+ * Starts the session of a sign-in by email code, in `tx`, and records it; or its second step
+ * (#611), which records it once taken.
+ */
 async function startSession(
   deps: {
-    readonly sessions: SessionStore;
-    readonly sessionPolicy: SessionPolicy;
+    readonly start: SessionStart;
     readonly auditLog: AuditLog;
     readonly identities: UserIdentities;
     readonly links: SignInLinks;
   },
   tx: Transaction,
   userId: string,
-  previousToken: string | undefined,
+  browser: BrowserTokens,
   now: number,
   via: 'code' | 'link',
-): Promise<string> {
-  const token = await beginSession(
-    { sessions: deps.sessions, policy: deps.sessionPolicy },
-    tx,
-    { userId, provider: EMAIL_CODE_PROVIDER, previousToken, now },
-  );
+): Promise<StartedSignIn> {
+  const started = await deps.start.begin(tx, {
+    userId,
+    provider: EMAIL_CODE_PROVIDER,
+    held: heldBefore(browser),
+    now,
+    via,
+  });
   // A way in of their own from now on: `pending` OIDC linking by email never takes them.
   await deps.identities.recordCodeSignIn(tx, userId);
   const self: Actor = { kind: 'user', id: userId, roles: [] };
@@ -487,10 +493,12 @@ async function startSession(
       data: { via: 'sign-in', provider: EMAIL_CODE_PROVIDER },
     });
   }
-  await deps.auditLog.record(tx, self, {
-    action: 'user.sign-in',
-    subject: { type: 'user', id: userId },
-    data: { method: 'email-code', provider: EMAIL_CODE_PROVIDER, via },
-  });
-  return token;
+  if ('token' in started) {
+    await deps.auditLog.record(tx, self, {
+      action: 'user.sign-in',
+      subject: { type: 'user', id: userId },
+      data: { method: 'email-code', provider: EMAIL_CODE_PROVIDER, via },
+    });
+  }
+  return started;
 }

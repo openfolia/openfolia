@@ -30,8 +30,6 @@ export class SignInSettings {
    * browser's `Sec-Fetch-Site` decides (`ActorGuard.sameOrigin`).
    */
   readonly origins: ReadonlySet<string>;
-  /** How long the browser keeps the session cookie: the longest a session may last, in seconds. */
-  readonly cookieSeconds: number;
 
   constructor(config: ConfigService<Env, true>) {
     const env = {
@@ -61,8 +59,6 @@ export class SignInSettings {
       ...(publicUrl ? [new URL(publicUrl).origin] : []),
       ...(config.get('CCMS_EDITOR_ORIGINS', { infer: true }) ?? []),
     ]);
-    this.cookieSeconds =
-      config.get('CCMS_SESSION_MAX_HOURS', { infer: true }) * 3600;
   }
 
   /**

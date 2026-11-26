@@ -36,7 +36,9 @@ export type SessionAuthentication =
  * with the roles they hold now, so a role change applies from the next
  * request, and so does a deactivation or a sign-out. Nothing is cached. A
  * session past a limit is ended. A failing store rejects (a 5xx), never a
- * refusal. Records the request's time, at most once a minute.
+ * refusal. Records the request's time, at most once a minute; not a
+ * `background` one's (#378: what an open tab asks by itself), so a session
+ * nobody uses reaches its idle time.
  */
 @Injectable()
 export class AuthenticateSessionAction implements UnguardedAction {
@@ -50,7 +52,13 @@ export class AuthenticateSessionAction implements UnguardedAction {
     private readonly users: UserDirectory,
   ) {}
 
-  async handle({ token }: { token: string }): Promise<SessionAuthentication> {
+  async handle({
+    token,
+    background = false,
+  }: {
+    token: string;
+    background?: boolean;
+  }): Promise<SessionAuthentication> {
     if (!SESSION_TOKEN_PATTERN.test(token)) {
       return { refused: 'invalid-session' };
     }
@@ -60,7 +68,7 @@ export class AuthenticateSessionAction implements UnguardedAction {
       return { refused: 'invalid-session' };
     }
     const now = this.now();
-    const limits = this.policyOfSessions.limits(
+    const limits = await this.policyOfSessions.limits(
       session.userId,
       session.provider,
     );
@@ -68,7 +76,8 @@ export class AuthenticateSessionAction implements UnguardedAction {
       session.createdAt.getTime() + limits.maxMs,
       session.lastSeenAt.getTime() + limits.idleMs,
     );
-    if (now >= endsAt) {
+    // Not `now >= endsAt`: limits that are no number would never end it.
+    if (!(now < endsAt)) {
       await this.sessions.revoke(hash);
       return { refused: 'session-expired' };
     }
@@ -79,6 +88,12 @@ export class AuthenticateSessionAction implements UnguardedAction {
       return user?.deactivatedAt
         ? { refused: 'user-deactivated' }
         : { refused: 'invalid-session' };
+    }
+    if (background) {
+      return {
+        actor,
+        session: { provider: session.provider, expiresAt: new Date(endsAt) },
+      };
     }
     if (now - session.lastSeenAt.getTime() >= TOUCH_EVERY_MS) {
       await this.sessions.touch(hash, new Date(now));

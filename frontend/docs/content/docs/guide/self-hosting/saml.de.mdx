@@ -1,0 +1,220 @@
+---
+title: 'Anmeldung mit SAML 2.0'
+description: 'Personen mit einem SAML-2.0-Identitätsanbieter am Editor anmelden lassen: die Adressen, die er braucht, die Einstellungen, Attribute, Gruppen und was nicht damit zusammengeht.'
+articleId: 'guide.self-hosting.saml'
+---
+
+Personen können sich am Editor bei jedem SAML-2.0-Identitätsanbieter anmelden, der Metadaten
+veröffentlicht, ob gehostet oder selbst betrieben. Nichts ist auf einen bestimmten Anbieter
+zugeschnitten. Die Anmeldeseite des Editors zeigt dann **Mit Single Sign-on (SAML) anmelden** oder
+den Namen des Anbieters, wenn er gesetzt ist. Die Anmeldung kann neben
+[OpenID Connect](/de/guide/self-hosting/oidc), Passwörtern und Codes per E-Mail an sein.
+
+## Die Adressen, die Ihr Identitätsanbieter braucht
+
+OpenFolia ist der **Service Provider**. Registrieren Sie ihn bei Ihrem Identitätsanbieter mit
+diesen Adressen:
+
+| Was                                                           | Bei einem gehosteten OpenFolia                        | Auf Ihrem eigenen Server                          |
+| ------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------- |
+| Metadaten des Service Providers (auch die Standard-Entity-ID) | `https://<team>.openfolia.com/api/auth/saml/metadata` | `https://docs.example.com/api/auth/saml/metadata` |
+| Assertion Consumer Service (ACS, Binding HTTP-POST)           | `https://<team>.openfolia.com/api/auth/saml/callback` | `https://docs.example.com/api/auth/saml/callback` |
+
+Die meisten Identitätsanbieter lesen die Metadaten des Service Providers von ihrer Adresse und
+füllen den Rest aus. Bei einem gehosteten OpenFolia senden Sie Ihrem Anbieter die Adresse (oder die
+Datei) der Metadaten Ihres Identitätsanbieters, das Format der Name-ID und die Namen der Attribute
+unten; er schaltet die Anmeldung ein.
+
+Die Beispiele verwenden den Editor unter `https://docs.example.com` und einen Identitätsanbieter
+unter `https://id.example.com`.
+
+## Den Identitätsanbieter einrichten
+
+In der Verwaltungskonsole des Identitätsanbieters:
+
+1. Legen Sie eine **SAML-Anwendung** an (manche Anbieter sagen Service Provider oder Relying Party),
+   aus der Metadaten-Adresse oben, oder tragen Sie Entity-ID und ACS-Adresse von Hand ein.
+2. **Signieren Sie die Assertion.** OpenFolia nimmt nur Antworten an, deren Assertion mit einem
+   Schlüssel aus den Metadaten des Identitätsanbieters signiert ist. Eine signierte Response darum
+   herum ist ebenfalls in Ordnung. Verschlüsselte Assertions werden nicht unterstützt.
+3. Senden Sie eine **Name-ID** (NameID) im Format **persistent**, oder legen Sie ein anderes fest:
+   siehe [Die Name-ID](#die-name-id).
+4. Fügen Sie die **Attribute** hinzu: die E-Mail-Adresse (`email`), den Anzeigenamen (`name`) und,
+   für Rollen aus Gruppen, die Gruppen (`groups`, ein Wert je Gruppe, alle in **einem** Attribut).
+   Andere Namen stellen Sie an der API ein. Eine Antwort mit zwei Attributen eines dieser Namen wird
+   abgelehnt, denn welches gilt, ließe sich nicht sagen. Ein Attribut je Gruppe wird deshalb nicht
+   unterstützt.
+5. Stellen Sie sicher, dass niemand beim Identitätsanbieter eine beliebige E-Mail-Adresse setzen
+   kann.
+
+## Die Name-ID
+
+An der Name-ID erkennt OpenFolia eine Person bei der nächsten Anmeldung wieder. Es erwartet **ein
+Format**, fordert es beim Identitätsanbieter an und lehnt eine Antwort in jedem anderen ab. Legen Sie
+es fest, bevor sich die erste Person anmeldet, und stellen Sie dasselbe beim Identitätsanbieter ein:
+
+| Format         | Wählen Sie es, wenn                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `persistent`   | der Identitätsanbieter es senden kann. Der Standard. Nach SAML bleibt sie gleich und geht nie an jemand anderen über.                   |
+| `emailAddress` | er nur E-Mail-Adressen senden kann. Die Name-ID dient dann auch als E-Mail-Adresse. Groß- und Kleinschreibung (A–Z) spielt keine Rolle. |
+| `unspecified`  | er einen Wert ohne Format oder mit diesem sendet, etwa eine Personalnummer. Der Wert zählt genau so, wie er gesendet wird.              |
+
+Bei einem gehosteten OpenFolia nennen Sie es Ihrem Anbieter. Auf Ihrem eigenen Server setzen Sie
+`CCMS_SAML_NAME_ID_FORMAT` (Standard `persistent`). `transient` ist nicht möglich: Der Wert ist bei
+jeder Anmeldung ein anderer.
+
+Das Format ist nur eine Bezeichnung. Prüfen Sie auch den Wert, der darunter gesendet wird:
+
+- **Eine Person, immer ein Wert.** Niemand darf ihn selbst ändern können, und er muss derselbe
+  sein, wie auch immer ihn jemand eintippt, wo die Anmeldung beginnt und was sie anfordert. Kann der
+  Identitätsanbieter immer ein Format senden, stellen Sie das ein. Wer mit einem anderen Wert ankommt, ist ein
+  neuer Benutzer, auch wenn der bisherige deaktiviert ist, beim Standard `CCMS_SAML_EMAIL_VERIFIED=false`. Bei `true` wird
+  eine erste Anmeldung mit der Adresse eines deaktivierten Benutzers abgelehnt
+  ([Der erste Admin und das Verknüpfen](#der-erste-admin-und-das-verknüpfen)). Eine E-Mail-Adresse oder ein Anmeldename
+  kann sich ändern, eine ID aus Ihrem Verzeichnis nicht.
+- **Ein Wert, immer eine Person.** Wer die E-Mail-Adresse oder den Anmeldenamen einer früheren Person
+  bekommt, kommt als deren Benutzer an, mit dessen Rollen. Vergibt Ihre Organisation Adressen oder
+  Namen neu, senden Sie eine ID aus Ihrem Verzeichnis.
+- **Qualifier.** Lassen Sie `NameQualifier` und `SPNameQualifier` weg, oder lassen Sie sie die
+  Entity-ID des Identitätsanbieters und die von OpenFolia nennen. Alles andere wird abgelehnt.
+- **Nur reiner Text:** höchstens 256 Zeichen, keine Leerzeichen oder Zeilenumbrüche um den Wert und
+  keine unsichtbaren Zeichen oder XML-Elemente darin. Eine Antwort mit solchen wird abgelehnt.
+- **Später nicht ändern.** Nach einer Änderung von `CCMS_SAML_NAME_ID_FORMAT` sind alle bei der
+  nächsten Anmeldung neue Benutzer, auch Personen, deren Benutzer deaktiviert ist, beim Standard `CCMS_SAML_EMAIL_VERIFIED=false`. Bei `true` wird die Adresse eines deaktivierten Benutzers
+  abgelehnt ([Der erste Admin und das Verknüpfen](#der-erste-admin-und-das-verknüpfen)).
+  Dasselbe gilt für
+  die Entity-ID des Identitätsanbieters, außer `CCMS_OIDC_LINK_BY_EMAIL=any` verbindet sie mit dem
+  Benutzer ihrer Adresse
+  ([Verknüpfen über die E-Mail-Adresse](/de/guide/self-hosting/oidc#verknüpfen-über-die-e-mail-adresse)). Bei einer anderen Entity-ID von OpenFolia (`CCMS_SAML_SP_ENTITY_ID` oder die
+  Adresse des Editors, aus der sie folgt) senden Identitätsanbieter meist andere persistente Werte: Dann
+  sind alle neue Benutzer, wie auch immer verknüpft wird.
+
+Wenn jemand ausscheidet, sperren Sie die Person auch beim Identitätsanbieter, nicht nur in OpenFolia.
+
+## Die API einrichten
+
+Auf Ihrem eigenen Server setzen Sie diese Werte in `deploy/api.env`:
+
+```sh
+CCMS_SAML_IDP_METADATA_URL=https://id.example.com/saml/metadata   # oder CCMS_SAML_IDP_METADATA_FILE
+CCMS_EDITOR_URL=https://docs.example.com/                          # die Adressen des Service Providers liegen darunter
+CCMS_SAML_NAME=Firmenkonto                                         # die Beschriftung der Schaltfläche (optional)
+```
+
+- **Die Metadaten** kommen von einer Adresse (`https://`, einfaches `http://` nur auf einem
+  Loopback-Host) oder aus einer Datei, die in den API-Container eingebunden ist
+  (`CCMS_SAML_IDP_METADATA_FILE`), nie beides. Eine Adresse wird einmal am Tag neu gelesen, ein
+  neues Signaturzertifikat des Identitätsanbieters gilt also innerhalb eines Tages. Starten Sie die
+  API neu, damit es sofort gilt. Auch beim Erzwingen von Single Sign-on wird eine Adresse neu gelesen; scheitert das oder ist sie ungültig, wird es abgelehnt. Metadaten aus einer Datei lassen sich so nicht prüfen. Die Metadaten nennen genau einen Identitätsanbieter, mit einer
+  Anmeldeadresse für HTTP-Redirect und mindestens einem Signaturzertifikat.
+- **Die Entity-ID** ist die Metadaten-Adresse, außer `CCMS_SAML_SP_ENTITY_ID` nennt eine andere,
+  für einen Identitätsanbieter, bei dem der Service Provider unter einem anderen Namen registriert
+  ist.
+- **Das Format der Name-ID** ist `CCMS_SAML_NAME_ID_FORMAT`: `persistent` (Standard),
+  `emailAddress` oder `unspecified` ([Die Name-ID](#die-name-id)).
+- **Die Attribute** sind `CCMS_SAML_EMAIL_ATTRIBUTE` (Standard `email`),
+  `CCMS_SAML_NAME_ATTRIBUTE` (Standard `name`) und `CCMS_SAML_GROUPS_ATTRIBUTE` (Standard
+  `groups`). Ein Name wie `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`
+  funktioniert ebenso.
+- **Das Editor-Image** leitet das Formular des Identitätsanbieters an die ACS-Adresse weiter, nur
+  an diese eine Adresse, ohne die Same-Origin-Prüfung seiner übrigen `/api`-Adressen. Ein eigener
+  Reverse Proxy davor muss einen seitenübergreifenden `POST` an `/api/auth/saml/callback` ebenfalls
+  durchlassen.
+
+Der [geheime Schlüssel](/de/guide/self-hosting/secret-key) der Instanz muss verfügbar sein: Er
+versiegelt das Cookie, das eine laufende Anmeldung hält. Dieses Cookie wird mit dem Formular des
+Identitätsanbieters mitgesendet (`SameSite=None`), deshalb muss der Editor über `https://`
+ausgeliefert werden.
+
+## Der erste Admin und das Verknüpfen
+
+Eine erste Anmeldung übernimmt einen vorhandenen Benutzer über die E-Mail-Adresse nur, wenn der
+Identitätsanbieter für die Adressen bürgt, die er sendet. SAML kennt dafür keinen Standard, deshalb
+ist es aus, bis Sie es einschalten:
+
+- **`CCMS_SAML_EMAIL_VERIFIED=false`** (Standard): Jede erste Anmeldung legt einen neuen Benutzer an,
+  auch die des ersten Admins, und eine hier deaktivierte Person, deren Name-ID sich ändert, kommt als
+  neuer Benutzer zurück: Nehmen Sie sie auch beim Identitätsanbieter heraus. Niemand kann ein vorhandenes Konto über eine E-Mail-Adresse
+  übernehmen, die er beim Identitätsanbieter selbst eingetragen hat (solange sie nicht die Name-ID
+  ist). Geben Sie Rollen über
+  [Gruppenzuordnungen](/de/guide/admin/group-mappings), oder legen Sie den ersten Admin auf anderem
+  Weg an ([Anmeldung mit Passwort](/de/guide/self-hosting/password-sign-in) oder Code per E-Mail) und
+  geben Sie dort dem neuen Benutzer die Admin-Rolle.
+- **`CCMS_SAML_EMAIL_VERIFIED=true`**: nur für einen Identitätsanbieter, bei dem niemand seine
+  Adresse selbst setzen kann. Dann setzen Sie, wie bei OpenID Connect, `CCMS_FIRST_ADMIN_EMAIL` vor
+  dem ersten Start auf Ihre Adresse beim Identitätsanbieter und melden sich mit der
+  SAML-Schaltfläche an, und `CCMS_OIDC_LINK_BY_EMAIL` entscheidet, ob eine erste Anmeldung einen
+  vorhandenen Benutzer mit dieser Adresse übernimmt: siehe
+  [Verknüpfen über die E-Mail-Adresse](/de/guide/self-hosting/oidc#verknüpfen-über-die-e-mail-adresse).
+  Eine erste Anmeldung mit einer Adresse, die ein deaktivierter Benutzer hat, wird abgelehnt, welche
+  NameID er jetzt auch hat.
+
+## Rollen aus Gruppen
+
+Die Werte des Gruppen-Attributs sind Gruppen, und eine Gruppenzuordnung gibt jedem Mitglied einer
+Gruppe eine Rolle, dieselben Zuordnungen wie bei OpenID Connect
+([Gruppenzuordnungen](/de/guide/admin/group-mappings)). Bei jeder Anmeldung gelten die Gruppen des
+Identitätsanbieters, wie sie sind.
+
+## Anmeldung, die beim Identitätsanbieter beginnt
+
+Standardmäßig muss eine Anmeldung an der Schaltfläche des Editors beginnen. Eine Antwort, die der
+Identitätsanbieter von sich aus sendet (etwa aus seinem App-Portal), wird mit **Die Anmeldung hat
+zu lange gedauert** abgelehnt, denn jeder könnte eine solche Antwort senden und eine Person an einem
+Konto anmelden, das nicht ihres ist. Setzen Sie `CCMS_SAML_IDP_INITIATED=true`, um sie anzunehmen;
+jede Antwort wird trotzdem nur einmal angenommen.
+
+## Abgelehnte Antworten
+
+Besteht eine Antwort eine Prüfung nicht, sagt die Anmeldeseite **Die Anmeldung hat nicht
+geklappt**, und im Protokoll der API steht, welche Prüfung es war. Bei einer Name-ID in einem anderen
+Format nennt das Protokoll das empfangene und das erwartete Format. Gleichen Sie eines an das andere
+an, **bevor** sich jemand angemeldet hat. Bei einem gehosteten OpenFolia fragen Sie Ihren Anbieter,
+was im Protokoll steht. Ein Identitätsanbieter, der das Format nicht senden kann,
+lehnt die Anmeldung unter Umständen selbst ab: Die Seite sagt dann, dass die Anmeldung beim
+Anmeldedienst abgebrochen oder abgelehnt wurde, und im Protokoll steht die Meldung des
+Identitätsanbieters, zum Beispiel `InvalidNameIDPolicy`.
+
+Für jede Antwort gelten diese Grenzen:
+
+- **Größe:** höchstens 64 KB XML in UTF-8, 1.500 Elemente und Texte, 1.000 Attribute (16 an einem
+  Element) und 32 Ebenen, ohne Kommentare, Verarbeitungsanweisungen, CDATA-Abschnitte oder DTD. Von
+  den Gruppen einer Person zählen die ersten 200. Ist jemand in mehr Gruppen oder eine Antwort zu
+  groß, senden Sie nur die, für die es eine Gruppenzuordnung gibt.
+- **Form:** Namen von Elementen und Attributen sind ASCII und beginnen mit einem Buchstaben, ein
+  schließendes Tag enthält nur seinen Namen, und nichts ist XHTML. Identitätsanbieter schreiben
+  Antworten ohnehin so.
+- **Werte:** höchstens 4.096 Zeichen in einem Attribut oder Namensraum und 8.192 in einem Text, und keines der
+  Zeilentrennzeichen U+0085, U+2028 und U+2029, nirgends in der Antwort: In einem Namen, einer
+  Gruppe oder einem anderen Attribut lehnen sie die Anmeldung ab. Senden Sie keine Fotos oder
+  anderen großen Attribute: Geben Sie nur die Attribute frei, die OpenFolia lesen soll.
+- **Zeit:** Das Prüfen einer Antwort darf 2 Sekunden dauern, getrennt vom übrigen Server. Eine
+  Anmeldung braucht wenige Millisekunden; eine Antwort, die länger braucht, wird abgelehnt, und das
+  Protokoll sagt, dass sie die Grenze überschritten hat. Kommen sehr viele Antworten auf einmal,
+  werden die über die 64 hinaus, die warten dürfen, nicht geprüft: Die Seite sagt, dass der
+  Anmeldedienst nicht erreichbar war, und ein späterer Versuch gelingt meist.
+- **Versuche:** Abgelehnte Antworten zählen je Client-Adresse, unter `CCMS_AUTH_FAILURES_MAX`
+  (Standard 20 pro Minute, getrennt von anderen fehlgeschlagenen Anmeldungen). Darüber sagt die
+  Anmeldeseite bis zum Ende des Zeitfensters **Zu viele Anmeldungen aus Ihrem Netzwerk sind
+  fehlgeschlagen**. Eine Anmeldung zählt nicht mehr, sobald sie gelingt. Hinter einem Proxy ist die Adresse die,
+  die `CCMS_TRUST_PROXY` die API glauben lässt:
+  [Reverse Proxy mit TLS](/de/guide/self-hosting/reverse-proxy).
+
+## Sitzungen und Abmelden
+
+Sitzungen dauern wie bei OpenID Connect ([Sitzungen](/de/guide/self-hosting/oidc#sitzungen)). Eine
+neue Anmeldung beendet die vorherige Sitzung des Browsers. Eine beim Identitätsanbieter begonnene
+Anmeldung kann das in der Regel nicht: Die frühere Sitzung bleibt dann gültig, bis sie abläuft.
+**Abmelden** beendet die Sitzung nur im Editor: Single Logout beim Identitätsanbieter wird nicht
+unterstützt.
+
+## Was nicht damit zusammengeht
+
+- **Demo-Modus:** Mit `CCMS_AUTH_MODE=demo` startet die API nicht, wenn SAML eingerichtet ist.
+- **Das gemeinsame Token:** Lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer, wie bei
+  OpenID Connect. Maschinelle Clients verwenden
+  [Tokens von Dienstkonten](/de/guide/integrations/authentication).
+- **Nicht unterstützt:** verschlüsselte Assertions, signierte Anmeldeanfragen, Single Logout und
+  das Binding HTTP-Artifact.
+
+Alle Einstellungen stehen in der [Referenz der Einstellungen](/de/reference/settings).

@@ -84,7 +84,8 @@
       "webhookManage": "Webhook-Abonnenten verwalten",
       "adminRoles": "Rollen anlegen, Personen zuweisen",
       "adminBranding": "Produktname, Logos und Farben festlegen",
-      "adminBackups": "Backups einrichten und den Backup-Schlüssel halten"
+      "adminBackups": "Backups einrichten und den Backup-Schlüssel halten",
+      "scimProvision": "Benutzer und Gruppen aus einem Verzeichnis bereitstellen (SCIM)"
     },
     "roles": {
       "list": {
@@ -115,7 +116,7 @@
       },
       "scope": {
         "hint": "Wo die Berechtigungen gelten. Eine leere Zeile steht für alles.",
-        "hintGlobal": "Wo die Berechtigungen gelten. Eine leere Zeile steht für alles. admin.roles, admin.branding und webhook.manage gelten immer überall.",
+        "hintGlobal": "Wo die Berechtigungen gelten. Eine leere Zeile steht für alles. admin.roles, admin.branding, webhook.manage und scim.provision gelten immer überall.",
         "all": "Alle",
         "moduleTypes": "Modultypen",
         "audience": "Zielgruppen",
@@ -218,15 +219,11 @@
         "edit": "Bearbeiten",
         "editLabel": "{name} bearbeiten",
         "deactivate": "Deaktivieren",
-        "deactivateLabel": "{name} deaktivieren",
         "reactivate": "Reaktivieren",
-        "reactivateLabel": "{name} reaktivieren",
         "invite": "Einladen",
-        "inviteLabel": "{name} einladen",
         "resetLink": "Zurücksetzen-Link",
-        "resetLinkLabel": "Einen Link zum Zurücksetzen des Passworts für {name} erstellen",
         "withdraw": "Einladung zurückziehen",
-        "withdrawLabel": "Die Einladung von {name} zurückziehen"
+        "menu": "Weitere Aktionen für {name}"
       },
       "created": "{name} hinzugefügt.",
       "saved": "{name} gespeichert.",
@@ -260,6 +257,13 @@
         "title": "Die Einladung von {name} zurückziehen?",
         "description": "Der Einladungslink funktioniert dann nicht mehr. Sie können {name} später wieder einladen.",
         "done": "Einladung von {name} zurückgezogen."
+      },
+      "secondFactor": {
+        "on": "Zwei-Faktor",
+        "reset": "Zwei-Faktor zurücksetzen",
+        "title": "Zwei-Faktor-Anmeldung von {name} zurücksetzen?",
+        "description": "Für ein verlorenes Telefon: {name} meldet sich dann ohne Code an und richtet sie neu ein, wo sie vorgeschrieben ist. Laufende Sitzungen gehen weiter. Vergewissern Sie sich, dass wirklich {name} darum bittet.",
+        "done": "Zwei-Faktor-Anmeldung von {name} zurückgesetzt."
       }
     },
     "groupMappings": {
@@ -446,6 +450,7 @@
         "savePointFailed": "Die Projekteinstellungen konnten nicht in die Überarbeitung übernommen werden"
       },
       "sections": {
+        "singleSignOn": "Single Sign-on und Sitzungen",
         "languages": "Sprachen",
         "moduleTypes": "Modultypen",
         "audiences": "Zielgruppen",
@@ -457,9 +462,11 @@
         "outputLabels": "Ausgabetexte",
         "headings": "Überschriften",
         "review": "Prüfung",
-        "manufacturer": "Hersteller"
+        "manufacturer": "Hersteller",
+        "secondFactor": "Zwei-Faktor-Anmeldung"
       },
       "hints": {
+        "singleSignOn": "Ob sich Personen über Ihren Anmeldedienst anmelden müssen und wie lange eine Sitzung dauert. Änderungen gelten sofort.",
         "languages": "Die Quellsprache, in der Inhalte geschrieben werden, und die Sprachen, in die übersetzt wird.",
         "moduleTypes": "Welche Arten von Modulen es gibt. Eingeschränkte Typen brauchen eine zusätzliche Abzeichnung; Module eines Textbaustein-Typs sind wiederverwendbare Formulierungen, beim Schreiben vorgeschlagen; eine abgeleitete Anleitung wie ein Sicherheitsblatt sammelt die Module der Sicherheitstypen, sofern ihre Regel keine anderen nennt.",
         "audiences": "Für wen Inhalte sind, von der offensten zur am stärksten eingeschränkten. Ein Modul ohne Zielgruppe erhält die letzte.",
@@ -471,7 +478,8 @@
         "outputLabels": "Die festen Texte, die Ausgaben drucken, je Sprache. Leere Felder nutzen den eingebauten Text, den sie zeigen.",
         "headings": "Wie tief Überschriften in einem Modul gehen dürfen.",
         "review": "Ob Autorinnen und Autoren ihre eigenen Überarbeitungen freigeben dürfen. Für ein kleines Team oder eine Person, die allein schreibt.",
-        "manufacturer": "Wer das Produkt herstellt und wie man ihn erreicht. Seitengestaltungen drucken diese Angaben auf die Rückseite und überall dort, wo ein Hersteller-Platzhalter steht."
+        "manufacturer": "Wer das Produkt herstellt und wie man ihn erreicht. Seitengestaltungen drucken diese Angaben auf die Rückseite und überall dort, wo ein Hersteller-Platzhalter steht.",
+        "secondFactor": "Wer sich mit einem Code vom Telefon anmelden muss, zusätzlich zum Passwort oder zum Code per E-Mail."
       },
       "add": {
         "moduleType": "Modultyp hinzufügen",
@@ -702,6 +710,62 @@
           "address": "Die Adresse hat höchstens {lines} Zeilen.",
           "website": "Die Website ist eine vollständige Adresse, die mit https://, http:// oder mailto: beginnt."
         }
+      },
+      "singleSignOn": {
+        "legend": "Wie sich Personen anmelden",
+        "optional": "Auf jedem Weg, den der Server anbietet",
+        "optionalHint": "Mit Passwort, Code per E-Mail oder über den Anmeldedienst. Der Standard.",
+        "required": "Nur mit Single Sign-on",
+        "requiredHint": "Über den Anmeldedienst und sonst nur mit dem Passwort des Notfallkontos.",
+        "note": "Service-Accounts arbeiten mit ihren Tokens weiter.",
+        "noProvider": "Auf diesem Server ist kein Anmeldedienst eingerichtet, daher lässt sich Single Sign-on nicht vorschreiben.",
+        "confirm": {
+          "title": "Single Sign-on vorschreiben?",
+          "description": "Wer sich anders angemeldet hat, wird sofort abgemeldet. Offene Einladungen, Passwort-Links und Codes per E-Mail enden und kommen nicht zurück.",
+          "descriptionNoAccount": "Wer sich anders angemeldet hat, wird sofort abgemeldet. Offene Einladungen, Passwort-Links und Codes per E-Mail enden und kommen nicht zurück. Es gibt kein Notfallkonto: Solange der Anmeldedienst ausfällt, kann sich niemand anmelden.",
+          "ok": "Single Sign-on vorschreiben"
+        },
+        "account": {
+          "title": "Notfallkonto",
+          "hint": "Die eine Person, die sich weiterhin mit ihrem Passwort anmelden kann, wenn Single Sign-on vorgeschrieben ist: aktiv, mit eigener Admin-Rolle und nicht nur über eine Gruppe. Jede Verwendung steht im Audit-Log, und alle Admins werden benachrichtigt.",
+          "none": "Kein Notfallkonto",
+          "noneHint": "Solange der Anmeldedienst ausfällt, kann sich niemand anmelden.",
+          "choose": "Person wählen",
+          "change": "Ändern",
+          "remove": "Notfallkonto entfernen",
+          "link": "Neuer Passwort-Link",
+          "search": "Personen suchen",
+          "failed": "Die Personen konnten nicht geladen werden.",
+          "retry": "Erneut versuchen",
+          "nobody": "Niemand gefunden.",
+          "more": "Es gibt mehr Personen: Tippen Sie, um jemanden zu finden.",
+          "notAdmin": "Keine Admin-Rolle",
+          "noPassword": "Hat kein Passwort"
+        },
+        "problems": {
+          "deactivated": "Dieses Konto ist deaktiviert, damit kommt niemand hinein. Wählen Sie ein anderes.",
+          "noAdminRole": "Diese Person hat keine eigene Admin-Rolle (eine über eine Gruppe zählt nicht), mit dem Konto kommt niemand hinein. Wählen Sie ein anderes.",
+          "noPassword": "Diese Person hat kein Passwort, mit dem Konto kommt niemand hinein. Solange Single Sign-on vorgeschrieben ist, bekommt sie auch keinen Link für ein neues. Wählen Sie ein anderes Konto.",
+          "passwordSignInOff": "Die Anmeldung mit Passwort ist auf diesem Server aus, mit dem Konto kommt niemand hinein."
+        },
+        "sessions": "Wie lange eine Sitzung dauert",
+        "idle": "Sitzung ohne Aktivität beenden nach",
+        "idleHint": "Was ein offener Tab von selbst abfragt, zählt nicht als Aktivität.",
+        "max": "Jede Sitzung beenden nach",
+        "maxHint": "Gezählt ab der Anmeldung, egal wie viel sie genutzt wird.",
+        "sessionsNote": "Eine Änderung gilt für laufende Sitzungen ab ihrer nächsten Anfrage. Eine längere Dauer bringt keine beendete Sitzung zurück.",
+        "serverSetting": "Einstellung des Servers ({span})"
+      },
+      "secondFactor": {
+        "legend": "Wer sich mit einem zweiten Faktor anmelden muss",
+        "optional": "Niemand: Alle entscheiden selbst",
+        "optionalHint": "Jede Person schaltet die Zwei-Faktor-Anmeldung in ihrem Kontomenü ein. Die Voreinstellung.",
+        "admins": "Administratoren",
+        "adminsHint": "Alle, die Rollen und Benutzer verwalten dürfen. Andere entscheiden selbst.",
+        "everyone": "Alle",
+        "everyoneHint": "Alle, die sich mit Passwort oder Code per E-Mail anmelden.",
+        "note": "Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein, vor allem anderen; laufende Sitzungen gehen weiter. Single Sign-on ist nicht erfasst: Ihr Anmeldedienst verlangt seinen eigenen zweiten Faktor.",
+        "setUpOwn": "Zwei-Faktor-Anmeldung einrichten"
       }
     },
     "variants": {
@@ -830,6 +894,7 @@
         "backupKey": "Backup-Schlüssel",
         "backupRequest": "Backup-Anforderung",
         "groupMapping": "Gruppenzuordnung",
+        "scimGroup": "Verzeichnisgruppe (SCIM)",
         "backupSettings": "Backup-Einstellungen",
         "route": "API-Route"
       },
@@ -907,6 +972,9 @@
         "storageLimitChange": "Speicherlimit geändert",
         "storageUploadRefused": "Upload abgelehnt: Speicherlimit erreicht",
         "settingsSelfApproval": "Eigene Freigabe geändert",
+        "scimGroupCreate": "Verzeichnisgruppe angelegt",
+        "scimGroupDelete": "Verzeichnisgruppe entfernt",
+        "scimGroupUpdate": "Verzeichnisgruppe geändert",
         "backupKeyCreate": "Backup-Schlüssel erstellt",
         "backupKeyRotate": "Backup-Schlüssel ersetzt",
         "backupSettingsUpdate": "Backup-Einstellungen geändert",
@@ -922,6 +990,7 @@
         "moduleRename": "Modul-ID geändert",
         "userEmailCodeRequested": "Anmeldecode angefordert",
         "userIdentityLink": "Anmeldekonto verknüpft",
+        "userIdentityUnlink": "Anmeldekonto getrennt",
         "userInvite": "Einladungslink erstellt",
         "userInviteWithdraw": "Einladung zurückgezogen",
         "userPasswordChanged": "Passwort geändert",
@@ -930,7 +999,19 @@
         "userSignIn": "Angemeldet",
         "userSignOut": "Abgemeldet",
         "apiRead": "Über die API gelesen",
-        "apiReadGap": "Lesezugriffe nicht einzeln aufgezeichnet"
+        "apiReadGap": "Lesezugriffe nicht einzeln aufgezeichnet",
+        "mailSent": "Benachrichtigung per E-Mail gesendet",
+        "notificationUnsubscribe": "Per E-Mail-Link abbestellt",
+        "settingsSecondFactor": "Zwei-Faktor-Vorgabe geändert",
+        "userSecondFactorOff": "Zwei-Faktor-Anmeldung ausgeschaltet",
+        "userSecondFactorOn": "Zwei-Faktor-Anmeldung eingeschaltet",
+        "userSecondFactorRecoveryCodes": "Neue Wiederherstellungscodes erstellt",
+        "userSecondFactorReset": "Zwei-Faktor-Anmeldung zurückgesetzt",
+        "settingsSingleSignOn": "Vorschrift zum Single Sign-on geändert",
+        "settingsBreakGlass": "Notfallkonto geändert",
+        "settingsSessionLimits": "Sitzungsdauer geändert",
+        "settingsSignInsEnded": "Nicht mehr erlaubte Sitzungen und Anmeldungen beendet",
+        "userBreakGlassSignIn": "Notfallanmeldung"
       },
       "export": {
         "label": "Exportieren",
@@ -1183,6 +1264,27 @@
           "title": "E-Mail ist ausgeschaltet: der geheime Schlüssel der Instanz fehlt",
           "text": "Ein Mailserver ist festgelegt ({host}), aber der Server hat keinen geheimen Schlüssel, um den Inhalt einer wartenden E-Mail zu versiegeln. Legen Sie CCMS_SECRET_KEY fest oder lassen Sie den Server eine Schlüsseldatei anlegen (CCMS_SECRET_KEY_GENERATE=true), und starten Sie ihn neu.",
           "link": "Wo der geheime Schlüssel festgelegt ist"
+        },
+        "failures": {
+          "none": "In den letzten 7 Tagen ist keine E-Mail fehlgeschlagen.",
+          "some": "{count, plural, one {# E-Mail ist} other {# E-Mails sind}} in den letzten 7 Tagen nach allen Wiederholungen fehlgeschlagen.",
+          "last": "Die neueste: {at}, {template}, {reason}.",
+          "templates": {
+            "test": "eine Test-E-Mail",
+            "notification": "eine Benachrichtigung",
+            "notification-digest": "eine tägliche Zusammenfassung",
+            "other": "eine E-Mail"
+          },
+          "reasons": {
+            "rejected": "vom Mailserver abgelehnt",
+            "unavailable": "Mailserver nicht erreichbar",
+            "tls": "keine sichere Verbindung",
+            "auth": "Anmeldung am Mailserver fehlgeschlagen",
+            "unreadable": "nicht lesbar (anderer geheimer Schlüssel)",
+            "off": "E-Mail wurde ausgeschaltet",
+            "other": "aus einem anderen Grund"
+          },
+          "audit": "Einzelheiten stehen im Protokoll."
         }
       },
       "jobs": {
@@ -2251,7 +2353,7 @@
       "already-approved": "Sie haben bereits freigegeben, was Sie an dieser Überarbeitung freigeben dürfen.",
       "head-moved": "Der Zweig hat sich nach dem Einreichen geändert, daher ging die Überarbeitung an den Autor zurück.",
       "not-approved": "Die Überarbeitung braucht noch Freigaben, bevor sie zusammengeführt werden kann.",
-      "approval-lapsed": "Eine nötige Freigabe zählt nicht mehr: der Person wurde die Rolle entzogen. Zur erneuten Prüfung zurückgeben.",
+      "approval-lapsed": "Eine nötige Freigabe zählt nicht mehr: die Person hat die Rolle nicht mehr oder wurde deaktiviert. Zur erneuten Prüfung zurückgeben.",
       "merge-conflict": "Die Überarbeitung steht in {total, plural, one {# Datei} other {# Dateien}} im Konflikt mit ihrer Basis. Der Autor löst das.",
       "base-moved": "Die Basis hat sich währenddessen weiter geändert. Versuchen Sie es erneut.",
       "base-missing": "Der Basiszweig existiert nicht mehr.",
@@ -2411,7 +2513,22 @@
       "maintenance-line-exists": "Diese Veröffentlichung hat bereits eine Wartungslinie.",
       "invalid-maintenance-branch": "Der Zweigname der Wartungslinie lässt sich für diese Veröffentlichung nicht bilden. Eine Administratorin oder ein Administrator kann das Muster ändern.",
       "sandbox-not-allowed": "{refused, select, uploads {In dieser Sandbox sind Uploads ausgeschaltet.} imports {In dieser Sandbox sind Importe ausgeschaltet.} templates {Vorlagen lassen sich in dieser Sandbox nicht ändern.} users {In dieser Sandbox können Sie keine Benutzer hinzufügen: Die Sandbox gehört nur Ihnen.} invitations {In dieser Sandbox gibt es keine Einladungen und Zurücksetzen-Links: Die Sandbox gehört nur Ihnen.} serviceAccounts {In dieser Sandbox gibt es keine Service-Accounts: Nichts von außen darf die Sandbox erreichen.} tokens {In dieser Sandbox können Sie keine Tokens ausstellen: Nichts von außen darf die Sandbox erreichen.} webhooks {Webhooks sind in dieser Sandbox ausgeschaltet: Nichts verlässt die Sandbox.} mail {E-Mail ist in dieser Sandbox ausgeschaltet: Nichts verlässt die Sandbox.} backups {Backups sind in dieser Sandbox ausgeschaltet.} other {Das ist in einer öffentlichen Sandbox ausgeschaltet.}}",
-      "sandbox-limit-reached": "{limit, select, moduleBytes {Das ist größer, als eine Sandbox speichert. Kürzen oder teilen Sie es.} commentLength {Ein Kommentar in einer Sandbox hat höchstens {max, number} Zeichen.} changeSets {Diese Sandbox hat so viele Überarbeitungen angelegt, wie sie darf ({max, number}).} modules {Diese Sandbox hat so viele Module angelegt, wie sie darf ({max, number}).} manuals {Diese Sandbox hat so viele Anleitungen angelegt, wie sie darf ({max, number}).} releasesPerHour {Diese Sandbox hat in dieser Stunde so viele Veröffentlichungen erstellt, wie sie darf ({max, number}). Versuchen Sie es später erneut.} writeBytes {Diese Sandbox hat so viel geschrieben, wie sie in ihrer Sitzung darf.} other {Diese Sandbox hat eine ihrer Grenzen erreicht.}}"
+      "sandbox-limit-reached": "{limit, select, moduleBytes {Das ist größer, als eine Sandbox speichert. Kürzen oder teilen Sie es.} commentLength {Ein Kommentar in einer Sandbox hat höchstens {max, number} Zeichen.} changeSets {Diese Sandbox hat so viele Überarbeitungen angelegt, wie sie darf ({max, number}).} modules {Diese Sandbox hat so viele Module angelegt, wie sie darf ({max, number}).} manuals {Diese Sandbox hat so viele Anleitungen angelegt, wie sie darf ({max, number}).} releasesPerHour {Diese Sandbox hat in dieser Stunde so viele Veröffentlichungen erstellt, wie sie darf ({max, number}). Versuchen Sie es später erneut.} writeBytes {Diese Sandbox hat so viel geschrieben, wie sie in ihrer Sitzung darf.} other {Diese Sandbox hat eine ihrer Grenzen erreicht.}}",
+      "unsubscribe-link-invalid": "Dieser Abbestell-Link ist nicht (mehr) gültig.",
+      "wrong-code": "Der Code stimmt nicht oder wurde schon verwendet. Warten Sie auf den nächsten.",
+      "second-factor-expired": "Diese Anmeldung ist abgelaufen. Melden Sie sich neu an.",
+      "second-factor-not-applicable": "Sie melden sich mit dem Konto Ihrer Organisation an: Dessen eigener zweiter Faktor schützt es.",
+      "second-factor-not-begun": "Dieses Einrichten ist abgelaufen. Beginnen Sie neu.",
+      "second-factor-off": "Die Zwei-Faktor-Anmeldung ist aus.",
+      "second-factor-on": "Die Zwei-Faktor-Anmeldung ist schon an.",
+      "second-factor-own": "Schalten Sie Ihre eigene im Kontomenü aus.",
+      "single-sign-on-required": "Diese Installation schreibt Single Sign-on vor.",
+      "single-sign-on-own-first": "Melden Sie sich zuerst über den Anmeldedienst an, oder wählen Sie das Konto, mit dem Sie angemeldet sind, als Notfallkonto, damit Sie sich nicht aussperren.",
+      "single-sign-on-unavailable": "Der Anmeldedienst antwortet nicht, daher lässt sich Single Sign-on gerade nicht vorschreiben. Versuchen Sie es später erneut.",
+      "break-glass-not-usable": "Dieses Konto kann nicht das Notfallkonto sein: Es muss ein aktives Admin-Konto mit Passwort sein.",
+      "session-limits-crossed": "Eine Sitzung kann nicht länger ungenutzt bleiben, als sie dauert. Wählen Sie eine kürzere Zeit ohne Aktivität oder eine längere Dauer.",
+      "second-factor-own-first": "Schalten Sie zuerst Ihre eigene Zwei-Faktor-Anmeldung ein, damit Sie sich nicht aussperren.",
+      "second-factor-unavailable": "Die Zwei-Faktor-Anmeldung ist nicht verfügbar: Der geheime Schlüssel des Servers (CCMS_SECRET_KEY) fehlt oder öffnet das Gespeicherte nicht. Wenden Sie sich an Ihre Administration."
     }
   },
   "theme": {
@@ -2895,6 +3012,9 @@
     "failure": "{what} {why}",
     "retry": "Erneut versuchen"
   },
+  "person": {
+    "deactivated": "deaktiviert"
+  },
   "demo": {
     "label": "Benutzer wechseln",
     "failed": "Die Demo-Benutzer konnten nicht geladen werden.",
@@ -2902,6 +3022,13 @@
     "switchFailed": "Wechsel zu {name} nicht möglich."
   },
   "signIn": {
+    "sessionEnded": "Ihre Sitzung ist beendet. Melden Sie sich an, um weiterzumachen.",
+    "emergency": {
+      "offer": "Notfallanmeldung",
+      "back": "Zurück zum Single Sign-on",
+      "intro": "Nur für das Notfallkonto. Seine Verwendung wird aufgezeichnet, und die Admins werden benachrichtigt.",
+      "noWayIn": "Single Sign-on ist vorgeschrieben, aber es ist kein Anmeldedienst eingerichtet. Wenden Sie sich an die Stelle, die diesen Server betreibt."
+    },
     "title": "Anmelden",
     "failed": "Der Server ist nicht erreichbar",
     "demo": {
@@ -2928,7 +3055,8 @@
       "intro": "Melden Sie sich mit dem Konto Ihrer Organisation an. Danach kommen Sie hierher zurück.",
       "label": "Anmeldeoptionen",
       "with": "Mit {name} anmelden",
-      "continue": "Weiter zur Anmeldung"
+      "continue": "Weiter zur Anmeldung",
+      "saml": "Mit Single Sign-on (SAML) anmelden"
     },
     "errors": {
       "provider-unavailable": "Der Anmeldedienst ist nicht erreichbar. Versuchen Sie es gleich noch einmal.",
@@ -2936,7 +3064,8 @@
       "sign-in-failed": "Die Anmeldung hat nicht geklappt. Versuchen Sie es noch einmal; schlägt sie weiter fehl, wenden Sie sich an Ihre Administration.",
       "sign-in-expired": "Die Anmeldung hat zu lange gedauert oder wurde in einem anderen Fenster begonnen. Melden Sie sich erneut an.",
       "user-deactivated": "Ihr Konto ist deaktiviert. Bitten Sie Ihre Administration, es wieder zu aktivieren.",
-      "sign-in-not-allowed": "Ihr Konto darf sich auf diesem Weg nicht anmelden. Wenden Sie sich an Ihre Administration."
+      "sign-in-not-allowed": "Ihr Konto darf sich auf diesem Weg nicht anmelden. Wenden Sie sich an Ihre Administration.",
+      "too-many-failed-attempts": "Zu viele Anmeldungen aus Ihrem Netzwerk sind fehlgeschlagen. Versuchen Sie es in einigen Minuten noch einmal."
     },
     "password": {
       "intro": "Melden Sie sich mit Ihrer E-Mail-Adresse und Ihrem Passwort an.",
@@ -3395,6 +3524,7 @@
       "signOff": "Abzeichnung: {type}",
       "approvedBy": "Freigegeben von {name}",
       "lapsed": "Freigegeben von {name}, zählt nicht mehr: die Rolle wurde entzogen",
+      "lapsedDeactivated": "Freigegeben von {name}, zählt nicht mehr",
       "waitingReviewer": "Wartet auf eine Prüferin oder einen Prüfer",
       "waitingApprover": "Wartet auf eine Abzeichnung für diesen Typ",
       "onceSubmitted": "Nötig, sobald sie eingereicht ist",
@@ -3402,6 +3532,7 @@
       "merge": "Zusammenführen",
       "merged": "In {ref} zusammengeführt",
       "readyToMerge": "Bereit zum Zusammenführen in {ref}",
+      "mergeBlocked": "Gesperrt, bis jede nötige Freigabe gilt. Eine Prüferin oder ein Prüfer gibt die Überarbeitung mit „Änderungen anfordern“ zurück.",
       "mergeLater": "In {ref}, sobald freigegeben",
       "afterTitle": "Nach der Freigabe",
       "afterMergeTitle": "Zusammengeführt",
@@ -3432,7 +3563,8 @@
       "commentRequired": "Schreiben Sie im Prüfkommentar, was sich ändern soll.",
       "reviewed": "Die Prüfung ist bereits erteilt.",
       "signedOff": "Alle Abzeichnungen sind bereits erteilt.",
-      "ownSignOff": "Sie haben diese Überarbeitung ganz oder teilweise geschrieben: Jemand anderes zeichnet sie ab."
+      "ownSignOff": "Sie haben diese Überarbeitung ganz oder teilweise geschrieben: Jemand anderes zeichnet sie ab.",
+      "approvalMissing": "Eine nötige Freigabe fehlt oder zählt nicht mehr. Eine Prüferin oder ein Prüfer gibt die Überarbeitung mit „Änderungen anfordern“ zurück, damit sie erneut freigegeben wird."
     },
     "done": {
       "submit": "„{title}“ zur Prüfung eingereicht.",
@@ -5298,6 +5430,7 @@
     "markFailedOffline": "Die Benachrichtigung konnte nicht als gelesen markiert werden: keine Verbindung.",
     "retry": "Erneut versuchen",
     "someone": {
+      "emergency": "Jemand",
       "author": "Eine Autorin oder ein Autor",
       "reviewer": "Eine Prüferin oder ein Prüfer",
       "publisher": "Eine Veröffentlicherin oder ein Veröffentlicher",
@@ -5321,7 +5454,8 @@
       "outputRecoveredUnnamed": "Ein PDF einer Veröffentlichung ist doch noch erstellt worden",
       "other": "Etwas ist passiert, das Sie betrifft",
       "backupFailed": "Ein Backup ist fehlgeschlagen",
-      "backupOverdue": "Seit mehr als {hours} Stunden kein gutes Backup"
+      "backupOverdue": "Seit mehr als {hours} Stunden kein gutes Backup",
+      "breakGlass": "{by} hat sich mit dem Notfallkonto angemeldet"
     }
   },
   "suggestion": {
@@ -6434,5 +6568,221 @@
       "description": "Die Sandbox wird nach der Sitzung gelöscht, es gibt also nichts aufzubewahren."
     },
     "mailOff": "E-Mail ist in dieser Sandbox ausgeschaltet: Nachrichten werden verworfen, keine wird gesendet."
+  },
+  "notificationSettings": {
+    "menu": "Benachrichtigungen",
+    "title": "Benachrichtigungen",
+    "lead": "Wählen Sie, wie Sie von jeder Art von Ereignis erfahren: nur in der Glocke, sofort per E-Mail oder in einer täglichen Zusammenfassung. Änderungen werden sofort gespeichert.",
+    "loading": "Ihre Benachrichtigungseinstellungen werden geladen …",
+    "loadFailed": "Ihre Benachrichtigungseinstellungen konnten nicht geladen werden",
+    "notSaved": "die letzte Änderung wurde zurückgenommen",
+    "emailOff": {
+      "title": "E-Mails sind für Sie aus",
+      "off": "Dieser Server versendet keine E-Mails (es ist kein Mailserver eingerichtet). Ihre Auswahl gilt weiter für die Glocke; E-Mails kommen, sobald eine Administratorin oder ein Administrator einen einrichtet.",
+      "no-secret-key": "Dieser Server kann noch keine E-Mails versenden: Ihm fehlt der geheime Schlüssel. Ihre Auswahl gilt weiter für die Glocke; E-Mails kommen, sobald einer hinterlegt ist.",
+      "no-public-url": "Dieser Server kann noch keine E-Mails versenden: Ihm fehlt eine öffentliche Adresse für die Links. Ihre Auswahl gilt weiter für die Glocke.",
+      "no-address": "Sie haben keine E-Mail-Adresse, daher kann Ihnen nichts gemailt werden. Bitten Sie eine Administratorin oder einen Administrator, eine einzutragen. Ihre Auswahl gilt weiter für die Glocke."
+    },
+    "everything": "Alle Benachrichtigungen",
+    "pauseEmail": {
+      "label": "Alle E-Mails pausieren",
+      "text": "Keine E-Mails, auch keine Zusammenfassung. Die Glocke zeigt weiter alles, und Ihre Auswahl unten bleibt erhalten. Admins bekommen weiter eine E-Mail, wenn das Notfallkonto verwendet wird."
+    },
+    "allOff": {
+      "label": "Alle Benachrichtigungen ausschalten",
+      "text": "Nichts in der Glocke und keine E-Mails, bis Sie das wieder einschalten. Nur für Sie. Admins erfahren weiter, wenn das Notfallkonto verwendet wird.",
+      "note": "Alle Ihre Benachrichtigungen sind aus. Sie erfahren nichts von Prüfungen, Veröffentlichungen oder Hinweisen, bis Sie das wieder einschalten."
+    },
+    "groups": {
+      "review": {
+        "title": "Prüfung und Ablauf",
+        "text": "Bitten um Prüfung und was mit Ihren Überarbeitungen geschieht."
+      },
+      "releases": {
+        "title": "Veröffentlichungen",
+        "text": "Neue Veröffentlichungen der Anleitungen, die Sie lesen."
+      },
+      "translations": {
+        "title": "Übersetzungen",
+        "text": "Die Übersetzungsimporte, die Sie gestartet haben."
+      },
+      "admin": {
+        "title": "Hinweise der Verwaltung",
+        "text": "Nur für Personen, die sich um Veröffentlichungen oder Backups kümmern. Admins erfahren immer, wenn das Notfallkonto verwendet wird."
+      }
+    },
+    "kinds": {
+      "changeSetSubmit": {
+        "label": "Eine Überarbeitung wird Ihnen zur Prüfung eingereicht",
+        "text": "Jemand bittet Sie, Änderungen zu prüfen."
+      },
+      "changeSetReturn": {
+        "label": "Ihre Überarbeitung wird mit Änderungswünschen zurückgegeben",
+        "text": "Eine Prüferin oder ein Prüfer bittet Sie um Änderungen."
+      },
+      "changeSetApprove": {
+        "label": "Ihre Überarbeitung wird freigegeben",
+        "text": "Ihre Änderungen wurden freigegeben."
+      },
+      "changeSetSignOff": {
+        "label": "Ihre Überarbeitung wird abgezeichnet",
+        "text": "Die letzte Freigabe liegt vor: Sie kann veröffentlicht werden."
+      },
+      "changeSetMerge": {
+        "label": "Ihre Überarbeitung wird veröffentlicht",
+        "text": "Ihre Änderungen sind jetzt Teil der Inhalte."
+      },
+      "lockBreak": {
+        "label": "Eine Administratorin oder ein Administrator hat eine Ihrer Sperren aufgehoben",
+        "text": "Andere können jetzt bearbeiten, was Sie gesperrt hatten."
+      },
+      "releasePublished": {
+        "label": "Eine Veröffentlichung ist erschienen",
+        "text": "Eine neue Veröffentlichung von Anleitungen, die Sie lesen."
+      },
+      "releaseOutputRecovered": {
+        "label": "Eine gescheiterte Datei einer Veröffentlichung ist doch fertig",
+        "text": "Ein PDF, das nicht erstellt werden konnte, ist doch fertig."
+      },
+      "translationImported": {
+        "label": "Ihr Übersetzungsimport ist abgeschlossen",
+        "text": "Die importierten Übersetzungen liegen in einer Überarbeitung."
+      },
+      "translationImportFailed": {
+        "label": "Ihr Übersetzungsimport ist fehlgeschlagen",
+        "text": "Die Datei konnte nicht gelesen oder übernommen werden."
+      },
+      "releaseOutputFailed": {
+        "label": "Eine Datei einer Veröffentlichung konnte nicht erstellt werden",
+        "text": "Ein PDF einer Veröffentlichung konnte nicht erstellt werden.",
+        "missed": "Sie erfahren nicht, wenn ein PDF einer Veröffentlichung nicht erstellt werden kann."
+      },
+      "backupFailed": {
+        "label": "Ein Backup ist fehlgeschlagen",
+        "text": "Der letzte Backup-Lauf wurde nicht abgeschlossen.",
+        "missed": "Sie erfahren nicht, wenn ein Backup fehlschlägt."
+      },
+      "backupOverdue": {
+        "label": "Seit längerer Zeit als erwartet kein gutes Backup",
+        "text": "Innerhalb der erwarteten Zeit ist kein Backup gelungen.",
+        "missed": "Sie erfahren nicht, wenn Backups nicht mehr gelingen."
+      }
+    },
+    "choices": {
+      "off": "Aus",
+      "app": "Nur in der App",
+      "email": "App + sofort per E-Mail",
+      "digest": "App + tägliche Zusammenfassung"
+    },
+    "adminMissed": {
+      "title": "Sie haben einen Hinweis der Verwaltung ausgeschaltet"
+    },
+    "digest": {
+      "title": "Tägliche Zusammenfassung",
+      "text": "Versand um {hour} ({zone}), nur an Tagen mit Neuigkeiten.",
+      "hour": "Uhrzeit",
+      "zone": "Zeitzone"
+    }
+  },
+  "unsubscribe": {
+    "title": "Abbestellen",
+    "heading": {
+      "ask": "Diese E-Mails abbestellen?",
+      "working": "Wird abbestellt …",
+      "done": "Sie haben abbestellt",
+      "nothing": "Nichts geändert",
+      "invalid": "Dieser Link funktioniert nicht",
+      "failed": "Etwas ist schiefgegangen"
+    },
+    "working": "Ihre Benachrichtigungseinstellungen werden geändert …",
+    "done": "Sie erhalten keine E-Mails mehr zu:",
+    "stillInApp": "In der Glocke sehen Sie diese Benachrichtigungen weiterhin. Sonst hat sich nichts geändert.",
+    "toSettings": "Benachrichtigungseinstellungen öffnen",
+    "invalid": "Dieser Abbestell-Link stammt nicht von diesem Server oder gilt nicht mehr. Sie können Ihre Benachrichtigungen im Editor ändern.",
+    "ask": "Sie erhalten keine E-Mails dieser Art mehr. In der Glocke sehen Sie diese Benachrichtigungen weiterhin, sonst ändert sich nichts.",
+    "askInApp": "In der Glocke sehen Sie diese Benachrichtigungen weiterhin, sonst ändert sich nichts.",
+    "confirm": "Diese E-Mails abbestellen",
+    "nothing": "Ihre Einstellungen senden diese E-Mails inzwischen auf einem anderen Weg, als dieser Link beendet. Das können Sie in Ihren Benachrichtigungseinstellungen ändern."
+  },
+  "secondFactor": {
+    "menu": "Zwei-Faktor-Anmeldung",
+    "locked": "Zu viele Fehlversuche. Versuchen Sie es in {minutes, plural, one {# Minute} other {# Minuten}} noch einmal.",
+    "code": {
+      "app": "Code aus Ihrer Authenticator-App",
+      "appHint": "Die sechs Ziffern, die die App gerade zeigt. Sie wechseln alle 30 Sekunden.",
+      "appMissing": "Geben Sie die sechs Ziffern ein, die die App zeigt.",
+      "recovery": "Wiederherstellungscode",
+      "recoveryHint": "Einer der zehn Codes, die Sie beim Einschalten der Zwei-Faktor-Anmeldung gesichert haben. Jeder funktioniert einmal.",
+      "recoveryMissing": "Geben Sie einen Ihrer Wiederherstellungscodes ein.",
+      "recoveryWrong": "Dieser Wiederherstellungscode stimmt nicht oder wurde schon verwendet."
+    },
+    "setUp": {
+      "scan": "Scannen Sie den Code mit einer Authenticator-App",
+      "qrCode": "QR-Code für {account}",
+      "key": "Scannen geht nicht? Geben Sie stattdessen diesen Schlüssel in der App ein:",
+      "keyLabel": "Schlüssel für die Authenticator-App",
+      "keyCopy": "Schlüssel kopieren",
+      "keyCopied": "Schlüssel kopiert",
+      "copyFailed": "Kopieren fehlgeschlagen. Markieren Sie den Schlüssel und kopieren Sie ihn.",
+      "openApp": "In einer App öffnen",
+      "enter": "Geben Sie den Code ein, den die App zeigt"
+    },
+    "recovery": {
+      "title": "Wiederherstellungscodes sichern",
+      "intro": "Jeder Code meldet Sie einmal ohne Ihr Telefon an. Sie werden nur jetzt angezeigt: Bewahren Sie sie sicher auf.",
+      "label": "Wiederherstellungscodes",
+      "copy": "Codes kopieren",
+      "copied": "Codes kopiert",
+      "copyFailed": "Kopieren fehlgeschlagen. Markieren Sie die Codes und kopieren Sie sie.",
+      "download": "Herunterladen",
+      "note": "Ohne Ihr Telefon und diese Codes kann Sie nur Ihre Administration wieder hereinlassen.",
+      "continue": "Gesichert, weiter",
+      "fileTitle": "Wiederherstellungscodes für {product} ({address})",
+      "fileName": "wiederherstellungscodes",
+      "leaveTitle": "Schließen, ohne die Codes zu sichern?",
+      "leaveDescription": "Sie werden nicht noch einmal angezeigt. Haben Sie sie nicht gesichert, können Sie nur neue erstellen.",
+      "leave": "Schließen",
+      "stay": "Zurück zu den Codes"
+    },
+    "signIn": {
+      "title": "Zwei-Faktor-Anmeldung",
+      "intro": "Noch ein Schritt zur Anmeldung als {email}.",
+      "useRecovery": "Wiederherstellungscode verwenden",
+      "useApp": "Code aus der App verwenden",
+      "setUpTitle": "Zwei-Faktor-Anmeldung einrichten",
+      "setUpIntro": "Sie ist hier vorgeschrieben. Richten Sie sie jetzt ein, um sich anzumelden: Sie brauchen eine Authenticator-App auf Ihrem Telefon.",
+      "turnOn": "Einschalten und anmelden",
+      "expiredTitle": "Melden Sie sich neu an",
+      "expiredHint": "Diese Anmeldung ist abgelaufen oder wurde schon verwendet. Beginnen Sie auf der Anmeldeseite neu.",
+      "lockedTitle": "Zu viele Fehlversuche",
+      "again": "Zurück zur Anmeldung",
+      "lockedHint": "Warten Sie {minutes, plural, one {# Minute} other {# Minuten}} und melden Sie sich dann neu an."
+    },
+    "dialog": {
+      "description": "Ein Code von Ihrem Telefon, zusätzlich zum Passwort oder zum Code per E-Mail.",
+      "offDescription": "Schützen Sie Ihr Konto mit einem Code aus einer Authenticator-App auf Ihrem Telefon, zusätzlich zum Passwort oder zum Code per E-Mail.",
+      "setUp": "Einrichten",
+      "setUpTitle": "Zwei-Faktor-Anmeldung einrichten",
+      "setUpDescription": "Beim Einschalten enden Ihre anderen Sitzungen; diese läuft weiter.",
+      "turnOn": "Einschalten",
+      "turnedOn": "Zwei-Faktor-Anmeldung ist an. {count, plural, =0 {Es liefen keine anderen Sitzungen.} one {# andere Sitzung beendet.} other {# andere Sitzungen beendet.}}",
+      "password": "Ihr Passwort",
+      "passwordMissing": "Geben Sie Ihr Passwort ein.",
+      "required": "Sie ist hier vorgeschrieben: Ohne sie richten Sie sie bei Ihrer nächsten Anmeldung ein.",
+      "requiredOn": "Sie ist hier vorgeschrieben. Schalten Sie sie aus, richten Sie sie bei Ihrer nächsten Anmeldung neu ein.",
+      "since": "An seit {date}",
+      "codesLeft": "{count, plural, =0 {Keine Wiederherstellungscodes übrig} one {# Wiederherstellungscode übrig} other {# Wiederherstellungscodes übrig}}",
+      "few": "Neue erstellen",
+      "newCodes": "Neue Wiederherstellungscodes",
+      "newCodesDescription": "Ihre früheren Wiederherstellungscodes funktionieren dann nicht mehr. Bestätigen Sie, dass Sie es sind.",
+      "turnOff": "Ausschalten",
+      "turnOffTitle": "Zwei-Faktor-Anmeldung ausschalten",
+      "turnOffDescription": "Sie melden sich dann ohne Code an, und Ihre Wiederherstellungscodes funktionieren nicht mehr. Bestätigen Sie, dass Sie es sind.",
+      "turnOffRequiredDescription": "Sie ist hier vorgeschrieben: Sie richten sie bei Ihrer nächsten Anmeldung neu ein. Ihre Wiederherstellungscodes funktionieren nicht mehr. Bestätigen Sie, dass Sie es sind.",
+      "turnedOff": "Zwei-Faktor-Anmeldung ist aus.",
+      "useCode": "Stattdessen einen Code verwenden",
+      "usePassword": "Stattdessen Ihr Passwort verwenden",
+      "done": "Gesichert"
+    }
   }
 }

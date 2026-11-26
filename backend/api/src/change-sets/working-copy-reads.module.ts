@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { AssetsModule } from '../assets/assets.module.js';
+import { ContentModule } from '../content/content.module.js';
 import { WorkingCopyInterceptor } from './api/working-copy-reads.js';
 import { OpenWorkingCopiesAction } from './core/actions/open-working-copies.action.js';
 import { WorkingCopyStore } from './core/working-copy-store.js';
@@ -14,7 +15,7 @@ import { DrizzleWorkingCopyStore } from './repos/drizzle-working-copy-store.js';
  */
 @Global()
 @Module({
-  imports: [AssetsModule],
+  imports: [AssetsModule, ContentModule],
   providers: [
     OpenWorkingCopiesAction,
     WorkingCopyInterceptor,

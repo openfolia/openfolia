@@ -184,6 +184,7 @@ export function withChildren(
     ns: element.ns,
     local: element.local,
     attributes,
+    declarations: element.declarations,
     children,
     line: element.line,
   };

@@ -16,7 +16,9 @@ import {
 } from '../../../access/core/allows.js';
 import { ActorAction } from '../../../access/core/policy.js';
 import { AssetUploads } from '../../../assets/core/asset-uploads.js';
+import { ConflictError } from '../../../base/core/errors.js';
 import { UnitOfWork } from '../../../base/core/unit-of-work.js';
+import { OpenSnapshotAction } from '../../../content/core/actions/open-snapshot.action.js';
 import type { ContentOverlay } from '../../../content/core/content-overlay.js';
 import type { ReadableContent } from '../../../content/core/readable-content.js';
 import { refusePastTemplateCaps } from '../../../content/core/template-caps.js';
@@ -25,7 +27,10 @@ import { LockSubject } from '../lock.js';
 import { draftReadPermission } from '../own-work.js';
 import type { DraftManifest, TemplateFileContent } from '../working-copy.js';
 import { authorsChangeSet } from '../working-copy-rules.js';
-import { WorkingCopyStore } from '../working-copy-store.js';
+import {
+  WorkingCopyStore,
+  type WorkingCopySize,
+} from '../working-copy-store.js';
 
 /** The 403's detail for another author's change set (to a reader of drafts). */
 export const LIVE_PREVIEW_AUTHOR_ONLY =
@@ -33,16 +38,28 @@ export const LIVE_PREVIEW_AUTHOR_ONLY =
 
 export interface OpenWorkingCopiesInput {
   readonly actor: Actor;
-  /** The change set's branch, opened for the actor (`OpenSnapshotAction`). */
-  readonly snapshot: ReadableContent;
   readonly changeSetId: string;
 }
 
 export interface OpenedWorkingCopies {
-  /** `snapshot` with the change set's working copies in place of their files. */
+  /** The change set's branch with its working copies in place of their files. */
   readonly content: ReadableContent;
   /** The images uploaded into the change set (SHA-256, hex): its author's to see. */
   readonly uploaded: ReadonlySet<string>;
+}
+
+/**
+ * A working copy that was there when the branch was opened is gone (a save point committed it, it
+ * was discarded): what is read now would be neither it nor the commit. Opening the working copies
+ * again reads the one that holds. Reaches a client (409) only when that happened again and again.
+ */
+export class WorkingCopyGoneError extends ConflictError {
+  constructor() {
+    super(
+      'working-copy-changed',
+      'A working copy was committed or discarded while it was read; read it again.',
+    );
+  }
 }
 
 /**
@@ -55,11 +72,14 @@ export interface OpenedWorkingCopies {
  *
  * A working copy stands in only where its author may read it as `GET
  * …/working-copy` would (`draftReadPermission`); `ReadableContent` filters
- * what is read through it again, as it filters files. `snapshot` must be
- * the change set's branch: its scope and conditions are what the drafts
- * are read with. Images: those a module the author may see on the branch
- * shows, and those uploaded into the change set; any other hash a draft
- * names is not read.
+ * what is read through it again, as it filters files. Images: those a
+ * module the author may see on the branch shows, and those uploaded into
+ * the change set; any other hash a draft names is not read.
+ *
+ * The order is what makes it one state (#935): the working copies are listed first, then the
+ * branch is opened. A save point moves the branch before it drops the copies it committed, so a
+ * copy not listed is on the branch opened; one listed and then gone is a `WorkingCopyGoneError`
+ * of the read, which opens again (`WorkingCopyInterceptor`).
  */
 @Injectable()
 export class OpenWorkingCopiesAction extends ActorAction<
@@ -73,13 +93,13 @@ export class OpenWorkingCopiesAction extends ActorAction<
     private readonly workingCopies: WorkingCopyStore,
     private readonly unit: UnitOfWork,
     private readonly uploads: AssetUploads,
+    private readonly openSnapshot: OpenSnapshotAction,
   ) {
     super();
   }
 
   protected async run({
     actor,
-    snapshot,
     changeSetId,
   }: OpenWorkingCopiesInput): Promise<OpenedWorkingCopies> {
     const changeSet = await authorsChangeSet(
@@ -88,17 +108,32 @@ export class OpenWorkingCopiesAction extends ActorAction<
       changeSetId,
       LIVE_PREVIEW_AUTHOR_ONLY,
     );
+    const sizes = await this.unit.run((tx) =>
+      this.workingCopies.sizesOf(tx, changeSet.id),
+    );
+    const snapshot = await this.openSnapshot.handle({
+      actor,
+      ref: changeSet.branch,
+      fresh: true,
+    });
     const config = await snapshot.config();
     const uploaded = new Set(
       (await this.uploads.list(changeSet.id)).map((u) => u.sha256),
     );
-    const overlay = this.overlayFor(actor, changeSet.id, config, uploaded);
+    const overlay = this.overlayFor(
+      actor,
+      changeSet.id,
+      sizes,
+      config,
+      uploaded,
+    );
     return { content: snapshot.withOverlay(overlay), uploaded };
   }
 
   private overlayFor(
     actor: Actor,
     changeSetId: string,
+    sizes: readonly WorkingCopySize[],
     config: ProjectConfig,
     uploaded: ReadonlySet<string>,
   ): ContentOverlay {
@@ -107,41 +142,40 @@ export class OpenWorkingCopiesAction extends ActorAction<
       // Names come from requests and from authored text: only a subject a lock could be on.
       const parsed = LockSubject.safeParse(subject);
       if (!parsed.success) return undefined;
-      return this.workingCopies.find(changeSetId, parsed.data);
+      const copy = await this.workingCopies.find(changeSetId, parsed.data);
+      // Asked only for what was listed.
+      if (!copy) throw new WorkingCopyGoneError();
+      return copy;
     };
     const templateText = async (templateId: string, path: string) => {
       const copy = await find({ type: 'template', templateId, path });
       const text = (copy?.content as TemplateFileContent | undefined)?.text;
       return typeof text === 'string' ? text : undefined;
     };
-    let subjects: ReturnType<ContentOverlay['subjects']> | undefined;
-    const listed = () =>
-      (subjects ??= this.unit
-        .run((tx) => this.workingCopies.sizesOf(tx, changeSetId))
-        .then((sizes) => ({
-          modules: sizes.flatMap(({ subject }) =>
-            subject.type === 'module'
-              ? [{ id: subject.moduleId, lang: subject.lang }]
-              : [],
-          ),
-          manuals: sizes.flatMap(({ subject }) =>
-            subject.type === 'manual' ? [subject.manualId] : [],
-          ),
-          designs: sizes.flatMap(({ subject }) =>
-            subject.type === 'design' ? [subject.designId] : [],
-          ),
-          templates: sizes.flatMap(({ subject, textBytes }) =>
-            subject.type === 'template'
-              ? [
-                  {
-                    templateId: subject.templateId,
-                    path: subject.path,
-                    size: textBytes ?? 0,
-                  },
-                ]
-              : [],
-          ),
-        })));
+    const subjects: Awaited<ReturnType<ContentOverlay['subjects']>> = {
+      modules: sizes.flatMap(({ subject }) =>
+        subject.type === 'module'
+          ? [{ id: subject.moduleId, lang: subject.lang }]
+          : [],
+      ),
+      manuals: sizes.flatMap(({ subject }) =>
+        subject.type === 'manual' ? [subject.manualId] : [],
+      ),
+      designs: sizes.flatMap(({ subject }) =>
+        subject.type === 'design' ? [subject.designId] : [],
+      ),
+      templates: sizes.flatMap(({ subject, textBytes }) =>
+        subject.type === 'template'
+          ? [
+              {
+                templateId: subject.templateId,
+                path: subject.path,
+                size: textBytes ?? 0,
+              },
+            ]
+          : [],
+      ),
+    };
     return {
       // The uploads are part of what the overlay shows (an image a draft names may arrive later):
       // a cache keyed by it never serves a render made before one of them was there.
@@ -149,8 +183,8 @@ export class OpenWorkingCopiesAction extends ActorAction<
         .update([...uploaded].sort().join(','))
         .digest('hex')}`,
       module: async (id, lang) => {
-        // One read of what there is (cached) before reading any draft: a manual names many modules.
-        const { modules } = await listed();
+        // Only what there is a draft of is read: a manual names many modules.
+        const { modules } = subjects;
         if (!modules.some((m) => m.id === id && m.lang === lang))
           return undefined;
         const copy = await find({ type: 'module', lang, moduleId: id });
@@ -163,7 +197,7 @@ export class OpenWorkingCopiesAction extends ActorAction<
           : undefined;
       },
       manifest: async (id) => {
-        const { manuals } = await listed();
+        const { manuals } = subjects;
         if (!manuals.includes(id)) return undefined;
         const copy = await find({ type: 'manual', manualId: id });
         if (!copy) return undefined;
@@ -180,7 +214,7 @@ export class OpenWorkingCopiesAction extends ActorAction<
       // Designs carry no audience (#390): every reader of the branch reads them, and the
       // author reads their own draft of one as `GET …/working-copy` does.
       pageDesign: async (id) => {
-        const { designs } = await listed();
+        const { designs } = subjects;
         if (!designs.includes(id)) return undefined;
         const copy = await find({ type: 'design', designId: id });
         if (!copy) return undefined;
@@ -193,7 +227,7 @@ export class OpenWorkingCopiesAction extends ActorAction<
       // read: past the caps the folder is refused (the repository's `InvalidContentError`), never
       // given in part, and no draft that would take the drafts past them is read.
       templateFiles: async (id) => {
-        const { templates } = await listed();
+        const { templates } = subjects;
         const files = new Map<string, string>();
         let bytes = 0;
         for (const { path, size } of templates.filter(
@@ -214,12 +248,12 @@ export class OpenWorkingCopiesAction extends ActorAction<
         return files;
       },
       templateFile: async (id, path) => {
-        const { templates } = await listed();
+        const { templates } = subjects;
         return templates.some((t) => t.templateId === id && t.path === path)
           ? templateText(id, path)
           : undefined;
       },
-      subjects: listed,
+      subjects: () => Promise.resolve(subjects),
       showsAsset: (hash) => Promise.resolve(uploaded.has(hash)),
     };
   }

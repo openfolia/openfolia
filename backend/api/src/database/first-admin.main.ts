@@ -13,6 +13,7 @@ import { firstAdminLocally } from '../access/repos/first-admin-locally.js';
 import { DatabaseEnv } from '../config/database-env.js';
 import { DEFAULT_INVITE_DAYS } from '../config/sign-in-env.js';
 import { StartupError } from '../config/startup-error.js';
+import { DrizzleInstallationSettingsStore } from '../settings/repos/drizzle-installation-settings-store.js';
 import { openDatabase } from './open-database.js';
 
 const USAGE = 'Usage: first-admin <email> [--name <name>] [--editor <url>]';
@@ -82,6 +83,16 @@ async function main(): Promise<void> {
       `${made.created ? 'Made' : 'Found'} the admin "${made.userId}". Open this link to choose their password; it works once, until ${made.expiresAt.toISOString()}, and is not shown again${base === null ? ' (put the editor’s address in front of it, or pass --editor)' : ''}:`,
     );
     console.log(made.link);
+    const { settings: installation } =
+      await new DrizzleInstallationSettingsStore(database).read();
+    if (
+      installation.singleSignOn !== 'optional' &&
+      installation.breakGlassUserId !== made.userId
+    ) {
+      console.error(
+        'This installation requires single sign-on: the link works only once it no longer does (allow-other-sign-ins), or for its emergency account.',
+      );
+    }
   } catch (error) {
     throw new StartupError(
       error instanceof Error ? error.message : String(error),

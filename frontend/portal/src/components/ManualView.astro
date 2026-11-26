@@ -1,0 +1,196 @@
+---
+import Base from '../layouts/Base.astro';
+import ReleaseSwitch from './ReleaseSwitch.astro';
+import { codeCopyConfig, fileSize, languageName, onlyAsText, textsFor } from '../lib/i18n.ts';
+import { switchHref, variantSwitches } from '../lib/variant-switch.ts';
+import {
+  contentsLabel,
+  formatDate,
+  href,
+  manualHtml,
+  manualPath,
+  olderPage,
+  releaseChoices,
+  snapshot,
+  tableOfContents,
+  type ManualPage,
+  type TocEntry,
+} from '../lib/site.ts';
+
+interface Props {
+  page: ManualPage;
+}
+
+// A manual page, in a product's newest release (`pages/[product]/[manual]/[variant]/`) or an
+// older one (`pages/[product]/v/[release]/[manual]/[variant]/`, #896).
+const { page } = Astro.props;
+const s = snapshot();
+const t = textsFor(s.lang);
+const { release, manual, variant } = page;
+const toc = tableOfContents(page);
+// Pagefind's filters and meta: the labels the search page's selects are named by.
+const variantFilters = Object.entries(variant.values).map(([attribute, value]) => {
+  const configured = s.variantAttributes.find((a) => a.id === attribute);
+  return {
+    label: configured?.label ?? attribute,
+    value: configured?.values.find((v) => v.id === value)?.label ?? value,
+  };
+});
+const path = manualPath(release, manual, variant);
+
+// The variant switch (src/lib/variant-switch.ts): an option that changes other attributes too
+// says so, and its link tells the page it opens, which then shows the notice.
+const switches = variantSwitches(manual.variants, variant, s.variantAttributes).map((choice) => ({
+  ...choice,
+  options: choice.options.map((option) => ({
+    ...option,
+    href: switchHref(href(manualPath(release, manual, option.target)), choice.attribute, option.changes),
+    hint: option.changes.length > 0 ? onlyAsText(t, s.lang, option.changes.map((c) => c.valueLabel)) : undefined,
+  })),
+}));
+const contents = contentsLabel(s.lang);
+// The release switch (#896): only when the product has more than one release built.
+const choices = releaseChoices(release, manual.id, variant);
+const older = olderPage(release, manual.id, variant);
+const Colophon = choices.length > 0 ? 'div' : 'p';
+const title = `${manual.title} (${variant.label})`;
+---
+
+<Base title={older ? t.releaseTitle.replace('{title}', () => title).replace('{revision}', () => release.revision) : title} path={path} product={release.product} guide={[release.productLabel, manual.title]} older={older}>
+  <div class="reading">
+    <aside class="reading__toc">
+      <details open data-toc class="toc-panel">
+        <summary>
+          <span>{contents}</span>
+          <svg class="chevron" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </summary>
+        <nav aria-label={contents} class="toc" data-toc-nav>
+          <span class="toc__marker" aria-hidden="true" data-toc-marker></span>
+          <ol>
+            {toc.map(function entry(item: TocEntry): unknown {
+              return (
+                <li>
+                  {item.href ? <a href={item.href}>{item.title}</a> : <span class="toc__group">{item.title}</span>}
+                  {item.entries.length > 0 && <ol>{item.entries.map(entry)}</ol>}
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+      </details>
+    </aside>
+    <article class="reading__main" aria-labelledby="manual-title">
+      <header class="masthead">
+        <nav class="crumbs" aria-label={t.breadcrumb}>
+          <ol>
+            <li><a href={href(`#product-${release.product}`)}>{release.productLabel}</a></li>
+          </ol>
+        </nav>
+        <h1 class:list={['masthead__title', { 'masthead__title--long': manual.title.length > 48 }]} id="manual-title">{manual.title}</h1>
+        <Colophon class="masthead__colophon">
+          {choices.length > 0 ? <ReleaseSwitch release={release} choices={choices} /> : <span class="nowrap">{t.latestRelease} {release.revision}</span>}
+          <span class="sep" aria-hidden="true">·</span>
+          <time datetime={release.publishedAt}>{formatDate(release.publishedAt, s.lang)}</time>
+          <span class="sep" aria-hidden="true">·</span>
+          <span class="nowrap">{languageName(s.lang)}</span>
+        </Colophon>
+        <div class="masthead__row">
+          {
+            switches.length > 0 ? (
+              <nav class="variants" aria-label={t.variants}>
+                {switches.map((choice, i) => (
+                  <div class="variants__choice" data-variant-attribute={choice.attribute} data-label={choice.label}>
+                    <span class="variants__label" id={`variant-${i}`}>{choice.label}</span>
+                    <ul aria-labelledby={`variant-${i}`}>
+                      {choice.options.map((option) => (
+                        <li>
+                          <a
+                            href={option.href}
+                            data-label={option.label}
+                            aria-current={option.current ? 'true' : undefined}
+                            class:list={{ 'has-hint': option.hint }}
+                          >
+                            <span class="variants__value">{option.label}</span>
+                            {/* The space keeps the hint a word of its own in the link's name. */}
+                            {option.hint && (
+                              <>
+                                {' '}
+                                <span class="variants__hint">{option.hint}</span>
+                              </>
+                            )}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+            ) : manual.variants.length > 1 ? (
+              <nav class="variants" aria-label={t.variants}>
+                <div class="variants__choice">
+                  <span class="variants__label" id="variant-0">{t.variant}</span>
+                  <ul aria-labelledby="variant-0">
+                    {manual.variants.map((other) => (
+                      <li>
+                        <a href={href(manualPath(release, manual, other))} aria-current={other.slug === variant.slug ? 'true' : undefined}>
+                          {other.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </nav>
+            ) : null
+          }
+          {
+            variant.pdf && (
+              <a class="pdf" href={href(`assets/${variant.pdf.file}`)} download={variant.pdf.name} type="application/pdf">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <span>{t.downloadPdf}</span>
+                <span class="pdf__size">{fileSize(variant.pdf.size, s.lang)}</span>
+              </a>
+            )
+          }
+        </div>
+        {
+          switches.length > 0 && (
+            <>
+              <p class="visually-hidden" role="status" data-switch-status></p>
+              <div class="switch-notice" data-switch-notice hidden>
+                <svg class="switch-notice__icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="M12 11v5.5M12 7.75v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+                <p class="switch-notice__text" aria-hidden="true" data-switch-notice-text></p>
+                <button class="switch-notice__close" type="button" aria-label={t.dismissNotice} data-switch-notice-close>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+                </button>
+              </div>
+            </>
+          )
+        }
+      </header>
+      <div class="manual-body" data-pagefind-body data-code-copy={JSON.stringify(codeCopyConfig(t))}>
+        {/* Read for the filters and meta only, never indexed as the page's text (#845). */}
+        <div hidden data-pagefind-ignore>
+          <span data-pagefind-filter={t.product}>{release.productLabel}</span>
+          {variantFilters.map((f) => <span data-pagefind-filter={f.label}>{f.value}</span>)}
+          <span data-pagefind-meta="title">{manual.title}</span>
+          <span data-pagefind-meta={t.product}>{release.productLabel}</span>
+          <span data-pagefind-meta={t.variant}>{variant.label}</span>
+        </div>
+        <Fragment set:html={manualHtml(page)} />
+      </div>
+    </article>
+  </div>
+  <script>
+    import { highlightCallouts, dismissTermOnEscape } from '@openfolia/render-html/browser';
+    import { startCodeCopy } from '../scripts/code-copy.ts';
+    import { startReading } from '../scripts/reading.ts';
+    import { showSwitchNotice } from '../scripts/variant-notice.ts';
+    import { startReleaseSwitch } from '../scripts/release-switch.ts';
+    showSwitchNotice(document);
+    startReleaseSwitch(document);
+    highlightCallouts(document);
+    dismissTermOnEscape(document);
+    startReading(document);
+    startCodeCopy(document);
+  </script>
+</Base>

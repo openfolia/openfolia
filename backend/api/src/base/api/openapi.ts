@@ -13,7 +13,10 @@ import {
 import { DELIVERY_DESCRIPTION } from './delivery-intro.js';
 import { JSON_API_EXTENSION } from './json-api.decorators.js';
 import { ErrorDocument, JSON_API } from './json-api.js';
+import { NAMES_PEOPLE_EXTENSION, People } from './people.js';
 import { PUBLIC_EXTENSION } from './public.decorator.js';
+import { ScimErrorDocument } from '../../scim/api/scim.resources.js';
+import { SCIM_EXTENSION, SCIM_MEDIA_TYPE } from '../../scim/api/scim-media.js';
 
 type Responses = Record<
   string,
@@ -30,11 +33,17 @@ const USER_HEADER_PARAMETER = {
   schema: { type: 'string' },
 };
 
-const errorResponse = (description: string) => ({
+const errorResponse = (description: string, scim = false) => ({
   description,
-  content: {
-    [JSON_API]: { schema: { $ref: '#/components/schemas/ErrorDocument' } },
-  },
+  content: scim
+    ? {
+        [SCIM_MEDIA_TYPE]: {
+          schema: { $ref: '#/components/schemas/ScimError' },
+        },
+      }
+    : {
+        [JSON_API]: { schema: { $ref: '#/components/schemas/ErrorDocument' } },
+      },
 });
 
 /**
@@ -86,6 +95,7 @@ function build(app: INestApplication, delivery: boolean): OpenAPIObject {
   });
 
   if (delivery) keepDeliveryOperations(document);
+  documentPeople(document);
 
   for (const path of Object.values(document.paths)) {
     for (const operation of Object.values(path)) {
@@ -100,7 +110,11 @@ function build(app: INestApplication, delivery: boolean): OpenAPIObject {
       const responses = operation.responses as Responses;
       const isJsonApi = Boolean(marked[JSON_API_EXTENSION]);
       delete marked[JSON_API_EXTENSION];
-      // Errors are JSON:API everywhere; successes on JSON:API routes.
+      // SCIM's routes (#377) answer and take SCIM's media type, errors too.
+      const isScim = Boolean(marked[SCIM_EXTENSION]);
+      delete marked[SCIM_EXTENSION];
+      const own = isScim ? SCIM_MEDIA_TYPE : JSON_API;
+      // Errors are JSON:API everywhere (SCIM's on SCIM's routes); successes on JSON:API routes.
       for (const [status, response] of Object.entries(responses)) {
         const content = response.content;
         if (!content) continue;
@@ -111,20 +125,20 @@ function build(app: INestApplication, delivery: boolean): OpenAPIObject {
           const [first] = Object.values(content);
           if (first === undefined) continue;
           for (const type of Object.keys(content)) delete content[type];
-          content[JSON_API] = first;
-        } else if (isJsonApi && content['application/json']) {
-          content[JSON_API] = content['application/json'];
+          content[own] = first;
+        } else if ((isJsonApi || isScim) && content['application/json']) {
+          content[own] = content['application/json'];
           delete content['application/json'];
         }
       }
-      // Request bodies on JSON:API routes are JSON:API too.
+      // Request bodies on JSON:API routes are JSON:API too (SCIM's, SCIM's).
       const body = (
         operation as {
           requestBody?: { content?: Responses[string]['content'] };
         }
       ).requestBody?.content;
-      if (isJsonApi && body?.['application/json']) {
-        body[JSON_API] = body['application/json'];
+      if ((isJsonApi || isScim) && body?.['application/json']) {
+        body[own] = body['application/json'];
         delete body['application/json'];
       }
       if (isJsonApi) {
@@ -140,21 +154,21 @@ function build(app: INestApplication, delivery: boolean): OpenAPIObject {
         operation.security = [];
         continue;
       }
-      responses['401'] ??= errorResponse('Missing or wrong API token.');
+      responses['401'] ??= errorResponse('Missing or wrong API token.', isScim);
       if (delivery) continue;
       const unknownUser = 'Demo mode: `X-Ccms-User` names no user.';
       const forbidden = responses['403'];
       if (forbidden) {
         forbidden.description = `${forbidden.description ?? ''} Or: ${unknownUser}`;
       } else {
-        responses['403'] = errorResponse(unknownUser);
+        responses['403'] = errorResponse(unknownUser, isScim);
       }
       const headerRefused = '`X-Ccms-User` sent while demo mode is off.';
       const badRequest = responses['400'];
       if (badRequest) {
         badRequest.description = `${badRequest.description ?? ''} Or: ${headerRefused}`;
       } else {
-        responses['400'] = errorResponse(headerRefused);
+        responses['400'] = errorResponse(headerRefused, isScim);
       }
       operation.parameters = [
         ...((operation.parameters as unknown[] | undefined) ?? []),
@@ -165,8 +179,60 @@ function build(app: INestApplication, delivery: boolean): OpenAPIObject {
   document.components ??= {};
   document.components.schemas ??= {};
   document.components.schemas['ErrorDocument'] ??= toOpenApi(ErrorDocument);
+  if (!delivery) {
+    document.components.schemas['ScimError'] ??= toOpenApi(ScimErrorDocument);
+  }
   if (delivery) pruneSchemas(document);
   return document;
+}
+
+/**
+ * `meta.people` in the documents of the routes marked `@NamesPeople()` (the JSON:API interceptor
+ * adds it to each), so no resource repeats it. Such a document is one for marked routes only.
+ */
+function documentPeople(document: OpenAPIObject): void {
+  type Schema = {
+    properties?: Record<string, Schema>;
+    required?: string[];
+    type?: string;
+  };
+  const schemas = (document.components?.schemas ?? {}) as Record<
+    string,
+    Schema
+  >;
+  const named = new Map<string, boolean>();
+  for (const path of Object.values(document.paths)) {
+    for (const operation of Object.values(path)) {
+      if (!operation?.responses) continue;
+      const marked = Boolean(operation[NAMES_PEOPLE_EXTENSION]);
+      delete operation[NAMES_PEOPLE_EXTENSION];
+      for (const [status, response] of Object.entries(
+        operation.responses as Responses,
+      )) {
+        if (!status.startsWith('2')) continue;
+        for (const media of Object.values(response.content ?? {})) {
+          const ref = (media as { schema?: { $ref?: string } }).schema?.$ref;
+          const name = ref && SCHEMA_REF.exec(ref)?.[1];
+          if (!name) continue;
+          if ((named.get(name) ?? marked) !== marked) {
+            throw new Error(
+              `${name} is the document of a route marked @NamesPeople() and of one that is not.`,
+            );
+          }
+          named.set(name, marked);
+        }
+      }
+    }
+  }
+  const people = toOpenApi(People) as Schema;
+  for (const [name, marked] of named) {
+    const schema = schemas[name];
+    if (!marked || !schema?.properties) continue;
+    const meta = (schema.properties['meta'] ??= { type: 'object' });
+    meta.properties = { ...meta.properties, people };
+    meta.required = [...(meta.required ?? []), 'people'];
+    schema.required = [...new Set([...(schema.required ?? []), 'meta'])];
+  }
 }
 
 /**

@@ -15,6 +15,12 @@ export const SESSION_COOKIE = '__Host-openfolia-session';
  */
 export const SIGN_IN_COOKIE = '__Host-openfolia-sign-in';
 
+/**
+ * The cookie holding a sign-in whose second step is open (#611, `PendingSignIns`): it binds the
+ * step to the browser that gave the first factor. Never a session: the guard does not read it.
+ */
+export const SECOND_FACTOR_COOKIE = '__Host-openfolia-second-factor';
+
 /** What a sign-in's sealed cookie is bound to (with the provider's ID). */
 export const SIGN_IN_SEAL_CONTEXT = 'sign-in:v1';
 
@@ -37,7 +43,14 @@ export function cookieOf(req: Request, name: string): string | undefined {
   return found === '' ? undefined : found;
 }
 
-const ATTRIBUTES = 'Path=/; Secure; HttpOnly; SameSite=Lax';
+const ATTRIBUTES = 'Path=/; Secure; HttpOnly';
+
+/**
+ * A cookie's `SameSite`: `Lax` (the default: sent on a top-level navigation here, not with a
+ * cross-site form), or `None` for the sign-in kept for a provider that posts its answer back
+ * from its own site (SAML's HTTP-POST binding, #376).
+ */
+export type SameSite = 'Lax' | 'None';
 
 /** Sets the cookie `name` (its value cookie-safe already) for `maxAgeSeconds`, or for the browser's session. */
 export function setCookie(
@@ -45,14 +58,22 @@ export function setCookie(
   name: string,
   value: string,
   maxAgeSeconds?: number,
+  sameSite: SameSite = 'Lax',
 ): void {
   res.append(
     'Set-Cookie',
-    `${name}=${value}; ${ATTRIBUTES}${maxAgeSeconds === undefined ? '' : `; Max-Age=${maxAgeSeconds}`}`,
+    `${name}=${value}; ${ATTRIBUTES}; SameSite=${sameSite}${maxAgeSeconds === undefined ? '' : `; Max-Age=${maxAgeSeconds}`}`,
   );
 }
 
 /** Removes the cookie `name` from the browser. */
-export function clearCookie(res: Response, name: string): void {
-  res.append('Set-Cookie', `${name}=; ${ATTRIBUTES}; Max-Age=0`);
+export function clearCookie(
+  res: Response,
+  name: string,
+  sameSite: SameSite = 'Lax',
+): void {
+  res.append(
+    'Set-Cookie',
+    `${name}=; ${ATTRIBUTES}; SameSite=${sameSite}; Max-Age=0`,
+  );
 }

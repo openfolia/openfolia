@@ -18,10 +18,64 @@ describe('portal settings', () => {
       audience: 'public',
       languages: undefined,
       releases: undefined,
+      releasesPerProduct: 1,
+      olderNoindex: true,
       outDir: '/work/dist',
       basePath: '/',
       branding: true,
     });
+  });
+
+  it('reads how many releases per product, and the older pages’ noindex (#896)', () => {
+    expect(
+      readSettings(
+        settingsOf({
+          CCMS_PORTAL_RELEASES_PER_PRODUCT: ' 3 ',
+          CCMS_PORTAL_OLDER_NOINDEX: 'off',
+        }),
+        '/work',
+      ),
+    ).toMatchObject({ releasesPerProduct: 3, olderNoindex: false });
+    expect(
+      readSettings(
+        settingsOf({ CCMS_PORTAL_RELEASES_PER_PRODUCT: '20' }),
+        '/work',
+      ).releasesPerProduct,
+    ).toBe(20);
+  });
+
+  it('reads the start page and the portal’s own address (#897)', () => {
+    const read = (over: Record<string, string>) =>
+      readSettings(settingsOf(over), '/work');
+    expect(read({})).toMatchObject({
+      start: undefined,
+      portalOrigin: undefined,
+    });
+    expect(
+      read({
+        CCMS_PORTAL_START: 'internal-start, portal-start',
+        CCMS_PORTAL_URL: 'https://docs.example.com',
+      }),
+    ).toMatchObject({
+      start: ['internal-start', 'portal-start'],
+      portalOrigin: 'https://docs.example.com',
+    });
+    expect(
+      read({
+        CCMS_PORTAL_URL: 'http://docs.example.com:8090/manuals',
+        CCMS_PORTAL_BASE_PATH: '/manuals/',
+      }).portalOrigin,
+    ).toBe('http://docs.example.com:8090');
+    for (const CCMS_PORTAL_START of ['Start', '../start', 'a b', 'a,B'])
+      expect(() => read({ CCMS_PORTAL_START })).toThrow(SettingsError);
+    for (const CCMS_PORTAL_URL of [
+      'docs.example.com',
+      'ftp://docs.example.com',
+      'https://docs.example.com/other/',
+      'https://user@docs.example.com',
+      'https://docs.example.com/?q',
+    ])
+      expect(() => read({ CCMS_PORTAL_URL })).toThrow('CCMS_PORTAL_URL: the');
   });
 
   it('turns the branding off', () => {
@@ -78,6 +132,21 @@ describe('portal settings', () => {
     [{ CCMS_PORTAL_OUT_DIR: '/' }, 'CCMS_PORTAL_OUT_DIR'],
     [{ CCMS_PORTAL_LANGUAGES: 'en,de,EN' }, 'differ only in case'],
     [{ CCMS_PORTAL_BRANDING: 'yes' }, 'CCMS_PORTAL_BRANDING: on or off'],
+    [{ CCMS_PORTAL_RELEASES_PER_PRODUCT: '0' }, 'from 1 to 20'],
+    [{ CCMS_PORTAL_RELEASES_PER_PRODUCT: '21' }, 'from 1 to 20'],
+    [{ CCMS_PORTAL_RELEASES_PER_PRODUCT: '2.5' }, 'from 1 to 20'],
+    [{ CCMS_PORTAL_RELEASES_PER_PRODUCT: 'all' }, 'from 1 to 20'],
+    [
+      {
+        CCMS_PORTAL_RELEASES_PER_PRODUCT: '2',
+        CCMS_PORTAL_RELEASES: '0193a8d0-0000-7000-8000-000000000001',
+      },
+      'not with CCMS_PORTAL_RELEASES',
+    ],
+    [
+      { CCMS_PORTAL_OLDER_NOINDEX: 'no' },
+      'CCMS_PORTAL_OLDER_NOINDEX: on or off',
+    ],
   ])('refuses %o', (over, message) => {
     expect(() => readSettings(settingsOf(over), '/work')).toThrow(
       SettingsError,

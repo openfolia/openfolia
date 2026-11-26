@@ -449,6 +449,41 @@
       "when": 1795594253593,
       "tag": "0063_audit_read_events",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795618892855,
+      "tag": "0064_saml_seen_assertions",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1795629980703,
+      "tag": "0065_scim",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1795632827194,
+      "tag": "0066_notification_emails",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1795640546237,
+      "tag": "0067_second_factors",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795642886091,
+      "tag": "0068_enforced_sso",
+      "breakpoints": true
     }
   ]
 }

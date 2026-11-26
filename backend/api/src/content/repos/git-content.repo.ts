@@ -83,6 +83,10 @@ export class GitContentRepo
     return this.repo.git.refs();
   }
 
+  override forgetListings(): void {
+    this.repo.git.forgetListings();
+  }
+
   override releases() {
     return this.repo.git.tagsNewestFirst();
   }

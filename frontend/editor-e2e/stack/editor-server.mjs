@@ -52,9 +52,17 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+/**
+ * SAML's assertion consumer service (#376): the identity provider's page posts its answer here
+ * from its own site, so the origin check cannot apply; never with the token, as the editor's
+ * nginx has it (`deploy/docker/editor/nginx.conf`).
+ */
+const SAML_ACS = '/api/auth/saml/callback';
+
 /** `/api/...` to the API, the prefix taken off and the token put in. */
 function proxy(req, res) {
-  const refusal = crossSiteRefusal(req);
+  const acs = req.method === 'POST' && req.url === SAML_ACS;
+  const refusal = acs ? undefined : crossSiteRefusal(req);
   if (refusal) {
     res.writeHead(403, { 'Content-Type': 'application/vnd.api+json' });
     res.end(JSON.stringify(refusal));
@@ -62,7 +70,7 @@ function proxy(req, res) {
   }
   const headers = { ...req.headers, host: api.host };
   delete headers.authorization;
-  if (token) headers.authorization = `Bearer ${token}`;
+  if (token && !acs) headers.authorization = `Bearer ${token}`;
   const upstream = request(
     {
       hostname: api.hostname,
@@ -152,8 +160,14 @@ function foreignRequest(req) {
   if (!OWN_HOSTS.has(req.headers.host ?? '')) return 'host';
   // A read changes nothing (and `/api` reads keep the proxy's own origin check); a write must
   // come from this server's own page.
+  // SAML's answer is posted from the identity provider's site (`SAML_ACS`, the token kept out).
   const origin = req.headers.origin;
-  if (origin === undefined || req.method === 'GET' || req.method === 'HEAD') {
+  if (
+    origin === undefined ||
+    req.method === 'GET' ||
+    req.method === 'HEAD' ||
+    (req.method === 'POST' && req.url === SAML_ACS)
+  ) {
     return undefined;
   }
   try {

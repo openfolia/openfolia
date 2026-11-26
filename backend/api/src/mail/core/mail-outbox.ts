@@ -26,6 +26,12 @@ export interface MailRequest<N extends MailTemplateName> {
   readonly params: MailParams<N>;
   /** The person's language, when known (`de`, `de-AT`); else the installation's. */
   readonly language?: string | null;
+  /**
+   * What `mail.sent` and `mail.failed` record of it besides its template (#884: a notification
+   * email's recipient, by user ID, and its kinds): IDs and names, never an address or text.
+   * Absent: nothing is recorded when it is sent.
+   */
+  readonly audit?: Readonly<Record<string, string | readonly string[]>>;
 }
 
 /** A queued email. */
@@ -71,6 +77,17 @@ export class MailOutbox {
     return this.enabled && this.settings.publicUrl !== null;
   }
 
+  /**
+   * Why an email with links cannot be sent now (#884, what a person's notification settings
+   * say): `off` (no mail server, or a public sandbox), `no-secret-key`, `no-public-url`; null
+   * when it can.
+   */
+  get linksUnavailable(): 'off' | 'no-secret-key' | 'no-public-url' | null {
+    if (this.sandbox.on || this.settings.state === 'off') return 'off';
+    if (this.settings.state === 'no-secret-key') return 'no-secret-key';
+    return this.settings.publicUrl === null ? 'no-public-url' : null;
+  }
+
   async queue<N extends MailTemplateName>(
     tx: Transaction,
     request: MailRequest<N>,
@@ -100,6 +117,7 @@ export class MailOutbox {
         JSON.stringify(params),
         mailParamsContext(id),
       ),
+      auditData: request.audit ?? null,
     });
     await this.jobs.enqueue(SEND_MAIL, { messageId: id }, { key: id, tx });
     return { id, language };

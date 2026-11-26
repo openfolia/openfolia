@@ -8,7 +8,7 @@ import { modulesOf } from './modules.ts';
  * pages render the resolved manuals with `@openfolia/render-html` themselves, so the only HTML that
  * reaches the site is the renderer's, escaped by construction.
  */
-export const SNAPSHOT_FORMAT = 2;
+export const SNAPSHOT_FORMAT = 3;
 
 /** A language tag this build writes as a folder and an attribute (`en`, `de-AT`, `zh-Hant`). */
 export const LANGUAGE_TAG = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$/;
@@ -142,6 +142,36 @@ export const SnapshotRelease = z.object({
 });
 export type SnapshotRelease = z.infer<typeof SnapshotRelease>;
 
+/**
+ * An older release of a product (#896): built beside its newest, under
+ * `<product>/v/<segment>/`. The segment is its revision in lowercase where that is a safe path
+ * segment and unique among the product's, else its ID.
+ */
+export const SnapshotOlderRelease = SnapshotRelease.extend({
+  segment: Segment,
+});
+export type SnapshotOlderRelease = z.infer<typeof SnapshotOlderRelease>;
+
+/** The path segment under `<product>/` that leads to a product's older releases. */
+export const OLDER_SEGMENT = 'v';
+
+/** An older release's search index, in its folder: no manual ID starts with `_` (`SEGMENT`). */
+export const OLDER_INDEX = '_pagefind';
+
+/**
+ * The authored start page (#897): an ordinary manual of the content repository, named by the
+ * build's settings, as its release has it. It is the start page instead of a manual: it has no
+ * page of its own and is in no list. `variants` holds its first variant only.
+ */
+export const SnapshotStart = z.object({
+  manual: SnapshotManual,
+  /** The portal's own address (`CCMS_PORTAL_URL`): links to it are links to this site's pages. Null: not set. */
+  origin: z.string().nullable(),
+  /** The path the languages' sites are served under on it. */
+  basePath: z.string(),
+});
+export type SnapshotStart = z.infer<typeof SnapshotStart>;
+
 export const Snapshot = z.object({
   format: z.literal(SNAPSHOT_FORMAT),
   /** The audience the build is for, and the configured levels in order (least restricted first). */
@@ -156,7 +186,14 @@ export const Snapshot = z.object({
   ),
   safetySymbols: z.array(Label),
   outputLabels: z.record(z.string(), z.unknown()),
+  /** Each product's newest built release: the addresses readers have always used. */
   releases: z.array(SnapshotRelease),
+  /** The products' older built releases, newest first (#896); empty by default. */
+  older: z.array(SnapshotOlderRelease).default([]),
+  /** Whether the older releases' pages carry `noindex` (`CCMS_PORTAL_OLDER_NOINDEX`). */
+  olderNoindex: z.boolean().default(true),
+  /** The authored start page (#897); null: the default one. */
+  start: SnapshotStart.nullable().default(null),
   /** `sha256` (hex) → its file under `assets/`. */
   assets: z.record(Hash, z.string().regex(ASSET_FILE)),
   /** Safety symbol ID → its file under `assets/` (always a raster image). */
@@ -175,7 +212,7 @@ export function linkedFiles(snapshot: Snapshot): Set<string> {
   if (b)
     for (const file of [b.logoLight, b.logoDark, b.mark, b.favicon, b.appIcon])
       if (file !== null) files.add(file);
-  for (const release of snapshot.releases)
+  for (const release of [...snapshot.releases, ...snapshot.older])
     for (const manual of release.manuals)
       for (const variant of manual.variants)
         if (variant.pdf) files.add(variant.pdf.file);
@@ -210,45 +247,73 @@ export function parseSnapshot(value: unknown): Snapshot {
     const rank = audienceRank(snapshot.audiences, audience);
     return rank === undefined || rank > limit;
   };
-  for (const release of snapshot.releases)
-    for (const manual of release.manuals) {
-      if (above(manual.audience))
-        throw new Error(
-          `manual ${manual.id} is for "${manual.audience}", above the build's audience "${snapshot.audience}"`,
-        );
-      for (const variant of manual.variants) {
-        for (const [module, audience] of Object.entries(
-          variant.moduleAudiences,
-        ))
-          if (above(audience))
-            throw new Error(
-              `module ${module} in manual ${manual.id} is for "${audience}", above the build's audience "${snapshot.audience}"`,
-            );
-        for (const module of modulesOf(variant.resolved))
-          if (!Object.hasOwn(variant.moduleAudiences, module))
-            throw new Error(
-              `module ${module} in manual ${manual.id} has no checked audience`,
-            );
-      }
-      // An update guide's steps show its first variant's modules: each one checked there.
-      if (manual.guide) {
-        const checked = manual.variants[0]?.moduleAudiences ?? {};
-        for (const step of manual.guide.steps) {
-          if (!Object.hasOwn(checked, step.module))
-            throw new Error(
-              `step ${step.id} in update guide ${manual.id} has no checked audience`,
-            );
-          if (step.level !== null && above(step.level))
-            throw new Error(
-              `step ${step.id} in update guide ${manual.id} is for the level "${step.level}", above the build's audience "${snapshot.audience}"`,
-            );
-        }
-        for (const level of manual.guide.levels)
-          if (above(level.id))
-            throw new Error(
-              `update guide ${manual.id} offers the level "${level.id}", above the build's audience "${snapshot.audience}"`,
-            );
-      }
+  // One newest release per product: its pages are the product's addresses.
+  const products = new Set<string>();
+  for (const release of snapshot.releases) {
+    if (products.has(release.product))
+      throw new Error(`two newest releases of ${release.product}`);
+    products.add(release.product);
+  }
+  // An older release sits beside its product's newest, at addresses of its own.
+  const segments = new Set<string>();
+  for (const release of snapshot.older) {
+    const newest = snapshot.releases.find((r) => r.product === release.product);
+    if (!newest)
+      throw new Error(
+        `release ${release.id} is an older release of ${release.product}, which has no newest release in the build`,
+      );
+    // `<product>/v/<segment>/` is the older release's page: a newest manual `v` would share it.
+    if (newest.manuals.some((m) => m.id === OLDER_SEGMENT))
+      throw new Error(
+        `manual ${OLDER_SEGMENT} of ${release.product} would share its address with the product's older releases (${release.product}/${OLDER_SEGMENT}/…)`,
+      );
+    const key = `${release.product}/${release.segment}`;
+    if (segments.has(key)) throw new Error(`two older releases at ${key}`);
+    segments.add(key);
+  }
+  const manuals = [...snapshot.releases, ...snapshot.older].flatMap(
+    (release) => release.manuals,
+  );
+  // The start page is checked as any manual is, and is none of the site's manuals itself.
+  const start = snapshot.start?.manual;
+  if (start && manuals.some((m) => m.id === start.id && !m.guide))
+    throw new Error(`manual ${start.id} is both the start page and a manual`);
+  for (const manual of start ? [...manuals, start] : manuals) {
+    if (above(manual.audience))
+      throw new Error(
+        `manual ${manual.id} is for "${manual.audience}", above the build's audience "${snapshot.audience}"`,
+      );
+    for (const variant of manual.variants) {
+      for (const [module, audience] of Object.entries(variant.moduleAudiences))
+        if (above(audience))
+          throw new Error(
+            `module ${module} in manual ${manual.id} is for "${audience}", above the build's audience "${snapshot.audience}"`,
+          );
+      for (const module of modulesOf(variant.resolved))
+        if (!Object.hasOwn(variant.moduleAudiences, module))
+          throw new Error(
+            `module ${module} in manual ${manual.id} has no checked audience`,
+          );
     }
+    // An update guide's steps show its first variant's modules: each one checked there.
+    if (manual.guide) {
+      const checked = manual.variants[0]?.moduleAudiences ?? {};
+      for (const step of manual.guide.steps) {
+        if (!Object.hasOwn(checked, step.module))
+          throw new Error(
+            `step ${step.id} in update guide ${manual.id} has no checked audience`,
+          );
+        if (step.level !== null && above(step.level))
+          throw new Error(
+            `step ${step.id} in update guide ${manual.id} is for the level "${step.level}", above the build's audience "${snapshot.audience}"`,
+          );
+      }
+      for (const level of manual.guide.levels)
+        if (above(level.id))
+          throw new Error(
+            `update guide ${manual.id} offers the level "${level.id}", above the build's audience "${snapshot.audience}"`,
+          );
+    }
+  }
   return snapshot;
 }

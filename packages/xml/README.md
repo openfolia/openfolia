@@ -14,7 +14,8 @@ const root = readXml(text); // throws XmlReadError with a `reason`
   fetched and nothing expands (no billion laughs).
 - **Bounded** by `XmlLimits` (`DEFAULT_XML_LIMITS`: length, element depth 64, nodes, attributes
   per element; at most `MAX_PREFIXES` namespace prefixes in scope).
-- XML 1.0 characters only (`isXmlChar`); namespaces resolved (`XML_NAMESPACE` for `xml:`);
+- XML 1.0 characters only (`isXmlChar`); namespaces resolved (`XML_NAMESPACE` for `xml:`), and
+  each element's own declarations given apart (`declarations`, by prefix, `''` for `xmlns`);
   comments and processing instructions skipped, CDATA as text. A document declaring another
   encoding than UTF-8 is `unsupported-encoding`. Each refusal has a stable `reason`
   (`XmlRefusal`).

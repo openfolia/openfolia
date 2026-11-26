@@ -15,6 +15,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
@@ -159,6 +160,7 @@ interface Shown {
 export class CoverPreviewComponent {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly title = input.required<string>();
   readonly variants = input<readonly VariantSummary[]>([]);
@@ -213,7 +215,7 @@ export class CoverPreviewComponent {
         }
       });
     });
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyRef.onDestroy(() => {
       this.runs++;
       clearTimeout(this.timer);
       this.show(null);
@@ -272,10 +274,13 @@ export class CoverPreviewComponent {
     }
     try {
       return await firstValueFrom(
-        this.http.get(
-          `${this.base}/manuals/${e(request.manualId)}/variants/${e(request.variant)}/${e(request.lang)}/pdf/pages/${page}.png`,
-          { params, headers: { Accept: 'image/png' }, responseType: 'blob' },
-        ),
+        this.http
+          .get(
+            `${this.base}/manuals/${e(request.manualId)}/variants/${e(request.variant)}/${e(request.lang)}/pdf/pages/${page}.png`,
+            { params, headers: { Accept: 'image/png' }, responseType: 'blob' },
+          )
+          // Closed: nobody waits for the page any more (#935).
+          .pipe(takeUntilDestroyed(this.destroyRef)),
       );
     } catch (error) {
       if (

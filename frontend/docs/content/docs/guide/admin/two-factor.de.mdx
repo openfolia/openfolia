@@ -1,0 +1,51 @@
+---
+title: 'Zwei-Faktor-Anmeldung vorschreiben'
+description: 'Einen zweiten Faktor für alle oder für Admins vorschreiben, ihn bei verlorenem Telefon zurücksetzen, und was er erfasst.'
+articleId: 'guide.admin.two-factor'
+---
+
+Die [Zwei-Faktor-Anmeldung](/de/guide/getting-started/two-factor) schaltet jede Person selbst in
+ihrem Kontomenü ein. Sie können sie auch vorschreiben.
+
+## Vorschreiben
+
+1. Schalten Sie zuerst Ihre eigene Zwei-Faktor-Anmeldung ein, wenn Sie sich mit einem Passwort oder
+   einem Code per E-Mail anmelden. Ohne sie wird die Einstellung abgelehnt, damit Sie sich nicht
+   aussperren.
+2. Wählen Sie **Verwaltung**, dann **Projekteinstellungen**.
+3. Wählen Sie unter **Installation** **Zwei-Faktor-Anmeldung**.
+4. Wählen Sie unter **Wer sich mit einem zweiten Faktor anmelden muss** eines davon:
+   - **Niemand: Alle entscheiden selbst**: die Voreinstellung.
+   - **Administratoren**: alle, deren Rollen `admin.roles` enthalten.
+   - **Alle**: alle, die sich mit Passwort oder Code per E-Mail anmelden.
+
+Die Wahl wird sofort gespeichert und gilt für die ganze Installation. Laufende Sitzungen gehen
+weiter. Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein und kann vorher nichts
+anderes tun.
+
+## Was sie erfasst
+
+| Weg zur Anmeldung                             | Fragt nach dem Code                       |
+| --------------------------------------------- | ----------------------------------------- |
+| Passwort                                      | Ja                                        |
+| Code per E-Mail und der Link in dieser E-Mail | Ja                                        |
+| Einladung und Link für ein neues Passwort     | Ja, nach dem neuen Passwort               |
+| Single Sign-on (OpenID Connect, SAML)         | Nein: Richten Sie es im Anmeldedienst ein |
+| Token eines Service-Accounts                  | Nein: Ein Token ist keine Person          |
+
+## Bei verlorenem Telefon zurücksetzen
+
+Wer weder das Telefon noch einen Wiederherstellungscode hat, kann sich nicht anmelden.
+
+1. Vergewissern Sie sich, dass wirklich diese Person darum bittet.
+2. Öffnen Sie **Verwaltung**, dann **Benutzer**. Personen mit eingeschalteter Zwei-Faktor-Anmeldung
+   sind mit **Zwei-Faktor** gekennzeichnet.
+3. Öffnen Sie das Menü am Ende ihrer Zeile, wählen Sie **Zwei-Faktor zurücksetzen** und bestätigen Sie.
+
+Die Person meldet sich dann ohne Code an und richtet sie neu ein, wo sie vorgeschrieben ist. Ihre
+eigene können Sie nicht zurücksetzen: Schalten Sie sie im Kontomenü aus oder fragen Sie einen
+anderen Admin.
+
+Das [Audit-Log](/de/guide/admin/audit-log) hält das Ein- und Ausschalten, neue
+Wiederherstellungscodes, ein Zurücksetzen und eine Änderung der Einstellung fest. Es enthält nie ein
+Geheimnis oder einen Code.

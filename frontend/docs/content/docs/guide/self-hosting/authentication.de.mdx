@@ -12,6 +12,7 @@ Anmeldeverfahren der Editor anbietet, wird an der API eingestellt:
 | E-Mail-Adresse und Passwort | standardmäßig an (`CCMS_PASSWORD_SIGN_IN`)                     | [Anmeldung mit Passwort](/de/guide/self-hosting/password-sign-in)                |
 | Ein Einmal-Code per E-Mail  | an, sobald E-Mail eingerichtet ist (`CCMS_EMAIL_CODE_SIGN_IN`) | [Anmeldung mit einem Code per E-Mail](/de/guide/self-hosting/email-code-sign-in) |
 | OpenID Connect              | `CCMS_OIDC_ISSUER` und seine Einstellungen                     | [OpenID Connect](/de/guide/self-hosting/oidc)                                    |
+| SAML 2.0                    | `CCMS_SAML_IDP_METADATA_URL` und seine Einstellungen           | [SAML 2.0](/de/guide/self-hosting/saml)                                          |
 
 Programme (Portale, Pipelines, Skripte) senden `Authorization: Bearer <token>`, das Token eines
 [Service-Accounts](/de/guide/admin/service-accounts), dessen Rollen nur das Nötige enthalten.

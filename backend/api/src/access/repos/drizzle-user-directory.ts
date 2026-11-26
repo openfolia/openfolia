@@ -27,6 +27,7 @@ import {
 } from '../core/user-directory.js';
 import { roleAssignments, roles, users } from './access.tables.js';
 import { signInLinks, userPasswords } from './passwords.tables.js';
+import { secondFactors } from './second-factors.tables.js';
 import { userIdentities } from './sign-in.tables.js';
 
 /**
@@ -149,6 +150,7 @@ const USER_COLUMNS = {
   // How the person signs in (#610).
   hasPassword: sql<boolean>`exists (select 1 from ${userPasswords} where ${userPasswords.userId} = ${users.id})`,
   hasIdentity: sql<boolean>`exists (select 1 from ${userIdentities} where ${userIdentities.userId} = ${users.id})`,
+  secondFactor: sql<boolean>`exists (select 1 from ${secondFactors} where ${secondFactors.userId} = ${users.id} and ${secondFactors.confirmedAt} is not null)`,
   inviteExpiresAt: sql<
     string | null
   >`(select ${signInLinks.expiresAt} from ${signInLinks} where ${signInLinks.userId} = ${users.id} and ${signInLinks.kind} = 'invite')`,
@@ -161,6 +163,7 @@ type UserRow = {
   deactivatedAt: Date | null;
   hasPassword: boolean;
   hasIdentity: boolean;
+  secondFactor: boolean;
   inviteExpiresAt: string | Date | null;
 };
 
@@ -168,6 +171,7 @@ type UserRow = {
 function asUser({
   hasPassword,
   hasIdentity,
+  secondFactor,
   inviteExpiresAt,
   ...user
 }: UserRow): Pick<User, 'id' | 'name' | 'email' | 'deactivatedAt' | 'signIn'> {
@@ -178,6 +182,7 @@ function asUser({
       provider: hasIdentity,
       inviteExpiresAt:
         inviteExpiresAt === null ? null : new Date(inviteExpiresAt),
+      secondFactor,
     },
   };
 }

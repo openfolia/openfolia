@@ -1,3 +1,4 @@
+import { sessionStart } from '../../../tests/fakes/fake-second-factors.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import pg from 'pg';
@@ -16,6 +17,10 @@ import {
   SignInWithEmailCodeAction,
   SignInWithEmailLinkAction,
 } from '../core/actions/email-code.action.js';
+import {
+  ChangePasswordAction,
+  PasswordSignInAction,
+} from '../core/actions/password-sign-in.action.js';
 import { SetPasswordWithLinkAction } from '../core/actions/sign-in-links.action.js';
 import {
   EmailCodeHasher,
@@ -24,6 +29,7 @@ import {
 } from '../core/email-codes.js';
 import { mintSignInLinkToken } from '../core/sign-in-links.js';
 import { PasswordAttempts } from '../core/password-attempts.js';
+import { PASSWORD_PROVIDER } from '../core/passwords.js';
 import { WaysIn } from '../core/ways-in.js';
 import { users } from './access.tables.js';
 import { DrizzleAccessAdmin } from './drizzle-access-admin.js';
@@ -36,6 +42,10 @@ import {
   DrizzleSessionStore,
   DrizzleUserIdentities,
 } from './drizzle-sign-in.js';
+import {
+  DrizzlePendingSignIns,
+  DrizzleSecondFactors,
+} from './drizzle-second-factors.js';
 import { emailSignInCodes } from './email-codes.tables.js';
 
 /**
@@ -102,6 +112,8 @@ describe.skipIf(!url)(
     let links: DrizzleSignInLinks;
     let passwords: DrizzlePasswordStore;
     let admin: DrizzleAccessAdmin;
+    let factors: DrizzleSecondFactors;
+    let pending: DrizzlePendingSignIns;
     /** Opens once the request has read the person; the test then lets it go on. */
     let read: () => void;
     let goOn: Promise<void>;
@@ -129,7 +141,9 @@ describe.skipIf(!url)(
       codes = new DrizzleEmailCodes(database);
       sessions = new DrizzleSessionStore(database);
       links = new DrizzleSignInLinks(database);
-      waysIn = new WaysIn(sessions, links, codes);
+      factors = new DrizzleSecondFactors(database);
+      pending = new DrizzlePendingSignIns(database);
+      waysIn = new WaysIn(sessions, links, codes, pending);
       // The request's read of the person, held open until the test lets it go on: the moment a
       // password change or a deactivation can run in between.
       admin = new DrizzleAccessAdmin(database);
@@ -150,6 +164,7 @@ describe.skipIf(!url)(
         mail,
         new DrizzleAuditLog(database),
         unit,
+        new FakeSessionPolicy(),
       );
     });
 
@@ -407,6 +422,15 @@ describe.skipIf(!url)(
       const policy = new FakeSessionPolicy();
       const audit = new DrizzleAuditLog(database);
       const identities = new DrizzleUserIdentities();
+      const startOf = (store: DrizzleSessionStore) =>
+        sessionStart({
+          sessions: store,
+          policy,
+          admin,
+          codes,
+          factors,
+          pending,
+        });
       const signIn = () =>
         how === 'code'
           ? new SignInWithEmailCodeAction(
@@ -415,7 +439,7 @@ describe.skipIf(!url)(
               codes,
               new NoBudget(),
               mail,
-              signInSessions,
+              startOf(signInSessions),
               policy,
               audit,
               unit,
@@ -428,7 +452,7 @@ describe.skipIf(!url)(
               codes,
               mail,
               admin,
-              signInSessions,
+              startOf(signInSessions),
               policy,
               audit,
               unit,
@@ -442,7 +466,7 @@ describe.skipIf(!url)(
           admin,
           setPasswords,
           new StoredShapeHasher(),
-          sessions,
+          startOf(sessions),
           policy,
           waysIn,
           audit,
@@ -459,6 +483,109 @@ describe.skipIf(!url)(
         ? { signedIn: a, set: b }
         : { signedIn: b, set: a };
     }
+
+    it('signs in with a password made anew (a rehash) while it is changed, without a deadlock (#611)', async () => {
+      const hasher = new StoredShapeHasher();
+      hasher.verify = async () => true;
+      hasher.needsRehash = () => true;
+      await unit.run(async (tx) =>
+        passwords.set(tx, 'pat', await hasher.hash('old')),
+      );
+      let goOn!: () => void;
+      const going = new Promise<void>((done) => (goOn = done));
+      let paused!: () => void;
+      const hasPaused = new Promise<void>((done) => (paused = done));
+      const gated = Object.create(passwords) as DrizzlePasswordStore;
+      gated.replaceIf = async (tx, userId, previous, next) => {
+        const replaced = await passwords.replaceIf(tx, userId, previous, next);
+        paused();
+        await going;
+        return replaced;
+      };
+      const audit = new DrizzleAuditLog(database);
+      const policy = new FakeSessionPolicy();
+      const start = sessionStart({
+        sessions,
+        policy,
+        admin,
+        codes,
+        factors,
+        pending,
+      });
+      const signIn = new PasswordSignInAction(
+        new FakePasswordSignIn(),
+        gated,
+        hasher,
+        start,
+        policy,
+        admin,
+        waysIn,
+        audit,
+        unit,
+      ).handle({ email: 'pat@example.org', password: 'old' });
+      await hasPaused;
+      const change = new ChangePasswordAction(
+        new FakePasswordSignIn(),
+        passwords,
+        hasher,
+        admin,
+        waysIn,
+        audit,
+        unit,
+      ).handle({
+        actor: { kind: 'user', id: 'pat', roles: [] },
+        currentPassword: 'old',
+        newPassword: 'a long new passphrase 42',
+      });
+      await pause(300);
+      goOn();
+      expect(await signIn).toMatchObject({ userId: 'pat' });
+      // The sign-in came first: it replaced the hash the change had checked, or was ended by it.
+      const changed = await change;
+      if (!('refused' in changed)) expect(changed.sessionsEnded).toBe(1);
+    });
+
+    it('turns a second factor on while a sign-in starts: it ends the session (#611)', async () => {
+      const at = new Date();
+      await unit.run((tx) => factors.begin(tx, 'pat', 'v1.sealed', at));
+      let goOn!: () => void;
+      const going = new Promise<void>((done) => (goOn = done));
+      let paused!: () => void;
+      const hasPaused = new Promise<void>((done) => (paused = done));
+      const gated = Object.create(sessions) as DrizzleSessionStore;
+      gated.create = async (tx, session) => {
+        paused();
+        await going;
+        return sessions.create(tx, session);
+      };
+      const started = unit.run((tx) =>
+        sessionStart({
+          sessions: gated,
+          policy: new FakeSessionPolicy(),
+          admin,
+          codes,
+          factors,
+          pending,
+        }).begin(tx, {
+          userId: 'pat',
+          provider: PASSWORD_PROVIDER,
+          held: {},
+          now: at.getTime(),
+        }),
+      );
+      await hasPaused;
+      const on = unit.run(async (tx) => {
+        await waysIn.holdPerson(tx, 'pat');
+        await factors.confirm(tx, 'pat', 'v1.sealed', new Date(), 1, [
+          'b'.repeat(64),
+        ]);
+        return waysIn.endWithoutSecondFactor(tx, 'pat');
+      });
+      await pause(300);
+      goOn();
+      expect(await started).toHaveProperty('token');
+      expect(await on).toBe(1);
+    });
 
     for (const how of ['code', 'link'] as const) {
       it(`signs in by ${how} while the invite sets a password, without a deadlock: the invite is closed (#660)`, async () => {

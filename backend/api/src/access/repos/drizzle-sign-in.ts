@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import {
   and,
   arrayContains,
-  asc,
   count,
   desc,
   eq,
@@ -34,10 +33,12 @@ import {
   type StoredSession,
 } from '../core/sessions.js';
 import { UserIdentities } from '../core/user-identities.js';
-import { roleAssignments, users } from './access.tables.js';
+import { GLOBAL_PERMISSIONS } from '../core/permissions.js';
+import { roleAssignments, roles, users } from './access.tables.js';
 import { userPasswords } from './passwords.tables.js';
 import { groupRoles, sessions, userIdentities } from './sign-in.tables.js';
 import { emailCodeSignIns } from './email-codes.tables.js';
+import { scimGroupMembers, scimGroups } from '../../scim/repos/scim.tables.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -330,16 +331,35 @@ export class DrizzleGroupMappings extends GroupMappings {
     return row?.total ?? 0;
   }
 
+  async groupsForRole(
+    tx: Transaction,
+    roleId: string,
+  ): Promise<readonly string[]> {
+    const rows = await drizzleOf(tx)
+      .select({ group: groupRoles.group })
+      .from(groupRoles)
+      .where(eq(groupRoles.roleId, roleId));
+    return rows.map((r) => r.group).sort();
+  }
+
   async usersInGroup(
     tx: Transaction,
     group: string,
   ): Promise<readonly string[]> {
-    const rows = await drizzleOf(tx)
+    const db = drizzleOf(tx);
+    const signedIn = await db
       .selectDistinct({ userId: userIdentities.userId })
       .from(userIdentities)
-      .where(arrayContains(userIdentities.groups, [group]))
-      .orderBy(asc(userIdentities.userId));
-    return rows.map((r) => r.userId);
+      .where(arrayContains(userIdentities.groups, [group]));
+    // And the members of the SCIM group of that name (#377).
+    const provisioned = await db
+      .select({ userId: scimGroupMembers.userId })
+      .from(scimGroupMembers)
+      .innerJoin(scimGroups, eq(scimGroups.id, scimGroupMembers.groupId))
+      .where(eq(scimGroups.displayName, group));
+    return [
+      ...new Set([...signedIn, ...provisioned].map((r) => r.userId)),
+    ].sort();
   }
 
   applyGroupRoles(tx: Transaction, userId: string): Promise<GroupRoleChange> {
@@ -349,7 +369,7 @@ export class DrizzleGroupMappings extends GroupMappings {
 
 /**
  * `GroupMappings.applyGroupRoles` in `db`: the roles the user's identities'
- * groups map to are held `via_groups`, the others not; a row neither
+ * groups and its SCIM groups (#377) map to are held `via_groups`, the others not; a row neither
  * direct nor through a group is removed. Answers what changed through groups.
  */
 export async function applyGroupRolesIn(
@@ -360,7 +380,18 @@ export async function applyGroupRolesIn(
     .selectDistinct({ roleId: groupRoles.roleId })
     .from(groupRoles)
     .where(
-      sql`${groupRoles.group} in (select unnest(${userIdentities.groups}) from ${userIdentities} where ${userIdentities.userId} = ${userId})`,
+      or(
+        sql`${groupRoles.group} in (select unnest(${userIdentities.groups}) from ${userIdentities} where ${userIdentities.userId} = ${userId})`,
+        // A SCIM group of that name the user is in (#377), for a role holding no global
+        // permission: a directory's token never makes an admin.
+        and(
+          sql`${groupRoles.group} in (select ${scimGroups.displayName} from ${scimGroups} join ${scimGroupMembers} on ${scimGroupMembers.groupId} = ${scimGroups.id} where ${scimGroupMembers.userId} = ${userId})`,
+          sql`${groupRoles.roleId} not in (select ${roles.id} from ${roles} where ${roles.permissions} && array[${sql.join(
+            [...GLOBAL_PERMISSIONS].map((p) => sql`${p}`),
+            sql`, `,
+          )}]::text[])`,
+        ),
+      ),
     );
   const want = new Set(wanted.map((r) => r.roleId));
   const held = await db

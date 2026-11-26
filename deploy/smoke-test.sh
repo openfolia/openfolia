@@ -174,7 +174,7 @@ step "the MCP server"
 compose exec -T api node dist/database/seed.main.js --example >/dev/null
 # The server needs no token of its own (#861): each caller sends its own service account token,
 # here one whose role (`reader`) holds content.read alone, and one that may do more (`publisher`).
-unset CCMS_MCP_API_TOKEN CCMS_MCP_HTTP_TOKEN
+unset CCMS_MCP_API_TOKEN
 mcp_token=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp --role reader | tail -n 1)
 mcp_wide_token=$(compose exec -T api node dist/database/service-token.main.js smoke-mcp-wide --role publisher | tail -n 1)
 export OPENFOLIA_MCP_PORT="$mcp_port"

@@ -21,6 +21,32 @@ export const RESTRICTED_CANARY = 'narwhalnine';
 /** A public word every build holds, to prove the search index is searched at all. */
 export const PUBLIC_WORD = 'chargingdock';
 
+/**
+ * Older releases (#896): a public word only alpha's older releases hold (a module the newest
+ * dropped), the revisions they were cut as, oldest first (one long enough to wrap), and the
+ * newest's, which every product has.
+ */
+export const OLDER_WORD = 'latchlever';
+export const OLDER_REVISIONS = [
+  '0.8',
+  '0.9-maintenance-for-cluster-setups-with-the-large-model-and-the-mains-adapter',
+] as const;
+export const NEWEST_REVISION = '1.0';
+
+/**
+ * The authored start page (#897): the manual that is it, in the newest releases only, and the
+ * portal's address its links are written with. `UNRELEASED_WORD` is in its text only after the
+ * releases were cut: no build may hold it.
+ */
+export const START_MANUAL = 'portal-start';
+/** The internal audience's own, which its site takes before the public one. */
+export const INTERNAL_START = 'portal-start-internal';
+export const PORTAL_ORIGIN = 'https://docs.example.com';
+export const UNRELEASED_WORD = 'walrustwelve';
+/** Its featured links that a public build has no page for (the internal one has the first two). */
+export const INTERNAL_LINKS = ['Service the drive unit', 'Update the software'];
+export const DEAD_LINKS = ['Reset the master key', 'The manual that moved'];
+
 /** The products of the fixture's product facet. */
 export const FIXTURE_PRODUCTS = ['alpha', 'beta'] as const;
 
@@ -338,6 +364,252 @@ const MODULES: Module[] = [
   }),
 ];
 
+type Runs = Extract<Block, { type: 'paragraph' }>['content'];
+const linked = (value: string, href: string): Runs[number] => ({
+  ...text(value),
+  marks: [{ type: 'link', href }],
+});
+const linkTo = (value: string, path: string) =>
+  linked(value, `${PORTAL_ORIGIN}/${path}`);
+const links = (id: string, items: Runs[]): Block => ({
+  type: 'list',
+  id,
+  ordered: false,
+  items: items.map((content, i) => ({ id: `${id}-${i}`, content, blocks: [] })),
+});
+
+/**
+ * The start page's modules (#897): its heading, introduction, notice and featured links (a
+ * section, a manual, a search, an address elsewhere, an internal manual and guide, a restricted
+ * module and a manual that is not there), a second group with a long title written in English
+ * only, and an internal one.
+ */
+const startModules = (
+  heading: readonly [string, string] = [
+    'Find the right page the first time',
+    'Finden Sie die richtige Seite auf Anhieb',
+  ],
+): Module[] => [
+  module('start-welcome', 'en', 'concept', 'public', {
+    title: heading[0],
+    keywords: [],
+    blocks: [
+      paragraph(
+        'lead',
+        'Everything about operating and charging your vehicle. Search, or start with one of the pages most readers need.',
+      ),
+      {
+        type: 'admonition',
+        id: 'news',
+        kind: 'note',
+        blocks: [
+          {
+            type: 'paragraph',
+            id: 'news-text',
+            content: [
+              text(
+                'New in this release: the large model on the mains adapter. See ',
+              ),
+              { type: 'xref', module: 'charging' },
+              text('. The '),
+              linkTo('old page', 'en/alpha/gone/'),
+              text(' has moved; see the '),
+              linkTo('manual', 'en/alpha/operating/'),
+              text(' and '),
+              { type: 'xref', module: 'start-more' },
+              text('. Check the '),
+              {
+                ...text('battery'),
+                marks: [{ type: 'term', termId: 'battery' }],
+              },
+              text('.'),
+            ],
+          },
+        ],
+      },
+      links('featured', [
+        [
+          {
+            type: 'xref',
+            module: 'charging',
+            text: [text('Charge the vehicle')],
+          },
+          text(
+            ': At the dock or by hand, and what to do when it does not start.',
+          ),
+        ],
+        [
+          linkTo(
+            'Operating manual',
+            'en/alpha/operating/model=large,power=mains/',
+          ),
+          text(' – For the large model on the mains adapter'),
+        ],
+        [
+          linkTo('Everything about the battery', 'en/search/?q=battery'),
+          text(': In every manual.'),
+        ],
+        [
+          linked(
+            'Spare parts and support',
+            'https://support.example.org/parts',
+          ),
+          text(': Order a part or ask a question.'),
+        ],
+        [
+          linkTo(INTERNAL_LINKS[0]!, 'en/alpha/service/'),
+          text(': For trained staff.'),
+        ],
+        [
+          linkTo(
+            INTERNAL_LINKS[1]!,
+            'en/alpha/software-update/?from=1.0&to=4.0',
+          ),
+          text(': Only the steps for your versions.'),
+        ],
+        [
+          {
+            type: 'xref',
+            module: 'master-key',
+            text: [text(DEAD_LINKS[0]!)],
+          },
+        ],
+        [linkTo(DEAD_LINKS[1]!, 'en/alpha/gone/')],
+      ]),
+    ],
+  }),
+  module('start-welcome', 'de', 'concept', 'public', {
+    title: heading[1],
+    keywords: [],
+    blocks: [
+      paragraph(
+        'lead',
+        'Alles über Betrieb und Laden Ihres Fahrzeugs. Suchen Sie, oder beginnen Sie mit einer der Seiten, die die meisten brauchen.',
+      ),
+      {
+        type: 'admonition',
+        id: 'news',
+        kind: 'note',
+        blocks: [
+          {
+            type: 'paragraph',
+            id: 'news-text',
+            content: [
+              text(
+                'Neu in dieser Version: das große Modell am Netzteil. Siehe ',
+              ),
+              { type: 'xref', module: 'charging' },
+              text('. Die '),
+              linkTo('alte Seite', 'de/alpha/gone/'),
+              text(' ist umgezogen; siehe die '),
+              // Copied from the English site, without its variant.
+              linkTo('Anleitung', 'en/alpha/operating/'),
+              text(' und '),
+              { type: 'xref', module: 'start-more' },
+              text('. Prüfen Sie den '),
+              { ...text('Akku'), marks: [{ type: 'term', termId: 'battery' }] },
+              text('.'),
+            ],
+          },
+        ],
+      },
+      links('featured', [
+        [
+          { type: 'xref', module: 'charging', text: [text('Fahrzeug laden')] },
+          text(
+            ': An der Station oder von Hand, und was zu tun ist, wenn es nicht beginnt.',
+          ),
+        ],
+        // Copied from the English site: it leads to this language's page.
+        [
+          linkTo(
+            'Betriebsanleitung',
+            'en/alpha/operating/model=large,power=mains/',
+          ),
+          text(' – Für das große Modell am Netzteil'),
+        ],
+        [
+          linkTo('Alles über den Akku', 'de/search/?q=Akku'),
+          text(': In allen Anleitungen.'),
+        ],
+        [
+          linked(
+            'Ersatzteilbestellung und Kundendienst',
+            'https://support.example.org/parts',
+          ),
+          text(': Ein Teil bestellen oder eine Frage stellen.'),
+        ],
+        [
+          linkTo('Antriebseinheit warten', 'de/alpha/service/'),
+          text(': Für geschultes Personal.'),
+        ],
+        [
+          linkTo(
+            'Software aktualisieren',
+            'de/alpha/software-update/?from=1.0&to=4.0',
+          ),
+          text(': Nur die Schritte für Ihre Versionen.'),
+        ],
+        [
+          {
+            type: 'xref',
+            module: 'master-key',
+            text: [text('Generalschlüssel zurücksetzen')],
+          },
+        ],
+        [linkTo('Die umgezogene Anleitung', 'de/alpha/gone/')],
+      ]),
+    ],
+  }),
+  module('start-more', 'en', 'concept', 'public', {
+    title:
+      'Before the first start: what to check on the vehicle, the dock and the charging contacts',
+    keywords: [],
+    blocks: [
+      termParagraph('more-term'),
+      links('more', [
+        [
+          linkTo(
+            'Beta: the operating manual for the battery-powered small model, from unpacking to the first charge',
+            'en/beta/operating/',
+          ),
+        ],
+        [linkTo('All manuals', 'en/manuals/')],
+      ]),
+    ],
+  }),
+  module('start-service', 'en', 'concept', 'internal', {
+    title: `For service staff ${INTERNAL_CANARY}`,
+    keywords: [],
+    blocks: [
+      paragraph('note', `Keep the service code ${INTERNAL_CANARY} at hand.`),
+      links('service', [
+        [
+          linkTo('The release before', `en/alpha/v/${OLDER_REVISIONS[0]}/`),
+          text(': For vehicles not updated yet.'),
+        ],
+      ]),
+    ],
+  }),
+];
+
+const START = `schemaVersion: 1
+title: Start page
+audience: public
+variants:
+  - model: large
+attributes:
+  product-name: Model A
+entries:
+  - module: start-welcome
+  - module: start-more
+  - module: start-service
+  - module: master-key
+`;
+
+/** The internal one: the same page, with what its audience alone may read. */
+const START_INTERNAL = START.replace('audience: public', 'audience: internal');
+
 /**
  * The public manual lists modules of every audience: only the public ones may reach a public build.
  * It is published in three of the four Model × Power supply combinations (no small one on mains),
@@ -460,6 +732,54 @@ const UPDATE_GUIDE = [
   '',
 ].join('\n');
 
+/** The module only the older releases hold (#896), in English and German. */
+const LEGACY_MODULES: Module[] = [
+  module('legacy-latch', 'en', 'procedure', 'public', {
+    title: 'Release the transport latch',
+    keywords: [OLDER_WORD],
+    blocks: [
+      paragraph(
+        'text',
+        `Pull the ${OLDER_WORD} before the first start: later models have none.`,
+      ),
+    ],
+  }),
+  module('legacy-latch', 'de', 'procedure', 'public', {
+    title: 'Transportsicherung lösen',
+    keywords: [OLDER_WORD],
+    blocks: [
+      paragraph(
+        'text',
+        `Ziehen Sie den ${OLDER_WORD} vor dem ersten Start: Spätere Modelle haben keinen.`,
+      ),
+    ],
+  }),
+];
+
+/**
+ * The public manual as the older releases have it (#896): the legacy module where the newest has
+ * the charging one, and no large model on mains yet, so a release switch meets a missing section
+ * and a missing variant.
+ */
+const OPERATING_OLDER = `schemaVersion: 1
+title: Operating manual
+audience: public
+glossary: true
+variants:
+  - { model: small, power: battery }
+  - { model: large, power: battery }
+attributes:
+  product-name:
+    - value: Model A
+      when: model in (large)
+    - value: Model B
+entries:
+  - module: welcome
+  - module: legacy-latch
+  - module: service-code
+  - module: master-key
+`;
+
 /** A procedure module per step, in English and German. */
 const STEP_MODULES: Module[] = UPDATE_STEPS.flatMap(
   ([id, , , , , enTitle, enText, deTitle, deText]) => [
@@ -476,12 +796,25 @@ const STEP_MODULES: Module[] = UPDATE_STEPS.flatMap(
   ],
 );
 
+/** The fixture content repository (`createFixtureRepo`). */
+export interface FixtureRepo {
+  /** The bare repository's directory. */
+  readonly dir: string;
+  /** Moves `main` from the older content to the newest (#896): cut the older releases before. */
+  advance(): void;
+  /** Moves `main` past it, to an edit of the start page that no release holds (#897). */
+  edit(): void;
+}
+
 /**
  * Creates the portal's fixture content repository (bare, as a server that writes tags needs) in
  * a new temporary directory: three audiences, two products, English and German, one manual per
- * audience, the public one listing modules of all three, and an internal update guide (#907). Returns its directory.
+ * audience, the public one listing modules of all three, and an internal update guide (#907).
+ * `main` starts at the content alpha's older releases are cut from (#896); `advance` moves it to
+ * the newest content (a commit after it), from which every product's newest release is cut, and
+ * `edit` to a change of the start page that no release holds (#897).
  */
-export function createFixtureRepo(): string {
+export function createFixtureRepo(): FixtureRepo {
   const work = mkdtempSync(join(tmpdir(), 'openfolia-portal-work-'));
   const env = {
     ...process.env,
@@ -500,9 +833,9 @@ export function createFixtureRepo(): string {
   };
   git(work, 'init', '-q', '-b', 'main');
   write('openfolia.yaml', CONFIG);
-  for (const m of [...MODULES, ...STEP_MODULES])
+  for (const m of [...MODULES, ...STEP_MODULES, ...LEGACY_MODULES])
     write(`modules/${m.meta.lang}/${m.id}.adoc`, printModule(m));
-  write('manuals/operating.yaml', OPERATING);
+  write('manuals/operating.yaml', OPERATING_OLDER);
   write('manuals/service.yaml', SERVICE);
   write('manuals/vault.yaml', VAULT);
   write(`manuals/${UPDATE_GUIDE_ID}.yaml`, UPDATE_GUIDE);
@@ -511,10 +844,34 @@ export function createFixtureRepo(): string {
   write(`assets/${ATTACHMENT_HASH}`, ATTACHMENT);
   write('symbols/w001.svg', HOSTILE_SVG);
   git(work, 'add', '-A');
+  git(work, 'commit', '-q', '-m', 'Older content');
+  const older = git(work, 'rev-parse', 'HEAD');
+  write('manuals/operating.yaml', OPERATING);
+  for (const m of LEGACY_MODULES)
+    execFileSync('rm', [join(work, `modules/${m.meta.lang}/${m.id}.adoc`)]);
+  write(`manuals/${START_MANUAL}.yaml`, START);
+  write(`manuals/${INTERNAL_START}.yaml`, START_INTERNAL);
+  for (const m of startModules())
+    write(`modules/${m.meta.lang}/${m.id}.adoc`, printModule(m));
+  git(work, 'add', '-A');
   git(work, 'commit', '-q', '-m', 'Fixture content');
+  const newest = git(work, 'rev-parse', 'HEAD');
+  for (const m of startModules([
+    `An unreleased heading ${UNRELEASED_WORD}`,
+    `Eine unveröffentlichte Überschrift ${UNRELEASED_WORD}`,
+  ]))
+    write(`modules/${m.meta.lang}/${m.id}.adoc`, printModule(m));
+  git(work, 'add', '-A');
+  git(work, 'commit', '-q', '-m', 'An edit not released yet');
+  const edited = git(work, 'rev-parse', 'HEAD');
   const bare = mkdtempSync(join(tmpdir(), 'openfolia-portal-repo-'));
   execFileSync('git', ['clone', '-q', '--bare', work, bare], { env });
   git(bare, 'remote', 'remove', 'origin');
+  git(bare, 'update-ref', 'refs/heads/main', older);
   execFileSync('rm', ['-rf', work]);
-  return bare;
+  return {
+    dir: bare,
+    advance: () => git(bare, 'update-ref', 'refs/heads/main', newest, older),
+    edit: () => git(bare, 'update-ref', 'refs/heads/main', edited, newest),
+  };
 }

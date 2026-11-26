@@ -1,3 +1,5 @@
+import type { Transaction } from '../../base/core/unit-of-work.js';
+import type { NotificationSettings } from './notification-settings.js';
 import type { PreferenceChanges, StoredPreferences } from './preferences.js';
 
 /**
@@ -10,10 +12,20 @@ export abstract class PreferenceStore {
 
   /**
    * Applies `changes` to `userId`'s preferences in one statement (stored from the defaults when
-   * there were none) and returns the result. Undefined when no such user exists.
+   * there were none) and returns the result; notification `choices` merge kind by kind. Undefined
+   * when no such user exists. Inside `tx` when given (with what records the change).
    */
   abstract write(
     userId: string,
     changes: PreferenceChanges,
+    tx?: Transaction,
   ): Promise<StoredPreferences | undefined>;
+
+  /**
+   * The notification settings of each of `userIds` that stored any (#884), in one read: the
+   * fan-out's and the email sender's. Those not in the map have the defaults.
+   */
+  abstract notificationSettings(
+    userIds: readonly string[],
+  ): Promise<Map<string, NotificationSettings>>;
 }

@@ -1,7 +1,9 @@
 import { inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { ApiClient, type Schema } from '../api';
+import { injectTranslate } from '@openfolia/ui/i18n';
+
+import { ApiClient, type Named, PeopleStates, type Schema } from '../api';
 import { MeService } from '../permissions/me';
 import { DemoSession } from '../session/demo-session';
 
@@ -105,7 +107,11 @@ export async function versionBefore(
   return one.data[0] ?? null;
 }
 
-/** How a person is named: the acting person's or a demo user's name, else their ID. */
+/**
+ * How a person is named: the acting person's or a demo user's name, else their ID. On its own it
+ * is shown with `of-person-name`, in a sentence with `injectPersonText()`, so a deactivated person
+ * is marked.
+ */
 export function injectPersonName(): (kind: string, id: string) => string {
   const me = inject(MeService);
   const demo = inject(DemoSession);
@@ -114,6 +120,16 @@ export function injectPersonName(): (kind: string, id: string) => string {
     if (kind === acting.kind && id === acting.id && acting.name) {
       return acting.name;
     }
-    return demo.users().find((u) => u.id === id)?.name ?? id;
+    return (kind === 'user' ? demo.nameOf(id) : undefined) ?? id;
   };
+}
+
+/** A person's name in a sentence: with "(deactivated)" after it while they are (#928). */
+export function injectPersonText(): (who: Named, name: string) => string {
+  const people = inject(PeopleStates);
+  const t = injectTranslate();
+  return (who, name) =>
+    people.isDeactivated(who)
+      ? `${name} (${t('editor.person.deactivated')})`
+      : name;
 }

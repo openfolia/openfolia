@@ -246,6 +246,17 @@ export function describe(
         true,
       );
     }
+    case 'sign-in.break-glass':
+      return view(
+        'lucideTriangleAlert',
+        'editor.notifications.kinds.breakGlass',
+        'editor.notifications.someone.emergency',
+        {
+          path: ['/admin', 'audit'],
+          query: { action: 'user.break-glass-sign-in' },
+        },
+        true,
+      );
     default:
       // A kind this editor does not know yet: a plain sentence, nothing to open.
       return view(

@@ -28,7 +28,8 @@ import {
 import { JSON_API, type ErrorObject } from './json-api.js';
 import { JsonApiException, NotModified } from './json-api.exception.js';
 
-interface Mapped {
+/** An exception as the API answers it: the status, the error objects and `Retry-After`. */
+export interface Mapped {
   status: number;
   errors: Omit<ErrorObject, 'status' | 'title'>[];
   retryAfter?: number;
@@ -50,7 +51,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       res.end();
       return;
     }
-    const { status, errors, retryAfter } = this.map(exception);
+    const { status, errors, retryAfter } = mapException(exception, this.logger);
     // Content headers may have been set before the handler ran; an error
     // must not inherit them, or a 503 for a commit would be cached for a year.
     res.removeHeader('ETag');
@@ -70,39 +71,44 @@ export class ApiExceptionFilter implements ExceptionFilter {
     // A Buffer, so Express keeps the media type as it is (no charset).
     res.status(status).send(Buffer.from(JSON.stringify(body)));
   }
+}
 
-  private map(exception: unknown): Mapped {
-    if (exception instanceof JsonApiException) {
-      return { status: exception.getStatus(), errors: exception.errors };
-    }
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      return {
-        status,
-        errors: [{ code: codeFor(status), detail: exception.message }],
-      };
-    }
-    if (exception instanceof DomainError) return fromDomain(exception);
-    // A table past the caps (#686) met by what lays out its grid (a renderer, an export): never
-    // content that was validated, so never expected; still the content's fault, not a 500.
-    if (exception instanceof TableTooLargeError) {
-      return {
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: [
-          {
-            code: 'table-too-large',
-            detail: exception.message,
-            meta: TABLE_CAPS,
-          },
-        ],
-      };
-    }
-    this.logger.error(exception);
+/**
+ * The status and error objects an exception is answered with: domain errors get the status that
+ * fits them, anything unexpected is logged and answered with a generic 500. Shared by the SCIM
+ * routes (#377), which write the same in SCIM's error shape.
+ */
+export function mapException(exception: unknown, logger: Logger): Mapped {
+  if (exception instanceof JsonApiException) {
+    return { status: exception.getStatus(), errors: exception.errors };
+  }
+  if (exception instanceof HttpException) {
+    const status = exception.getStatus();
     return {
-      status: HttpStatus.INTERNAL_SERVER_ERROR,
-      errors: [{ code: 'internal-error', detail: 'Internal error.' }],
+      status,
+      errors: [{ code: codeFor(status), detail: exception.message }],
     };
   }
+  if (exception instanceof DomainError) return fromDomain(exception);
+  // A table past the caps (#686) met by what lays out its grid (a renderer, an export): never
+  // content that was validated, so never expected; still the content's fault, not a 500.
+  if (exception instanceof TableTooLargeError) {
+    return {
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
+      errors: [
+        {
+          code: 'table-too-large',
+          detail: exception.message,
+          meta: TABLE_CAPS,
+        },
+      ],
+    };
+  }
+  logger.error(exception);
+  return {
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    errors: [{ code: 'internal-error', detail: 'Internal error.' }],
+  };
 }
 
 function fromDomain(error: DomainError): Mapped {

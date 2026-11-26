@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  type NotificationSettings,
+  type NotificationSettingsChanges,
+} from './notification-settings.js';
 
 /**
  * A tip's ID, as the editor's tip catalogue names it (`content.new-module`): lowercase letters
@@ -17,8 +22,9 @@ export const TipId = z
 export const MAX_DISMISSED_TIPS = 500;
 
 /**
- * A person's own preferences (#222): the editor's tips and first-run tour. Kept per person on the
- * server, so they follow the person from browser to browser.
+ * A person's own preferences (#222): the editor's tips and first-run tour, and how they hear of
+ * notifications (#884). Kept per person on the server, so they follow the person from browser to
+ * browser.
  */
 export interface Preferences {
   /** Whether the editor shows tips and the tour at all ("Show tips" in the account menu). */
@@ -27,6 +33,8 @@ export interface Preferences {
   readonly dismissedTips: readonly string[];
   /** Whether the person finished or skipped the first-run tour. */
   readonly tourDone: boolean;
+  /** Which notifications reach them, and how (#884). */
+  readonly notifications: NotificationSettings;
 }
 
 /** The preferences as stored, with when they last changed. */
@@ -41,7 +49,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showTips: true,
   dismissedTips: [],
   tourDone: false,
+  notifications: DEFAULT_NOTIFICATION_SETTINGS,
 };
 
-/** A change of preferences: what is left out stays. */
-export type PreferenceChanges = Partial<Preferences>;
+/** A change of preferences: what is left out stays; notification settings merge per setting. */
+export type PreferenceChanges = Partial<Omit<Preferences, 'notifications'>> & {
+  readonly notifications?: NotificationSettingsChanges;
+};

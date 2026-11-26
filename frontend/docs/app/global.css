@@ -54,6 +54,19 @@ pre {
   overflow-wrap: anywhere;
 }
 
+/*
+ * The search dialog's failure panel (`components/search.tsx`) fades in.
+ */
+@keyframes search-state-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.search-state {
+  animation: search-state-in 0.2s ease-out backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

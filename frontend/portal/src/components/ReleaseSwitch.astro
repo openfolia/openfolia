@@ -1,0 +1,79 @@
+---
+import { onlyAsText, textsFor } from '../lib/i18n.ts';
+import { formatDate, snapshot, type BuiltRelease, type ReleaseChoice } from '../lib/site.ts';
+
+interface Props {
+  /** The page's release. */
+  release: BuiltRelease;
+  /** Every built release of its product (`releaseChoices`), newest first: at least two. */
+  choices: readonly ReleaseChoice[];
+}
+
+/**
+ * The release switch (#896): the release the page is in, and a menu of the product's built
+ * releases, newest first and the latest marked, each with its date. A disclosure of links, so it
+ * works without script and by keyboard (Escape closes it, `src/scripts/chrome.ts`); with script a
+ * link to the same page there also keeps the section in view (`src/scripts/release-switch.ts`).
+ * An entry that lacks the page says what it opens instead, before the click.
+ */
+const { release, choices } = Astro.props;
+const s = snapshot();
+const t = textsFor(s.lang);
+const latest = choices.find((c) => c.current)?.latest ?? false;
+const product = choices[0]?.release.productLabel ?? release.productLabel;
+const hint = (choice: ReleaseChoice) =>
+  choice.missing === 'manual'
+    ? t.withoutManual
+    : choice.missing === 'variant' && choice.variant
+      ? onlyAsText(t, s.lang, [choice.variant.label])
+      : undefined;
+---
+
+<details class="relswitch" data-relswitch>
+  <summary>
+    <span class="relswitch__label">{t.latestRelease}</span>{' '}
+    <span class="relswitch__value">{release.revision}</span>
+    {latest && <>{' '}<span class="relswitch__latest">{t.latestTag}</span></>}
+    <svg class="relswitch__chevron" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </summary>
+  <div class="relswitch__menu">
+    <p class="relswitch__title" id="relswitch-title">{t.releasesOf.replace('{product}', () => product)}</p>
+    <ul class="relswitch__list" aria-labelledby="relswitch-title">
+      {
+        choices.map((choice) => (
+          <li>
+            <a href={choice.href} aria-current={choice.current ? 'page' : undefined} data-release-option data-keep-place={choice.keepsPlace ? '' : undefined}>
+              <span class="relswitch__row">
+                <span class="relswitch__name">{choice.release.revision}</span>
+                {choice.latest && <>{' '}<span class="relswitch__tag">{t.latestTag}</span></>}
+                {choice.current && (
+                  <svg class="relswitch__check" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                )}
+              </span>{' '}
+              <span class="relswitch__meta">
+                <time datetime={choice.release.publishedAt}>{formatDate(choice.release.publishedAt, s.lang)}</time>
+                {hint(choice) && (
+                  <>
+                    <span class="sep" aria-hidden="true">·</span>
+                    {/* The separator is hidden: a comma keeps the hint a phrase of its own in the link's name. */}
+                    <span class="visually-hidden">, </span>
+                    <span class="relswitch__hint">{hint(choice)}</span>
+                  </>
+                )}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</details>
+{/* After a switch to a release without the section the reader was in (`release-switch.ts`). */}
+<p class="visually-hidden" role="status" data-release-status></p>
+<div class="switch-notice" data-release-notice hidden>
+  <svg class="switch-notice__icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="M12 11v5.5M12 7.75v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+  <p class="switch-notice__text" aria-hidden="true" data-release-notice-text>{t.sectionMissing}</p>
+  <button class="switch-notice__close" type="button" aria-label={t.dismissNotice} data-release-notice-close>
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
+  </button>
+</div>

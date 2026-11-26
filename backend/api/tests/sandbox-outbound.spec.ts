@@ -43,6 +43,9 @@ const INVENTORY: Record<string, Decision> = {
   'backend/api/src/access/repos/oidc-identity-provider.ts': {
     off: 'AccessModule offers no identity provider (CCMS_OIDC_* refused at start; demo mode only).',
   },
+  'backend/api/src/access/repos/saml-identity-provider.ts': {
+    off: 'AccessModule offers no identity provider (CCMS_SAML_IDP_METADATA_* refused at start; demo mode only).',
+  },
   'backend/api/src/audit/repos/https-audit-sink.ts': {
     off: 'AuditModule binds AuditSink to NoAuditSink (CCMS_AUDIT_SINK_* refused at start).',
   },
@@ -106,6 +109,9 @@ const INVENTORY: Record<string, Decision> = {
   'backend/api/src/base/api/api-exception.filter.ts': {
     noConnection: 'STATUS_CODES from node:http.',
   },
+  'backend/api/src/scim/api/scim-http.ts': {
+    noConnection: 'STATUS_CODES from node:http.',
+  },
   'backend/api/src/base/api/client-address.ts': {
     noConnection: 'isIPv4 and isIPv6 from node:net.',
   },
@@ -143,6 +149,7 @@ const PACKAGES: Record<string, 'network' | 'none'> = {
   '@nestjs/core': 'none',
   '@nestjs/platform-express': 'none',
   '@nestjs/swagger': 'none',
+  '@node-saml/node-saml': 'none',
   '@openfolia/content-model': 'none',
   '@openfolia/content-repo': 'none',
   '@openfolia/dita': 'none',

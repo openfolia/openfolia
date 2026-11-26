@@ -20,6 +20,20 @@ const settings = (state: 'on' | 'off' | 'no-secret-key') => ({
       senderName: 'OpenFolia',
       language: 'en',
     },
+    // Emails that failed lately (#884): one, a notification refused by the server.
+    meta: {
+      failures: {
+        count: state === 'on' ? 1 : 0,
+        last:
+          state === 'on'
+            ? {
+                at: '2026-11-20T09:30:00Z',
+                template: 'notification',
+                reason: 'rejected',
+              }
+            : null,
+      },
+    },
   },
 });
 
@@ -50,6 +64,7 @@ test.describe('email @area:admin @api:mail', () => {
     await expect(
       mail.getByRole('button', { name: 'Send a test email' }),
     ).toHaveCount(0);
+    await expect(mail.getByText(/failed in the last 7 days/)).toHaveCount(0);
   });
 
   test('shows the mail server and sends a test email', async ({ page }) => {
@@ -83,6 +98,15 @@ test.describe('email @area:admin @api:mail', () => {
     await expect(mail.getByText('mail.example.com:587')).toBeVisible();
     await expect(mail.getByText('STARTTLS, required')).toBeVisible();
     await expect(mail.getByText('OpenFolia <docs@example.com>')).toBeVisible();
+    // The emails that failed lately, and why the newest did (#884).
+    await expect(
+      mail.getByText(
+        '1 email failed for good in the last 7 days, after every retry.',
+      ),
+    ).toBeVisible();
+    await expect(
+      mail.getByText(/a notification, refused by the mail server/),
+    ).toBeVisible();
     await mail.getByRole('button', { name: 'Send a test email' }).click();
     await expect(
       mail.getByRole('status').filter({ hasText: 'admin@example.com' }),

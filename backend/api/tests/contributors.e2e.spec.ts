@@ -398,6 +398,7 @@ describe('what a contributor may not do: 403', () => {
     'POST /users/:userId/invite',
     'DELETE /users/:userId/invite',
     'POST /users/:userId/password-reset',
+    'DELETE /users/:userId/second-factor',
     'GET /service-accounts',
     'POST /service-accounts',
     'GET /service-accounts/:serviceAccountId',

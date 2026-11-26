@@ -47,7 +47,7 @@ import { ToastService } from '@openfolia/ui/toast';
 
 import { ApiError, toApiError } from '../api';
 import { languageName } from '../content/browser-model';
-import { injectPersonName } from '../history/history-model';
+import { injectPersonName, injectPersonText } from '../history/history-model';
 import { apiErrorText } from '../i18n';
 import { GuardDirective } from '../permissions/guard.directive';
 import { MeService } from '../permissions/me';
@@ -196,12 +196,10 @@ const CHANGE_ID = /^[A-Za-z0-9-]{2,35}\/[a-z0-9][a-z0-9-]{0,199}$/;
                     name: person(r.attributes.publishedBy),
                     date: (r.attributes.publishedAt | ofDate: dateTime),
                   }
-          }}
-          ·
+          }}&nbsp;·
           <span class="font-mono text-xs" [attr.title]="r.attributes.commit">{{
             commit()
-          }}</span>
-          ·
+          }}</span>&nbsp;·
           <span class="font-mono text-xs [overflow-wrap:anywhere]">{{
             r.attributes.tag
           }}</span>
@@ -216,7 +214,11 @@ const CHANGE_ID = /^[A-Za-z0-9-]{2,35}\/[a-z0-9][a-z0-9-]{0,199}$/;
           data-slot="withdrawal"
         >
           <p class="m-0 flex items-center gap-2 font-medium">
-            <ng-icon name="lucideCircleSlash" aria-hidden="true" />
+            <ng-icon
+              name="lucideCircleSlash"
+              class="shrink-0"
+              aria-hidden="true"
+            />
             {{
               'editor.releases.detail.withdrawn'
                 | transloco
@@ -376,8 +378,9 @@ export class ReleaseDetailPage {
   private readonly language = inject(LanguageService);
   private readonly t = injectTranslate();
   protected readonly person = (who: { kind: string; id: string }) =>
-    this.nameOf(who.kind, who.id);
+    this.personText(who, this.nameOf(who.kind, who.id));
   private readonly nameOf = injectPersonName();
+  private readonly personText = injectPersonText();
 
   protected readonly view = injectQueryState({
     notes: idParam(LANG),

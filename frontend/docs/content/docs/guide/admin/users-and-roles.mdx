@@ -19,8 +19,9 @@ says where they apply. Changes apply at once and are written to the audit log.
 ![The New user dialog with a name, an email address, the user ID and the roles](/images/guide/en/admin-user-new.webp)
 
 The list shows each person's email address and ID under their name. It searches name, email and
-ID (press <kbd>/</kbd>), and **All**, **Active** and **Deactivated** filter it. **Edit** and
-**Deactivate** are at the end of each row; in a narrow window, scroll the list sideways to reach them.
+ID (press <kbd>/</kbd>), and **All**, **Active** and **Deactivated** filter it. At the end
+of each row are **Edit** and a menu with everything else; in a narrow window, scroll the list sideways
+to reach them.
 
 ## How a person signs in
 
@@ -31,12 +32,15 @@ code by email, or several of these. When sign-in with a password is on, the User
   provider**, **Invited, not yet signed in**, **Invite ran out** or **Not yet**.
 - A new person gets an invite at once: a one-time link, shown once to copy. When email is set up,
   it is emailed to them too.
-- **Invite** makes a new invite, **Withdraw invite** ends an open one, and **Reset link** makes a
+- In a row's menu, **Invite** makes a new invite, **Withdraw invite** ends an open one, and **Reset link** makes a
   password reset link for someone who has a password. Each link works once, for a limited time,
   and replaces any earlier one.
 
 A person without an email address gets no link. Codes by email need no work here: the person asks
 for one on the sign-in page.
+
+**Two-factor** in a row marks a person with two-factor sign-in on; **Reset two-factor** in its
+menu is for a lost phone. See [Require two-factor sign-in](/guide/admin/two-factor).
 
 <ServerSetting>
   The ways to sign in are set up as in [Authentication
@@ -53,7 +57,7 @@ for one on the sign-in page.
 
 ![The Roles page with the Author role, its permissions, its scope and who holds it](/images/guide/en/admin-roles.webp)
 
-**admin.roles**, **admin.branding** and **webhook.manage** always apply everywhere. Under **Who
+**admin.roles**, **admin.branding**, **webhook.manage** and **scim.provision** always apply everywhere. Under **Who
 holds it**, add or remove people and service accounts. A role with **admin.roles** cannot go to a
 service account. **Delete role** works once nobody holds it.
 
@@ -61,8 +65,19 @@ service account. **Delete role** works once nobody holds it.
 
 ## Deactivate a person
 
-1. In **Users**, choose **Deactivate** in the person's row, and confirm.
+1. In **Users**, open the menu at the end of the person's row, choose **Deactivate** and confirm.
 2. The person can no longer act. Approvals they gave stop counting, and every lock they hold is
-   released. Their roles stay.
+   released. Their roles stay. They stay out also when your identity provider names them
+   differently later (made again there, or signing in through your other provider): a first
+   sign-in with an address the provider vouches for that a deactivated user has is refused. A
+   provider that vouches for no address (SAML's default) cannot be held this way, so take the
+   person out at the provider too. To let in someone else who now has that address, change or
+   clear the deactivated user's address.
 
-**Reactivate** brings them back.
+Their work stays, under their name. While they are deactivated, the editor puts a quiet
+**(deactivated)** after the name wherever it says who wrote, approved or published something: in
+the history of modules and manuals, in the review (the list, the approvals and the comments), in
+releases and maintenance lines, in the translation jobs, in the audit log, and in a notification
+that names the person. An email keeps the name as it was sent.
+
+**Reactivate** brings them back, and the mark goes.

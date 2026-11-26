@@ -6,13 +6,13 @@ import {
   runContended,
   UnitOfWork,
 } from '../../../base/core/unit-of-work.js';
-import { subjectKey } from '../../../change-sets/core/lock.js';
 import { LockStore } from '../../../change-sets/core/lock-store.js';
 import { AccessAdmin } from '../access-admin.js';
-import { beginAccessChange, keepAnAdmin } from '../access-changes.js';
+import { beginAccessChange } from '../access-changes.js';
 import type { Actor } from '../actor.js';
 import { ActorAction } from '../policy.js';
 import type { User } from '../user-directory.js';
+import { deactivateUserIn, reactivateUserIn } from '../user-deactivation.js';
 import { WaysIn } from '../ways-in.js';
 
 export interface UserInput {
@@ -65,34 +65,18 @@ export class DeactivateUserAction extends ActorAction<UserInput, Deactivated> {
             `The user "${userId}" is deactivated already.`,
           );
         }
-        const deactivatedAt = await this.admin.setDeactivated(tx, userId, true);
-        await keepAnAdmin(this.admin, tx);
-        const released = await this.locks.removeAllHeldBy(tx, {
-          kind: 'user',
-          id: userId,
-        });
-        const sessionsEnded = await this.waysIn.endAll(tx, userId);
-        await this.auditLog.record(tx, actor, {
-          action: 'user.deactivate',
-          subject: { type: 'user', id: userId },
-          data: { locksReleased: released.length, sessionsEnded },
-        });
-        for (const lock of released) {
-          await this.auditLog.record(tx, actor, {
-            action: 'lock.release',
-            subject: subjectKey(lock.subject),
-            data: {
-              lockId: lock.id,
-              changeSetId: lock.changeSetId,
-              reason: 'user.deactivate',
-              holder: { kind: 'user', id: userId },
-            },
-          });
-        }
-        return {
-          user: { ...user, deactivatedAt },
-          locksReleased: released.length,
-        };
+        const { deactivatedAt, locksReleased } = await deactivateUserIn(
+          {
+            admin: this.admin,
+            locks: this.locks,
+            waysIn: this.waysIn,
+            auditLog: this.auditLog,
+          },
+          tx,
+          actor,
+          userId,
+        );
+        return { user: { ...user, deactivatedAt }, locksReleased };
       },
       BOUNDED,
     );
@@ -129,11 +113,7 @@ export class ReactivateUserAction extends ActorAction<UserInput, User> {
             `The user "${userId}" is active.`,
           );
         }
-        await this.admin.setDeactivated(tx, userId, false);
-        await this.auditLog.record(tx, actor, {
-          action: 'user.reactivate',
-          subject: { type: 'user', id: userId },
-        });
+        await reactivateUserIn(this.admin, this.auditLog, tx, actor, userId);
         return { ...user, deactivatedAt: null };
       },
       BOUNDED,

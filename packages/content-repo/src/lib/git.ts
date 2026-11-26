@@ -465,6 +465,14 @@ export class GitRepo {
     return result;
   }
 
+  /**
+   * From now on, no caller shares a listing that is in flight now: for a caller that has learnt of
+   * a write another process made (which this one's `refsMoved` was not told of) and must see it.
+   */
+  forgetListings(): void {
+    this.refListings.clear();
+  }
+
   private async readRefs(): Promise<ReadonlyMap<string, ListedRef>> {
     const { stdout } = await this.git([
       'for-each-ref',

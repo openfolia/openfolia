@@ -40,16 +40,23 @@ import {
   type SnapshotGuide,
   type SnapshotManual,
   type SnapshotPdf,
+  type SnapshotOlderRelease,
   type SnapshotRelease,
   type SnapshotStep,
   LANGUAGE_TAG,
+  OLDER_SEGMENT,
 } from '../src/lib/snapshot.ts';
+import { startPage } from '../src/lib/start.ts';
 
 export interface FetchOptions {
   readonly audience: string;
   /** The languages to build; undefined: every configured one. */
   readonly languages: readonly string[] | undefined;
   readonly releases: readonly string[] | undefined;
+  /** How many of each product's newest releases to build when `releases` is unset (default 1). */
+  readonly releasesPerProduct?: number;
+  /** Whether the older releases' pages carry `noindex` (default true). */
+  readonly olderNoindex?: boolean;
   /**
    * Where the images, attachments and symbols go, each written once as it arrives (named by
    * its hash, so every language shares it): no build holds the files in memory.
@@ -57,6 +64,12 @@ export interface FetchOptions {
   readonly assetsDir: string;
   /** The organisation's branding (`GET /branding`) on the site; false: the default look. */
   readonly branding: boolean;
+  /** The manuals that may be the start page (#897), by ID: the first there is; undefined: the default one. */
+  readonly start?: readonly string[] | undefined;
+  /** The portal's own address (an origin), so a link to it on the start page is one to its page. */
+  readonly portalOrigin?: string | undefined;
+  /** The path the sites are served under (default `/`). */
+  readonly basePath?: string;
   /** Progress lines (never a credential). */
   readonly log: (line: string) => void;
 }
@@ -134,7 +147,11 @@ export async function fetchSnapshots(
 ): Promise<FetchedBuild[]> {
   const { audience, log } = options;
   const me = await client.resource('/me');
-  const releases = await chooseReleases(client, options.releases);
+  const releases = await chooseReleases(
+    client,
+    options.releases,
+    options.releasesPerProduct ?? 1,
+  );
   if (releases.length === 0) throw new NothingReleased();
 
   // The audience levels come from the newest release's configuration; every release's own is checked too.
@@ -194,6 +211,11 @@ export async function fetchSnapshots(
     const assets: Record<string, string> = {};
     const symbols: Record<string, string> = {};
     const out: SnapshotRelease[] = [];
+    // The start page (#897): the first of the manuals set that there is, from the newest release
+    // that has it, of each product's newest only.
+    const rank = (m: SnapshotManual) => options.start?.indexOf(m.id) ?? -1;
+    let start: SnapshotManual | undefined;
+    const newestSeen = new Set<string>();
     for (const release of releases) {
       const tag = str(release.attributes['tag'], 'release tag');
       const config = configs.get(tag)!;
@@ -205,14 +227,20 @@ export async function fetchSnapshots(
       const facet = shown.facets.find(
         (f) => f.id === release.attributes['productFacet'],
       );
-      const manuals = await readManuals(
-        client,
-        tag,
-        lang,
-        config,
-        audience,
-        log,
-      );
+      const read = await readManuals(client, tag, lang, config, audience, log);
+      // An update guide is no start page: it stays the guide it is.
+      const starts = read.filter((m) => rank(m) >= 0 && !m.guide);
+      const manuals = read.filter((m) => !starts.includes(m));
+      let startHere: SnapshotManual | undefined;
+      if (!newestSeen.has(product))
+        for (const manual of starts)
+          if (!start || rank(manual) < rank(start))
+            // Its first variant is the page, as an update guide's is.
+            startHere = start = {
+              ...manual,
+              variants: manual.variants.slice(0, 1),
+            };
+      if (read.length > 0) newestSeen.add(product);
       await attachPdfs(
         client,
         str(release.id, 'release id'),
@@ -225,7 +253,7 @@ export async function fetchSnapshots(
         log,
       );
       // Images, attachments and symbols the manuals show: found by rendering them once.
-      for (const manual of manuals)
+      for (const manual of startHere ? [...manuals, startHere] : manuals)
         for (const variant of manual.variants) {
           const {
             assets: images,
@@ -329,6 +357,7 @@ export async function fetchSnapshots(
         manuals,
       });
     }
+    const { latest, older } = splitReleases(out, log);
     const direction = newest.languages.direction?.[lang];
     const labels = labelsIn(newest, lang);
     const snapshot = parseSnapshot({
@@ -348,14 +377,33 @@ export async function fetchSnapshots(
         label,
       })),
       outputLabels: newest.outputLabels ?? {},
-      releases: out,
+      releases: latest,
+      older,
+      olderNoindex: options.olderNoindex ?? true,
+      start: start
+        ? {
+            manual: start,
+            origin: options.portalOrigin ?? null,
+            basePath: options.basePath ?? '/',
+          }
+        : null,
       assets,
       symbols,
       branding,
     });
+    if (options.start !== undefined) {
+      const page = startPage(snapshot);
+      log(
+        page
+          ? `Start page ${lang}: manual ${start!.id}, ${page.sections.reduce((n, p) => n + p.links.length, 0)} featured link(s)`
+          : `Start page ${lang}: no released manual ${options.start.join(' or ')} for this audience (or it holds no module, or is an update guide): the default start page is built`,
+      );
+      for (const problem of page?.problems ?? [])
+        log(`Start page ${lang}: ${problem}`);
+    }
     const files = linkedFiles(snapshot).size;
     log(
-      `${lang}: ${out.reduce((n, r) => n + r.manuals.length, 0)} manual(s), ${files} file(s).`,
+      `${lang}: ${out.reduce((n, r) => n + r.manuals.length, 0)} manual(s)${older.length > 0 ? ` (${older.length} older release(s))` : ''}, ${files} file(s).`,
     );
     builds.push({ lang, snapshot });
   }
@@ -369,43 +417,79 @@ export class NothingReleased extends Error {
   }
 }
 
-/** The releases asked for, or each product's newest that is not withdrawn; newest first. */
+/**
+ * The releases asked for, or each product's `perProduct` newest that are not withdrawn; newest
+ * first. A product's first is its newest: the build puts it at today's addresses, the others
+ * under `<product>/v/<release>/` (#896).
+ */
 async function chooseReleases(
   client: ApiClient,
   ids: readonly string[] | undefined,
+  perProduct: number,
 ): Promise<JsonApiResource[]> {
-  if (ids !== undefined) {
-    const chosen = await Promise.all(
-      ids.map((id) => client.resource(`/releases/${id.toLowerCase()}`)),
-    );
-    const products = new Set<string>();
-    for (const release of chosen) {
-      if (release.attributes['withdrawal'] !== null)
-        throw new ApiError(`release ${release.id} is withdrawn`, 0, undefined);
-      // A product's pages have one address per manual and variant: one release each.
-      const product = String(release.attributes['product']);
-      if (products.has(product))
-        throw new ApiError(
-          `two releases of one product (${release.id}): a portal shows one release per product`,
-          0,
-          undefined,
-        );
-      products.add(product);
-    }
-    return chosen.sort((a, b) =>
+  const newestFirst = (list: JsonApiResource[]) =>
+    list.sort((a, b) =>
       String(b.attributes['publishedAt']).localeCompare(
         String(a.attributes['publishedAt']),
       ),
     );
+  if (ids !== undefined) {
+    const chosen = await Promise.all(
+      ids.map((id) => client.resource(`/releases/${id.toLowerCase()}`)),
+    );
+    for (const release of chosen)
+      if (release.attributes['withdrawal'] !== null)
+        throw new ApiError(`release ${release.id} is withdrawn`, 0, undefined);
+    return newestFirst(chosen);
   }
   const all = await client.list('/releases', { 'filter[state]': 'published' });
-  const latest = new Map<string, JsonApiResource>();
-  for (const release of all) {
+  const taken = new Map<string, number>();
+  const chosen: JsonApiResource[] = [];
+  for (const release of newestFirst([...all])) {
     const product = String(release.attributes['product']);
-    if (release.attributes['withdrawal'] === null && !latest.has(product))
-      latest.set(product, release);
+    const count = taken.get(product) ?? 0;
+    if (release.attributes['withdrawal'] !== null || count >= perProduct)
+      continue;
+    taken.set(product, count + 1);
+    chosen.push(release);
   }
-  return [...latest.values()];
+  return chosen;
+}
+
+/**
+ * The built releases (newest first) as each product's newest and its older ones, each older one
+ * with its address segment: its revision in lowercase where that is a safe, unused segment, else
+ * its ID. A product's newest is the newest with something for the audience (one with nothing is
+ * not built at all).
+ */
+export function splitReleases(
+  releases: readonly SnapshotRelease[],
+  log: (line: string) => void,
+): { latest: SnapshotRelease[]; older: SnapshotOlderRelease[] } {
+  const latest: SnapshotRelease[] = [];
+  const older: SnapshotOlderRelease[] = [];
+  const used = new Map<string, Set<string>>();
+  for (const release of releases) {
+    const product = release.product;
+    if (!used.has(product)) {
+      used.set(product, new Set());
+      latest.push(release);
+      continue;
+    }
+    const taken = used.get(product)!;
+    const revision = release.revision.toLowerCase();
+    const at =
+      SEGMENT.test(revision) && !taken.has(revision)
+        ? revision
+        : segment(release.id.toLowerCase(), 'release');
+    taken.add(at);
+    older.push({ ...release, segment: at });
+  }
+  if (older.length > 0)
+    log(
+      `Older releases: ${older.map((r) => `${r.product}/${OLDER_SEGMENT}/${r.segment}`).join(', ')}`,
+    );
+  return { latest, older };
 }
 
 /** The manuals at `tag` in `lang`, each variant resolved, every module's audience checked. */

@@ -170,6 +170,7 @@ export function toUserResource(
             password: user.signIn.password,
             provider: user.signIn.provider,
             inviteExpiresAt: user.signIn.inviteExpiresAt?.toISOString() ?? null,
+            secondFactor: user.signIn.secondFactor,
           },
         }),
     },

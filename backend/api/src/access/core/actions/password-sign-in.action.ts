@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { AuditLog } from '../../../audit/core/audit-log.js';
 import { ConflictError, ForbiddenError } from '../../../base/core/errors.js';
-import { UnitOfWork } from '../../../base/core/unit-of-work.js';
+import {
+  type Transaction,
+  UnitOfWork,
+} from '../../../base/core/unit-of-work.js';
 import { AccessAdmin } from '../access-admin.js';
 import { type Actor, UserEmail } from '../actor.js';
-import { beginSession } from '../begin-session.js';
 import {
   checkNewPassword,
   PASSWORD_PROVIDER,
@@ -14,24 +16,27 @@ import {
 } from '../passwords.js';
 import { ActorAction, type UnguardedAction } from '../policy.js';
 import { SessionPolicy } from '../session-policy.js';
-import { SessionStore } from '../sessions.js';
+import {
+  type BrowserTokens,
+  heldBefore,
+  SessionStart,
+  type StartedSignIn,
+} from '../session-start.js';
+import { SignInNotAllowedError } from '../sign-in-rules.js';
 import { WaysIn } from '../ways-in.js';
 
 /** Why a password sign-in gave no session. */
 export type PasswordRefusal =
-  /** Unknown address, no password, or the wrong one: the same answer for each. */
+  /**
+   * Unknown address, no password, the wrong one, or one the session policy refuses (#378): the
+   * same answer for each.
+   */
   | 'invalid-credentials'
   /** The right password, but the user is deactivated. */
-  | 'user-deactivated'
-  /** The right password, but the session policy refuses password sign-in for them. */
-  | 'sign-in-not-allowed';
+  | 'user-deactivated';
 
 export type PasswordSignInOutcome =
-  | {
-      readonly userId: string;
-      /** The new session's token, for the cookie; never stored or logged. */
-      readonly token: string;
-    }
+  | ({ readonly userId: string } & StartedSignIn)
   | { readonly refused: PasswordRefusal };
 
 /**
@@ -40,10 +45,12 @@ export type PasswordSignInOutcome =
  *
  * An unknown address, a user without a password and a wrong password all answer
  * `invalid-credentials`, and take the same time: an address with no password is checked
- * against a dummy hash (`PasswordHasher.verifyNothing`). Only the right password learns that
- * the user is deactivated (`user-deactivated`) or that the session policy refuses them
- * (`sign-in-not-allowed`). A hash made with older parameters is replaced by one with the
- * current ones (`needsRehash`). The browser's previous session ends. Recorded as
+ * against a dummy hash (`PasswordHasher.verifyNothing`). Whom the session policy refuses (single
+ * sign-on is required, #378) gets that answer too, right password or wrong, after the same work:
+ * which account is the break-glass one is nobody's to try out. Only the right password of someone
+ * it allows learns that the user is deactivated (`user-deactivated`). A hash made with older parameters is replaced by one with the
+ * current ones (`needsRehash`). With a second factor on or required (#611) it opens the second
+ * step instead of a session (`SessionStart`). The browser's previous session ends. Recorded as
  * `user.sign-in` (`data.method` `password`); the password, its hash and the token never are.
  * Failed attempts are counted by the caller (`FailedAuthentications`, `PasswordAttempts`), which refuses before
  * this runs past the limit. 409 `password-sign-in-off` when it is off.
@@ -58,18 +65,20 @@ export class PasswordSignInAction implements UnguardedAction {
     private readonly settings: PasswordSignIn,
     private readonly passwords: PasswordStore,
     private readonly hasher: PasswordHasher,
-    private readonly sessions: SessionStore,
+    private readonly start: SessionStart,
     private readonly sessionPolicy: SessionPolicy,
+    private readonly admin: AccessAdmin,
+    private readonly waysIn: WaysIn,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
   ) {}
 
-  async handle(input: {
-    readonly email: string;
-    readonly password: string;
-    /** The session the browser held before, if any: ended. */
-    readonly previousToken?: string | undefined;
-  }): Promise<PasswordSignInOutcome> {
+  async handle(
+    input: {
+      readonly email: string;
+      readonly password: string;
+    } & BrowserTokens,
+  ): Promise<PasswordSignInOutcome> {
     if (!this.settings.enabled) {
       throw new ConflictError(
         'password-sign-in-off',
@@ -80,6 +89,11 @@ export class PasswordSignInAction implements UnguardedAction {
     const found = UserEmail.safeParse(email).success
       ? await this.passwords.findByEmail(email)
       : undefined;
+    // Asked for every address, before the password, so its time says nothing either.
+    const allowed = await this.sessionPolicy.maySignIn(
+      found?.userId ?? '',
+      PASSWORD_PROVIDER,
+    );
     if (!found) {
       await this.hasher.verifyNothing(input.password);
       return { refused: 'invalid-credentials' };
@@ -87,46 +101,57 @@ export class PasswordSignInAction implements UnguardedAction {
     if (!(await this.hasher.verify(found.hash, input.password))) {
       return { refused: 'invalid-credentials' };
     }
+    if (!allowed) return { refused: 'invalid-credentials' };
     if (found.deactivatedAt !== null) return { refused: 'user-deactivated' };
-    if (
-      !(await this.sessionPolicy.maySignIn(found.userId, PASSWORD_PROVIDER))
-    ) {
-      return { refused: 'sign-in-not-allowed' };
-    }
     const rehash = this.hasher.needsRehash(found.hash)
       ? await this.hasher.hash(input.password)
       : undefined;
-    const token = await this.unit.run(async (tx) => {
+    const work = async (tx: Transaction): Promise<PasswordSignInOutcome> => {
+      // The person before their password, as every change of it takes them; then both again: the
+      // check above takes its time, and a password changed or a person deactivated meanwhile
+      // ended the ways in this would reopen.
+      await this.waysIn.holdPerson(tx, found.userId);
+      if ((await this.passwords.hashOf(found.userId, tx)) !== found.hash) {
+        return { refused: 'invalid-credentials' };
+      }
+      const user = await this.admin.findUser(tx, found.userId);
+      if (!user) return { refused: 'invalid-credentials' };
+      if (user.deactivatedAt !== null) return { refused: 'user-deactivated' };
       if (rehash !== undefined) {
-        // Only over the hash just checked: a password changed meanwhile stays.
         await this.passwords.replaceIf(tx, found.userId, found.hash, rehash);
       }
-      const token = await beginSession(
-        { sessions: this.sessions, policy: this.sessionPolicy },
-        tx,
-        {
-          userId: found.userId,
-          provider: PASSWORD_PROVIDER,
-          previousToken: input.previousToken,
-          now: this.now(),
-        },
-      );
-      await this.auditLog.record(
-        tx,
-        { kind: 'user', id: found.userId, roles: [] },
-        {
-          action: 'user.sign-in',
-          subject: { type: 'user', id: found.userId },
-          data: {
-            method: 'password',
-            provider: PASSWORD_PROVIDER,
-            rehashed: rehash !== undefined,
+      const started = await this.start.begin(tx, {
+        userId: found.userId,
+        provider: PASSWORD_PROVIDER,
+        held: heldBefore(input),
+        now: this.now(),
+      });
+      if ('token' in started) {
+        await this.auditLog.record(
+          tx,
+          { kind: 'user', id: found.userId, roles: [] },
+          {
+            action: 'user.sign-in',
+            subject: { type: 'user', id: found.userId },
+            data: {
+              method: 'password',
+              provider: PASSWORD_PROVIDER,
+              rehashed: rehash !== undefined,
+            },
           },
-        },
-      );
-      return token;
-    });
-    return { userId: found.userId, token };
+        );
+      }
+      return { userId: found.userId, ...started };
+    };
+    try {
+      return await this.unit.run(work);
+    } catch (error) {
+      // Required since the check above.
+      if (error instanceof SignInNotAllowedError) {
+        return { refused: 'invalid-credentials' };
+      }
+      throw error;
+    }
   }
 }
 

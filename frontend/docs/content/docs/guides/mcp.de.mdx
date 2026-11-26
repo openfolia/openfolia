@@ -306,23 +306,21 @@ nicht geantwortet), bis zu 10 Sekunden über seinen Neustart hinaus.
 
 Bis v0.0.3 hatte ein selbst betriebener MCP-Server ein Token für alle, `CCMS_MCP_HTTP_TOKEN`, und
 jeder Aufrufer las als der eigene Service-Account des Servers, `CCMS_MCP_API_TOKEN`. Dieses
-geteilte Token ist **veraltet**: In dieser Version funktioniert es noch, der Server warnt beim Start
-davor. Mit v0.0.5 entfällt es.
+geteilte Token **entfällt** mit v0.0.5: Ein Server, der mit gesetztem `CCMS_MCP_HTTP_TOKEN`
+startet, bricht ab und sagt es, und ein Aufrufer mit dem geteilten Token bekommt 401.
 
 1. Legen Sie für jede Person und jeden Agenten, die sich verbinden, einen Service-Account und ein
    Token an, wie in [Ein eigenes MCP-Token anlegen](#ein-eigenes-mcp-token-anlegen). Das Konto hinter
    `CCMS_MCP_API_TOKEN` hält schon nur `content.read`; Sie können also auch weitere Tokens davon
    ausstellen, eines je Aufrufer.
 2. Ersetzen Sie in jedem Client das geteilte Token durch das eigene des Aufrufers (etwa in
-   `OPENFOLIA_MCP_TOKEN`). Solange bedient der Server Aufrufer mit eigenem Token und solche mit dem
-   geteilten nebeneinander.
-3. Wenn alle Clients umgestellt sind, entfernen Sie beide Einstellungen und starten den Server neu.
+   `OPENFOLIA_MCP_TOKEN`).
+3. Entfernen Sie beide Einstellungen vor dem Upgrade auf v0.0.5 und starten Sie den Server neu.
+   (`CCMS_MCP_API_TOKEN` bleibt für den stdio-Transport.)
 
 <ServerSetting lang="de">
-  Entfernen Sie
-  [`CCMS_MCP_HTTP_TOKEN`](/de/reference/settings#ccms_mcp_http_token) und
-  [`CCMS_MCP_API_TOKEN`](/de/reference/settings#ccms_mcp_api_token) aus
-  `deploy/.env` und führen Sie `docker compose up -d` aus.
+  Entfernen Sie `CCMS_MCP_HTTP_TOKEN` und `CCMS_MCP_API_TOKEN` aus `deploy/.env`
+  und führen Sie `docker compose up -d` aus.
 </ServerSetting>
 
 ## Selbst betreiben

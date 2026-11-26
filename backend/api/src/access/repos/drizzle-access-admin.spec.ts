@@ -98,7 +98,12 @@ describe('DrizzleAccessAdmin', () => {
         roleIds: ['admin'],
         groupRoleIds: [],
         permissions: ['admin.roles'],
-        signIn: { password: false, provider: false, inviteExpiresAt: null },
+        signIn: {
+          password: false,
+          provider: false,
+          inviteExpiresAt: null,
+          secondFactor: false,
+        },
       });
       expect([...(await admin.heldPermissions(tx, 'bob'))]).toEqual([
         'admin.roles',

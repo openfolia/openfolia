@@ -1,0 +1,111 @@
+---
+title: 'Bereitstellung mit SCIM'
+description: 'Benutzer und Gruppen von Ihrem Verzeichnis anlegen, ändern und deaktivieren lassen, mit SCIM 2.0.'
+articleId: 'guide.admin.scim'
+---
+
+Ihr Verzeichnis (der Identitätsanbieter, der Ihre Mitarbeitenden führt) kann die Benutzer und
+Gruppen des Editors mit SCIM 2.0 aktuell halten. Es legt einen Benutzer an, wenn jemand
+dazukommt, ändert Name und E-Mail-Adresse und deaktiviert ihn, wenn er geht. Seine Gruppen geben
+Rollen über [Gruppenzuordnungen](/de/guide/admin/group-mappings).
+
+Die SCIM-Adresse eines gehosteten OpenFolia lautet:
+
+```text
+https://<team>.openfolia.com/api/scim/v2
+```
+
+Sonst ist es die Adresse Ihres Editors, gefolgt von `/api/scim/v2`.
+
+## Ein SCIM-Token erstellen
+
+Das Verzeichnis meldet sich mit dem Token eines Service-Accounts an, der nichts darf außer
+bereitstellen.
+
+1. Öffnen Sie **Verwaltung**, dann **Rollen**, und wählen Sie **Neue Rolle**.
+2. Benennen Sie sie, etwa „Verzeichnis“, und haken Sie nur **scim.provision** an. Wählen Sie
+   **Rolle anlegen**.
+3. Öffnen Sie **Service-Accounts** und wählen Sie **Neuer Service-Account**. Geben Sie ihm die
+   Rolle „Verzeichnis“ und wählen Sie **Service-Account hinzufügen**.
+4. Wählen Sie in seiner Zeile **Tokens**, dann **Token ausstellen**, und kopieren Sie das Token.
+5. Tragen Sie in den SCIM-Einstellungen Ihres Verzeichnisses die SCIM-Adresse oben und das Token
+   als Bearer-Token ein.
+
+Nur ein Service-Account darf bereitstellen: Eine Person wird abgewiesen, welche Rollen sie auch
+hat. Widerrufen Sie das Token oder deaktivieren Sie den Service-Account, um die Bereitstellung
+sofort zu beenden. Ohne Token antwortet die SCIM-Adresse mit 401.
+
+## Was das Verzeichnis kann
+
+- **Benutzer**: anlegen, lesen, auflisten, ersetzen, ändern (PATCH) und löschen. `userName` ist
+  Pflicht und eindeutig, ohne Rücksicht auf Groß- und Kleinschreibung. Der im Editor gezeigte
+  Name ist der `displayName`, sonst der `name`, sonst der `userName`. Die E-Mail-Adresse ist die
+  primäre, sonst die geschäftliche, sonst die erste.
+- **Gruppen**: anlegen, lesen, auflisten, ersetzen, ändern und löschen, mit ihren Mitgliedern.
+  Mitglieder müssen Benutzer sein, die das Verzeichnis bereitgestellt hat.
+- **Filter und Seiten**: `filter` (etwa `userName eq "jane@example.org"`), `startIndex` und
+  `count` (höchstens 200), `attributes` und `excludedAttributes`.
+- **Erkennung**: `ServiceProviderConfig`, `ResourceTypes` und `Schemas`.
+
+Sortieren, Sammeländerungen (Bulk), ETags und Passwörter werden nicht unterstützt. Listen zeigen
+nur Benutzer und Gruppen, die das Verzeichnis bereitgestellt hat.
+
+## Wenn jemand geht
+
+Setzt das Verzeichnis einen Benutzer auf inaktiv oder löscht es ihn, verliert er sofort den
+Zugang:
+
+- jede Sitzung endet, und seine Anmeldelinks und -codes gelten nicht mehr;
+- jede Sperre, die er hält, wird freigegeben;
+- seine nächste Anfrage wird abgewiesen.
+
+Seine Revisionen, Kommentare und Freigaben bleiben erhalten. Einen Benutzer im Verzeichnis zu
+löschen, deaktiviert ihn im Editor und trennt ihn vom Verzeichnis; gelöscht wird er nie. Setzen
+Sie ihn wieder auf aktiv, um ihn zurückzuholen; eine Aktualisierung ohne `active` ändert daran
+nichts. Eine Aktualisierung, die jemanden auf inaktiv setzt, deaktiviert ihn, was immer sonst an
+ihr falsch ist; ist etwas falsch, kann der Rest der Aktualisierung wegfallen. Stellt das
+Verzeichnis jemanden, den es gelöscht hat, mit derselben E-Mail-Adresse erneut bereit, kommt
+derselbe Benutzer aktiv zurück, es sei denn, Sie haben ihn seither im Editor reaktiviert oder
+deaktiviert. Wen Sie im Editor deaktiviert haben, bleibt deaktiviert, was das Verzeichnis auch
+sendet: Reaktivieren Sie ihn unter **Benutzer**.
+
+Eine Änderung, nach der niemand mehr Rollen verwalten könnte, wird abgewiesen, selbst eine
+Deaktivierung.
+
+## Gruppen und Rollen
+
+Eine bereitgestellte Gruppe gibt Rollen wie eine Anmeldegruppe: Legen Sie eine Gruppenzuordnung
+mit dem `displayName` der Gruppe und einer Rolle an. Mitglieder haben die Rolle sofort und
+verlieren sie, wenn sie die Gruppe verlassen, die Gruppe gelöscht oder die Zuordnung entfernt
+wird.
+
+Eine bereitgestellte Gruppe gibt nie eine Rolle mit **admin.roles**, **admin.branding**,
+**admin.backups**, **webhook.manage** oder **scim.provision**, auch wenn eine Zuordnung sie nennt:
+Das SCIM-Token kann keinen Admin machen. Erhält eine Rolle eine dieser Berechtigungen, verlieren
+die Mitglieder bereitgestellter Gruppen sie sofort. Geben Sie solche Rollen Personen direkt oder
+über eine Anmeldegruppe.
+
+## Benutzer, die es schon gibt
+
+Legt das Verzeichnis einen Benutzer an, dessen E-Mail-Adresse jemandem gehört, der schon im
+Editor ist, wird dieser verknüpft statt ein neuer angelegt, so wie es die Einstellung Ihres
+Servers für das Verknüpfen von Anmeldungen per E-Mail erlaubt (`CCMS_OIDC_LINK_BY_EMAIL`: in der
+Grundeinstellung nur jemand, der sich noch nie angemeldet hat). Nie verknüpft wird, wer
+deaktiviert ist oder eine Berechtigung über Lesen, Schreiben und Prüfen von Inhalten hinaus hat
+(**content.read**, **content.read.draft**, **content.edit**, **content.review**).
+
+## E-Mail-Adressen
+
+SCIM ändert die E-Mail-Adresse nur von Benutzern, die es selbst angelegt hat, nur bis zu ihrer
+ersten Anmeldung und nur solange sie nicht mehr als diese Berechtigungen haben. Danach ändern Sie
+die Adresse im Editor unter **Benutzer**. Sonst könnte, wer das SCIM-Token hat, ein Konto auf eine
+eigene Adresse umziehen und sein Passwort zurücksetzen.
+
+Ändert sich eine Adresse in Ihrem Verzeichnis, wird dessen Aktualisierung abgewiesen, bis Sie
+die Adresse auch im Editor geändert haben. Alles andere geht durch: andere Änderungen, solange
+sich die beiden Adressen unterscheiden, weil Sie die im Editor zuerst geändert haben, und das
+Deaktivieren (außer beim letzten Admin). Eine Adresse, die Sie im Editor gesetzt haben, bleibt,
+bis sich die im Verzeichnis ändert.
+
+Jede Änderung des Verzeichnisses steht im [Audit-Log](/de/guide/admin/audit-log), unter dem
+Service-Account.

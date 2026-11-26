@@ -13,7 +13,11 @@ import {
   UnitOfWork,
 } from '../../../base/core/unit-of-work.js';
 import { AccessAdmin } from '../access-admin.js';
-import { beginAccessChange, keepAnAdmin } from '../access-changes.js';
+import {
+  applyGroupRolesOf,
+  beginAccessChange,
+  keepAnAdmin,
+} from '../access-changes.js';
 import type { Actor } from '../actor.js';
 import {
   type GroupMapping,
@@ -72,8 +76,8 @@ export class GetGroupMappingAction extends ActorAction<
 
 /**
  * Applies the mappings to every user last seen in `group`, recording each
- * role gained or lost (`role.assign` / `role.unassign`, `data.via`
- * `groups`); answers whether a role with `admin.roles` was lost.
+ * role gained or lost (`applyGroupRolesOf`); answers whether a role with
+ * `admin.roles` was lost.
  */
 async function reapply(
   admin: AccessAdmin,
@@ -85,22 +89,8 @@ async function reapply(
 ): Promise<boolean> {
   let tookAdmin = false;
   for (const userId of await mappings.usersInGroup(tx, group)) {
-    const change = await mappings.applyGroupRoles(tx, userId);
-    for (const roleId of change.unassigned) {
-      const role = await admin.findRole(roleId, tx);
-      if (role?.permissions.includes('admin.roles')) tookAdmin = true;
-      await auditLog.record(tx, actor, {
-        action: 'role.unassign',
-        subject: { type: 'role', id: roleId },
-        data: { userId, via: 'groups' },
-      });
-    }
-    for (const roleId of change.assigned) {
-      await auditLog.record(tx, actor, {
-        action: 'role.assign',
-        subject: { type: 'role', id: roleId },
-        data: { userId, via: 'groups' },
-      });
+    if (await applyGroupRolesOf(admin, mappings, auditLog, tx, actor, userId)) {
+      tookAdmin = true;
     }
   }
   return tookAdmin;

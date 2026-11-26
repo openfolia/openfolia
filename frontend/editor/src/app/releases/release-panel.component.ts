@@ -32,7 +32,7 @@ import { RefreshingDirective } from '@openfolia/ui/smooth';
 
 import { ApiClient, pageQuery } from '../api';
 import { languageName } from '../content/browser-model';
-import { injectPersonName } from '../history/history-model';
+import { injectPersonName, injectPersonText } from '../history/history-model';
 import { GuardDirective } from '../permissions/guard.directive';
 import { UiTexts } from '../i18n';
 import { MeService } from '../permissions/me';
@@ -320,6 +320,7 @@ export class ReleasePanelComponent {
       this.source.config()?.audiences.find((a) => a.id === id)?.label,
   };
   private readonly nameOf = injectPersonName();
+  private readonly personText = injectPersonText();
 
   readonly release = input.required<ReleaseItem>();
   /** The release as people read it ("North 2.1"). */
@@ -380,7 +381,7 @@ export class ReleasePanelComponent {
   });
 
   protected readonly person = (who: { kind: string; id: string }) =>
-    this.nameOf(who.kind, who.id);
+    this.personText(who, this.nameOf(who.kind, who.id));
 
   constructor() {
     effect(() => {

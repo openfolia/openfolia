@@ -13,7 +13,7 @@ export const FIXTURE_OUT = join(import.meta.dirname, '..', 'dist-fixture');
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const servers: Server[] = [];
-  for (const audience of ['public', 'internal']) {
+  for (const audience of ['public', 'internal', 'plain']) {
     const root = join(FIXTURE_OUT, audience);
     if (!existsSync(join(root, 'index.html')))
       throw new Error(

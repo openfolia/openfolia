@@ -41,6 +41,7 @@ import {
 } from '../api';
 import { languageName } from '../content/browser-model';
 import { injectPersonName } from '../history/history-model';
+import { PersonNameComponent } from '../session/person-name.component';
 import { apiErrorText } from '../i18n';
 import { MeService } from '../permissions/me';
 import { frameOffset } from '../releases/frame-offset';
@@ -74,6 +75,7 @@ const BELOW_FRAME_PX = 32;
 @Component({
   selector: 'of-translation-jobs-page',
   imports: [
+    PersonNameComponent,
     TranslocoPipe,
     NgIcon,
     DatePipe,
@@ -108,10 +110,10 @@ const BELOW_FRAME_PX = 32;
       (retry)="reload()"
     >
       <ng-template ofListTable let-items>
-        <table z-table class="min-w-[56rem] table-fixed">
+        <table z-table class="min-w-[66rem] table-fixed">
           <thead z-table-header class="bg-background sticky top-0 z-10">
             <tr z-table-row>
-              <th z-table-head class="w-[30%]">
+              <th z-table-head class="w-[24%]">
                 {{ 'editor.translations.jobs.table.subject' | transloco }}
               </th>
               <th z-table-head class="w-40">
@@ -184,9 +186,11 @@ const BELOW_FRAME_PX = 32;
                     [attr.title]="job.attributes.createdAt | ofDate: dateTime"
                     >{{ job.attributes.createdAt | ofRelativeTime }}</span
                   >
-                  <span class="block text-xs break-words">{{
-                    person(job.attributes.createdBy)
-                  }}</span>
+                  <of-person-name
+                    class="block text-xs"
+                    [who]="job.attributes.createdBy"
+                    [name]="person(job.attributes.createdBy)"
+                  />
                 </td>
                 <td z-table-cell class="align-top text-sm whitespace-normal">
                   @if (job.attributes.dueDate; as due) {

@@ -122,3 +122,70 @@ export async function startMailServer(
     },
   };
 }
+
+/** The MIME parts of a message: their headers and decoded bodies. */
+export function parts(raw: string): { headers: string; body: string }[] {
+  const boundaries = [...raw.matchAll(/boundary="?([^";\r\n]+)"?/g)].map(
+    (m) => m[1]!,
+  );
+  let pieces = [raw];
+  for (const boundary of boundaries) {
+    pieces = pieces.flatMap((p) => p.split(`--${boundary}`));
+  }
+  return pieces
+    .map((piece) => {
+      const at = piece.search(/\r?\n\r?\n/);
+      if (at < 0) return undefined;
+      const headers = piece.slice(0, at);
+      let body = piece.slice(at).trim();
+      if (/Content-Transfer-Encoding: quoted-printable/i.test(headers)) {
+        body = body
+          .replace(/=\r?\n/g, '')
+          .replace(/=([0-9A-F]{2})/g, (_, hex: string) =>
+            String.fromCharCode(parseInt(hex, 16)),
+          );
+        body = Buffer.from(body, 'latin1').toString('utf8');
+      } else if (/Content-Transfer-Encoding: base64/i.test(headers)) {
+        body = Buffer.from(body.replace(/\s/g, ''), 'base64').toString(
+          /Content-Type: text/i.test(headers) ? 'utf8' : 'latin1',
+        );
+      }
+      return { headers, body: body.replace(/\r\n/g, '\n') };
+    })
+    .filter((p): p is { headers: string; body: string } => p !== undefined);
+}
+
+/** A message's top-level headers, unfolded, by lowercase name (the first of each). */
+export function headersOf(raw: string): Map<string, string> {
+  const head = raw
+    .slice(0, raw.search(/\r?\n\r?\n/))
+    .replace(/\r?\n[ \t]+/g, ' ');
+  const out = new Map<string, string>();
+  for (const line of head.split(/\r?\n/)) {
+    const at = line.indexOf(':');
+    if (at <= 0) continue;
+    const name = line.slice(0, at).trim().toLowerCase();
+    if (!out.has(name)) out.set(name, decodeWords(line.slice(at + 1).trim()));
+  }
+  return out;
+}
+
+/** RFC 2047 encoded words (`=?UTF-8?Q?…?=`, `=?UTF-8?B?…?=`) as text. */
+function decodeWords(value: string): string {
+  return value
+    .replace(/\?=\s+=\?/g, '?==?')
+    .replace(
+      /=\?UTF-8\?([QB])\?([^?]*)\?=/gi,
+      (_, kind: string, data: string) =>
+        kind.toUpperCase() === 'B'
+          ? Buffer.from(data, 'base64').toString('utf8')
+          : Buffer.from(
+              data
+                .replace(/_/g, ' ')
+                .replace(/=([0-9A-F]{2})/gi, (_m, hex: string) =>
+                  String.fromCharCode(parseInt(hex, 16)),
+                ),
+              'latin1',
+            ).toString('utf8'),
+    );
+}

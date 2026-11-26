@@ -364,9 +364,13 @@ describe('snapshots', () => {
         expect(await snap?.designTemplateListing('missing')).toEqual([]);
         expect(await snap?.designTemplateListing('../modules')).toEqual([]);
         expect(
-          (await snap?.designTemplateFile('house', 'parts/notice.typ'))?.toString(),
+          (
+            await snap?.designTemplateFile('house', 'parts/notice.typ')
+          )?.toString(),
         ).toBe('#let n = 1\n');
-        expect(await snap?.designTemplateFile('house', 'secret')).toBeUndefined();
+        expect(
+          await snap?.designTemplateFile('house', 'secret'),
+        ).toBeUndefined();
         expect(
           await snap?.designTemplateFile('linked', 'manual.typ'),
         ).toBeUndefined();
@@ -773,6 +777,25 @@ describe('ref listings', () => {
       expect(listings(slow.log)).toBe(2);
     } finally {
       git.close();
+      rmSync(slow.dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never shares a listing begun before it was told to forget it (another process wrote)', async () => {
+    const bare = createBareSampleRepo();
+    const slow = slowListingGit();
+    const git = new GitRepo(bare.dir, slow.binary);
+    try {
+      const before = git.refs();
+      git.forgetListings();
+      const after = git.refs();
+      // Shared again from then on.
+      const shared = git.refs();
+      await Promise.all([before, after, shared]);
+      expect(listings(slow.log)).toBe(2);
+    } finally {
+      git.close();
+      rmSync(bare.dir, { recursive: true, force: true });
       rmSync(slow.dir, { recursive: true, force: true });
     }
   });

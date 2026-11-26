@@ -10,6 +10,22 @@ export const SIGN_IN_PATH = 'sign-in';
 /** The query parameter holding the address to go back to after signing in. */
 export const RETURN_PARAM = 'returnUrl';
 
+/** The page of a sign-in's second step (#611). */
+export const SECOND_STEP_PATH = 'sign-in-two-factor';
+
+/** On after the first step: to the second, or signed in to where they were going. */
+export function afterSignIn(
+  router: Router,
+  step: 'verify' | 'set-up' | null,
+  returnUrl: string,
+): Promise<boolean> {
+  return !step
+    ? router.navigateByUrl(returnUrl)
+    : router.navigate([`/${SECOND_STEP_PATH}`], {
+        queryParams: returnUrl === '/' ? {} : { [RETURN_PARAM]: returnUrl },
+      });
+}
+
 /**
  * The address to go back to after signing in: a path inside the editor (one `/`, not `//` or
  * `/\`, which a browser reads as another host), never the sign-in page itself; anything else is

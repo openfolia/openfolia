@@ -1,0 +1,107 @@
+---
+title: 'Die Startseite einrichten'
+description: 'Die Startseite des Portals als Anleitung schreiben: Überschrift, kurze Einleitung, Hinweis und empfohlene Links, veröffentlicht und übersetzt wie jeder andere Text.'
+articleId: 'guide.portal.start-page'
+---
+
+Die Startseite eines Portals beginnt mit einem Suchfeld und listet die Anleitungen jedes Produkts. Sie
+können ihr eine eigene Überschrift geben, eine kurze Einleitung, einen Hinweis und empfohlene Links zu
+den Seiten, die Leser am meisten brauchen.
+
+Sie schreiben sie in OpenFolia, als eigene Anleitung. Sie wird geprüft, veröffentlicht und übersetzt
+wie jede andere Anleitung, und Leser sehen eine Änderung erst, wenn sie veröffentlicht ist.
+
+![Die Startseite eines Portals: eigene Überschrift und Einleitung über dem Suchfeld, darunter ein Hinweis und drei empfohlene Links](/images/guide/de/portal-start-page.webp)
+
+## Die Startseite schreiben
+
+1. Beginnen Sie eine Überarbeitung
+   ([Eine Überarbeitung beginnen](/de/guide/change-sets/start-a-revision)).
+2. Legen Sie eine Anleitung an: Wählen Sie **Neue Anleitung**, geben Sie ihr einen **Titel**, zum
+   Beispiel „Startseite“, und setzen Sie die **Zielgruppe**, für die das Portal ist. Eine Anleitung
+   ohne Zielgruppe gilt nur für die am stärksten eingeschränkte und wäre auf einem öffentlichen Portal
+   nicht zu sehen.
+3. Fügen Sie mit **Neues Modul…** ein Modul hinzu. Sein Titel ist die Überschrift der Startseite.
+4. Schreiben Sie seinen Text:
+   - **Der erste Absatz** ist die Einleitung. Er steht zwischen Überschrift und Suchfeld.
+   - **Ein Hinweis** eignet sich für eine Mitteilung, zum Beispiel über eine neue Version. Auch jeder
+     andere Block kann dort stehen, unter dem Suchfeld.
+   - **Eine Liste, deren Punkte alle mit einem Link beginnen**, wird zu den empfohlenen Links.
+5. Fügen Sie für weitere Gruppen von Links weitere Module hinzu. Jedes erscheint als Abschnitt mit
+   seinem Titel. Die Kapiteltitel der Anleitung werden nicht gezeigt.
+6. Lassen Sie die Überarbeitung prüfen und veröffentlichen Sie eine Version.
+
+Halten Sie sie kurz: Überschrift, zwei oder drei Sätze und drei bis acht Links genügen. Die
+Anleitungen der Produkte folgen darunter.
+
+## Empfohlene Links
+
+Jeder Punkt einer solchen Liste ist eine Karte: zuerst ein Link oder ein
+[Querverweis](/de/guide/writing/cross-references), dann nach einem Doppelpunkt eine Zeile, die sagt,
+wozu die Seite dient.
+
+> **Fahrzeug laden**: An der Station oder von Hand.
+
+| Ziel                         | So verlinken                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ein Abschnitt                | Ein **Querverweis** auf sein Modul. Die Karte öffnet die erste Anleitung der neuesten Versionen, die es enthält, in deren erster Variante. |
+| Eine Anleitung oder Variante | Ein **Link** mit der Adresse der Seite, aus dem Portal kopiert.                                                                            |
+| Ein Update-Leitfaden         | Ein **Link** mit seiner Adresse, mit den Versionen, wenn sie gewählt sind (`?from=1.0&to=2.0`).                                            |
+| Eine Suche                   | Ein **Link** mit der Adresse der Suchseite, nachdem Sie gesucht haben, zum Beispiel `https://<team>.openfolia.com/de/search/?q=Akku`.      |
+| Eine ältere Version          | Ein **Link** mit der Adresse ihrer Seite oder einer Anleitung darin.                                                                       |
+| **Alle Anleitungen**         | Ein **Link** mit der Adresse dieser Seite.                                                                                                 |
+| Eine Seite anderswo          | Ein **Link** mit ihrer Adresse. Die Karte nennt die Website, die sie öffnet.                                                               |
+
+Für einen Link tippen Sie <kbd>/</kbd>, wählen **Link** und geben **Adresse** und **Text** ein.
+
+Die Adresse dürfen Sie in jeder Sprache kopieren: Der Link führt zur Seite in der Sprache, in der der
+Leser liest. Nur die Filter einer Suche gelten in der Sprache, in der sie kopiert wurden; ihre Wörter
+gelten in jeder. Die Startseite selbst kann kein Ziel sein, einer ihrer Abschnitte schon, per Querverweis.
+
+Die Prüfungen warnen bei einem Querverweis vor einem **Verweis außerhalb der Anleitung**. Das ist hier
+zu erwarten: Die Startseite enthält kein Modul einer anderen Anleitung.
+
+## Wenn eine Seite fehlt
+
+Das Portal zeigt nie einen empfohlenen Link, der ins Leere führt. Ist die Seite nicht in diesem
+Portal, fehlt ihre Karte, und der Build des Portals meldet es. Das geschieht, wenn eine Anleitung:
+
+- noch nicht veröffentlicht ist oder entfernt wurde;
+- für eine stärker eingeschränkte Zielgruppe als das Portal ist;
+- in dieser Variante nicht veröffentlicht ist.
+
+Ein Link im Text auf eine solche Seite bleibt als einfacher Text stehen. Die Adresse eines Abschnitts,
+den es nicht mehr gibt, führt zum Anfang seiner Seite.
+
+## Zielgruppen
+
+Ein Portal zeigt nichts oberhalb seiner eigenen Zielgruppe, auch nicht auf der Startseite. Links auf
+stärker eingeschränkte Seiten fehlen im offeneren Portal, eine Startseite kann also beiden dienen.
+
+Eine Anleitung enthält kein Modul für eine stärker eingeschränkte Zielgruppe als ihre eigene. Soll
+das Servicepersonal mehr sehen als die Kunden, legen Sie eine zweite Anleitung mit der Zielgruppe
+**Intern** an, die dieselben Module verwendet und eigene ergänzt.
+
+## Sprachen
+
+Übersetzen Sie die Module der Startseite wie alle anderen ([Übersetzungen](/de/guide/translations)).
+Ein nicht übersetztes Modul erscheint in der Ausgangssprache, wie in einer Anleitung.
+
+## Wieder entfernen
+
+Löschen Sie die Anleitung und veröffentlichen Sie eine Version jedes Produkts, dessen neueste Version
+sie noch enthält, oder lassen Sie die Einstellung leeren. Das Portal zeigt dann wieder seine Standard-Startseite.
+
+## Einschalten
+
+<ServerSetting lang="de">
+  Nennen Sie die ID der Anleitung in `CCMS_PORTAL_START`, zum Beispiel
+  `portal-start`. Für mehrere Zielgruppen nennen Sie je eine, durch Kommas
+  getrennt, die am stärksten eingeschränkte zuerst: Jedes Portal nimmt die
+  erste, die es zeigen darf. Keine davon steht in der Liste der Anleitungen.
+  Setzen Sie `CCMS_PORTAL_URL` auf die eigene Adresse des Portals, zum Beispiel
+  `https://docs.example.com`: Ohne sie gilt ein Link auf eine seiner Seiten als
+  Seite anderswo, und niemand merkt, wenn sie fehlt. Siehe [Erstellen und
+  Vorschau](/de/guide/portal/build). Ein Update-Leitfaden kann nicht die
+  Startseite sein.
+</ServerSetting>

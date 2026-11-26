@@ -7,7 +7,7 @@ export interface PasswordAttempt {
 
 /**
  * Port: the lockout per account (#610). Every password check for an account (a sign-in with
- * its address, a change of one's own password) and every "Forgot password" for an address
+ * its address, a change of one's own password, a second factor's code, #611) and every "Forgot password" for an address
  * counts toward one total per key, at most `CCMS_PASSWORD_FAILURES_MAX` per
  * `CCMS_PASSWORD_FAILURES_WINDOW_MS`. Counted before the check, in one step with the limit's
  * test, so attempts at once cannot slip past it; a right password is taken back. Kept alike
@@ -21,6 +21,14 @@ export abstract class PasswordAttempts {
    */
   abstract reserve(
     key: string,
+    options?: {
+      /**
+       * An upper bound on the limit, whatever the settings say (also 0: no limit): the smaller
+       * of the two holds. For a second factor's codes (#611), six digits that must never be
+       * guessed without end.
+       */
+      readonly atMost?: number;
+    },
   ): Promise<
     { attempt: PasswordAttempt; remaining: number } | { retryAfter: number }
   >;

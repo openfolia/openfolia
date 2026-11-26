@@ -127,7 +127,7 @@ const REACHES = 'it would reach other people';
 /**
  * The settings a public sandbox refuses at start, each with why: whatever sends something out
  * (email, webhooks to private or plain-HTTP addresses, AI providers, embeddings, the audit sink,
- * S3 storage) or lets people in another way than the demo's (OpenID Connect, passwords, codes by
+ * S3 storage) or lets people in another way than the demo's (OpenID Connect, SAML, passwords, codes by
  * email, a first admin). Unset (or `off`/`false`) they are fine.
  */
 export const SANDBOX_REFUSED_SETTINGS = [
@@ -135,6 +135,8 @@ export const SANDBOX_REFUSED_SETTINGS = [
   'CCMS_OIDC_CLIENT_ID',
   'CCMS_OIDC_CLIENT_SECRET',
   'CCMS_OIDC_REDIRECT_URL',
+  'CCMS_SAML_IDP_METADATA_URL',
+  'CCMS_SAML_IDP_METADATA_FILE',
   'CCMS_PASSWORD_SIGN_IN',
   'CCMS_EMAIL_CODE_SIGN_IN',
   'CCMS_FIRST_ADMIN_EMAIL',
@@ -173,6 +175,8 @@ const REFUSED: Record<
   CCMS_OIDC_CLIENT_ID: { why: REACHES },
   CCMS_OIDC_CLIENT_SECRET: { why: REACHES },
   CCMS_OIDC_REDIRECT_URL: { why: REACHES },
+  CCMS_SAML_IDP_METADATA_URL: { why: REACHES },
+  CCMS_SAML_IDP_METADATA_FILE: { why: REACHES },
   CCMS_PASSWORD_SIGN_IN: { why: REACHES, harmless: 'off' },
   CCMS_EMAIL_CODE_SIGN_IN: { why: LEAVES, harmless: 'off' },
   CCMS_FIRST_ADMIN_EMAIL: { why: REACHES },

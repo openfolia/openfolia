@@ -62,6 +62,10 @@ export class FakeOutboxFeed extends OutboxFeed {
     return { from, events };
   }
 
+  async find(id: number): Promise<OutboxEvent | undefined> {
+    return this.rows.find((r) => r.position.id === id);
+  }
+
   async blocked(): Promise<string[]> {
     return [...this.held].sort();
   }

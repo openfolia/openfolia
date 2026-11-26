@@ -48,6 +48,23 @@ stehen in der Umgebung des Servers, hier sind sie nur zu lesen.
 Ist E-Mail eingeschaltet, sendet **Test-E-Mail senden** eine an Sie. Sie sollte innerhalb einer
 Minute ankommen; ein Fehler erscheint im [Audit-Log](/de/guide/admin/audit-log).
 
+Der Abschnitt zählt auch die E-Mails, die in den letzten 7 Tagen endgültig gescheitert sind, und
+zeigt das jüngste Scheitern: wann, welche Art von E-Mail und warum. Eine gescheiterte E-Mail wird
+zuerst wiederholt, in wachsenden Abständen. Die Gründe:
+
+- **rejected**: Der Mailserver hat die E-Mail oder die Adresse abgelehnt.
+- **unavailable**: Der Mailserver war nicht erreichbar oder hat nicht geantwortet.
+- **tls**: Es kam keine sichere Verbindung zustande.
+- **auth**: Der Mailserver hat die Anmeldung abgelehnt.
+- **unreadable**: Die E-Mail ließ sich zum Senden nicht öffnen, etwa nachdem sich der
+  Instanzschlüssel geändert hat.
+- **off**: E-Mail wurde ausgeschaltet, bevor die E-Mail hinausging.
+
+Jede gesendete Benachrichtigungs-E-Mail steht im [Audit-Log](/de/guide/admin/audit-log) als
+`mail.sent`, jede endgültig gescheiterte E-Mail als `mail.failed`, mit ihrer Art und der Person, für
+die sie war, nie mit ihrem Inhalt. Welche Benachrichtigungen per E-Mail kommen,
+wählt jede Person unter [Benachrichtigungen](/de/guide/getting-started/notifications).
+
 ## Hintergrundarbeit
 
 **Hintergrundarbeit** zeigt die Worker, die Dateien von Veröffentlichungen erstellen, Importe ausführen und

@@ -22,5 +22,6 @@ export type {
   Response,
   Schema,
 } from './api-types';
+export { type Named, PeopleStates } from './people-states';
 export { ReadRef } from './read-ref';
 export { provideApi } from './provide-api';

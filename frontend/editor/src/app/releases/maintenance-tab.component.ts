@@ -35,6 +35,7 @@ import { ZardTableImports } from '@openfolia/ui/table';
 
 import { ApiClient, pageQuery, toApiError, type ApiError } from '../api';
 import { injectPersonName } from '../history/history-model';
+import { PersonNameComponent } from '../session/person-name.component';
 import { apiErrorText } from '../i18n';
 import { GuardDirective } from '../permissions/guard.directive';
 import { MeService } from '../permissions/me';
@@ -70,6 +71,7 @@ const BELOW_FRAME_PX = 32;
 @Component({
   selector: 'of-maintenance-tab',
   imports: [
+    PersonNameComponent,
     TranslocoPipe,
     NgIcon,
     DatePipe,
@@ -185,9 +187,11 @@ const BELOW_FRAME_PX = 32;
                     [attr.title]="l.attributes.createdAt | ofDate: dateTime"
                     >{{ l.attributes.createdAt | ofRelativeTime }}</span
                   >
-                  <span class="block text-xs break-words">{{
-                    person(l.attributes.createdBy)
-                  }}</span>
+                  <of-person-name
+                    class="block text-xs"
+                    [who]="l.attributes.createdBy"
+                    [name]="person(l.attributes.createdBy)"
+                  />
                 </td>
                 <td z-table-cell class="align-top text-end">
                   @if (open) {

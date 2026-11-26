@@ -124,7 +124,7 @@ function meta(row: Suggestion): HTMLElement {
 
 export interface TypeaheadOptions {
   /** The index (default: this site's Pagefind). */
-  readonly load?: (base: string) => Promise<Pagefind>;
+  readonly load?: (base: string, dir?: string) => Promise<Pagefind>;
   /** Opens a row (default: the browser goes there). */
   readonly go?: (url: string) => void;
 }
@@ -234,6 +234,7 @@ function attach(
     const url = new URL(form.action, location.href);
     url.search = '';
     url.searchParams.set('q', q);
+    if (c.release) url.searchParams.set('release', c.release);
     const option = el('a', 'typeahead__option typeahead__all');
     option.href = url.pathname + url.search;
     option.append(
@@ -289,7 +290,7 @@ function attach(
       }, SLOW_MS);
     let pagefind: Pagefind;
     try {
-      pagefind = await load(c.base);
+      pagefind = await load(c.base, c.index);
     } catch {
       if (mine !== run) return;
       // The index is not there: the field goes back to a plain search form.
@@ -333,7 +334,7 @@ function attach(
 
   input.addEventListener('focus', () => {
     // The index loads while the reader starts typing.
-    if (!failed) load(c.base).catch(() => undefined);
+    if (!failed) load(c.base, c.index).catch(() => undefined);
   });
 
   input.addEventListener('input', () => {

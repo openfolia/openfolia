@@ -31,7 +31,9 @@ import { KbdComponent } from '@openfolia/ui/kbd';
 import { ZardTextareaComponent } from '@openfolia/ui/textarea';
 
 import { toApiError } from '../api';
+import { injectPersonText } from '../history/history-model';
 import { apiErrorText } from '../i18n';
+import { PersonNameComponent } from '../session/person-name.component';
 import {
   ReviewComments,
   type Comment,
@@ -63,6 +65,7 @@ const BODY_MAX = 10_000;
     AvatarComponent,
     CollapseComponent,
     KbdComponent,
+    PersonNameComponent,
     ZardButtonComponent,
     ZardTextareaComponent,
   ],
@@ -103,12 +106,22 @@ const BODY_MAX = 10_000;
             <header
               class="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs leading-5"
             >
-              <span class="break-words">{{ nameOf(thread.first) }}</span>
+              <span class="min-w-0"
+                ><of-person-name
+                  [who]="thread.first.attributes.author"
+                  [name]="nameOf(thread.first)"
+                /><span class="ml-1.5" aria-hidden="true"
+                  >&NoBreak;·</span
+                ></span
+              >
               @if (anchorFor(thread); as anchor) {
-                <span aria-hidden="true">·</span>
-                <span class="break-words" data-slot="anchor">{{ anchor }}</span>
+                <span class="min-w-0 break-words"
+                  ><span data-slot="anchor">{{ anchor }}</span
+                  ><span class="ml-1.5" aria-hidden="true"
+                    >&NoBreak;·</span
+                  ></span
+                >
               }
-              <span aria-hidden="true">·</span>
               <ng-container
                 *ngTemplateOutlet="when; context: { $implicit: thread.first }"
               />
@@ -180,8 +193,14 @@ const BODY_MAX = 10_000;
                           class="text-muted-foreground m-0 flex flex-wrap items-center gap-x-1.5 text-xs leading-5"
                           data-slot="byline"
                         >
-                          <span class="break-words">{{ nameOf(reply) }}</span>
-                          <span aria-hidden="true">·</span>
+                          <span class="min-w-0"
+                            ><of-person-name
+                              [who]="reply.attributes.author"
+                              [name]="nameOf(reply)"
+                            /><span class="ml-1.5" aria-hidden="true"
+                              >&NoBreak;·</span
+                            ></span
+                          >
                           <ng-container
                             *ngTemplateOutlet="
                               when;
@@ -482,6 +501,7 @@ const BODY_MAX = 10_000;
 export class DiffCommentsComponent {
   protected readonly comments = inject(ReviewComments);
   private readonly t = injectTranslate();
+  private readonly personText = injectPersonText();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** The module (`<lang>/<moduleId>`) and block the threads are on. */
@@ -630,7 +650,10 @@ export class DiffCommentsComponent {
 
   protected threadLabel(thread: Thread): string {
     return this.t('editor.review.comments.threadBy', {
-      name: this.nameOf(thread.first),
+      name: this.personText(
+        thread.first.attributes.author,
+        this.nameOf(thread.first),
+      ),
     });
   }
 

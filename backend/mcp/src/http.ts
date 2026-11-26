@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import {
   createServer,
@@ -30,13 +30,6 @@ export interface HttpOptions {
    * account's, `ccms_sat_…`, forwarded to the API on every read, #861).
    */
   readonly callerContext: (token: string) => McpContext;
-  /**
-   * Deprecated (#861, to be removed in v0.0.5): the one token every caller
-   * may send instead (`CCMS_MCP_HTTP_TOKEN`), and the context it reads with
-   * (the server's own service account, `CCMS_MCP_API_TOKEN`). Unset: callers
-   * bring their own tokens only.
-   */
-  readonly shared?: { readonly token: string; readonly context: McpContext };
   /** Origins a browser-based caller may send (`Origin`); any other is 403. */
   readonly allowedOrigins: readonly string[];
   /** Whether the server listens on a loopback address only: then `Host` must name one. */
@@ -243,7 +236,7 @@ export const CHECK_RETRY_AFTER_S = 5;
  * loopback, the bearer token (failures counted per client address,
  * `clientAddress`), the client's rate, the method (POST only) and the body
  * size. The token is the caller's own service account token, checked by the
- * API (`Callers`), or the deprecated shared token, compared in constant time.
+ * API (`Callers`).
  */
 export function createHttpHandler(
   options: HttpOptions,
@@ -252,10 +245,6 @@ export function createHttpHandler(
   const requests = new Counter(MAX_REQUESTS_PER_WINDOW, now);
   const failures = new Counter(MAX_FAILURES_PER_WINDOW, now);
   const allFailures = new Counter(MAX_FAILURES_PER_WINDOW_ALL, now);
-  const shared = options.shared && {
-    digest: digest(options.shared.token),
-    context: options.shared.context,
-  };
   const callers = new Callers(options.callerContext, now);
   const checks = new Limiter(MAX_CHECKS_AT_ONCE, MAX_CHECKS_WAITING);
   const checking = new Map<string, number>();
@@ -273,8 +262,7 @@ export function createHttpHandler(
       if (!isLoopback(host))
         return refuse(res, 403, 'Forbidden: host not allowed');
     }
-    // The token first. A caller already admitted with its own token (or
-    // holding the shared one) is always served, even from an address others
+    // The token first. A caller already admitted with its own token is always served, even from an address others
     // have locked out (a NAT, a proxy, this machine). Any other token costs a
     // failed attempt of its address up front, taken back when the API accepts
     // it or cannot say, so checks under way count too. A token of no service
@@ -286,17 +274,13 @@ export function createHttpHandler(
     // for everyone, which queues: never by the global budget, so a flood of
     // wrong tokens from many addresses cannot lock a new real caller out.
     // This does not slow guessing down: the tokens' entropy is the defence
-    // (256 random bits; see `settings.ts` for the shared one).
+    // (256 random bits).
     const header = req.headers.authorization ?? '';
     const presented = /^Bearer\s+(\S+)$/i.exec(header)?.[1];
     const sent = presented === undefined ? undefined : digest(presented);
     const key = sent?.toString('hex');
     let context: McpContext | undefined;
-    if (shared && sent && timingSafeEqual(sent, shared.digest)) {
-      context = shared.context;
-    }
     const own =
-      context === undefined &&
       presented !== undefined &&
       key !== undefined &&
       SERVICE_TOKEN.test(presented);
@@ -304,7 +288,7 @@ export function createHttpHandler(
     // Whether this request holds a failed attempt counted up front.
     let counted = false;
     let countedIn: number | undefined;
-    if (context === undefined && !known) {
+    if (!known) {
       // The global budget first (not for a service token): past it, no address is counted or looked up.
       const global = !own && allFailures.over(EVERYONE);
       const local = !global && failures.over(address);
@@ -339,7 +323,7 @@ export function createHttpHandler(
         'Retry-After': String(requests.retryAfter(address)),
       });
     }
-    if (context === undefined && own && presented !== undefined && key) {
+    if (own && presented !== undefined && key) {
       const under = checking.get(address) ?? 0;
       if (!known && under >= MAX_CHECKS_PER_ADDRESS) {
         forgive();

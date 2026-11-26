@@ -1,14 +1,17 @@
 import { PERMISSIONS } from '../src/access/core/permissions.js';
 import { Logger } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import {
   ActorDocument,
   UserPageDocument,
 } from '../src/access/api/access.resources.js';
 import { AuditEventPageDocument } from '../src/audit/api/audit-event.resources.js';
+import { users } from '../src/access/repos/access.tables.js';
 import { exampleSeed } from '../src/access/repos/example-seed.js';
 import { Seed, seedAccess } from '../src/access/repos/seed.js';
 import { ErrorDocument } from '../src/base/api/json-api.js';
-import { fill, PUBLIC_ROUTES, routesOf, send } from './routes.js';
+import { ScimErrorDocument } from '../src/scim/api/scim.resources.js';
+import { fill, isScimRoute, PUBLIC_ROUTES, routesOf, send } from './routes.js';
 import { createTestApp, TOKEN, type TestApp } from './test-app.js';
 
 /** Demo mode (`CCMS_AUTH_MODE=demo`) over the example seed. */
@@ -103,7 +106,10 @@ describe('demo mode', () => {
         .set('X-Ccms-User', 'nobody')
         .set('Accept', '*/*');
       expect([route, res.status]).toEqual([route, 403]);
-      expect(error(res.body)?.code).toBe('unknown-user');
+      // SCIM's errors (#377) carry a status, not a code.
+      if (isScimRoute(route))
+        expect(ScimErrorDocument.parse(res.body).status).toBe('403');
+      else expect(error(res.body)?.code).toBe('unknown-user');
     }
   });
 
@@ -139,7 +145,12 @@ describe('demo mode', () => {
         permissions: [...PERMISSIONS],
         groupRoleIds: [],
         // How they sign in (#610): seeded, no password, no provider, no invite.
-        signIn: { password: false, provider: false, inviteExpiresAt: null },
+        signIn: {
+          password: false,
+          provider: false,
+          inviteExpiresAt: null,
+          secondFactor: false,
+        },
       },
     });
     expect(decodeURIComponent(doc.links.next ?? '')).toBe(
@@ -167,5 +178,21 @@ describe('demo mode', () => {
         '/demo/users?page[size]=2&page[number]=2',
       );
     }
+  });
+
+  it('lists the deactivated users, to name whose work it is (#928)', async () => {
+    const off = async () =>
+      UserPageDocument.parse(
+        (await t.get('/demo/users?filter[status]=deactivated')).body,
+      ).data.map((u) => u.id);
+    expect(await off()).toEqual([]);
+    await t.database.db
+      .update(users)
+      .set({ deactivatedAt: new Date() })
+      .where(eq(users.id, 'sample-reader'));
+    expect(await off()).toEqual(['sample-reader']);
+    const offered = UserPageDocument.parse((await t.get('/demo/users')).body);
+    expect(offered.data.map((u) => u.id)).not.toContain('sample-reader');
+    expect((await t.get('/demo/users?filter[status]=gone')).status).toBe(400);
   });
 });

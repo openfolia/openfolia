@@ -88,6 +88,23 @@ describe('the demo content', () => {
     }
   });
 
+  it('has an owner update guide, with the technician steps in the service manual (#926)', () => {
+    const { manuals } = readDemoContent();
+    const guide = manuals['software-update'] as Manifest;
+    const service = manuals['service'] as Manifest;
+    expect(guide.audience).toBe('owner');
+    const steps = guide.guide?.steps ?? [];
+    for (const id of ['update-diagnostic-tester', 'update-calibrate-camera']) {
+      expect(steps.map((s) => s.module)).not.toContain(id);
+      expect(service.entries.map((e) => e.module)).toContain(id);
+    }
+    expect(steps.some((s) => s.level)).toBe(false);
+    // Every version after the first (the oldest, which has nothing to install) still has a step.
+    for (const v of (guide.guide?.versions ?? []).slice(1)) {
+      expect(steps.map((s) => s.version)).toContain(v);
+    }
+  });
+
   it('is in English and German in full, with the same blocks in each', () => {
     const { modules } = readDemoContent();
     const source = modules[SOURCE_LANG];

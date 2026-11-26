@@ -1,0 +1,116 @@
+---
+title: 'Require single sign-on'
+description: 'Let people sign in only through your identity provider, keep an emergency account, and set how long sessions last.'
+articleId: 'guide.admin.single-sign-on'
+---
+
+You can require everyone to sign in through your organisation's identity provider (OpenID Connect
+or SAML), and set how long a session lasts. Both are in **Admin**, then **Project settings**, under
+**Installation**, **Single sign-on and sessions**. A change applies at once to the whole
+installation and is recorded in the [audit log](/guide/admin/audit-log).
+
+## Require single sign-on
+
+1. Sign in through your identity provider yourself. Without that, the setting is refused, so you
+   cannot lock yourself out.
+2. Choose an **Emergency account** (below). You can do without, but then nobody gets in while the
+   provider is down.
+3. Under **How people sign in**, choose **Only with single sign-on** and confirm.
+
+Before the setting is saved, the server checks the provider: OpenID Connect by reading what the
+provider publishes, anew each time; SAML by reading its metadata address anew (it must answer within
+ten seconds with valid metadata; the metadata used for sign-ins changes only when what was read is
+valid). Metadata from a file cannot be checked: it is never asked, and what was read last counts. Whether people can sign in there, only a sign-in shows, so try one
+first.
+
+From then on:
+
+- Everyone who signed in another way is signed out at once. Text typed in a module that was not
+  saved yet stays in their browser and is there again after they sign in.
+- The sign-in page offers the identity provider only, and a quiet **Emergency sign-in**.
+- Open invitations, links to set a password and codes by email end, and no new ones are made.
+  Someone new signs in through the provider.
+- The emergency account is signed out too, and its earlier links end. Only the session you make the
+  change with goes on.
+
+Turning it off brings none of that back: people ask for a new link or sign in again.
+
+## The emergency account
+
+One account that can still sign in with its password, for the day the provider does not work (a
+"break-glass" account).
+
+1. Choose a person under **Emergency account**. They must be active, have a password, and hold a
+   role with `admin.roles` given directly, not through a group.
+2. Keep the password somewhere safe. Turn on
+   [two-factor sign-in](/guide/getting-started/two-factor) for the account.
+
+They choose **Emergency sign-in** on the sign-in page. It takes the password only, never a code by
+email, with the same lockout and the same second factor as any password sign-in. Every sign-in with
+it is an event of its own in the audit log, **Emergency sign-in**. Everyone who is an admin at that
+moment gets a notification and, when the server sends email, an email. Nobody can turn these off. If
+you require single sign-on while signed in with the account's password, that counts as a use too.
+
+If its password is lost, **New password link** under **Emergency account** makes a one-time link to
+set a new one, while the account still has a password of its own.
+
+The page warns when the account can no longer be used: the person was deactivated, lost the role, or
+has no password, or sign-in with a password is off on the server. It stops working at that moment,
+and nobody is signed in with it again when the role comes back. Choose another one then.
+
+An account without a password gets no new link while single sign-on is required. Choose another
+account, or turn single sign-on off, give the person a password and require it again. If nobody can
+sign in to do that, see below.
+
+## When nobody can sign in
+
+If the provider does not work and there is no emergency account that can be used, single sign-on can
+be turned off from the server's command line.
+
+On a hosted OpenFolia, ask whoever hosts it for you.
+
+<ServerSetting>
+  Run `node dist/database/allow-other-sign-ins.main.js` in the API's container.
+  It is recorded in the audit log.
+</ServerSetting>
+
+## What it covers
+
+| Way in                                       | With single sign-on required                                     |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| OpenID Connect, SAML                         | Works                                                            |
+| Password                                     | Refused, but for the emergency account                           |
+| Code by email, and the link in that email    | Refused                                                          |
+| Invitation, and a link to set a new password | Refused, but for a link an admin makes for the emergency account |
+| **Forgot password?**                         | Not offered                                                      |
+
+It is about people signing in. It does **not** cover:
+
+- **Service accounts and SCIM.** They act with tokens of their own, as before. Review them under
+  [Service accounts](/guide/admin/service-accounts).
+- **Addresses open to anyone.** A project's stable addresses follow their own setting
+  ([Who opens the addresses](/guide/releases/address-access)). A portal is a site of its own.
+- **The shared token.** A server set up with `CCMS_API_TOKEN` lets whoever holds it read without
+  signing in. A server refuses to start with it beside an identity provider, except on one
+  developer's own machine (an identity provider on a loopback address).
+- **Demo mode and the public sandbox.** Nobody signs in there, so single sign-on cannot be required.
+- **Who the provider lets in.** Anyone your provider signs in gets in, with the roles their groups
+  give. Take people out there, or provision them [over SCIM](/guide/admin/scim).
+
+## How long a session lasts
+
+- **End a session without activity after:** the idle time. Counted to the minute.
+- **End every session after:** the longest a session lasts after signing in, however much it is
+  used. The shorter of the two ends it.
+
+Leave a setting at **The server's setting** to keep what the server is set up with. A change applies
+to running sessions from their next request. A longer limit never brings back a session that had
+already ended.
+
+**What counts as activity:** what a person does: opening a page, typing, pointing, scrolling with the
+wheel or a finger, in a preview too. Anything the editor asks the server within a minute of that keeps the session. What an open tab asks by itself, such as the
+count of notifications, does not count, so a tab left open ends like any other. A program that uses
+a session's cookie without the editor counts as activity with each request.
+
+When a session ends, the editor goes to the sign-in page. Text typed in a module that was not saved
+yet is kept in the browser and offered again after signing in.

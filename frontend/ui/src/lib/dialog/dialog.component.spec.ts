@@ -33,13 +33,19 @@ afterAll(() => {
   template: `
     <button type="button" id="opener">Open</button>
     <button type="button" id="elsewhere">Elsewhere</button>
-    <z-dialog [(zVisible)]="open" [zDuration]="0">
+    <z-dialog [(zVisible)]="open" [zDuration]="0" [zCanClose]="canClose">
       <button type="button" id="inside">Inside</button>
     </z-dialog>
   `,
 })
 class Host {
   readonly open = signal(false);
+  may = true;
+  asked = 0;
+  readonly canClose = () => {
+    this.asked++;
+    return this.may;
+  };
 }
 
 async function opened() {
@@ -76,6 +82,45 @@ describe('the dialog’s focus on closing', () => {
       document.querySelector<HTMLElement>('#elsewhere')!.focus(),
     );
     expect(document.activeElement?.id).toBe('elsewhere');
+    fixture.destroy();
+  });
+});
+
+describe('the dialog’s own ways to close', () => {
+  it('each ask the host first: Escape, the X (#611)', async () => {
+    const { fixture } = await opened();
+    const host = fixture.componentInstance;
+    const ways = [
+      () =>
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+        ),
+      () =>
+        document
+          .querySelector<HTMLButtonElement>(
+            '[data-testid="z-close-header-button"]',
+          )!
+          .click(),
+    ];
+    for (const way of ways) {
+      host.may = false;
+      host.asked = 0;
+      way();
+      await wait(10);
+      await fixture.whenStable();
+      expect(host.asked).toBe(1);
+      expect(host.open()).toBe(true);
+      expect(document.querySelector('#inside')).not.toBeNull();
+      host.may = true;
+      way();
+      await wait(20);
+      await fixture.whenStable();
+      expect(host.open()).toBe(false);
+      host.open.set(true);
+      fixture.detectChanges();
+      await wait(10);
+      await fixture.whenStable();
+    }
     fixture.destroy();
   });
 });

@@ -1,3 +1,4 @@
+import { FakeGroupMappings } from '../../../../tests/fakes/fake-sign-in.js';
 import { FakeAccessAdmin } from '../../../../tests/fakes/fake-access-admin.js';
 import { FakeAuditLog } from '../../../../tests/fakes/fake-audit-log.js';
 import { FakeLockStore } from '../../../../tests/fakes/fake-lock-store.js';
@@ -215,7 +216,12 @@ describe('service accounts', () => {
     // Nor through the role they hold.
     await withAccount(s);
     s.admin.serviceAccountRoles.set('publisher', 1);
-    const updateRole = new UpdateRoleAction(s.admin, s.audit, s.unit);
+    const updateRole = new UpdateRoleAction(
+      s.admin,
+      s.audit,
+      s.unit,
+      new FakeGroupMappings(s.admin),
+    );
     await expect(
       updateRole.handle({
         actor: root,

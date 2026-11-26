@@ -78,8 +78,13 @@ export function settingsKey(settings: PortalSettings): string {
     audience: settings.audience,
     languages: settings.languages ?? null,
     releases: settings.releases ?? null,
+    releasesPerProduct: settings.releasesPerProduct,
+    olderNoindex: settings.olderNoindex,
     basePath: settings.basePath,
     branding: settings.branding,
+    // Not in the key while unset, so a build from before they existed is still served.
+    start: settings.start,
+    portalOrigin: settings.portalOrigin,
   });
 }
 

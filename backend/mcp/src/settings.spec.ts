@@ -11,25 +11,17 @@ describe('loadSettings', () => {
     expect(() => loadSettings('stdio', {})).toThrow(
       /CCMS_MCP_API_URL[\s\S]*CCMS_MCP_API_TOKEN/,
     );
-    const token = '9f3c2a71e04b8d65c1a7f0e93b42d8a6';
-    expect(
-      loadSettings('http', {
-        ...API,
-        CCMS_MCP_HTTP_TOKEN: token,
-        CCMS_MCP_HTTP_PORT: '',
-      }),
-    ).toEqual({
+    expect(loadSettings('http', { ...API, CCMS_MCP_HTTP_PORT: '' })).toEqual({
       ...API,
       CCMS_MCP_HTTP_HOST: '127.0.0.1',
       CCMS_MCP_HTTP_PORT: 3200,
-      CCMS_MCP_HTTP_TOKEN: token,
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: [],
       CCMS_MCP_HTTP_TRUST_PROXY: 0,
       CCMS_MCP_HTTP_PROXY_ADDRESSES: [],
     });
   });
 
-  it('needs no token of its own over HTTP (#861): callers bring theirs; the deprecated shared one needs the API token', () => {
+  it('needs no token of its own over HTTP (#861): callers bring theirs', () => {
     expect(
       loadSettings('http', { CCMS_MCP_API_URL: API.CCMS_MCP_API_URL }),
     ).toMatchObject({
@@ -40,20 +32,12 @@ describe('loadSettings', () => {
       CCMS_MCP_API_URL: API.CCMS_MCP_API_URL,
     });
     expect(http.CCMS_MCP_API_TOKEN).toBeUndefined();
-    expect(http.CCMS_MCP_HTTP_TOKEN).toBeUndefined();
-    expect(() =>
-      loadSettings('http', {
-        CCMS_MCP_API_URL: API.CCMS_MCP_API_URL,
-        CCMS_MCP_HTTP_TOKEN: '9f3c2a71e04b8d65c1a7f0e93b42d8a6',
-      }),
-    ).toThrow(/CCMS_MCP_API_TOKEN: required with CCMS_MCP_HTTP_TOKEN/);
   });
 
   it('takes none or a hop count from 1 to 10 for CCMS_MCP_HTTP_TRUST_PROXY, with the proxies named', () => {
     const http = (env: Record<string, string>) =>
       loadSettings('http', {
         ...API,
-        CCMS_MCP_HTTP_TOKEN: '9f3c2a71e04b8d65c1a7f0e93b42d8a6',
         ...env,
       });
     const trust = (value: string) =>
@@ -94,45 +78,37 @@ describe('loadSettings', () => {
     }
   });
 
-  it('refuses a short HTTP token, one equal to the API token, and a URL that is no http(s), naming no value', () => {
+  it('refuses to start while the removed shared CCMS_MCP_HTTP_TOKEN is set (#922), naming no value', () => {
+    const shared = '9f3c2a71e04b8d65c1a7f0e93b42d8a6';
+    for (const load of [
+      (env: Record<string, string>) => loadSettings('http', env),
+      (env: Record<string, string>) => loadSettings('stdio', env),
+    ]) {
+      expect(() => load({ ...API, CCMS_MCP_HTTP_TOKEN: shared })).toThrow(
+        /CCMS_MCP_HTTP_TOKEN \(or CCMS_MCP_HTTP_TOKEN_FILE\) is removed[\s\S]*service account token/,
+      );
+      expect(() => load({ ...API, CCMS_MCP_HTTP_TOKEN: shared })).not.toThrow(
+        new RegExp(shared),
+      );
+    }
     expect(() =>
-      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN: 'short-secret' }),
-    ).toThrow(/at least 32/);
+      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN_FILE: '/x' }),
+    ).toThrow(/is removed/);
+    // An empty value counts as unset.
     expect(() =>
-      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN: 'short-secret' }),
-    ).not.toThrow(/short-secret/);
-    const same = '4be0c95a7d1f36e28a0b5c9d7e14f3a26b8c0d9e';
-    expect(() =>
-      loadSettings('http', {
-        ...API,
-        CCMS_MCP_API_TOKEN: same,
-        CCMS_MCP_HTTP_TOKEN: same,
-      }),
-    ).toThrow(/must differ/);
+      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN: '' }),
+    ).not.toThrow();
+  });
+
+  it('refuses a URL that is no http(s)', () => {
     expect(() =>
       loadSettings('stdio', { ...API, CCMS_MCP_API_URL: 'file:///etc/passwd' }),
     ).toThrow(/CCMS_MCP_API_URL/);
   });
 
-  it('refuses an HTTP token that is plainly not random', () => {
-    expect(() =>
-      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN: 'a'.repeat(64) }),
-    ).toThrow(/different characters/);
-    expect(() =>
-      loadSettings('http', { ...API, CCMS_MCP_HTTP_TOKEN: 'secret'.repeat(8) }),
-    ).toThrow(/different characters/);
-    expect(() =>
-      loadSettings('http', {
-        ...API,
-        CCMS_MCP_HTTP_TOKEN: '0123456789abcdef'.repeat(2),
-      }),
-    ).toThrow(/repeated pattern/);
-  });
-
   it('reads the allowed origins as a list', () => {
     const s = loadSettings('http', {
       ...API,
-      CCMS_MCP_HTTP_TOKEN: 'd27a9c0e5b41f863a7e2c9b05d14f68e',
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: 'https://a.example, https://b.example',
     });
     expect(s.CCMS_MCP_HTTP_ALLOWED_ORIGINS).toEqual([

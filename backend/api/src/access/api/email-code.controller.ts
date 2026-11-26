@@ -43,9 +43,9 @@ import {
   EmailCodeSignInDocument,
 } from './email-code.resources.js';
 import { FailedAuthentications } from './failed-authentications.js';
-import { sessionCookie } from './password.controller.js';
 import { SignedInDocument } from './password.resources.js';
-import { SESSION_COOKIE, setCookie } from './session-cookies.js';
+import { SignInAnswer } from './sign-in-answer.js';
+import { browserTokens } from './sign-in-attempts.js';
 import { SignInSettings } from './sign-in-settings.js';
 
 /** What "Email me a code" always answers. */
@@ -56,7 +56,7 @@ const ERROR = { standardSchema: ErrorDocument };
 
 const OFF = {
   description:
-    '`email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode).',
+    '`email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). `single-sign-on-required`: the installation requires single sign-on, for every address alike.',
   ...ERROR,
 };
 
@@ -100,6 +100,7 @@ export class EmailCodeController implements OnApplicationShutdown {
     private readonly linkAction: SignInWithEmailLinkAction,
     private readonly settings: SignInSettings,
     private readonly failures: FailedAuthentications,
+    private readonly answer: SignInAnswer,
   ) {}
 
   async onApplicationShutdown(): Promise<void> {
@@ -156,7 +157,7 @@ export class EmailCodeController implements OnApplicationShutdown {
   @ApiOperation({
     summary: 'Sign in with a code by email',
     description:
-      'Checks the email address and the code emailed to it and starts a session: the cookie `__Host-openfolia-session`, as a password or a provider’s sign-in does, ending the browser’s previous session. The code works once. An unknown address, no code, a wrong code and one past its time are all 401 `invalid-code`, in the same time. A wrong code counts toward the address’s tries (`CCMS_PASSWORD_FAILURES_*`); the try that uses them up revokes the code, and further tries are 429 until the window ends. A code takes five tries at most. Recorded as `user.sign-in` (`data.method` `email-code`).',
+      'Checks the email address and the code emailed to it and starts a session: the cookie `__Host-openfolia-session`, as a password or a provider’s sign-in does, ending the browser’s previous session; or, with a second factor on or required (`meta.secondFactor`), no session yet but the second step’s cookie (`POST /auth/second-factor/…`). The code works once. An unknown address, no code, a wrong code and one past its time are all 401 `invalid-code`, in the same time. A wrong code counts toward the address’s tries (`CCMS_PASSWORD_FAILURES_*`); the try that uses them up revokes the code, and further tries are 429 until the window ends. A code takes five tries at most. Recorded as `user.sign-in` (`data.method` `email-code`).',
   })
   @ApiOkResponse({ standardSchema: SignedInDocument })
   @ApiUnauthorizedResponse({
@@ -184,7 +185,7 @@ export class EmailCodeController implements OnApplicationShutdown {
       this.codeAction.handle({
         email: body.data.attributes.email,
         code: body.data.attributes.code,
-        previousToken: sessionCookie(req),
+        ...browserTokens(req),
       }),
     );
     if ('retryAfter' in outcome) {
@@ -215,8 +216,7 @@ export class EmailCodeController implements OnApplicationShutdown {
       }
     }
     this.failures.forgive(client);
-    setCookie(res, SESSION_COOKIE, outcome.token, this.settings.cookieSeconds);
-    return { meta: { userId: outcome.userId } };
+    return this.answer.started(res, outcome);
   }
 
   @Post('link')
@@ -226,7 +226,7 @@ export class EmailCodeController implements OnApplicationShutdown {
   @ApiOperation({
     summary: 'Sign in with the link from a code’s email',
     description:
-      'Signs in with the token of the link in a code’s email (`<editor>/sign-in-code#<token>`; the token goes in the body, never in an address) and sets the session cookie. The link and its code work once, together. Recorded as `user.sign-in` (`data.method` `email-code`, `via` `link`).',
+      'Signs in with the token of the link in a code’s email (`<editor>/sign-in-code#<token>`; the token goes in the body, never in an address) and sets the session cookie (or the second step’s first: `meta.secondFactor`). The link and its code work once, together. Recorded as `user.sign-in` (`data.method` `email-code`, `via` `link`).',
   })
   @ApiOkResponse({ standardSchema: SignedInDocument })
   @ApiNotFoundResponse({
@@ -253,7 +253,7 @@ export class EmailCodeController implements OnApplicationShutdown {
     this.fromEditor(req);
     const outcome = await this.linkAction.handle({
       token: body.data.attributes.token,
-      previousToken: sessionCookie(req),
+      ...browserTokens(req),
     });
     if ('refused' in outcome) {
       switch (outcome.refused) {
@@ -275,8 +275,7 @@ export class EmailCodeController implements OnApplicationShutdown {
           throw notAllowed();
       }
     }
-    setCookie(res, SESSION_COOKIE, outcome.token, this.settings.cookieSeconds);
-    return { meta: { userId: outcome.userId } };
+    return this.answer.started(res, outcome);
   }
 
   /**

@@ -479,8 +479,8 @@ MCP-Server durchsuchen und lesen, mit einem Dienstkonto, das nur lesen darf.
 
    Das Token des Service-Accounts gilt 90 Tage: Erzeuge vorher auf dieselbe Weise ein neues
    (ersetze `mcp-agent.token` und den Header deiner Konfiguration, nach Rückfrage). Eine
-   Installation, die noch `CCMS_MCP_HTTP_TOKEN` und `CCMS_MCP_API_TOKEN` in `.env` hat (vor
-   v0.0.4), arbeitet eine Version lang weiter; zum Umstieg siehe [Vom geteilten Token
+   Installation, die noch `CCMS_MCP_HTTP_TOKEN` in `.env` hat (vor v0.0.4), muss umsteigen, denn
+   das geteilte Token entfällt: siehe [Vom geteilten Token
    umsteigen](%%SITE_URL%%/de/guides/mcp#vom-geteilten-token-umsteigen).
 
 3. **Den MCP-Server starten:**

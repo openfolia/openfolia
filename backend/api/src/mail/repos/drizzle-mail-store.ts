@@ -31,6 +31,7 @@ function toStored(row: Row): StoredMail {
     attempts: row.attempts,
     lastError: row.lastError,
     createdAt: row.createdAt,
+    auditData: row.auditData ?? null,
   };
 }
 
@@ -52,6 +53,7 @@ export class DrizzleMailStore extends MailStore {
       template: mail.template,
       language: mail.language,
       paramsSealed: mail.paramsSealed,
+      auditData: mail.auditData as Record<string, unknown> | null,
     });
   }
 

@@ -331,10 +331,12 @@ const notFound = [
 function drain(t: Harness) {
   t.http
     .match(() => true)
-    .forEach((r) =>
-      r.request.responseType === 'blob'
-        ? r.flush(new Blob(), notFound[1])
-        : r.cancelled || r.flush(...notFound),
+    .forEach(
+      (r) =>
+        r.cancelled ||
+        (r.request.responseType === 'blob'
+          ? r.flush(new Blob(), notFound[1])
+          : r.flush(...notFound)),
     );
 }
 

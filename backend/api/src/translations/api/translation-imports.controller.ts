@@ -285,7 +285,7 @@ export class TranslationImportsController {
   })
   @ApiConflictResponse({
     description:
-      '`invalid-state`: the change set is no draft. `locked`: another change set holds the module’s lock. `uncommitted-working-copies`: the change set has a working copy of the module; commit or discard it first.',
+      '`invalid-state`: the change set is no draft. `locked`: another change set holds the module’s lock. `uncommitted-working-copies`: the change set has a working copy of the module; commit or discard it first. `stale-working-copy`: a save point changed the record (a design’s, manual’s or the configuration’s file) since the branch head was read (#957); mark it again.',
     standardSchema: ErrorDocument,
   })
   @ApiUnprocessableEntityResponse({

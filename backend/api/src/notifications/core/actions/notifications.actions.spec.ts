@@ -9,7 +9,17 @@ import {
   manifest,
   module,
 } from '../../../../tests/fakes/fake-content.js';
+import { FakeJobQueue } from '../../../../tests/fakes/fake-job-queue.js';
+import {
+  FakeMailSettings,
+  FakeMailStore,
+} from '../../../../tests/fakes/fake-mail.js';
+import { FakeNotificationEmailQueue } from '../../../../tests/fakes/fake-notification-email-queue.js';
 import { FakeNotificationStore } from '../../../../tests/fakes/fake-notification-store.js';
+import { FakePreferenceStore } from '../../../../tests/fakes/fake-preference-store.js';
+import { fakeSealer } from '../../../../tests/fakes/fake-secret-key.js';
+import { MailOutbox } from '../../../mail/core/mail-outbox.js';
+import { NotificationRouting } from '../notification-routing.js';
 import { FakeOutboxFeed } from '../../../../tests/fakes/fake-outbox-feed.js';
 import { FakeUnitOfWork } from '../../../../tests/fakes/fake-unit-of-work.js';
 import { FakeUserDirectory } from '../../../../tests/fakes/fake-user-directory.js';
@@ -140,6 +150,7 @@ function setUp(
   const feed = new FakeOutboxFeed();
   const store = new FakeNotificationStore();
   const unit = new FakeUnitOfWork();
+  const preferences = new FakePreferenceStore();
   return {
     changeSet,
     head: head.commit,
@@ -149,7 +160,23 @@ function setUp(
     feed,
     store,
     unit,
-    deliver: new DeliverNotificationsAction(feed, fanOut, store, unit),
+    preferences,
+    deliver: new DeliverNotificationsAction(
+      feed,
+      fanOut,
+      store,
+      unit,
+      new NotificationRouting(
+        preferences,
+        new FakeNotificationEmailQueue(store),
+        new MailOutbox(
+          new FakeMailSettings(),
+          new FakeMailStore(),
+          fakeSealer(1),
+          new FakeJobQueue(),
+        ),
+      ),
+    ),
     list: new ListNotificationsAction(store),
     get: new GetNotificationAction(store),
     unread: new CountUnreadNotificationsAction(store),
@@ -343,6 +370,30 @@ describe('the fan-out', () => {
       { topic: 'change-set.return', reason: 'payload' },
     ]);
     expect(recipients(s)).toEqual([['change-set.return', author.id]]);
+  });
+
+  it('tells those who were administrators at an emergency sign-in, whatever they are or set now (#378)', async () => {
+    const other = user('other-admin', ['content.read']);
+    const later = user('later-admin', ['admin.roles']);
+    const s = setUp([author, admin, reader, other, later]);
+    await s.preferences.write(other.id, { notifications: { allOff: true } });
+    s.feed.add('sign-in.break-glass', {
+      userId: admin.id,
+      admins: [admin.id, other.id, 'gone'],
+    });
+    s.feed.add('sign-in.break-glass', { userId: 42 });
+    const report = await s.deliver.handle();
+    expect(report.skipped).toMatchObject([
+      { topic: 'sign-in.break-glass', reason: 'payload' },
+    ]);
+    expect(recipients(s).sort()).toEqual([
+      ['sign-in.break-glass', other.id],
+      ['sign-in.break-glass', admin.id],
+    ]);
+    expect(s.store.stored[0]).toMatchObject({
+      subject: { type: 'user', id: admin.id },
+      payload: { by: { kind: 'user', id: admin.id } },
+    });
   });
 
   it('tells every admin.backups holder of a failed or overdue backup, nobody else', async () => {

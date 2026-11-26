@@ -24,6 +24,14 @@ const PAGES: Readonly<Record<string, Route['loadComponent']>> = {
     ),
   review: () =>
     import('./review-rule-topic.component').then((m) => m.ReviewRuleTopicPage),
+  'two-factor': () =>
+    import('./second-factor-topic.component').then(
+      (m) => m.SecondFactorTopicPage,
+    ),
+  'single-sign-on': () =>
+    import('./single-sign-on-topic.component').then(
+      (m) => m.SingleSignOnTopicPage,
+    ),
   'code-languages': () =>
     import('./code-languages-topic.component').then(
       (m) => m.CodeLanguagesTopicPage,

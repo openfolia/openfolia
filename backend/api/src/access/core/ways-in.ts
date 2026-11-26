@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { Transaction } from '../../base/core/unit-of-work.js';
 import { EmailCodes } from './email-codes.js';
+import { PendingSignIns } from './pending-sign-ins.js';
 import { SessionStore } from './sessions.js';
 import { SignInLinks } from './sign-in-links.js';
 
 /**
  * Ends a person's ways in (#645), in the transaction of the change that calls for it, so a new
- * way in never misses one: their sessions, the links to set a password (`SignInLinks`) and the
- * open code by email (`EmailCodes`). A way in added later is ended here too. It holds the person
+ * way in never misses one: their sessions, the links to set a password (`SignInLinks`), the
+ * open code by email (`EmailCodes`) and the sign-ins whose second step is open (`PendingSignIns`,
+ * #611). A way in added later is ended here too. It holds the person
  * first, until the change commits (#650, `holdPerson`), so a request for a code under way
  * (`EmailCodes.hold`) either finishes first and its code is ended, or reads the person after the
  * change; and every such change takes the person, their links, then their code, in that order.
@@ -18,6 +20,7 @@ export class WaysIn {
     private readonly sessions: SessionStore,
     private readonly links: SignInLinks,
     private readonly codes: EmailCodes,
+    private readonly pending: PendingSignIns,
   ) {}
 
   /**
@@ -46,13 +49,34 @@ export class WaysIn {
   }
 
   /**
-   * After the address changes: what was emailed to the old one, the links and the open code.
-   * Sessions stay: the person signed in themselves.
+   * After a second factor is turned on (#611): the sessions and the open second steps begun
+   * without it (but the session of `keepSessionHash`, the request's own). Answers how many
+   * sessions ended. What was emailed stays: it leads to the second step now.
+   */
+  async endWithoutSecondFactor(
+    tx: Transaction,
+    userId: string,
+    keepSessionHash?: string,
+  ): Promise<number> {
+    await this.holdPerson(tx, userId);
+    await this.endOpenSteps(tx, userId);
+    return this.sessions.revokeAllOf(tx, userId, keepSessionHash);
+  }
+
+  /** The open second steps alone (#611): after a second factor is turned off or reset. */
+  endOpenSteps(tx: Transaction, userId: string): Promise<void> {
+    return this.pending.revokeAll(tx, userId);
+  }
+
+  /**
+   * After the address changes: what was emailed to the old one, the links and the open code, and
+   * a second step one of them opened. Sessions stay: the person signed in themselves.
    */
   async endMailed(tx: Transaction, userId: string): Promise<void> {
     await this.holdPerson(tx, userId);
     await this.links.revokeAll(tx, userId);
     await this.codes.revokeAll(tx, userId);
+    await this.endOpenSteps(tx, userId);
   }
 }
 

@@ -17,7 +17,8 @@ pnpm nx run portal:site
 
 The settings are read from the environment (`.env.example`, "Portal"): the API, the token, the
 audience, and optionally the languages, the releases (default: each product's newest release
-that is not withdrawn), the output folder (default `frontend/portal/dist`) and the path the
+that is not withdrawn; `CCMS_PORTAL_RELEASES_PER_PRODUCT` builds more of each, "Older releases"
+below), the output folder (default `frontend/portal/dist`) and the path the
 site is served under. The output holds `<lang>/` per language and an `index.html` that sends
 the reader to the first. It replaces the output folder only once every language is built, and
 puts the previous one back when the new one cannot be moved in.
@@ -105,6 +106,32 @@ place, every file is searched for the token and its secret, and the build fails 
   search result's step opens the jump that shows it. `theme.js` marks the page `has-script`
   before it paints, so what only works with script shows at once, and the steps are revealed
   once moved: nothing shifts in view.
+- **The authored start page** (#897): with `CCMS_PORTAL_START` (manual IDs, the first there is),
+  `build/fetch.ts` takes that manual out of the lists (of older releases too) and into the
+  snapshot's `start`: from the newest release that has it, of each product's newest only, its
+  first variant; its audience is checked as any manual's. `src/lib/start.ts` reads it as a page:
+  the first module's title and opening paragraph are the heading and introduction over the search
+  field, the rest of its text stands under it, and a list whose every item starts with a link or
+  cross-reference becomes cards (`StartLinks.astro`); each further module is a section. A target
+  is always a page of the snapshot: a cross-reference's section in the first manual that holds the
+  module, or the page an address on `CCMS_PORTAL_URL` names, in the build's language; any other
+  address is external. A target with no page is left out (in the text: the link is) and reported
+  in the build's log. Without a start manual the page is the default one, its HTML unchanged.
+- **Older releases** (#896): with `CCMS_PORTAL_RELEASES_PER_PRODUCT` above 1 (or several
+  releases of one product in `CCMS_PORTAL_RELEASES`), `build/fetch.ts` (`splitReleases`) keeps
+  each product's newest release in `releases`, at today's addresses, and the rest in the
+  snapshot's `older`, each with the folder it is written to (`<product>/v/<segment>/`: its
+  revision in lower case, or its ID when that is not a safe or unique segment). The same
+  components render both (`ManualView`, `GuideView`, routes under `src/pages/[product]/v/`), with
+  a release page per older release. Older pages carry a canonical link to the newest page (or
+  its nearest one), `noindex` unless `CCMS_PORTAL_OLDER_NOINDEX=off`, and `OlderNotice`. The
+  colophon's `ReleaseSwitch` (only when a product has more than one release, so the default build
+  stays as it was) is a `<details>` menu; `src/scripts/release-switch.ts` carries the section in
+  view (after a short dwell, so scrolling back up to the switch does not lose it) and the page's
+  query, and the arrival page says when the section is not there. Search: the main index holds
+  only the newest releases (`build/run.ts` moves the `v` folders aside while it indexes); each
+  older release has its own index at `<product>/v/<segment>/_pagefind/`, which its pages' search
+  fields and `search/?release=<product>/<segment>` use, with a link to search the latest.
 - **Search** is Pagefind's index of the manual pages (`data-pagefind-body`), with product and
   variant attribute filters, built per language. Results group a manual's variants and show its
   matching sections (every heading carries an ID, `@openfolia/render-html`), a few per page; the
@@ -159,8 +186,9 @@ examples for nginx and Caddy.
 
 - `portal:build` builds the fixture sites into `dist-fixture/` (a public build in English and
   German with the branding off, an internal one in English and German with the fixture's brand
-  and an update guide) from the
-  API booted in process over `testing/`.
+  and an update guide, with three releases of each product so the older-release pages are
+  built too; each with its authored start page, and `plain` from a release without one) from the
+  API booted in process over `testing/`. Each build's log is kept as `<site>.log`.
 - `portal:e2e` checks them: no internal or restricted text in the public files or its search
   index, no token anywhere, no inline script, the pages in a browser at desktop and phone width
   in light and dark, and WCAG 2.1 AA with axe on every kind of page in both languages.

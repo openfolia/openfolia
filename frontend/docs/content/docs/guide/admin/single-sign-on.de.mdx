@@ -1,0 +1,123 @@
+---
+title: 'Single Sign-on vorschreiben'
+description: 'Personen nur über Ihren Anmeldedienst anmelden lassen, ein Notfallkonto behalten und die Dauer von Sitzungen festlegen.'
+articleId: 'guide.admin.single-sign-on'
+---
+
+Sie können vorschreiben, dass sich alle über den Anmeldedienst Ihrer Organisation (OpenID Connect
+oder SAML) anmelden, und festlegen, wie lange eine Sitzung dauert. Beides finden Sie unter
+**Verwaltung**, dann **Projekteinstellungen**, dort unter **Installation** **Single Sign-on und
+Sitzungen**. Eine Änderung gilt sofort für die ganze Installation und steht im
+[Audit-Log](/de/guide/admin/audit-log).
+
+## Single Sign-on vorschreiben
+
+1. Melden Sie sich selbst über Ihren Anmeldedienst an. Sonst wird die Einstellung abgelehnt, damit
+   Sie sich nicht aussperren.
+2. Wählen Sie ein **Notfallkonto** (siehe unten). Es geht auch ohne, aber dann kommt niemand hinein,
+   solange der Anmeldedienst ausfällt.
+3. Wählen Sie unter **Wie sich Personen anmelden** **Nur mit Single Sign-on** und bestätigen Sie.
+
+Vor dem Speichern prüft der Server den Anmeldedienst: bei OpenID Connect liest er jedes Mal neu,
+was der Dienst veröffentlicht; bei SAML liest er die Metadaten-Adresse neu (sie muss binnen
+zehn Sekunden gültige Metadaten liefern; die Metadaten für Anmeldungen ändern sich nur, wenn das
+Gelesene gültig ist). Metadaten aus einer Datei lassen sich nicht prüfen: es wird nie nachgefragt,
+es gelten die zuletzt gelesenen. Ob man sich dort anmelden kann, zeigt nur eine
+Anmeldung. Probieren Sie sie vorher aus.
+
+Ab dann gilt:
+
+- Wer sich anders angemeldet hat, wird sofort abgemeldet. In einem Modul getippter, noch nicht
+  gespeicherter Text bleibt im Browser und ist nach der Anmeldung wieder da.
+- Die Anmeldeseite bietet nur den Anmeldedienst an, dazu unauffällig die **Notfallanmeldung**.
+- Offene Einladungen, Links für ein Passwort und Codes per E-Mail enden, und es werden keine neuen
+  erstellt. Neue Personen melden sich über den Anmeldedienst an.
+- Auch das Notfallkonto wird abgemeldet, und seine früheren Links enden. Nur die Sitzung, in der Sie
+  die Änderung vornehmen, läuft weiter.
+
+Das Ausschalten bringt davon nichts zurück: Personen bitten um einen neuen Link oder melden sich
+erneut an.
+
+## Das Notfallkonto
+
+Ein einziges Konto, das sich weiterhin mit seinem Passwort anmelden kann, für den Tag, an dem der
+Anmeldedienst nicht funktioniert (ein „Break-Glass“-Konto).
+
+1. Wählen Sie unter **Notfallkonto** eine Person. Sie muss aktiv sein, ein Passwort haben und eine
+   Rolle mit `admin.roles` direkt besitzen, nicht nur über eine Gruppe.
+2. Bewahren Sie das Passwort sicher auf. Schalten Sie für das Konto die
+   [Zwei-Faktor-Anmeldung](/de/guide/getting-started/two-factor) ein.
+
+Auf der Anmeldeseite wählt die Person **Notfallanmeldung**. Sie nimmt nur das Passwort an, nie einen
+Code per E-Mail, mit derselben Sperre und demselben zweiten Faktor wie jede Anmeldung mit Passwort.
+Jede Anmeldung damit ist ein eigenes Ereignis im Audit-Log, **Notfallanmeldung**. Wer in diesem
+Moment Admin ist, bekommt eine Benachrichtigung und, wenn der Server E-Mails sendet, eine E-Mail.
+Beides lässt sich nicht abschalten. Schreiben Sie Single Sign-on vor, während Sie mit dem Passwort
+des Kontos angemeldet sind, zählt auch das als Verwendung.
+
+Ist sein Passwort verloren, erzeugt **Neuer Passwort-Link** unter **Notfallkonto** einen einmaligen
+Link für ein neues, solange das Konto noch ein eigenes Passwort hat.
+
+Die Seite warnt, wenn das Konto nicht mehr verwendbar ist: Die Person wurde deaktiviert, hat die
+Rolle verloren oder hat kein Passwort, oder die Anmeldung mit Passwort ist auf dem Server aus. In
+diesem Moment funktioniert es nicht mehr, und niemand ist damit wieder angemeldet, wenn die Rolle
+zurückkommt. Wählen Sie dann ein anderes.
+
+Ein Konto ohne Passwort bekommt keinen neuen Link, solange Single Sign-on vorgeschrieben ist. Wählen
+Sie ein anderes Konto, oder heben Sie die Vorschrift auf, geben Sie der Person ein Passwort und
+schreiben Sie Single Sign-on wieder vor. Kann sich dafür niemand anmelden, lesen Sie weiter.
+
+## Wenn sich niemand anmelden kann
+
+Funktioniert der Anmeldedienst nicht und gibt es kein verwendbares Notfallkonto, lässt sich die
+Vorschrift auf der Kommandozeile des Servers ausschalten.
+
+Bei einem gehosteten OpenFolia wenden Sie sich an die Stelle, die es für Sie betreibt.
+
+<ServerSetting lang="de">
+  Führen Sie `node dist/database/allow-other-sign-ins.main.js` im Container der
+  API aus. Das steht danach im Audit-Log.
+</ServerSetting>
+
+## Was es erfasst
+
+| Weg                                        | Wenn Single Sign-on vorgeschrieben ist                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| OpenID Connect, SAML                       | Funktioniert                                                             |
+| Passwort                                   | Abgelehnt, außer für das Notfallkonto                                    |
+| Code per E-Mail und der Link in der E-Mail | Abgelehnt                                                                |
+| Einladung und Link für ein neues Passwort  | Abgelehnt, außer einem Link, den ein Admin für das Notfallkonto erstellt |
+| **Passwort vergessen?**                    | Wird nicht angeboten                                                     |
+
+Es geht um Personen, die sich anmelden. **Nicht** erfasst sind:
+
+- **Service-Accounts und SCIM.** Sie handeln wie bisher mit eigenen Tokens. Prüfen Sie sie unter
+  [Service-Accounts](/de/guide/admin/service-accounts).
+- **Für alle offene Adressen.** Die festen Adressen eines Projekts folgen ihrer eigenen Einstellung
+  ([Wer Adressen öffnen kann](/de/guide/releases/address-access)). Ein Portal ist eine eigene Website.
+- **Das gemeinsame Token.** Ist auf einem Server `CCMS_API_TOKEN` gesetzt, kann damit ohne Anmeldung
+  gelesen werden. Neben einem Anmeldedienst startet ein Server damit nicht, außer auf dem eigenen
+  Rechner beim Entwickeln (ein Anmeldedienst auf einer Loopback-Adresse).
+- **Demo-Modus und öffentliche Sandbox.** Dort meldet sich niemand an, also lässt sich Single
+  Sign-on nicht vorschreiben.
+- **Wen der Anmeldedienst einlässt.** Wen er anmeldet, der kommt hinein, mit den Rollen aus seinen
+  Gruppen. Nehmen Sie Personen dort heraus oder stellen Sie sie
+  [über SCIM](/de/guide/admin/scim) bereit.
+
+## Wie lange eine Sitzung dauert
+
+- **Sitzung ohne Aktivität beenden nach:** die Leerlaufzeit, auf die Minute gezählt.
+- **Jede Sitzung beenden nach:** so lange dauert eine Sitzung nach der Anmeldung höchstens, egal wie
+  viel sie genutzt wird. Die kürzere der beiden Zeiten beendet sie.
+
+Lassen Sie **Einstellung des Servers** stehen, um zu behalten, womit der Server eingerichtet ist.
+Eine Änderung gilt für laufende Sitzungen ab ihrer nächsten Anfrage. Eine längere Zeit bringt eine
+schon beendete Sitzung nie zurück.
+
+**Was als Aktivität zählt:** was eine Person tut: eine Seite öffnen, tippen, zeigen, mit dem Rad oder
+Finger scrollen, auch in einer Vorschau. Was der Editor innerhalb einer Minute danach vom Server abruft, erhält die Sitzung. Was ein offener Tab von sich aus fragt, etwa die
+Zahl der Benachrichtigungen, zählt nicht. So endet auch ein offen gelassener Tab. Ein Programm, das
+das Cookie einer Sitzung ohne den Editor verwendet, zählt mit jeder Anfrage als Aktivität.
+
+Endet eine Sitzung, geht der Editor zur Anmeldeseite. In einem Modul getippter, noch nicht
+gespeicherter Text bleibt im Browser und wird nach der Anmeldung wieder angeboten.

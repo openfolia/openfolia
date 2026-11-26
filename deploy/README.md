@@ -197,8 +197,7 @@ There are three places for settings:
 section "Container deployment" lists the ones above.
 
 **Secrets from files.** Each of `CCMS_DATABASE_URL`, `CCMS_API_TOKEN`, `CCMS_S3_ACCESS_KEY_ID`,
-`CCMS_S3_SECRET_ACCESS_KEY`, `CCMS_STYLE_REVIEW_API_KEY`, `CCMS_EMBEDDER_API_KEY`, `CCMS_AUDIT_SINK_SECRET`, `CCMS_OIDC_CLIENT_SECRET`, `CCMS_MCP_API_TOKEN` and
-`CCMS_MCP_HTTP_TOKEN` can come from a file: set `<NAME>_FILE` to its path, for example a Compose
+`CCMS_S3_SECRET_ACCESS_KEY`, `CCMS_STYLE_REVIEW_API_KEY`, `CCMS_EMBEDDER_API_KEY`, `CCMS_AUDIT_SINK_SECRET`, `CCMS_OIDC_CLIENT_SECRET` and `CCMS_MCP_API_TOKEN` can come from a file: set `<NAME>_FILE` to its path, for example a Compose
 secret under `/run/secrets/`. The editor takes `CCMS_EDITOR_API_TOKEN_FILE` in the same way. The
 instance secret key has `CCMS_SECRET_KEY_FILE`, which the API reads itself. No secret is ever
 part of an image: the images hold code only, and every setting comes in when the container
@@ -482,6 +481,17 @@ copy that counts, so back it up (see "Backups"). To publish it elsewhere, push f
   `pending`, people who signed in before would get a second account at their first sign-in at the
   new one; set `any` for the move, if the new provider guarantees verified addresses, and back
   once everyone has signed in.
+- **Sign-in with SAML 2.0** (#376), beside or instead of OpenID Connect: register the service
+  provider at your identity provider from `https://<editor>/api/auth/saml/metadata` (the ACS is
+  `https://<editor>/api/auth/saml/callback`, HTTP-POST; the assertion signed), then set
+  `CCMS_SAML_IDP_METADATA_URL` (or `_FILE`) and `CCMS_EDITOR_URL` on the API (`.env.example`, the
+  SAML block; the guide's "Sign-in with SAML 2.0"). The provider sends a persistent NameID, or
+  `CCMS_SAML_NAME_ID_FORMAT` names another Format; others are refused. The editor image passes the identity
+  provider's cross-site form post to that one address, without the token; a reverse proxy of
+  your own in front of it must let it through too. The same group mappings and shared-token rule
+  as OpenID Connect; linking by email (the first admin's included) only with
+  `CCMS_SAML_EMAIL_VERIFIED=true`, for a provider where people cannot set their own address (off by
+  default); not with demo mode.
 
 ### Example: a provider you host yourself
 
@@ -1016,7 +1026,7 @@ allowed over plain http by `CCMS_PORTAL_HTTP_HOSTS=api`); the other `CCMS_PORTAL
   changes. Never a withdrawn release, though: when the build without it fails, the holding page
   below takes its place. The site is in the `portal` volume, with a record beside it of the
   settings it was built with, so a restart serves it at once, unless the audience, languages,
-  releases, base path or branding changed: then the holding page until the new build is ready.
+  releases, base path, branding or start page changed: then the holding page until the new build is ready.
 - **Before the first release** (or when every release is withdrawn) it shows a page saying no
   manuals are released yet, which reloads every minute.
 - **Health:** healthy once it serves a build or that page (`/healthz`); the first build may take
@@ -1272,13 +1282,10 @@ minute) and forwards it on every read, so the API applies that account's scope, 
 expiry, and records its last use. A token that may do more than read is refused with 403
 `token-not-read-only`.
 
-**Migrating from the shared token (deprecated, removed in v0.0.5).** Until v0.0.3 every caller
-sent one `CCMS_MCP_HTTP_TOKEN` and read as the server's `CCMS_MCP_API_TOKEN`. Both still work for
-one release (the server warns at start): a caller sending the shared token reads as before,
-beside callers with their own. To move: give each caller a service account token of its own
-(the one in `CCMS_MCP_API_TOKEN` will do for one caller), change the callers' `Authorization`
-header to it, then remove `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` from deploy/.env and
-run `docker compose up -d`.
+**The shared token is gone (v0.0.5).** Until v0.0.3 every caller sent one `CCMS_MCP_HTTP_TOKEN`.
+The `mcp` service refuses to start while `deploy/.env` still holds it, and says why. Give each caller a
+service account token of its own, change its `Authorization` header to it, and remove
+`CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` from deploy/.env, before you upgrade to v0.0.5.
 
 The editor serves it at its own address plus `/mcp` (`CCMS_EDITOR_MCP_URL`, which `compose.yaml`
 sets to the `mcp` service), so behind your reverse proxy its address is

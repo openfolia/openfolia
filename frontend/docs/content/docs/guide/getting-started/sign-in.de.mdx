@@ -12,8 +12,8 @@ Installation anbietet. Welche es gibt, entscheidet Ihr Admin.
 Nutzen Sie den Weg, den Ihre Seite zeigt:
 
 - **Mit dem Konto Ihrer Organisation:** Wählen Sie **Mit … anmelden** (der Name des
-  Anmeldedienstes Ihrer Organisation). Melden Sie sich dort an. Danach kommen Sie zurück in den
-  Editor.
+  Anmeldedienstes Ihrer Organisation) oder **Mit Single Sign-on (SAML) anmelden**. Melden Sie sich
+  dort an. Danach kommen Sie zurück in den Editor.
 - **Mit Passwort:** Geben Sie **E-Mail-Adresse** und **Passwort** ein und wählen Sie **Anmelden**.
   Passwort vergessen? Wählen Sie **Passwort vergessen?** und folgen Sie dem Link in der E-Mail. Der
   Link funktioniert einmal, eine Stunde lang.
@@ -22,9 +22,15 @@ Nutzen Sie den Weg, den Ihre Seite zeigt:
   Link. Der Code funktioniert einmal, einige Minuten lang (10, wenn Ihr Admin keine andere Zeit eingestellt hat).
   Manche Installationen bieten nur diesen Weg an: Dann zeigt die Seite allein **Code per E-Mail
   senden**.
+- **Notfallanmeldung** (nur wo Ihre Organisation Single Sign-on vorschreibt): für ein von den Admins
+  benanntes Konto, mit seinem Passwort, falls der Anmeldedienst nicht funktioniert. Siehe
+  [Single Sign-on vorschreiben](/de/guide/admin/single-sign-on).
 - **Als Demo-Benutzer** (nur in Demo-Installationen): Wählen Sie unter **Demo-Benutzer** eine
   Person. Jede hat andere Rollen. So sehen Sie, was eine schreibende, eine prüfende Person oder ein
   Admin sieht.
+
+Mit eingeschalteter [Zwei-Faktor-Anmeldung](/de/guide/getting-started/two-factor) fragt die nächste
+Seite nach einem Code aus Ihrer Authenticator-App.
 
 Nach dem Anmelden sehen Sie **Inhalte** oder die Seite, die Sie aufgerufen haben.
 
@@ -62,7 +68,15 @@ Ihre anderen Sitzungen enden; diese läuft weiter.
 Eine Demo-Installation hat kein **Abmelden**. Nutzen Sie stattdessen **Benutzer wechseln** im
 Kontomenü.
 
+## Wenn Ihre Sitzung endet
+
+Eine Sitzung endet nach einer Zeit ohne Aktivität und spätestens einige Tage nach der Anmeldung. Die
+Anmeldeseite sagt dann, dass Ihre Sitzung beendet ist. Melden Sie sich wieder an: Sie kommen auf die
+Seite zurück, auf der Sie waren. In einem Modul getippter, noch nicht gespeicherter Text bleibt in
+Ihrem Browser und wird wieder angeboten.
+
 ## Wenn die Anmeldung nicht klappt
 
 Fragen Sie Ihren Admin. Er kann Ihnen eine neue Einladung oder einen Link für ein neues Passwort
-schicken oder Ihr Konto wieder aktivieren.
+schicken oder Ihr Konto wieder aktivieren. Haben Sie Ihr Telefon verloren, kann er
+Ihre [Zwei-Faktor-Anmeldung](/de/guide/getting-started/two-factor) zurücksetzen.

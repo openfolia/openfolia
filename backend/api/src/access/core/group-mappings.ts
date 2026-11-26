@@ -19,7 +19,8 @@ export const MAX_GROUPS = 200;
 /**
  * A group's members hold a role (#37): whoever signs in in the group holds
  * the role, from that sign-in on; a person's group memberships are those the
- * provider sent at their last sign-in.
+ * provider sent at their last sign-in, and the SCIM groups a directory put them
+ * in (#377).
  */
 export interface GroupMapping {
   /** A UUID. */
@@ -77,7 +78,16 @@ export abstract class GroupMappings {
   /** How many mappings give the role `roleId`. */
   abstract countForRole(tx: Transaction, roleId: string): Promise<number>;
 
-  /** The users some identity of whom was last seen in `group`, by ID. */
+  /** The groups a mapping gives the role `roleId` to, by name. */
+  abstract groupsForRole(
+    tx: Transaction,
+    roleId: string,
+  ): Promise<readonly string[]>;
+
+  /**
+   * The users some identity of whom was last seen in `group`, and the members of the SCIM group
+   * of that name (#377), by ID.
+   */
   abstract usersInGroup(
     tx: Transaction,
     group: string,
@@ -85,7 +95,7 @@ export abstract class GroupMappings {
 
   /**
    * Brings the roles `userId` holds through groups in line with its
-   * identities' groups and the mappings: gives the ones it should hold and
+   * identities' groups, its SCIM groups (#377) and the mappings: gives the ones it should hold and
    * takes the others (a direct assignment of the same role stays).
    */
   abstract applyGroupRoles(

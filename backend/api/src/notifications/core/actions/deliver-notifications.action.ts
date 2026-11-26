@@ -11,6 +11,7 @@ import {
 import { FanOut } from '../fan-out.js';
 import type { NewNotification } from '../notification.js';
 import { NotificationStore } from '../notification-store.js';
+import { NotificationRouting } from '../notification-routing.js';
 
 /** The notifications' outbox consumer (`outbox_consumers.name`). */
 export const CONSUMER = 'notifications';
@@ -60,7 +61,9 @@ export interface DeliveryReport {
 
 /**
  * Reads the outbox from the notifications' cursor (`OutboxFeed`), works
- * out who each row concerns (`FanOut`) and stores their notifications, in
+ * out who each row concerns (`FanOut`), applies each person's choices
+ * (`NotificationRouting`, #884: a kind turned off is not stored) and stores
+ * their notifications, with the emails they choose scheduled beside them, in
  * batches of `BATCH_SIZE`. Each batch's notifications and the cursor move
  * are one transaction, the cursor moved by compare-and-swap: a run that
  * stops or fails mid-batch (a restart) writes nothing of it, the next one
@@ -87,6 +90,7 @@ export class DeliverNotificationsAction implements UnguardedAction {
     private readonly fanOut: FanOut,
     private readonly store: NotificationStore,
     private readonly unit: UnitOfWork,
+    private readonly routing: NotificationRouting,
   ) {}
 
   async handle(
@@ -143,11 +147,15 @@ export class DeliverNotificationsAction implements UnguardedAction {
         taken++;
       }
       if (!samePosition(from, to)) {
+        // Read outside the transaction, like the fan-out: the choices as they are now.
+        const routed = await this.routing.route(made);
         const recorded = await this.unit.run(async (tx) => {
           if (!(await this.feed.advance(tx, CONSUMER, from, to))) {
             return undefined;
           }
-          return this.store.add(tx, made);
+          const stored = await this.store.add(tx, routed.keep);
+          await this.routing.schedule(tx, routed.email);
+          return stored;
         }, BOUNDED);
         if (recorded === undefined) {
           report.raced = true;

@@ -132,14 +132,26 @@ export async function fileUnchangedSince(
   subject: LockSubject,
   own?: OwnBranch,
 ): Promise<boolean> {
-  if (since === head.commit) return true;
-  if (!COMMIT_ID.test(since)) return false;
   // The configuration under either name (`ccms.yaml` is still read for one release): a change
   // to the file in effect, whichever it is, makes the copy stale.
   const paths =
     subject.type === 'config'
       ? [subjectPath(subject), LEGACY_CONFIG_FILE_NAME]
       : [subjectPath(subject)];
+  return filesUnchangedSince(openSnapshot, actor, head, since, paths, own);
+}
+
+/** `fileUnchangedSince` for the files at `paths` (#957: a module's translation record). */
+export async function filesUnchangedSince(
+  openSnapshot: Pick<OpenSnapshotAction, 'handle'>,
+  actor: Actor,
+  head: ReadableContent,
+  since: string,
+  paths: readonly string[],
+  own?: OwnBranch,
+): Promise<boolean> {
+  if (since === head.commit) return true;
+  if (!COMMIT_ID.test(since)) return false;
   let base: ReadableContent | undefined;
   try {
     base = await openSnapshot.handle({ actor, ref: since });

@@ -51,6 +51,7 @@ export const PERMISSION_TEXTS: Readonly<Record<ApiPermission, string>> = {
   'admin.roles': 'editor.admin.permissions.adminRoles',
   'admin.branding': 'editor.admin.permissions.adminBranding',
   'admin.backups': 'editor.admin.permissions.adminBackups',
+  'scim.provision': 'editor.admin.permissions.scimProvision',
 };
 
 export const PERMISSIONS: readonly ApiPermission[] = ALL_PERMISSIONS;

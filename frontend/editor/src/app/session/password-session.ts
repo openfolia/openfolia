@@ -3,6 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL, toApiError, type Schema } from '../api';
+import type { SecondStepKind } from '../second-factor/second-factor-session';
 
 const JSON_API = 'application/vnd.api+json';
 const HEADERS = { Accept: JSON_API, 'Content-Type': JSON_API };
@@ -14,6 +15,10 @@ export interface SignInOptions {
   /** "Email me a code" (#634). */
   readonly emailCode: boolean;
   readonly providers: number;
+  /** Single sign-on is required (#378): the providers alone. */
+  readonly singleSignOn: boolean;
+  /** With it required, there is an emergency account to sign in to with its password. */
+  readonly emergencySignIn: boolean;
 }
 
 /** What a one-time link is for, for the page it opens. */
@@ -32,7 +37,8 @@ export const CODE_LINK_TOKEN = /^ccms_ecl_[0-9a-f]{64}$/;
  * Signing in with an email address and a password (#610), or a code by email (#634): the sign-in
  * page's options, signing in, "Forgot password", asking for a code and signing in with it or its link, the page a one-time link opens, changing one's password, and an
  * admin's invites and reset links. Each call rejects with an `ApiError`. The session is the
- * HttpOnly cookie the API sets, as with a provider's sign-in.
+ * HttpOnly cookie the API sets, as with a provider's sign-in. Each way to sign in answers the
+ * second step left to do (#611), null when the person is signed in.
  */
 @Injectable({ providedIn: 'root' })
 export class PasswordSession {
@@ -56,10 +62,10 @@ export class PasswordSession {
     return this.asked;
   }
 
-  signIn(email: string, password: string): Promise<string> {
+  signIn(email: string, password: string): Promise<SecondStepKind> {
     return this.send<Schema<'SignedInDocument'>>('/auth/password/sign-in', {
       data: { type: 'PasswordSignIn', attributes: { email, password } },
-    }).then((doc) => doc.meta.userId);
+    }).then((doc) => doc.meta.secondFactor);
   }
 
   async forgot(email: string): Promise<void> {
@@ -76,17 +82,17 @@ export class PasswordSession {
   }
 
   /** Signs in with the code from the email (#634); the API sets the session cookie. */
-  signInWithCode(email: string, code: string): Promise<string> {
+  signInWithCode(email: string, code: string): Promise<SecondStepKind> {
     return this.send<Schema<'SignedInDocument'>>('/auth/email-code/sign-in', {
       data: { type: 'EmailCodeSignIn', attributes: { email, code } },
-    }).then((doc) => doc.meta.userId);
+    }).then((doc) => doc.meta.secondFactor);
   }
 
   /** Signs in with the link from a code's email (#634). */
-  signInWithLink(token: string): Promise<string> {
+  signInWithLink(token: string): Promise<SecondStepKind> {
     return this.send<Schema<'SignedInDocument'>>('/auth/email-code/link', {
       data: { type: 'EmailCodeLink', attributes: { token } },
-    }).then((doc) => doc.meta.userId);
+    }).then((doc) => doc.meta.secondFactor);
   }
 
   readLink(token: string): Promise<SignInLinkInfo> {
@@ -95,10 +101,10 @@ export class PasswordSession {
     }).then((doc) => doc.meta);
   }
 
-  async setPassword(token: string, password: string): Promise<void> {
-    await this.send('/auth/password/set', {
+  setPassword(token: string, password: string): Promise<SecondStepKind> {
+    return this.send<Schema<'SignedInDocument'>>('/auth/password/set', {
       data: { type: 'PasswordSet', attributes: { token, password } },
-    });
+    }).then((doc) => doc.meta.secondFactor);
   }
 
   changePassword(

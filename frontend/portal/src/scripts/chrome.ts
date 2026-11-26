@@ -86,8 +86,11 @@ export function startChrome(doc: Document): void {
     fit();
   }
 
-  const menu = doc.querySelector<HTMLDetailsElement>('[data-prodswitch]');
-  if (menu) {
+  // The product switch and the release switch (#896): menus that close once an entry is chosen,
+  // on a click elsewhere, and on Escape (focus back on their button).
+  for (const menu of doc.querySelectorAll<HTMLDetailsElement>(
+    '[data-prodswitch], [data-relswitch]',
+  )) {
     menu.addEventListener('click', (event) => {
       if ((event.target as Element).closest('a')) menu.open = false;
     });
@@ -99,6 +102,11 @@ export function startChrome(doc: Document): void {
         menu.open = false;
         menu.querySelector('summary')?.focus();
       }
+    });
+    // Tabbing out of the menu closes it, as a click elsewhere does.
+    menu.addEventListener('focusout', (event) => {
+      const next = event.relatedTarget as Node | null;
+      if (menu.open && next !== null && !menu.contains(next)) menu.open = false;
     });
   }
 

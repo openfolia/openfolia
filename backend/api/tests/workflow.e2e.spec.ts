@@ -439,6 +439,10 @@ describe('the change set workflow', () => {
       expect(res.status).toBe(409);
       expect(errors(res.body)[0]).toMatchObject({
         code: 'approval-lapsed',
+        // Names both ways an approval lapses (#950).
+        detail: expect.stringContaining(
+          'lost the role or scope it took, or was deactivated',
+        ),
         meta: {
           pending: ['review'],
           lapsed: [

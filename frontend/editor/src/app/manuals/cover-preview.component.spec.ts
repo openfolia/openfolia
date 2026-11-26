@@ -189,6 +189,16 @@ describe('CoverPreviewComponent', () => {
     expect(t.slot('thumbnails')?.querySelectorAll('img').length).toBe(2);
   });
 
+  it('cancels the page it is asking for when it closes (#935)', async () => {
+    const t = await render();
+    const first = t.page(1);
+    t.fixture.destroy();
+    expect(first.cancelled).toBe(true);
+    await t.settle();
+    // No page 2, nothing shown: `verify` finds no other request.
+    expect(created).toEqual([]);
+  });
+
   it('shows an error with Retry, which renders again', async () => {
     const t = await render();
     t.page(1).flush(new Blob(['{}']), {

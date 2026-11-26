@@ -25,6 +25,8 @@ describe('password sign-in off (#610)', () => {
       passwordReset: false,
       emailCode: false,
       providers: 0,
+      singleSignOn: false,
+      emergencySignIn: false,
     });
   });
 

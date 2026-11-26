@@ -33,11 +33,35 @@ export interface FakeIdentity {
   groups: string[];
 }
 
+/** A user's SCIM link (#377), by user ID. */
+export interface FakeScimUser {
+  userName: string;
+  externalId: string | null;
+  attributes: Record<string, unknown>;
+  createdByScim: boolean;
+  scimDeactivatedAt: Date | null;
+  /** Let go by the directory: kept for `formerLink`, otherwise as if not there. */
+  unlinked: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** A SCIM group (#377), by ID. */
+export interface FakeScimGroup {
+  displayName: string;
+  externalId: string | null;
+  members: Set<string>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface FakeState {
   roles: Map<string, RoleDefinition>;
   users: Map<string, FakeUser>;
   identities: Map<string, FakeIdentity>;
   mappings: Map<string, GroupMapping>;
+  scimUsers: Map<string, FakeScimUser>;
+  scimGroups: Map<string, FakeScimGroup>;
 }
 
 const clone = (state: FakeState): FakeState => ({
@@ -56,6 +80,15 @@ const clone = (state: FakeState): FakeState => ({
     [...state.identities].map(([k, i]) => [k, { ...i, groups: [...i.groups] }]),
   ),
   mappings: new Map(state.mappings),
+  scimUsers: new Map(
+    [...state.scimUsers].map(([k, u]) => [k, structuredClone(u)]),
+  ),
+  scimGroups: new Map(
+    [...state.scimGroups].map(([k, g]) => [
+      k,
+      { ...g, members: new Set(g.members) },
+    ]),
+  ),
 });
 
 const heldRoles = (u: FakeUser) => new Set([...u.roleIds, ...u.groupRoleIds]);
@@ -72,6 +105,8 @@ export class FakeAccessAdmin extends AccessAdmin {
     users: new Map(),
     identities: new Map(),
     mappings: new Map(),
+    scimUsers: new Map(),
+    scimGroups: new Map(),
   };
   private readonly open = new WeakMap<FakeTransaction, FakeState>();
   locked = 0;
@@ -256,6 +291,10 @@ export class FakeAccessAdmin extends AccessAdmin {
   ): Promise<number> {
     this.in(tx);
     return this.serviceAccountRoles.get(roleId) ?? 0;
+  }
+
+  async endLostBreakGlass(): Promise<void> {
+    // The fake keeps no sessions.
   }
 
   async countActiveAdmins(tx: Transaction): Promise<number> {

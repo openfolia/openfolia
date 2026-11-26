@@ -2,9 +2,11 @@
 import Base from '../layouts/Base.astro';
 import SearchField from '../components/SearchField.astro';
 import { textsFor } from '../lib/i18n.ts';
-import { catalogue, href } from '../lib/site.ts';
+import { catalogue, href, searchScope } from '../lib/site.ts';
 
 const { s, products, attributes } = catalogue();
+// The older releases' own indexes (#896): `?release=<product>/<release>` searches one of them.
+const scopes = s.older.map(searchScope);
 const t = textsFor(s.lang);
 const texts = {
   results: t.resultsFor,
@@ -18,10 +20,19 @@ const texts = {
 ---
 
 <Base title={t.search} path="search/" current="search">
-  <div class="searchpage" data-search-root data-texts={JSON.stringify(texts)} data-lang={s.lang} data-base={href()} data-product-key={t.product} data-variant-key={t.variant}>
+  <div class="searchpage" data-search-root data-texts={JSON.stringify(texts)} data-lang={s.lang} data-base={href()} data-product-key={t.product} data-variant-key={t.variant} data-releases={scopes.length > 0 ? JSON.stringify(scopes) : undefined}>
     <header class="listpage__head">
       <h1 class="listpage__title">{t.searchTitle}</h1>
     </header>
+    {
+      scopes.length > 0 && (
+        <p class="search-scope" data-search-scope data-text={t.searchingRelease} hidden>
+          <svg class="search-scope__icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle></svg>
+          <span class="search-scope__text" data-search-scope-text></span>
+          <a class="arrow-link" href={href('search/')} data-search-latest>{t.searchLatest} <span aria-hidden="true">→</span></a>
+        </p>
+      )
+    }
     <form class="searchform" role="search" data-search-form>
       <SearchField id="search-q" size="page" bare />
       {

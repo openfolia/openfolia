@@ -73,6 +73,12 @@ export abstract class OutboxFeed {
   abstract blocked(): Promise<string[]>;
 
   /**
+   * The row `id`, whichever consumer read it (#884: the email sender runs the fan-out of a
+   * notification's row again before it sends); undefined when there is none.
+   */
+  abstract find(id: number): Promise<OutboxEvent | undefined>;
+
+  /**
    * Moves the consumer's cursor from `from` to `to` inside `tx`; false
    * (nothing moved) when it is no longer at `from` (another server read
    * and recorded the same batch).

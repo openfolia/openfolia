@@ -1,53 +1,80 @@
+import type { Transaction } from '../../base/core/unit-of-work.js';
+import { sessionLimitsOf } from '../core/refused-sign-ins.js';
 import {
   type LinkByEmail,
   type SessionLimits,
   SessionPolicy,
 } from '../core/session-policy.js';
+import {
+  requiresSingleSignOn,
+  signInAllowed,
+  type SignInRules,
+  type SignInSetup,
+} from '../core/sign-in-rules.js';
 
-/** The limits of a session begun with a provider turned off: it has ended. */
+/** The limits of a session that may not go on: it has ended. */
 const ENDED: SessionLimits = Object.freeze({ idleMs: 0, maxMs: 0 });
 
 /**
- * The core's session policy (#37): the same limits for everyone, from the
- * settings (`CCMS_SESSION_IDLE_MINUTES`, `CCMS_SESSION_MAX_HOURS`), and any
- * provider offered may be used by anyone; linking by email follows
- * `CCMS_OIDC_LINK_BY_EMAIL`. A way of signing in turned off (`off`: codes by
- * email while `CCMS_EMAIL_CODE_SIGN_IN` is off, #634) may not be signed in
- * with, and its sessions end at their next request. Enforced single
- * sign-on (#378) will replace it.
+ * The core's session policy (#37): the same limits for everyone, what an administrator set
+ * (`SignInRules`, #378) in place of the server's own (`SignInSetup`). With single sign-on required
+ * only a provider offered now may be signed in with, and the break-glass account's password
+ * (`signInAllowed`); a session begun any other way has ended at its next request, whatever else
+ * ended it. A way of signing in turned off (`off`: codes by email while `CCMS_EMAIL_CODE_SIGN_IN`
+ * is off, #634) likewise. Linking by email follows `CCMS_OIDC_LINK_BY_EMAIL`.
  */
 export class EnvSessionPolicy extends SessionPolicy {
-  private readonly fixed: SessionLimits;
-
-  private readonly linking: LinkByEmail;
-
   private readonly off: ReadonlySet<string>;
 
-  constructor(settings: {
-    idleMinutes: number;
-    maxHours: number;
-    linkByEmail: LinkByEmail;
-    /** Session providers turned off. */
-    off?: readonly string[];
-  }) {
+  constructor(
+    private readonly rules: SignInRules,
+    private readonly setup: SignInSetup,
+    private readonly settings: {
+      readonly linkByEmail: LinkByEmail;
+      /** Session providers turned off. */
+      readonly off?: readonly string[];
+    },
+  ) {
     super();
-    this.linking = settings.linkByEmail;
     this.off = new Set(settings.off ?? []);
-    this.fixed = {
-      idleMs: settings.idleMinutes * 60_000,
-      maxMs: settings.maxHours * 3_600_000,
-    };
   }
 
-  limits(_userId: string, providerId: string): SessionLimits {
-    return this.off.has(providerId) ? ENDED : this.fixed;
+  async limits(
+    userId: string,
+    providerId: string,
+    tx?: Transaction,
+  ): Promise<SessionLimits> {
+    if (this.off.has(providerId)) return ENDED;
+    // For a session that is there already: only what decides about it.
+    const rule = await this.rules.readFor({ userId, providerId }, tx);
+    return signInAllowed(rule, this.setup.offered, userId, providerId)
+      ? sessionLimitsOf(rule, this.setup)
+      : ENDED;
   }
 
-  maySignIn(_userId: string, providerId: string): Promise<boolean> {
-    return Promise.resolve(!this.off.has(providerId));
+  async maySignIn(
+    userId: string,
+    providerId: string,
+    tx?: Transaction,
+  ): Promise<boolean> {
+    return (
+      !this.off.has(providerId) &&
+      signInAllowed(
+        // The whole rule, whoever it is: what is looked up before anyone is authenticated never
+        // depends on whose account it is.
+        await this.rules.read(tx),
+        this.setup.offered,
+        userId,
+        providerId,
+      )
+    );
+  }
+
+  async requiresSingleSignOn(tx?: Transaction): Promise<boolean> {
+    return requiresSingleSignOn(await this.rules.read(tx));
   }
 
   linkByEmail(): LinkByEmail {
-    return this.linking;
+    return this.settings.linkByEmail;
   }
 }

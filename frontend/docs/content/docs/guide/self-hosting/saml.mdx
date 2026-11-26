@@ -1,0 +1,199 @@
+---
+title: 'Sign-in with SAML 2.0'
+description: 'Let people sign in to the editor with a SAML 2.0 identity provider: the addresses it needs, the settings, attributes, groups and what does not go with it.'
+articleId: 'guide.self-hosting.saml'
+---
+
+People can sign in to the editor at any SAML 2.0 identity provider that publishes metadata, hosted
+or your own. Nothing is specific to one provider. The editor's sign-in page then shows **Sign in
+with single sign-on (SAML)**, or the provider's name when it is set. It can be on beside
+[OpenID Connect](/guide/self-hosting/oidc), passwords and codes by email.
+
+## The addresses your identity provider needs
+
+OpenFolia is the **service provider**. Register it at your identity provider with these addresses:
+
+| What                                                   | On a hosted OpenFolia                                 | On your own server                                |
+| ------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------- |
+| Service provider metadata (also the default entity ID) | `https://<team>.openfolia.com/api/auth/saml/metadata` | `https://docs.example.com/api/auth/saml/metadata` |
+| Assertion consumer service (ACS, binding HTTP-POST)    | `https://<team>.openfolia.com/api/auth/saml/callback` | `https://docs.example.com/api/auth/saml/callback` |
+
+Most identity providers read the service provider's metadata from its address and fill in the
+rest. On a hosted OpenFolia, send your provider your identity provider's metadata address (or file),
+the name ID's format and the attribute names below; they turn it on.
+
+The examples use the editor at `https://docs.example.com` and an identity provider at
+`https://id.example.com`.
+
+## Set up the identity provider
+
+In the identity provider's admin console:
+
+1. Create a **SAML application** (some providers call it a service provider or relying party) from
+   the metadata address above, or enter the entity ID and the ACS address by hand.
+2. **Sign the assertion.** OpenFolia accepts only answers whose assertion is signed with a key in
+   the identity provider's metadata. A signed response around it is fine too. Encrypted assertions
+   are not supported.
+3. Send a **name ID** (NameID) in the format **persistent**, or agree on another one: see
+   [The name ID](#the-name-id).
+4. Add the **attributes**: the email address (`email`), the display name (`name`) and, for roles
+   from groups, the groups (`groups`, one value per group, all in **one** attribute). Other names
+   are set on the API. An answer with two attributes of one of these names is refused: which one
+   counts could not be told. One attribute per group is therefore not supported.
+5. Make sure people cannot set an email address of their own choosing at the identity provider.
+
+## The name ID
+
+The name ID is how OpenFolia recognises a person at the next sign-in. It expects **one format**,
+asks the identity provider for it and refuses an answer in any other. Choose it before the first
+person signs in, and set the same one at the identity provider:
+
+| Format         | Choose it when                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `persistent`   | The identity provider can send it. The default: SAML has it stay the same and never pass to someone else.             |
+| `emailAddress` | It can only send email addresses. The name ID then also serves as the email address. Its case does not matter (A–Z).  |
+| `unspecified`  | It sends a value without naming a format, or with this one, such as a staff number. The value counts exactly as sent. |
+
+On a hosted OpenFolia, tell your provider which one. On your own server, set
+`CCMS_SAML_NAME_ID_FORMAT` (default `persistent`). `transient` is not possible: its value is
+another one at each sign-in.
+
+The format is only a label. Check the value sent under it as well:
+
+- **One person, always one value.** People must not be able to change it themselves, and it must be the
+  same however they type it, wherever the sign-in starts and whatever it asks for. Where the identity
+  provider can send one format always, set that. Someone who arrives with another value is a new user,
+  even if their earlier user is deactivated, with the default `CCMS_SAML_EMAIL_VERIFIED=false`. With `true`,
+  a first sign-in with an address a deactivated user has is refused
+  ([The first admin and linking](#the-first-admin-and-linking)). An email address or a login name can change; an ID from
+  your directory does not.
+- **One value, always one person.** Someone who is given an earlier colleague's email address or
+  login name arrives as that colleague's user, with its roles. If your organisation gives addresses
+  or names out again, send an ID from your directory.
+- **Qualifiers.** Leave `NameQualifier` and `SPNameQualifier` out, or let them name the identity
+  provider's and OpenFolia's entity ID. Anything else is refused.
+- **Plain text only:** at most 256 characters, no spaces or line breaks around the value, and no
+  invisible characters or XML elements in it. An answer with them is refused.
+- **No changes later.** After a change of `CCMS_SAML_NAME_ID_FORMAT`, everyone is a new user at their
+  next sign-in, also people whose user is deactivated, with the default `CCMS_SAML_EMAIL_VERIFIED=false`. With `true`,
+  a deactivated user's address is refused ([The first admin and linking](#the-first-admin-and-linking)).
+  The same goes for the identity provider's
+  entity ID, unless `CCMS_OIDC_LINK_BY_EMAIL=any` joins them to the user with their address
+  ([Linking by email address](/guide/self-hosting/oidc#linking-by-email-address)). With another entity ID of OpenFolia (`CCMS_SAML_SP_ENTITY_ID`, or the
+  editor's address it follows from), identity providers usually send other persistent values: everyone is a new
+  user then, whatever the linking.
+
+When someone leaves, block them at the identity provider too, not only in OpenFolia.
+
+## Configure the API
+
+On your own server, set these in `deploy/api.env`:
+
+```sh
+CCMS_SAML_IDP_METADATA_URL=https://id.example.com/saml/metadata   # or CCMS_SAML_IDP_METADATA_FILE
+CCMS_EDITOR_URL=https://docs.example.com/                          # the service provider's addresses are under it
+CCMS_SAML_NAME=Company account                                     # the sign-in button's label (optional)
+```
+
+- **The metadata** comes from an address (`https://`, plain `http://` only on a loopback host) or
+  from a file mounted into the API container (`CCMS_SAML_IDP_METADATA_FILE`), never both. An
+  address is read again once a day, so a new signing certificate the identity provider publishes
+  applies within a day. Restart the API to apply one at once. Requiring single sign-on reads an address anew too, and is refused when it fails or is not valid; metadata from a file cannot be checked that way. The metadata names one identity
+  provider, with an HTTP-Redirect sign-in address and at least one signing certificate.
+- **The entity ID** is the metadata address unless `CCMS_SAML_SP_ENTITY_ID` names another one, for
+  an identity provider where the service provider was registered under another name.
+- **The name ID's format** is `CCMS_SAML_NAME_ID_FORMAT`: `persistent` (default), `emailAddress` or
+  `unspecified` ([The name ID](#the-name-id)).
+- **The attributes** are `CCMS_SAML_EMAIL_ATTRIBUTE` (default `email`),
+  `CCMS_SAML_NAME_ATTRIBUTE` (default `name`) and `CCMS_SAML_GROUPS_ATTRIBUTE` (default `groups`).
+  A name such as `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` works as
+  well.
+- **The editor image** passes the identity provider's form post to the ACS address, and only that
+  one address, without the same-origin check its other `/api` addresses have. A reverse proxy of
+  your own in front of it must let a cross-site `POST` to `/api/auth/saml/callback` through as
+  well.
+
+The instance [secret key](/guide/self-hosting/secret-key) must be available: it seals the cookie
+that holds a sign-in while it is under way. That cookie is sent with the identity provider's post
+(`SameSite=None`), so the editor must be served over `https://`.
+
+## The first admin and linking
+
+A first sign-in joins an existing user by email address only when the identity provider vouches
+for the addresses it sends. SAML has no standard way to say so, so it is off unless you turn it on:
+
+- **`CCMS_SAML_EMAIL_VERIFIED=false`** (the default): every first sign-in makes a new user, the
+  first admin's too, and a person deactivated here whose name ID changes comes back as a new user:
+  take them out at the identity provider too. Nobody can claim an existing account by an email address they typed in at the
+  identity provider (as long as it is not the name ID). Give people their roles through [group mappings](/guide/admin/group-mappings),
+  or make the first admin another way ([password sign-in](/guide/self-hosting/password-sign-in) or a
+  code by email) and give the new user the admin role there.
+- **`CCMS_SAML_EMAIL_VERIFIED=true`**: only for an identity provider where people cannot set their
+  own address. Then, as with OpenID Connect, set `CCMS_FIRST_ADMIN_EMAIL` to your address at the
+  identity provider before the first start and sign in with the SAML button, and
+  `CCMS_OIDC_LINK_BY_EMAIL` decides whether a first sign-in joins an existing user with that
+  address: see [Linking by email address](/guide/self-hosting/oidc#linking-by-email-address). A
+  first sign-in with an address a deactivated user has is refused, whatever their NameID now.
+
+## Roles from groups
+
+The groups attribute's values are groups, and a group mapping gives every member of a group a role,
+the same mappings as for OpenID Connect ([Group mappings](/guide/admin/group-mappings)). At each
+sign-in the identity provider's groups apply as they are.
+
+## Sign-in started at the identity provider
+
+By default a sign-in has to start at the editor's button. An answer the identity provider sends
+on its own (from its app portal, say) is refused with **That sign-in took too long**, because
+anyone could post such an answer to sign a person in to an account that is not theirs. Set
+`CCMS_SAML_IDP_INITIATED=true` to accept them; each answer is still accepted only once.
+
+## Refused answers
+
+When an answer fails a check, the sign-in page says **Signing in did not work**, and the API logs
+which check it was. For a name ID in another format, the log holds the format that came and the one
+expected. Set one of the two to the other, **before** anyone has signed in. On a hosted OpenFolia,
+ask your provider for what the log says. An identity provider
+that cannot send the format may refuse the sign-in itself: the page then says that signing in was
+cancelled or refused at the sign-in service, and the log holds the identity provider's own message,
+for example `InvalidNameIDPolicy`.
+
+These limits apply to every answer:
+
+- **Size:** at most 64 KB of XML in UTF-8, 1,500 elements and texts, 1,000 attributes (16 on one
+  element) and 32 levels, without comments, processing instructions, CDATA sections or a DTD. Of a
+  person's groups, the first 200 count. If someone is in more, or an answer is too large, send only
+  the groups that have a group mapping.
+- **Form:** names of elements and attributes are ASCII and begin with a letter, an end tag holds
+  nothing but its name, and nothing is XHTML. Identity providers write answers like this anyway.
+- **Values:** at most 4,096 characters in an attribute or a namespace and 8,192 in a text, and none of the line
+  separators U+0085, U+2028 and U+2029, anywhere in the answer: in a name, a group or any other
+  attribute, they refuse the sign-in. Send no photos or other large attributes: release only the
+  attributes OpenFolia is set to read.
+- **Time:** checking one answer may take 2 seconds, apart from the rest of the server. A sign-in
+  takes a few milliseconds; an answer that takes longer is refused, and the log says it took
+  longer than the limit. When very many answers arrive at once, those past the 64 that may wait
+  are not checked: the page says the sign-in service could not be reached, and a later try
+  usually works.
+- **Tries:** refused answers count per client address, under `CCMS_AUTH_FAILURES_MAX` (default 20 a
+  minute, counted apart from other failed sign-ins). Past it, the sign-in page says **Too many
+  sign-ins from your network failed** until the window ends. A sign-in stops counting once it succeeds.
+  Behind a proxy, the address is the one `CCMS_TRUST_PROXY` lets the API believe:
+  [Reverse proxy with TLS](/guide/self-hosting/reverse-proxy).
+
+## Sessions and signing out
+
+Sessions last as with OpenID Connect ([Sessions](/guide/self-hosting/oidc#sessions)). Signing in
+again ends the session the browser had before. A sign-in started at the identity provider usually can't:
+the earlier session then stays valid until it runs out. **Sign out**
+ends the session in the editor only: single logout at the identity provider is not supported.
+
+## What does not go with it
+
+- **Demo mode:** with `CCMS_AUTH_MODE=demo`, the API refuses to start when SAML is set up.
+- **The shared token:** leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset, as with OpenID
+  Connect. Machine clients use [service account tokens](/guide/integrations/authentication).
+- **Not supported:** encrypted assertions, signed authentication requests, single logout and the
+  HTTP-Artifact binding.
+
+Every setting is in the [settings reference](/reference/settings).

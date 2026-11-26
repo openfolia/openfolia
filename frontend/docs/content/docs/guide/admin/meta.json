@@ -3,7 +3,10 @@
   "pages": [
     "navigation",
     "users-and-roles",
+    "two-factor",
     "group-mappings",
+    "scim",
+    "single-sign-on",
     "service-accounts",
     "project-settings",
     "variants",

@@ -143,7 +143,8 @@ const keyOf = (approver: { kind: string; id: string }) =>
 /**
  * 409 for a change set that lacks approvals it needs: `approval-lapsed`
  * when an approval that would meet a pending requirement no longer holds
- * (its approver lost the role or scope), else `not-approved`. Both carry
+ * (its approver lost the role or scope, or was deactivated), else
+ * `not-approved`. Both carry
  * `meta.pending`; `approval-lapsed` also `meta.lapsed`, who gave what.
  */
 export function notApproved(standing: ReviewStanding): ConflictError {
@@ -153,7 +154,7 @@ export function notApproved(standing: ReviewStanding): ConflictError {
   if (lapsed.length > 0) {
     return new ConflictError(
       'approval-lapsed',
-      'An approval the change set needs no longer holds: its approver lost the role or scope it took. Return it to be reviewed again.',
+      'An approval the change set needs no longer holds: its approver lost the role or scope it took, or was deactivated. Return it to be reviewed again.',
       {
         pending: [...standing.pending],
         lapsed: lapsed.map((a) => ({

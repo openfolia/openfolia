@@ -15,6 +15,7 @@ import { ZardInputComponent } from '@openfolia/ui/input';
 
 import { toApiError } from '../api';
 import { apiErrorText } from '../i18n';
+import type { SecondStepKind } from '../second-factor/second-factor-session';
 import { PasswordSession } from '../session/password-session';
 
 /**
@@ -109,8 +110,8 @@ import { PasswordSession } from '../session/password-session';
 export class PasswordFormComponent {
   /** Whether "Forgot password?" is offered. */
   readonly resetOffered = input(false);
-  /** Signed in: the session cookie is set. */
-  readonly signedIn = output<void>();
+  /** The password is right: signed in (null), or the second step left to do (#611). */
+  readonly signedIn = output<SecondStepKind>();
 
   private readonly session = inject(PasswordSession);
   private readonly t = injectTranslate();
@@ -132,8 +133,7 @@ export class PasswordFormComponent {
     this.busy.set(true);
     this.error.set('');
     try {
-      await this.session.signIn(email, password);
-      this.signedIn.emit();
+      this.signedIn.emit(await this.session.signIn(email, password));
     } catch (error) {
       const text = apiErrorText(toApiError(error));
       this.error.set(this.t(text.key, text.params));

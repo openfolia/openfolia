@@ -60,7 +60,6 @@ export class DrizzlePasswordAttempts
   }
 
   onModuleInit(): void {
-    if (this.max === 0) return;
     this.pruning = setInterval(
       () => void this.prune().catch(() => undefined),
       Math.max(this.windowMs, 60_000),
@@ -74,10 +73,13 @@ export class DrizzlePasswordAttempts
 
   async reserve(
     key: string,
+    options: { readonly atMost?: number } = {},
   ): Promise<
     { attempt: PasswordAttempt; remaining: number } | { retryAfter: number }
   > {
-    if (this.max === 0) return { attempt: UNCOUNTED, remaining: Infinity };
+    const atMost = options.atMost ?? Infinity;
+    const max = this.max === 0 ? atMost : Math.min(this.max, atMost);
+    if (max === Infinity) return { attempt: UNCOUNTED, remaining: Infinity };
     const keyHash = await this.hashOf(key);
     const now = new Date(this.now());
     const ended = new Date(now.getTime() - this.windowMs);
@@ -92,13 +94,13 @@ export class DrizzlePasswordAttempts
           failures: sql`case when ${t.windowStart} <= ${ended} then 1 else ${t.failures} + 1 end`,
           windowStart: sql`case when ${t.windowStart} <= ${ended} then ${now} else ${t.windowStart} end`,
         },
-        setWhere: sql`${t.windowStart} <= ${ended} or ${t.failures} < ${this.max}`,
+        setWhere: sql`${t.windowStart} <= ${ended} or ${t.failures} < ${max}`,
       })
       .returning({ windowStart: t.windowStart, failures: t.failures });
     if (row) {
       return {
         attempt: { keyHash, windowStart: row.windowStart },
-        remaining: Math.max(0, this.max - row.failures),
+        remaining: Math.max(0, max - row.failures),
       };
     }
     const [held] = await this.database.db

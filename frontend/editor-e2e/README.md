@@ -123,7 +123,7 @@ scroller)` waits until the scroller has loaded what it shows (nothing busy or a 
   that edits the configuration in a revision of its own retries taking its lock (`toPass`).
 - **Installation-wide state** (a setting such as self-approval, #588; an outbox consumer held
   after a restore, `outbox-restore.spec.ts`, #619; people invited with passwords,
-  `password-sign-in.spec.ts`, #610): a flow that changes it would change
+  `password-sign-in.spec.ts`, #610; who must have a second factor, `second-factor.spec.ts`, #611): a flow that changes it would change
   what every other flow running beside it sees, so it never runs beside them. Its spec file is
   matched by `ISOLATED` in `playwright.config.ts` (`ISOLATED_SPECS`, `isolated.ts`): the `isolated` project runs it after `desktop`
   and `narrow` are done (`dependencies`), one test at a time (`workers: 1`: `mode: 'serial'` orders

@@ -12,6 +12,7 @@ editor offers is set on the API:
 | Email address and password | on by default (`CCMS_PASSWORD_SIGN_IN`)          | [Password sign-in](/guide/self-hosting/password-sign-in)               |
 | A one-time code by email   | on with email set up (`CCMS_EMAIL_CODE_SIGN_IN`) | [Sign-in with a code by email](/guide/self-hosting/email-code-sign-in) |
 | OpenID Connect             | `CCMS_OIDC_ISSUER` and its settings              | [OpenID Connect](/guide/self-hosting/oidc)                             |
+| SAML 2.0                   | `CCMS_SAML_IDP_METADATA_URL` and its settings    | [SAML 2.0](/guide/self-hosting/saml)                                   |
 
 Programs (portals, pipelines, scripts) send `Authorization: Bearer <token>`, the token of a
 [service account](/guide/admin/service-accounts) whose roles hold only what they need.

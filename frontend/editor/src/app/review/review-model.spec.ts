@@ -49,6 +49,43 @@ describe('transitionStates: merge', () => {
       reason: 'editor.changeSet.rewritten.mergeBlocked',
     });
   });
+
+  it('is blocked with the reason while an approval it needs lapsed (#950)', () => {
+    const gone = {
+      requirement: 'review',
+      approver: { kind: 'user' as const, id: 'former' },
+      head: 'h',
+      self: false,
+      at: '2026-01-01T00:00:00Z',
+    };
+    const review: ReviewMeta = {
+      required: ['review'],
+      granted: [],
+      pending: ['review'],
+      approvals: [gone],
+      lapsed: [gone],
+      selfApproved: false,
+      selfApproval: 'never',
+      yours: false,
+    };
+    expect(
+      transitionStates(publisher, changeSet('current'), review, '', false)
+        .merge,
+    ).toEqual({
+      kind: 'disabled',
+      reason: 'editor.review.blocked.approvalMissing',
+    });
+    // Met again (none pending): offered.
+    expect(
+      transitionStates(
+        publisher,
+        changeSet('current'),
+        { ...review, pending: [] },
+        '',
+        false,
+      ).merge,
+    ).toEqual({ kind: 'enabled' });
+  });
 });
 
 describe('transitionStates: an author and self-approval (#588)', () => {

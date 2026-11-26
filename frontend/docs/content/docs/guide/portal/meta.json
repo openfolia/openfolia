@@ -1,4 +1,12 @@
 {
   "title": "Portal",
-  "pages": ["update-guides", "build", "compose", "branding", "hosting"]
+  "pages": [
+    "start-page",
+    "update-guides",
+    "older-releases",
+    "build",
+    "compose",
+    "branding",
+    "hosting"
+  ]
 }

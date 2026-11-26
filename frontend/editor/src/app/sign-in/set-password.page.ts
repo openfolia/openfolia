@@ -27,6 +27,7 @@ import {
   type SignInLinkInfo,
 } from '../session/password-session';
 import { SignInFrameComponent } from './sign-in-frame.component';
+import { afterSignIn } from './sign-in.guards';
 
 /** The fewest characters a password has (the API's rule; it checks the rest). */
 const MIN_LENGTH = 12;
@@ -260,9 +261,10 @@ export class SetPasswordPage {
     this.error.set('');
     this.busy.set(true);
     try {
-      await this.session.setPassword(this.token, password);
+      const step = await this.session.setPassword(this.token, password);
+      // Read anew either way: the sessions of before have ended.
       await this.me.refresh(true).catch(() => false);
-      await this.router.navigateByUrl('/');
+      await afterSignIn(this.router, step, '/');
     } catch (error) {
       const failure = toApiError(error);
       if (failure.code === 'link-invalid' || failure.code === 'link-expired') {

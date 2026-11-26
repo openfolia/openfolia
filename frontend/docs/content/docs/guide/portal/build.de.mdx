@@ -37,16 +37,20 @@ CCMS_PORTAL_AUDIENCE=public \
 pnpm nx run portal:site
 ```
 
-| Einstellung             | Was                                                                                                        |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `CCMS_PORTAL_API_URL`   | Die Adresse der API, `https://` (einfaches `http` nur zu diesem Rechner). Erforderlich.                    |
-| `CCMS_PORTAL_TOKEN`     | Das Token des Service-Accounts. Nur im Header `Authorization` gesendet. Erforderlich.                      |
-| `CCMS_PORTAL_AUDIENCE`  | Die Zielgruppe. Erforderlich.                                                                              |
-| `CCMS_PORTAL_LANGUAGES` | Die Sprachen, durch Kommas getrennt (Standard: jede konfigurierte Sprache).                                |
-| `CCMS_PORTAL_RELEASES`  | IDs von Veröffentlichungen, durch Kommas getrennt (Standard: die neueste nicht zurückgezogene je Produkt). |
-| `CCMS_PORTAL_OUT_DIR`   | Wohin die Websites geschrieben werden (Standard: `frontend/portal/dist`).                                  |
-| `CCMS_PORTAL_BASE_PATH` | Der Pfad, unter dem die Websites liegen, mit `/` am Anfang und Ende (Standard: `/`).                       |
-| `CCMS_PORTAL_BRANDING`  | `on` (Standard) oder `off`: das Branding Ihrer Organisation oder das Standard-Aussehen von OpenFolia.      |
+| Einstellung                        | Was                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_PORTAL_API_URL`              | Die Adresse der API, `https://` (einfaches `http` nur zu diesem Rechner). Erforderlich.                                                                                                                                                              |
+| `CCMS_PORTAL_TOKEN`                | Das Token des Service-Accounts. Nur im Header `Authorization` gesendet. Erforderlich.                                                                                                                                                                |
+| `CCMS_PORTAL_AUDIENCE`             | Die Zielgruppe. Erforderlich.                                                                                                                                                                                                                        |
+| `CCMS_PORTAL_LANGUAGES`            | Die Sprachen, durch Kommas getrennt (Standard: jede konfigurierte Sprache).                                                                                                                                                                          |
+| `CCMS_PORTAL_RELEASES`             | IDs von Veröffentlichungen, durch Kommas getrennt, auch mehrere eines Produkts (Standard: siehe nächste Zeile).                                                                                                                                      |
+| `CCMS_PORTAL_RELEASES_PER_PRODUCT` | Wie viele der neuesten nicht zurückgezogenen Veröffentlichungen je Produkt, `1` bis `20` (Standard: `1`). Die neueste liegt unter den gewohnten Adressen, ältere unter `v/<version>/`: [Eine ältere Version lesen](/de/guide/portal/older-releases). |
+| `CCMS_PORTAL_OLDER_NOINDEX`        | `on` (Standard) oder `off`: Die Seiten älterer Versionen bitten Suchmaschinen, sie nicht zu indexieren.                                                                                                                                              |
+| `CCMS_PORTAL_OUT_DIR`              | Wohin die Websites geschrieben werden (Standard: `frontend/portal/dist`).                                                                                                                                                                            |
+| `CCMS_PORTAL_BASE_PATH`            | Der Pfad, unter dem die Websites liegen, mit `/` am Anfang und Ende (Standard: `/`).                                                                                                                                                                 |
+| `CCMS_PORTAL_BRANDING`             | `on` (Standard) oder `off`: das Branding Ihrer Organisation oder das Standard-Aussehen von OpenFolia.                                                                                                                                                |
+| `CCMS_PORTAL_START`                | Die Anleitung, die die Startseite ist, als ID; mehrere, durch Kommas getrennt, werden der Reihe nach versucht (Standard: keine, die Standard-Startseite): [Die Startseite einrichten](/de/guide/portal/start-page).                                  |
+| `CCMS_PORTAL_URL`                  | Die eigene Adresse des Portals, zum Beispiel `https://docs.example.com`: Ein Link auf der Startseite auf eine seiner Seiten wird dann geprüft und öffnet sich in der Sprache des Lesers.                                                             |
 
 Die Ausgabe enthält einen Ordner je Sprache (`en/`, `de/`) und eine `index.html`, die Leser zur
 ersten schickt. Sie ersetzt den Ausgabeordner erst, wenn jede Sprache erstellt ist. Vorher

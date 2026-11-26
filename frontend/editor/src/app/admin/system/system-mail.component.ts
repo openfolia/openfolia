@@ -17,6 +17,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { ZardButtonComponent } from '@openfolia/ui/button';
 import {
+  DatePipe,
   injectTranslate,
   LanguageService,
   translated,
@@ -37,11 +38,28 @@ type MailSettings = Response<'/mail'>['data'];
 /** The languages an email is written in; another interface language leaves it to the installation's. */
 const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
 
+/** A failed email's kind and reason in words; another is "an email", "another reason". */
+const TEMPLATES: Readonly<Record<string, string>> = {
+  test: 'editor.admin.system.mail.failures.templates.test',
+  notification: 'editor.admin.system.mail.failures.templates.notification',
+  'notification-digest':
+    'editor.admin.system.mail.failures.templates.notification-digest',
+};
+const REASONS: Readonly<Record<string, string>> = {
+  rejected: 'editor.admin.system.mail.failures.reasons.rejected',
+  unavailable: 'editor.admin.system.mail.failures.reasons.unavailable',
+  tls: 'editor.admin.system.mail.failures.reasons.tls',
+  auth: 'editor.admin.system.mail.failures.reasons.auth',
+  unreadable: 'editor.admin.system.mail.failures.reasons.unreadable',
+  off: 'editor.admin.system.mail.failures.reasons.off',
+};
+
 /**
  * The Email section of Admin › System (#609): whether the server sends email and through which
  * mail server (`GET /mail`: host, port, TLS, sign-in, sender; never the password), read-only as
  * the settings are in the environment. Off, it says exactly why: no mail server, or no instance
- * secret key (with a link to where the key is shown, `secretKey`). "Send a test email" queues
+ * secret key (with a link to where the key is shown, `secretKey`). The emails that failed for
+ * good in the last 7 days (#884), and the newest: when, what kind, why. "Send a test email" queues
  * one to the signed-in administrator (`POST /mail/test`), in the interface's language.
  */
 @Component({
@@ -53,6 +71,7 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
     ZardButtonComponent,
     SkeletonRowsComponent,
     ErrorStateComponent,
+    DatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   viewProviders: [
@@ -238,6 +257,52 @@ const MAIL_LANGUAGES: ReadonlySet<string> = new Set(['en', 'de']);
               </div>
             }
           }
+          @if (s.meta.failures; as f) {
+            @if (f.count > 0) {
+              <div
+                class="border-warning bg-warning-muted flex min-w-0 items-start gap-3 rounded-lg border p-3 text-sm"
+                data-slot="mail-failures"
+              >
+                <ng-icon
+                  name="lucideTriangleAlert"
+                  aria-hidden="true"
+                  class="text-warning mt-0.5 shrink-0"
+                />
+                <div class="flex min-w-0 flex-col gap-1">
+                  <p class="m-0 font-medium break-words">
+                    {{
+                      'editor.admin.system.mail.failures.some'
+                        | transloco: { count: f.count }
+                    }}
+                  </p>
+                  @if (f.last; as last) {
+                    <p class="text-muted-foreground m-0 break-words">
+                      {{
+                        'editor.admin.system.mail.failures.last'
+                          | transloco
+                            : {
+                                at: (last.at | ofDate: dateFormat),
+                                template:
+                                  (templateKey(last.template) | transloco),
+                                reason: (reasonKey(last.reason) | transloco),
+                              }
+                      }}
+                    </p>
+                  }
+                  <p class="text-muted-foreground m-0 break-words">
+                    {{ 'editor.admin.system.mail.failures.audit' | transloco }}
+                  </p>
+                </div>
+              </div>
+            } @else if (s.attributes.state === 'on') {
+              <p
+                class="text-muted-foreground m-0 text-xs break-words"
+                data-slot="mail-no-failures"
+              >
+                {{ 'editor.admin.system.mail.failures.none' | transloco }}
+              </p>
+            }
+          }
         </div>
       } @else {
         <of-skeleton-rows
@@ -284,6 +349,26 @@ export class SystemMailComponent {
     const text = apiErrorText(failure);
     return { kind: failure.kind, message: this.t(text.key, text.params) };
   });
+
+  protected readonly dateFormat: Intl.DateTimeFormatOptions = {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  };
+
+  /** The failed email's kind as a word: one this card knows, else "an email". */
+  protected templateKey(template: string | null): string {
+    return (
+      (template && Object.hasOwn(TEMPLATES, template) && TEMPLATES[template]) ||
+      'editor.admin.system.mail.failures.templates.other'
+    );
+  }
+
+  protected reasonKey(reason: string | null): string {
+    return (
+      (reason && Object.hasOwn(REASONS, reason) && REASONS[reason]) ||
+      'editor.admin.system.mail.failures.reasons.other'
+    );
+  }
 
   protected readonly tlsKey = computed(() => {
     switch (this.settings()?.attributes.tls) {

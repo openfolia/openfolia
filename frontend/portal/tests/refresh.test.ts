@@ -311,16 +311,20 @@ describe('the holding page', () => {
 });
 
 describe('the record of what is served', () => {
-  const settings = (audience: string) =>
+  const settings = (audience: string, start?: string[]) =>
     settingsKey({
       apiUrl: new URL('http://api:3000'),
       token: 'never in the key',
       audience,
       languages: undefined,
       releases: undefined,
+      releasesPerProduct: 1,
+      olderNoindex: true,
       outDir: '/out/site',
       basePath: '/',
       branding: true,
+      start,
+      portalOrigin: undefined,
     });
   let root: string;
   beforeEach(() => {
@@ -335,6 +339,9 @@ describe('the record of what is served', () => {
     writeBuildRecord(out, settings('internal'), 'a@pdfs-1');
     expect(shownReleases(out, settings('internal'))).toBe('a@pdfs-1');
     expect(shownReleases(out, settings('public'))).toBeUndefined();
+    // Another start page is another site; none set keeps the record from before it existed (#897).
+    expect(shownReleases(out, settings('internal', ['home']))).toBeUndefined();
+    expect(settings('internal')).not.toContain('start');
     expect(existsSync(join(out, 'site.json'))).toBe(false);
     writeFileSync(`${out}.json`, 'not json');
     expect(shownReleases(out, settings('internal'))).toBeUndefined();

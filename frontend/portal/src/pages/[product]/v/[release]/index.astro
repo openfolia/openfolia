@@ -1,0 +1,74 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import ReleaseSwitch from '../../../../components/ReleaseSwitch.astro';
+import { languageName, textsFor } from '../../../../lib/i18n.ts';
+import { entryPath, formatDate, href, manualPath, olderPage, releaseChoices, releaseRoot, snapshot, type SnapshotOlderRelease } from '../../../../lib/site.ts';
+
+// An older release's own page (#896): what it holds, from the start page's product section and
+// the release switch. Its manuals and guides at `<product>/v/<release>/…`.
+export function getStaticPaths() {
+  return snapshot().older.map((release) => ({
+    params: { product: release.product, release: release.segment },
+    props: { release },
+  }));
+}
+
+const { release } = Astro.props as { release: SnapshotOlderRelease };
+const s = snapshot();
+const t = textsFor(s.lang);
+const choices = releaseChoices(release);
+const older = olderPage(release);
+/** Variants a manual links before "+n more" (the manual's own page has them all), as the start page. */
+const FOLD = 4;
+---
+
+<Base title={t.releaseTitle.replace('{title}', () => release.productLabel).replace('{revision}', () => release.revision)} path={releaseRoot(release)} product={release.product} older={older}>
+  <div class="listpage release-page">
+    <header class="masthead release-page__head">
+      <p class="masthead__kicker">{t.olderRelease}</p>
+      <h1 class:list={['masthead__title', { 'masthead__title--long': release.productLabel.length > 48 }]}>{release.productLabel}</h1>
+      <div class="masthead__colophon">
+        <ReleaseSwitch release={release} choices={choices} />
+        <span class="sep" aria-hidden="true">·</span>
+        <time datetime={release.publishedAt}>{formatDate(release.publishedAt, s.lang)}</time>
+        <span class="sep" aria-hidden="true">·</span>
+        <span class="nowrap">{languageName(s.lang)}</span>
+      </div>
+      {
+        release.notes && (
+          <section class="release-page__notes" aria-labelledby="release-notes">
+            <h2 class="release-page__notes-title" id="release-notes">{t.releaseNotes}</h2>
+            <p>{release.notes}</p>
+          </section>
+        )
+      }
+    </header>
+    <section class="product release-page__manuals" aria-labelledby="release-manuals">
+      <h2 class="release-page__heading" id="release-manuals">{t.releaseManuals}</h2>
+      <ul class="entries">
+        {release.manuals.map((manual) => (
+          <li class="entry">
+            <a class="entry__title" href={href(entryPath(release, manual))}>{manual.title}</a>
+            {manual.guide && <span class="kind-tag">{t.updateGuide}</span>}
+            {!manual.guide && manual.variants.length > 1 && (
+              <ul class="entry__variants" aria-label={t.variants}>
+                {manual.variants.slice(0, FOLD).map((v) => (
+                  <li><a href={href(manualPath(release, manual, v))}>{v.label}</a></li>
+                ))}
+                {manual.variants.length > FOLD && (
+                  <li class="entry__more">
+                    <a href={href(manualPath(release, manual, manual.variants[FOLD]!))}>{t.moreVariants.replace('{n}', String(manual.variants.length - FOLD))}</a>
+                  </li>
+                )}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  </div>
+  <script>
+    import { startReleaseSwitch } from '../../../../scripts/release-switch.ts';
+    startReleaseSwitch(document);
+  </script>
+</Base>

@@ -51,6 +51,7 @@ import type { DraftManifest, WorkingCopy } from '../working-copy.js';
 import {
   authorsChangeSet,
   fileUnchangedSince,
+  filesUnchangedSince,
   sameBytes,
   staleWorkingCopy,
   workingCopyIssues,
@@ -107,6 +108,12 @@ export interface CommitWorkingCopiesInput {
 export interface TranslationRecordWrite {
   readonly subject: SubjectOf<'module'>;
   readonly record: TranslationRecord;
+  /**
+   * The commit the record was made from (#957): a record file changed on the branch since is
+   * 409 `stale-working-copy`, as a working copy's file is. Left out, the head's record is
+   * replaced whatever it says.
+   */
+  readonly baseCommit?: string;
 }
 
 /**
@@ -418,7 +425,7 @@ export class CommitWorkingCopiesAction extends ActorAction<
       }
     }
     const writtenKeys = new Set(written.map(keyOf));
-    for (const { subject, record } of records) {
+    for (const { subject, record, baseCommit } of records) {
       if (deleting.has(keyOf(subject))) {
         throw new UnprocessableError(
           'duplicate-subject',
@@ -429,6 +436,22 @@ export class CommitWorkingCopiesAction extends ActorAction<
       // Changing a module's record is changing the module: its scope as committed.
       await checkCommittedScope(actor, head, subject);
       const path = recordPath(subject.lang, subject.moduleId);
+      if (
+        baseCommit !== undefined &&
+        !(await filesUnchangedSince(
+          bases,
+          actor,
+          head,
+          baseCommit,
+          [path],
+          readsChangeSets(actor)
+            ? undefined
+            : { branches: this.branches, changeSet },
+        ))
+      ) {
+        stale.push(subject);
+        continue;
+      }
       const text = printTranslationRecord(record);
       if (
         sameBytes(

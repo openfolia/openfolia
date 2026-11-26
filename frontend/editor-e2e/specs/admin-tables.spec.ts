@@ -130,7 +130,7 @@ test.describe('admin tables @area:admin @api:access @api:audit @narrow', () => {
     page,
   }) => {
     // The stack runs without password sign-in: its options as with it on, and every person
-    // invited with a long address, so each row shows the sign-in column and all four actions.
+    // invited with a long address, so each row shows the sign-in column and its actions.
     await page.addInitScript(() => {
       try {
         localStorage.setItem('of-language', 'de');
@@ -178,12 +178,10 @@ test.describe('admin tables @area:admin @api:access @api:audit @narrow', () => {
       const users = page.getByRole('region', { name: 'Benutzer', exact: true });
       const row = users.getByRole('row', { name: /^Sample Admin/ });
       await expect(
-        row.getByRole('button', {
-          name: 'Die Einladung von Sample Admin zurückziehen',
-        }),
+        row.getByRole('button', { name: 'Sample Admin bearbeiten' }),
       ).toBeVisible();
       await expect(
-        row.getByRole('button', { name: 'Sample Admin einladen' }),
+        row.getByRole('button', { name: 'Weitere Aktionen für Sample Admin' }),
       ).toBeVisible();
       expect(
         await sideways(page, 'Benutzer'),

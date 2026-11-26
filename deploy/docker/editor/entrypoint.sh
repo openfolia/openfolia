@@ -140,6 +140,14 @@ fi
   printf 'set $openfolia_api %s;\n' "$api"
   printf 'proxy_pass $openfolia_api$request_uri;\n'
 } >/tmp/openfolia/addresses.conf
+# SAML's assertion consumer service (#376, `location = /api/auth/saml/callback`): posted from the
+# identity provider's site, so proxied without the same-origin check and never with the token.
+{
+  [ -z "$resolver_line" ] || printf '%s\n' "$resolver_line"
+  printf 'set $openfolia_api %s;\n' "$api"
+  # A fixed path: never the request's raw one, which another spelling could make differ.
+  printf 'proxy_pass $openfolia_api/auth/saml/callback$is_args$args;\n'
+} >/tmp/openfolia/saml.conf
 # /mcp (#860): the MCP server's own endpoint, proxied as it is, never with the token: the server
 # checks the caller's bearer token, Origin and rate itself. Looked up like the API's, so the
 # editor starts without the MCP service, and /mcp answers 404 while its name resolves to nothing

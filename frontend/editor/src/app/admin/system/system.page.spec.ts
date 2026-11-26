@@ -162,6 +162,10 @@ function outboxStatus(blockedConsumers: string[] = []) {
 function mail(
   state: 'on' | 'off' | 'no-secret-key' = 'off',
   over: Record<string, unknown> = {},
+  failures: {
+    count: number;
+    last: { at: string; template: string | null; reason: string | null } | null;
+  } = { count: 0, last: null },
 ) {
   const server = state !== 'off';
   return {
@@ -179,6 +183,7 @@ function mail(
         language: 'en' as const,
         ...over,
       },
+      meta: { failures },
     },
   };
 }
@@ -308,6 +313,42 @@ describe('SystemPage', () => {
       expect(
         card?.querySelector('[data-slot="mail-test-queued"]')?.textContent,
       ).toContain('jane@example.com');
+    });
+
+    it('says when no email failed lately (#884)', async () => {
+      const quiet = await renderMail(mail('on'));
+      expect(
+        quiet.root.querySelector('[data-slot="mail-no-failures"]')?.textContent,
+      ).toContain('No email failed in the last 7 days');
+      expect(
+        quiet.root.querySelector('[data-slot="mail-failures"]'),
+      ).toBeNull();
+    });
+
+    it('says why the newest email that failed did (#884)', async () => {
+      const { root } = await renderMail(
+        mail(
+          'on',
+          {},
+          {
+            count: 3,
+            last: {
+              at: '2026-11-20T09:30:00Z',
+              template: 'notification-digest',
+              reason: 'auth',
+            },
+          },
+        ),
+      );
+      const failures = root.querySelector('[data-slot="mail-failures"]');
+      expect(failures?.textContent).toContain(
+        '3 emails failed for good in the last 7 days',
+      );
+      expect(failures?.textContent).toContain('a daily summary');
+      expect(failures?.textContent).toContain(
+        'sign-in to the mail server failed',
+      );
+      expect(root.querySelector('[data-slot="mail-no-failures"]')).toBeNull();
     });
 
     it('says why there is no email without a mail server', async () => {

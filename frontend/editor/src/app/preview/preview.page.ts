@@ -56,7 +56,7 @@ import { DesignInUseComponent } from '../admin/page-designs/design-in-use.compon
 import { HiddenContentBarComponent } from './hidden-content-bar.component';
 import { PreviewPages } from './preview-pages';
 import { languageName } from '../content/browser-model';
-import { injectPersonName } from '../history/history-model';
+import { injectPersonName, injectPersonText } from '../history/history-model';
 import { apiErrorText, UiTexts } from '../i18n';
 import { GuardDirective } from '../permissions/guard.directive';
 import { MeService } from '../permissions/me';
@@ -400,6 +400,7 @@ export class PreviewPage {
   private readonly t = injectTranslate();
   private readonly failureText = injectFailureText();
   private readonly nameOf = injectPersonName();
+  private readonly personText = injectPersonText();
 
   protected readonly view = injectQueryState(PREVIEW_VIEW);
   protected readonly moduleId = this.view.get('module');
@@ -423,7 +424,7 @@ export class PreviewPage {
   protected readonly withdrawal = signal<Withdrawal | null>(null);
   private withdrawalRuns = 0;
   protected readonly person = (who: { kind: string; id: string }) =>
-    this.nameOf(who.kind, who.id);
+    this.personText(who, this.nameOf(who.kind, who.id));
 
   protected readonly context = signal<Context | null>(null);
   protected readonly contextError = signal<ApiError | null>(null);

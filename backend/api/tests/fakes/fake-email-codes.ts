@@ -184,17 +184,20 @@ export class FakePasswordAttempts extends PasswordAttempts {
     super();
   }
 
+  /** The smaller of its limit (`max`; 0: none) and the caller's `atMost`. */
   async reserve(
     key: string,
+    options: { readonly atMost?: number } = {},
   ): Promise<
     { attempt: PasswordAttempt; remaining: number } | { retryAfter: number }
   > {
+    const max = Math.min(this.max || Infinity, options.atMost ?? Infinity);
     const count = this.counts.get(key) ?? 0;
-    if (count >= this.max) return { retryAfter: this.retryAfter };
+    if (count >= max) return { retryAfter: this.retryAfter };
     this.counts.set(key, count + 1);
     return {
       attempt: { keyHash: key, windowStart: new Date(0) },
-      remaining: this.max - count - 1,
+      remaining: max - count - 1,
     };
   }
 

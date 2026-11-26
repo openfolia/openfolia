@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -15,7 +16,9 @@ import {
  * out or failed for good, so nothing of an email is kept after sending. `params_sealed` holds the
  * template's params, sealed under the instance secret key (`SecretSealer`, context
  * `mail-params:v1:<id>`), as they may carry a sign-in link. The body is never stored: it is
- * rendered when it is sent.
+ * rendered when it is sent. `audit_data` (#884): what `mail.sent` and `mail.failed` record of a
+ * notification email besides its template (the recipient's user ID, the kinds); never the address
+ * or the params.
  */
 export const mailMessages = pgTable(
   'mail_messages',
@@ -29,6 +32,7 @@ export const mailMessages = pgTable(
     attempts: integer('attempts').notNull().default(0),
     /** The last failed attempt's error kind (`rejected`, `unavailable`, `tls`, `auth`). */
     lastError: text('last_error'),
+    auditData: jsonb('audit_data').$type<Record<string, unknown>>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

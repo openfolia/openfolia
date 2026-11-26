@@ -18,6 +18,8 @@ entries:
   - { module: hv-isolation, when: drive in (electric) }
   - module: changing-brake-fluid
   - module: warning-lights
+  - module: update-diagnostic-tester
+  - module: update-calibrate-camera
   - module: tyre-pressures
   - module: fluids-and-capacities
   - module: fuses

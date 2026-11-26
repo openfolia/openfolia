@@ -7,12 +7,14 @@ import {
   parseConfig,
   parseManifest,
   parseModule,
+  PageDesign,
   parsePageDesign,
+  printPageDesign,
   printConfig,
   parseTranslationRecord,
   printModule,
   printTranslationRecord,
-  type ProjectConfig,
+  ProjectConfig,
   type TranslationRecord,
 } from '@openfolia/content-model';
 import { actorWith } from '../../../../tests/fakes/actors.js';
@@ -62,6 +64,7 @@ import { CommitWorkingCopiesAction } from './commit-working-copies.action.js';
 import { ReconcileChangeSetCommitsAction } from './reconcile-change-set-commits.action.js';
 import { RevertChangesAction } from './revert-changes.action.js';
 import { SaveWorkingCopyAction } from './save-working-copy.action.js';
+import { MarkTranslationCurrentAction } from '../../../translations/core/actions/mark-translation-current.action.js';
 
 const EDITING: Permission[] = [
   'content.read',
@@ -2792,5 +2795,186 @@ describe('RevertChangesAction', () => {
     ).rejects.toMatchObject({ code: 'branch-moved' });
     expect(s.locks.locks).toHaveLength(1);
     expect(s.intents.intents).toEqual([]);
+  });
+});
+
+describe('marking a translation current while a save point lands (#957)', () => {
+  /** The change set's author, managing translations and the configuration. */
+  const manager: Actor = {
+    ...actorWith([...EDITING, 'translation.manage', 'admin.roles']),
+    id: author.id,
+  };
+  const ASSET = 'sha256:' + 'a'.repeat(64);
+  const english = text('A.');
+  const deutsch = module('charging', 'de', 'A auf Deutsch.');
+  const para = (id: string, t: string) => ({
+    type: 'paragraph' as const,
+    id,
+    content: [{ type: 'text' as const, text: t }],
+  });
+  const labelled = ProjectConfig.parse({
+    ...fakeConfig,
+    moduleTypes: [{ id: 'concept', label: { en: 'Concept', de: 'Konzept' } }],
+  });
+  const covered: Manifest = {
+    ...manifest('user-manual', ['charging']),
+    coverImage: {
+      default: { asset: ASSET, alt: { en: 'The vehicle', de: 'Das Fahrzeug' } },
+      variants: [],
+    },
+  } as Manifest;
+  const house = printPageDesign(
+    PageDesign.parse({
+      schemaVersion: 1,
+      id: 'house',
+      name: 'House style',
+      preset: 'classic',
+      colours: { primary: '#1f4e79', accent: '#2563eb', text: '#1f2328' },
+      regions: {
+        back: {
+          en: [para('maker', 'Made by us')],
+          de: [para('maker', 'Von uns')],
+        },
+      },
+    }),
+  );
+
+  /** The author's other save point of `subject`, with `content`. */
+  const savePoint =
+    (subject: LockSubject, content: WorkingCopyContent) =>
+    async (s: ReturnType<typeof setUp>) => {
+      await s.save.handle({
+        actor: manager,
+        changeSetId: s.mine.id,
+        subject,
+        content,
+        version: 0,
+      });
+      await s.commit.handle({
+        actor: manager,
+        changeSetId: s.mine.id,
+        subjects: [subject],
+      });
+    };
+
+  /**
+   * Marks `which` current through the real save and save point, with the author's other save
+   * point (`landed`) committed between the head read and the working-copy check: when the lock
+   * is taken, which comes between the two.
+   */
+  async function markWithSavePointBetween(
+    which:
+      | { moduleId: string }
+      | { manualId: string }
+      | { designId: string }
+      | { config: true },
+    subject: LockSubject,
+    landed: (s: ReturnType<typeof setUp>) => Promise<void>,
+  ) {
+    const s = setUp({
+      config: labelled,
+      modules: [english, deutsch],
+      manifests: [covered],
+      pageDesigns: { house },
+    });
+    s.lock(subject);
+    const mark = new MarkTranslationCurrentAction(
+      { handle: async () => s.mine } as never,
+      new OpenSnapshotAction(
+        s.repository,
+        new ChangeSetAuthoredBranches(s.changeSets),
+      ),
+      { handle: () => landed(s) } as never,
+      s.commit,
+      s.save,
+      s.copies,
+      s.audit,
+      { handle: async () => undefined } as never,
+    );
+    const outcome = await mark
+      .handle({ actor: manager, changeSetId: s.mine.id, lang: 'de', ...which })
+      .catch((e: unknown) => e);
+    return { s, outcome };
+  }
+
+  it('refuses a manual changed since its head was read, keeping the save point', async () => {
+    const manual: LockSubject = { type: 'manual', manualId: 'user-manual' };
+    const { s, outcome } = await markWithSavePointBetween(
+      { manualId: 'user-manual' },
+      manual,
+      savePoint(manual, { ...covered, title: 'Changed meanwhile' }),
+    );
+    expect(outcome).toMatchObject({ code: 'stale-working-copy' });
+    expect(
+      parseManifest((await s.file('manuals/user-manual.yaml')) as string, {
+        id: 'user-manual',
+      }).title,
+    ).toBe('Changed meanwhile');
+    expect(s.copies.copies.size).toBe(0);
+  });
+
+  it('refuses a page design changed since its head was read, keeping the save point', async () => {
+    const design: LockSubject = { type: 'design', designId: 'house' };
+    const { s, outcome } = await markWithSavePointBetween(
+      { designId: 'house' },
+      design,
+      savePoint(design, {
+        ...parsePageDesign(house, { id: 'house' }),
+        name: 'Changed meanwhile',
+      }),
+    );
+    expect(outcome).toMatchObject({ code: 'stale-working-copy' });
+    expect(
+      parsePageDesign((await s.file('design/house.yaml')) as string, {
+        id: 'house',
+      }).name,
+    ).toBe('Changed meanwhile');
+    expect(s.copies.copies.size).toBe(0);
+  });
+
+  it('refuses the configuration changed since its head was read, keeping the save point', async () => {
+    const config: LockSubject = { type: 'config' };
+    const { s, outcome } = await markWithSavePointBetween(
+      { config: true },
+      config,
+      savePoint(config, {
+        ...labelled,
+        audiences: [{ id: 'public', label: 'Changed meanwhile' }],
+      }),
+    );
+    expect(outcome).toMatchObject({ code: 'stale-working-copy' });
+    expect(
+      parseConfig((await s.file('openfolia.yaml')) as string).audiences,
+    ).toEqual([{ id: 'public', label: 'Changed meanwhile' }]);
+    expect(s.copies.copies.size).toBe(0);
+  });
+
+  it('refuses a module whose translation record changed since its head was read, keeping that record', async () => {
+    const german: LockSubject = {
+      type: 'module',
+      lang: 'de',
+      moduleId: 'charging',
+    };
+    const meanwhile: TranslationRecord = {
+      schemaVersion: 1,
+      sourceCommit: 'a'.repeat(40),
+      blocks: { p: '1'.repeat(64), q: '2'.repeat(64) },
+    };
+    const { s, outcome } = await markWithSavePointBetween(
+      { moduleId: 'charging' },
+      german,
+      async (s) => {
+        await s.commit.handle({
+          actor: manager,
+          changeSetId: s.mine.id,
+          subjects: [],
+          translationRecords: [{ subject: german, record: meanwhile }],
+        });
+      },
+    );
+    expect(outcome).toMatchObject({ code: 'stale-working-copy' });
+    expect(await s.file('modules/de/charging.translation.yaml')).toBe(
+      printTranslationRecord(meanwhile),
+    );
   });
 });

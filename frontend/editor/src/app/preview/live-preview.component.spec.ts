@@ -11,6 +11,7 @@ import { provideRouter } from '@angular/router';
 import { provideZard } from '@openfolia/ui/core';
 
 import { ReadRef } from '../api';
+import { Activity } from '../api/activity';
 import { apiErrorInterceptor } from '../api/api-interceptors';
 import { MeService } from '../permissions/me';
 import { provideChangeSetUrl } from '../session/change-set-url';
@@ -179,8 +180,11 @@ describe('LivePreviewComponent', () => {
     expect(frames()[0]!.iframe.srcdoc).toContain('It charges.');
     // Shown only once its document has loaded.
     expect(frames()[0]!.shown).toBe(false);
+    // What a person does in the frame keeps the session too (#378).
+    const watched = vi.spyOn(TestBed.inject(Activity), 'watch');
     await loaded(frames()[0]!.iframe);
     expect(frames()[0]!.shown).toBe(true);
+    expect(watched).toHaveBeenCalledWith(frames()[0]!.iframe.contentDocument);
 
     // An autosave landed: after a moment, the page is read again.
     fixture.componentInstance.revision.set('r2');

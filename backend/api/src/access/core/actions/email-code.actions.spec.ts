@@ -1,3 +1,7 @@
+import {
+  FakeSecondFactors,
+  sessionStart,
+} from '../../../../tests/fakes/fake-second-factors.js';
 import { FakeAccessAdmin } from '../../../../tests/fakes/fake-access-admin.js';
 import { FakeAuditLog } from '../../../../tests/fakes/fake-audit-log.js';
 import {
@@ -76,15 +80,18 @@ function setUp({ max = 3 } = {}) {
     mail,
     audit,
     unit,
+    policy,
   );
   request.now = clock;
+  const factors = new FakeSecondFactors();
+  const start = sessionStart({ sessions, policy, admin, codes, factors });
   const signIn = new SignInWithEmailCodeAction(
     settings,
     hasher,
     codes,
     attempts,
     mail,
-    sessions,
+    start,
     policy,
     audit,
     unit,
@@ -98,7 +105,7 @@ function setUp({ max = 3 } = {}) {
     codes,
     mail,
     admin,
-    sessions,
+    start,
     policy,
     audit,
     unit,
@@ -130,6 +137,7 @@ function setUp({ max = 3 } = {}) {
     admin,
     identities,
     links,
+    factors,
     audit,
     settings,
     hasher,
@@ -604,6 +612,28 @@ describe('SignInWithEmailCodeAction', () => {
   });
 });
 
+describe('with single sign-on required (#378)', () => {
+  it('asks for, takes and follows nothing, whoever it is', async () => {
+    const s = setUp();
+    await s.ask('pat@example.org');
+    const { code, token } = s.lastCode();
+    s.policy.required = true;
+    const refused = (error: unknown) =>
+      (error as { code?: string }).code === 'single-sign-on-required';
+    for (const email of ['pat@example.org', 'nobody@example.org']) {
+      await expect(s.request.handle({ email })).rejects.toSatisfy(refused);
+      await expect(s.signIn.handle({ email, code })).rejects.toSatisfy(refused);
+    }
+    await expect(s.link.handle({ token })).rejects.toSatisfy(refused);
+    expect(s.sessions.sessions.size).toBe(0);
+    // Nothing was counted or used up.
+    s.policy.required = false;
+    expect(
+      await s.signIn.handle({ email: 'pat@example.org', code }),
+    ).toMatchObject({ userId: 'pat' });
+  });
+});
+
 describe('SignInWithEmailLinkAction', () => {
   it('signs in with the link, once, and the code goes with it', async () => {
     const s = setUp();
@@ -650,4 +680,37 @@ describe('SignInWithEmailLinkAction', () => {
       refused: 'link-invalid',
     });
   });
+});
+
+describe('with a second factor on (#611)', () => {
+  it.each(['code', 'link'] as const)(
+    'the %s opens the second step, and no session',
+    async (how) => {
+      const s = setUp();
+      await new FakeUnitOfWork().run(async (tx) => {
+        const at = new Date(0);
+        await s.factors.begin(tx, 'pat', 'sealed', at);
+        await s.factors.confirm(tx, 'pat', 'sealed', at, 1, []);
+      });
+      await s.ask('pat@example.org');
+      const { code, token } = s.lastCode();
+      const enter = () =>
+        how === 'code'
+          ? s.signIn.handle({ email: 'pat@example.org', code })
+          : s.link.handle({ token });
+      const outcome = await enter();
+      expect(outcome).toMatchObject({ userId: 'pat', secondStep: 'verify' });
+      expect(outcome).not.toHaveProperty('token');
+      expect(s.sessions.sessions.size).toBe(0);
+      expect(s.actions()).not.toContain('user.sign-in');
+      // A way in of their own all the same: a directory no longer moves their address (#938).
+      expect(
+        await new FakeUnitOfWork().run((tx) =>
+          s.identities.hasAnyIdentity(tx, 'pat'),
+        ),
+      ).toBe(true);
+      // The code is used up all the same.
+      expect(await enter()).toHaveProperty('refused');
+    },
+  );
 });

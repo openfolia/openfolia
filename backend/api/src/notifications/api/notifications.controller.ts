@@ -32,6 +32,7 @@ import {
 } from '../../base/api/json-api.decorators.js';
 import { NotModified } from '../../base/api/json-api.exception.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
+import { NamesPeople } from '../../base/api/people.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
   CountUnreadNotificationsAction,
@@ -73,6 +74,7 @@ export class NotificationsController {
   ) {}
 
   @Get()
+  @NamesPeople()
   @Paged()
   @Filters({
     name: 'unread',
@@ -139,6 +141,7 @@ export class NotificationsController {
   }
 
   @Get(':notificationId')
+  @NamesPeople()
   @ApiOperation({
     summary: 'Read one of your notifications',
     description: `Another person’s is 404, exactly like one that does not exist. ${OWN_ONLY}`,

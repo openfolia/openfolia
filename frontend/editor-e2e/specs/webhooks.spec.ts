@@ -1,5 +1,6 @@
 import { type Api, unique } from '../src/api.ts';
 import { expect, signIn, test, USERS } from '../src/fixtures.ts';
+import { knobGaps } from '../src/switch.ts';
 
 interface HeaderJson {
   name: string;
@@ -89,6 +90,13 @@ test.describe('webhooks @area:admin @api:webhooks @api:secrets', () => {
     await rows.nth(1).getByRole('textbox', { name: 'Name' }).fill('X-Tenant');
     await rows.nth(1).getByRole('textbox', { name: 'Value' }).fill('north');
     await expect(rows.nth(1).getByRole('alert')).toHaveCount(0);
+
+    // The small switch's knob sits inside the border, as far from each side, on and off.
+    const gaps = { size: 'sm', top: 1, bottom: 1, end: 1, away: 11 };
+    for (const [i, on] of [true, false].entries()) {
+      const track = rows.nth(i).getByRole('switch', { name: 'Secret' });
+      await expect.poll(() => knobGaps(track)).toEqual({ on, ...gaps });
+    }
 
     const created = page.waitForResponse(
       (r) => r.request().method() === 'POST' && r.url().endsWith('/webhooks'),

@@ -243,6 +243,8 @@ describe('ProjectSettingsPage', () => {
       'safety-symbols',
       'code-languages',
       'review',
+      'two-factor',
+      'single-sign-on',
     ]);
     expect(t.el().textContent).toContain('Content model');
     expect(t.el().textContent).toContain(

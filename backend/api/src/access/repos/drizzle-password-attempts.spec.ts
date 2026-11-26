@@ -148,4 +148,32 @@ describe('DrizzlePasswordAttempts (#610)', () => {
       expect(await limited(off, accountKey('pat@example.org'))).toBe(false);
     }
   });
+
+  it.each([
+    ['a limit above it', 50, 10],
+    ['a lower limit', 3, 3],
+    ['no limit', 0, 10],
+  ])(
+    'holds the caller’s upper bound (#611) with %s in the settings',
+    async (_, max, held) => {
+      const attempts = make(max);
+      for (let left = held - 1; left >= 0; left--) {
+        expect(await attempts.reserve('a', { atMost: 10 })).toMatchObject({
+          remaining: left,
+        });
+      }
+      expect(await attempts.reserve('a', { atMost: 10 })).toEqual({
+        retryAfter: 900,
+      });
+      // Another key is not held up, and a caller without a bound has the settings' limit.
+      expect(await attempts.reserve('b', { atMost: 10 })).toHaveProperty(
+        'attempt',
+      );
+      expect(await attempts.reserve('c')).toMatchObject({
+        remaining: max === 0 ? Infinity : max - 1,
+      });
+      clock += WINDOW_MS;
+      expect(await attempts.prune()).toBe(max === 0 ? 2 : 3);
+    },
+  );
 });

@@ -325,7 +325,7 @@ export interface paths {
         };
         /**
          * Users to act as (demo mode)
-         * @description Demo mode only (`CCMS_AUTH_MODE=demo`): the active users `X-Ccms-User` may name, for a user switcher, to any actor with the token (without email addresses). 404 `not-found` when demo mode is off, which is how a client learns it is.
+         * @description Demo mode only (`CCMS_AUTH_MODE=demo`): the active users `X-Ccms-User` may name, for a user switcher (or, with `filter[status]=deactivated`, the deactivated ones), to any actor with the token (without email addresses). 404 `not-found` when demo mode is off, which is how a client learns it is.
          */
         get: operations["Access_demoUsers"];
         put?: never;
@@ -581,7 +581,7 @@ export interface paths {
         };
         /**
          * Read the installation settings
-         * @description The installation’s own settings, kept in the database and changed at once: not the project configuration (`GET /config`), which changes in a change set. `selfApproval` says who may approve their own change set; the review screen reads it from a change set’s `meta.review.selfApproval`. Needs the `admin.roles` permission.
+         * @description The installation’s own settings, kept in the database and changed at once: not the project configuration (`GET /config`), which changes in a change set. `selfApproval` says who may approve their own change set; the review screen reads it from a change set’s `meta.review.selfApproval`. `secondFactor` says who must sign in with a second factor, `singleSignOn` whether with an identity provider, `breakGlassAccount` who may still use a password then, and the session limits how long a session lasts. Needs the `admin.roles` permission.
          */
         get: operations["Settings_read"];
         put?: never;
@@ -591,9 +591,49 @@ export interface paths {
         head?: never;
         /**
          * Change the installation settings
-         * @description What is left out stays. Applies at once. A changed `selfApproval` is audited as `settings.self-approval` (`from`, `to`); approvals already given stay, whatever it changes to (the rule is read when an approval is given). A change that changes nothing records nothing. Needs the `admin.roles` permission.
+         * @description What is left out stays. Applies at once. A changed `selfApproval` is audited as `settings.self-approval` (`from`, `to`); approvals already given stay, whatever it changes to (the rule is read when an approval is given). A changed `secondFactor` is audited as `settings.second-factor`; sessions already running go on, and someone without a second factor sets one up at their next sign-in. A changed `singleSignOn` (`settings.single-sign-on`), `breakGlassAccount` (`settings.break-glass`) or session limit (`settings.session-limits`) counts for running sessions too: what it refuses ends at once (`settings.sign-ins-ended`, the counts). A change that changes nothing records nothing. Needs the `admin.roles` permission.
          */
         patch: operations["Settings_update"];
+        trace?: never;
+    };
+    "/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Email’s settings
+         * @description Whether the server sends email, and through which mail server: its host, port and TLS, whether it signs in, the sender’s address and name. Never the user or the password. Read-only: the settings are in the environment (`CCMS_MAIL_*`). Needs the `admin.roles` permission.
+         */
+        get: operations["Mail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mail/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test email
+         * @description Queues a test email to the signed-in administrator’s own address, in `language` (else the installation’s), with the branding. It is sent in the background, as every email is, and retried; a failure for good is recorded as `mail.failed`. Recorded as `mail.test`. Needs the `admin.roles` permission.
+         */
+        post: operations["Mail_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/refs": {
@@ -1165,7 +1205,7 @@ export interface paths {
         };
         /**
          * Where a change set’s review stands
-         * @description Read only: every approval it needs (`required`: the review, and a sign-off for each restricted module type it changes), the approvals of its review head (of its branch’s head while a draft) and what is still `pending`, and the approvals that `lapsed` (their approver lost the role or scope), all as approve, sign-off and merge judge them; `granted` is always empty. The change set is found as `GET /change-sets/{changeSetId}` finds it. Needs `content.read.draft`, as reviewing does.
+         * @description Read only: every approval it needs (`required`: the review, and a sign-off for each restricted module type it changes), the approvals of its review head (of its branch’s head while a draft) and what is still `pending`, and the approvals that `lapsed` (their approver lost the role or scope, or was deactivated), all as approve, sign-off and merge judge them; `granted` is always empty. The change set is found as `GET /change-sets/{changeSetId}` finds it. Needs `content.read.draft`, as reviewing does.
          */
         get: operations["ChangeSetWorkflow_review"];
         put?: never;
@@ -2437,9 +2477,33 @@ export interface paths {
         };
         /**
          * Finish signing in (browser)
-         * @description Where the identity provider sends the browser back. Checks the answer against the sealed cookie, finds or makes the person's user, applies their groups' roles and starts a session: the cookie `__Host-openfolia-session` (`Secure`, `HttpOnly`, `SameSite=Lax`) and a 303 to the editor at `returnTo`. Anything else is a 303 to the editor's sign-in page with `?error=` (`provider-unavailable`, `access-denied`, `sign-in-failed`, `sign-in-expired`, `user-deactivated`, `sign-in-not-allowed`), never more detail. Takes whatever query the provider sends.
+         * @description Where the identity provider sends the browser back. Checks the answer against the sealed cookie, finds or makes the person's user, applies their groups' roles and starts a session, ending the browser's previous one and the second step it had open: the cookie `__Host-openfolia-session` (`Secure`, `HttpOnly`, `SameSite=Lax`) and a 303 to the editor at `returnTo`. Anything else is a 303 to the editor's sign-in page with `?error=` (`provider-unavailable`, `access-denied`, `sign-in-failed`, `sign-in-expired`, `user-deactivated`, `sign-in-not-allowed`), never more detail. Takes whatever query the provider sends.
          */
         get: operations["SignIn_callback"];
+        put?: never;
+        /**
+         * Finish signing in, posted (browser)
+         * @description Where an identity provider that answers with a form posts the browser back (SAML's HTTP-POST binding, the assertion consumer service: `SAMLResponse`). Checks the answer (with the sealed cookie, here `SameSite=None`, when the sign-in began here; without it only when IdP-initiated sign-in is allowed) and answers as `GET /auth/{provider}/callback` does. Refused answers count against the client's address (`CCMS_AUTH_FAILURES_*`, apart from its other failed authentications); past the limit, a 303 to the sign-in page with `?error=too-many-failed-attempts`. 404 for a provider that answers with a redirect.
+         */
+        post: operations["SignIn_postedCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/{provider}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * This server's metadata for the identity provider
+         * @description The service provider metadata of a provider that has one (SAML: entity ID, assertion consumer service, signed assertions wanted), for the identity provider's administrator to import. 404 for any other provider.
+         */
+        get: operations["SignIn_metadata"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2457,7 +2521,7 @@ export interface paths {
         };
         /**
          * Sign-in options
-         * @description What the sign-in page offers: the email and password form, “Forgot password” (only when email can carry the link), “Email me a code” (#634, only when email is set up), and how many identity providers. Anyone may ask, before signing in.
+         * @description What the sign-in page offers: the email and password form, “Forgot password” (only when email can carry the link), “Email me a code” (#634, only when email is set up), and how many identity providers; or, with single sign-on required, the providers alone and whether there is an emergency sign-in (never whose). Anyone may ask, before signing in.
          */
         get: operations["Password_options"];
         put?: never;
@@ -2479,7 +2543,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with a password
-         * @description Checks the email address and password and starts a session: the cookie `__Host-openfolia-session`, as a provider’s sign-in does, ending the browser’s previous session. An unknown address, a person without a password and a wrong password are all 401 `invalid-credentials`, in the same time. Recorded as `user.sign-in` (`data.method` `password`).
+         * @description Checks the email address and password and starts a session: the cookie `__Host-openfolia-session`, as a provider’s sign-in does, ending the browser’s previous session; or, with a second factor on or required (`meta.secondFactor`), no session yet but the second step’s cookie (`POST /auth/second-factor/…`). An unknown address, a person without a password, a wrong password and, while single sign-on is required, anyone but the break-glass account are all 401 `invalid-credentials`, in the same time. Recorded as `user.sign-in` (`data.method` `password`).
          */
         post: operations["Password_signIn"];
         delete?: never;
@@ -2539,7 +2603,7 @@ export interface paths {
         put?: never;
         /**
          * Set a password with a one-time link
-         * @description Sets the person’s password through their invite or reset link and signs them in (the session cookie). The link works once. **Every other session of the person ends.** Recorded as `user.password-set` (`data.via` `invite` or `reset`) and `user.sign-in`. A password the rules refuse leaves the link working.
+         * @description Sets the person’s password through their invite or reset link and signs them in (the session cookie, or the second step’s first: `meta.secondFactor`). The link works once. **Every other session of the person ends.** Recorded as `user.password-set` (`data.via` `invite` or `reset`) and `user.sign-in`. A password the rules refuse leaves the link working.
          */
         post: operations["Password_setPassword"];
         delete?: never;
@@ -2643,7 +2707,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with a code by email
-         * @description Checks the email address and the code emailed to it and starts a session: the cookie `__Host-openfolia-session`, as a password or a provider’s sign-in does, ending the browser’s previous session. The code works once. An unknown address, no code, a wrong code and one past its time are all 401 `invalid-code`, in the same time. A wrong code counts toward the address’s tries (`CCMS_PASSWORD_FAILURES_*`); the try that uses them up revokes the code, and further tries are 429 until the window ends. A code takes five tries at most. Recorded as `user.sign-in` (`data.method` `email-code`).
+         * @description Checks the email address and the code emailed to it and starts a session: the cookie `__Host-openfolia-session`, as a password or a provider’s sign-in does, ending the browser’s previous session; or, with a second factor on or required (`meta.secondFactor`), no session yet but the second step’s cookie (`POST /auth/second-factor/…`). The code works once. An unknown address, no code, a wrong code and one past its time are all 401 `invalid-code`, in the same time. A wrong code counts toward the address’s tries (`CCMS_PASSWORD_FAILURES_*`); the try that uses them up revokes the code, and further tries are 429 until the window ends. A code takes five tries at most. Recorded as `user.sign-in` (`data.method` `email-code`).
          */
         post: operations["EmailCode_signIn"];
         delete?: never;
@@ -2663,7 +2727,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with the link from a code’s email
-         * @description Signs in with the token of the link in a code’s email (`<editor>/sign-in-code#<token>`; the token goes in the body, never in an address) and sets the session cookie. The link and its code work once, together. Recorded as `user.sign-in` (`data.method` `email-code`, `via` `link`).
+         * @description Signs in with the token of the link in a code’s email (`<editor>/sign-in-code#<token>`; the token goes in the body, never in an address) and sets the session cookie (or the second step’s first: `meta.secondFactor`). The link and its code work once, together. Recorded as `user.sign-in` (`data.method` `email-code`, `via` `link`).
          */
         post: operations["EmailCode_link"];
         delete?: never;
@@ -2672,7 +2736,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mail": {
+    "/me/second-factor": {
         parameters: {
             query?: never;
             header?: never;
@@ -2680,10 +2744,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Email’s settings
-         * @description Whether the server sends email, and through which mail server: its host, port and TLS, whether it signs in, the sender’s address and name. Never the user or the password. Read-only: the settings are in the environment (`CCMS_MAIL_*`). Needs the `admin.roles` permission.
+         * Read your second factor
+         * @description Whether two-factor sign-in is on for you, how many recovery codes are left and whether the installation requires it. Never the secret or a code.
          */
-        get: operations["Mail_get"];
+        get: operations["SecondFactor_read"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2692,7 +2756,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mail/test": {
+    "/me/second-factor/set-up": {
         parameters: {
             query?: never;
             header?: never;
@@ -2702,14 +2766,386 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a test email
-         * @description Queues a test email to the signed-in administrator’s own address, in `language` (else the installation’s), with the branding. It is sent in the background, as every email is, and retried; a failure for good is recorded as `mail.failed`. Recorded as `mail.test`. Needs the `admin.roles` permission.
+         * Begin two-factor sign-in
+         * @description Makes a new secret for your authenticator app, shown only now; it counts for nothing until `POST /me/second-factor/confirm` confirms it, within ten minutes. Beginning again replaces it. Takes your password when you have one; a wrong one counts as a failed sign-in.
          */
-        post: operations["Mail_test"];
+        post: operations["SecondFactor_begin"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn on two-factor sign-in
+         * @description Turns it on with a code of the app just set up. Your other sessions end; this one goes on. Answers your recovery codes, once. Recorded as `user.second-factor-on`.
+         */
+        post: operations["SecondFactor_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make new recovery codes
+         * @description Ten new recovery codes, shown only now, in place of every earlier one. Takes your password or a current code again. Recorded as `user.second-factor-recovery-codes`.
+         */
+        post: operations["SecondFactor_recoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/second-factor/turn-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn off two-factor sign-in
+         * @description Removes your second factor and its recovery codes. Takes your password or a current code again. Where the installation requires it, you set up a new one at your next sign-in. Recorded as `user.second-factor-off`.
+         */
+        post: operations["SecondFactor_turnOff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{userId}/second-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Reset a user’s second factor
+         * @description Removes another person’s second factor and recovery codes, when they lost both: they sign in without it, and set up a new one at once where the installation requires it. Their sessions go on. Recorded as `user.second-factor-reset`. Needs `admin.roles`.
+         */
+        delete: operations["SecondFactor_reset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/second-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the open second step
+         * @description What the second step of this browser’s sign-in is, from the cookie its first factor set. No session exists until it is taken.
+         */
+        get: operations["SecondFactor_step"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/second-factor/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with the second factor
+         * @description Takes the second step with a code of the authenticator app or a recovery code, and starts the session. A code is accepted once; a wrong one leaves the step open and counts as a failed sign-in. Recorded as `user.sign-in` (`data.secondFactor`).
+         */
+        post: operations["SecondFactor_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/second-factor/set-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Begin a required second factor
+         * @description For a sign-in of someone the installation requires two-factor sign-in of and who has none yet: makes a new secret for their app, shown only now. Beginning again replaces it.
+         */
+        post: operations["SecondFactor_stepSetUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/second-factor/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn on a required second factor
+         * @description Turns it on with a code of the app just set up, ends the person’s earlier sessions and starts this one. Answers the recovery codes, once. Recorded as `user.second-factor-on` and `user.sign-in`.
+         */
+        post: operations["SecondFactor_stepConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/ServiceProviderConfig": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: what is supported
+         * @description Patch and filters; no bulk, sorting, ETags or password changes. Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/ResourceTypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: the resource types
+         * @description Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/ResourceTypes/{resourceTypeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: a resource type
+         * @description Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_type"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: the schemas
+         * @description User, Group and the enterprise user extension. Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_schemas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Schemas/{schemaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: a schema
+         * @description Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_schema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: the provisioned users
+         * @description Filtered and paged as SCIM does it, by ID. Only users a directory provisioned. Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_users"];
+        put?: never;
+        /**
+         * SCIM: provision a user
+         * @description A new user, its ID made from `userName`; or an existing one taken over by its email address where the link-by-email setting (`CCMS_OIDC_LINK_BY_EMAIL`) allows it, never one deactivated or holding a permission beyond reading and writing content. Its name is `displayName` (else `name`, else `userName`), its address the primary of `emails`. A password is never kept. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        post: operations["Scim_addUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: a provisioned user
+         * @description Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_user"];
+        /**
+         * SCIM: replace a provisioned user
+         * @description Its name, address, attributes and `active`: false deactivates it at once (its sessions end, its locks are released; its change sets and comments stay), true lets it act again, left out it stays as it is. One that sets it to false deactivates whatever else in it is wrong (nothing else of it may then be kept), but for the last admin. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        put: operations["Scim_putUser"];
+        post?: never;
+        /**
+         * SCIM: let a provisioned user go
+         * @description Deactivated at once (its sessions end, its locks are released), no longer provisioned and out of every group; the user stays, with its change sets and comments, shown as deactivated. Provisioning its address again brings the same user back, unless the link-by-email setting is off or an admin reactivated or deactivated it since. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        delete: operations["Scim_removeUser"];
+        options?: never;
+        head?: never;
+        /**
+         * SCIM: change a provisioned user
+         * @description SCIM PATCH operations (`add`, `replace`, `remove`, with paths and value filters), then saved as a PUT would be; one that leaves `active` false deactivates whatever else in it is wrong, as there. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        patch: operations["Scim_changeUser"];
+        trace?: never;
+    };
+    "/scim/v2/Groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: the provisioned groups
+         * @description Filtered and paged as SCIM does it, by name. Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_groups"];
+        put?: never;
+        /**
+         * SCIM: provision a group
+         * @description A group and its members (provisioned users): they gain at once the roles the group mappings give the group's `displayName`. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        post: operations["Scim_addGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scim/v2/Groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SCIM: a provisioned group
+         * @description Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        get: operations["Scim_group"];
+        /**
+         * SCIM: replace a provisioned group
+         * @description Its name and members: whoever joins or leaves gains or loses what the mappings give. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        put: operations["Scim_putGroup"];
+        post?: never;
+        /**
+         * SCIM: remove a provisioned group
+         * @description Its members lose what its mappings gave. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        delete: operations["Scim_removeGroup"];
+        options?: never;
+        head?: never;
+        /**
+         * SCIM: change a provisioned group
+         * @description SCIM PATCH operations: members added (`add` to `members`) and removed (`remove` of `members[value eq "…"]`, or of `members` with the values), a new name. Applies at once, and is recorded in the audit log (`data.via` `scim`). Needs a service account’s token whose roles hold `scim.provision`; anyone else is 403, a person too.
+         */
+        patch: operations["Scim_changeGroup"];
         trace?: never;
     };
     "/change-sets/{changeSetId}/comments": {
@@ -3582,6 +4018,26 @@ export interface paths {
          * @description `{ meta: { ids: [...] } }` marks those (1 to 200), `{ meta: { all: true } }` all of yours. One already read keeps when it was read. Answers how many were marked and how many are still unread. Only your own notifications: nobody reads or marks another person’s. A service (the API token) has none. Any actor; no permission needed.
          */
         post: operations["Notifications_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unsubscribe/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop a notification email
+         * @description Stops the email for the kinds the email was about, the way it came (at once, or in the daily summary): those kinds come in the app only from now on, without signing in. The link’s sealed token names the person, those kinds and the way; it changes nothing else and turns nothing on. A mail client posts `List-Unsubscribe=One-Click` (any body, which is not read); the editor posts nothing. Answering it again changes nothing more.
+         */
+        post: operations["Unsubscribe_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4542,6 +4998,13 @@ export interface components {
             data: components["schemas"]["AuditEventResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -4910,7 +5373,7 @@ export interface components {
                 /** @description Each permission held; permissions not held are left out. */
                 permissions: {
                     /** @enum {string} */
-                    permission: "content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups";
+                    permission: "content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision";
                     /** @description Where it is held, one per role; `[{}]`: everywhere. */
                     scopes: components["schemas"]["Scope"][];
                 }[];
@@ -4920,7 +5383,7 @@ export interface components {
         Role: {
             id: string;
             name: string;
-            permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups")[];
+            permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision")[];
             scope: components["schemas"]["Scope"];
         };
         /** @description Where permissions apply; a dimension left out means all of it. */
@@ -4976,7 +5439,7 @@ export interface components {
             };
             meta: {
                 /** @description Derived from its roles: every permission some role of the user holds, in any scope (for a client telling what a person may do, e.g. a contributor, who neither reviews nor approves). Actions still check the target. */
-                permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups")[];
+                permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision")[];
                 /** @description Of its roles (`relationships.roles`, every role it holds), those it holds only through its identity provider’s groups (#37): they follow the group mappings, and taking them from the user directly changes nothing. */
                 groupRoleIds: string[];
                 signIn?: components["schemas"]["UserSignInMeta"];
@@ -4993,6 +5456,8 @@ export interface components {
              * @description An open invite’s end (in the past: it ran out); null for none.
              */
             inviteExpiresAt: string | null;
+            /** @description Two-factor sign-in is on (#611). */
+            secondFactor: boolean;
         };
         Health: {
             /**
@@ -5315,10 +5780,48 @@ export interface components {
                  */
                 selfApproval: "never" | "review" | "review-and-sign-off";
                 /**
+                 * @description Who must sign in with a second factor (an authenticator app): `optional` (the default: each person’s own choice), `admins` (everyone holding `admin.roles`) or `everyone`. For people who sign in with a password or a code by email; single sign-on is the provider’s to secure. Someone without one sets it up at their next sign-in; sessions already running go on.
+                 * @enum {string}
+                 */
+                secondFactor: "optional" | "admins" | "everyone";
+                /**
+                 * @description Whether people must sign in with an identity provider: `optional` (the default) or `required`. Required, passwords, codes by email and their links are refused for everyone but the break-glass account’s password, and what was begun another way ends at once. Service accounts and their tokens are not affected.
+                 * @enum {string}
+                 */
+                singleSignOn: "optional" | "required";
+                /** @description After how many minutes without a request of its person a session ends; null: the server’s own limit (`meta.serverSessionIdleMinutes`). Never longer than a session lasts. */
+                sessionIdleMinutes: number | null;
+                /** @description After how many hours a session ends, used or not; null: the server’s own limit (`meta.serverSessionMaxHours`). */
+                sessionMaxHours: number | null;
+                /**
                  * Format: date-time
                  * @description When they last changed; null: never.
                  */
                 updatedAt: string | null;
+            };
+            relationships: {
+                /** @description Who may still sign in with their password while single sign-on is required: an active administrator, of their own and not through a group. Every use is audited (`user.break-glass-sign-in`) and the administrators are notified. */
+                breakGlassAccount: {
+                    /** @description Null: nobody. */
+                    data: {
+                        /** @enum {string} */
+                        type: "User";
+                        id: string;
+                    } | null;
+                };
+            };
+            meta: {
+                /** @description An identity provider is set up, so single sign-on can be required. */
+                singleSignOnAvailable: boolean;
+                /**
+                 * @description Why the break-glass account could not be signed in to now: `deactivated`, `no-admin-role` (none of their own), `no-password` or `password-sign-in-off`. Null when it could, or there is none.
+                 * @enum {string|null}
+                 */
+                breakGlassProblem: "deactivated" | "no-admin-role" | "no-password" | "password-sign-in-off" | null;
+                /** @description The server’s own limit (`CCMS_SESSION_IDLE_MINUTES`). */
+                serverSessionIdleMinutes: number;
+                /** @description The server’s own limit (`CCMS_SESSION_MAX_HOURS`). */
+                serverSessionMaxHours: number;
             };
         };
         UpdateInstallationSettingsDocument: {
@@ -5328,19 +5831,147 @@ export interface components {
                 /** @enum {string} */
                 id?: "installation";
                 /** @description The settings to change; left out stays. */
-                attributes: {
+                attributes?: {
                     /**
                      * @description Who may approve their own change set: `never` (the default: four eyes), `review` (its author may give the review approval; a restricted type’s sign-off still needs someone else) or `review-and-sign-off` (its author may give both). The author still needs the permission and scope as anyone would. Read when an approval is given: approvals given before a change stay.
                      * @enum {string}
                      */
                     selfApproval?: "never" | "review" | "review-and-sign-off";
+                    /**
+                     * @description Who must sign in with a second factor (an authenticator app): `optional` (the default: each person’s own choice), `admins` (everyone holding `admin.roles`) or `everyone`. For people who sign in with a password or a code by email; single sign-on is the provider’s to secure. Someone without one sets it up at their next sign-in; sessions already running go on.
+                     * @enum {string}
+                     */
+                    secondFactor?: "optional" | "admins" | "everyone";
+                    /**
+                     * @description Whether people must sign in with an identity provider: `optional` (the default) or `required`. Required, passwords, codes by email and their links are refused for everyone but the break-glass account’s password, and what was begun another way ends at once. Service accounts and their tokens are not affected.
+                     * @enum {string}
+                     */
+                    singleSignOn?: "optional" | "required";
+                    /** @description After how many minutes without a request of its person a session ends; null: the server’s own limit (`meta.serverSessionIdleMinutes`). Never longer than a session lasts. */
+                    sessionIdleMinutes?: number | null;
+                    /** @description After how many hours a session ends, used or not; null: the server’s own limit (`meta.serverSessionMaxHours`). */
+                    sessionMaxHours?: number | null;
                 };
+                relationships?: {
+                    /** @description Who may still sign in with their password while single sign-on is required: an active administrator, of their own and not through a group. Every use is audited (`user.break-glass-sign-in`) and the administrators are notified. */
+                    breakGlassAccount?: {
+                        /** @description Null: nobody. */
+                        data: {
+                            /** @enum {string} */
+                            type: "User";
+                            id: string;
+                        } | null;
+                    };
+                };
+            };
+        };
+        MailSettingsDocument: {
+            data: components["schemas"]["MailSettingsResource"];
+        };
+        /** @description `id` is always `instance`. Read-only: the settings are in the environment. */
+        MailSettingsResource: {
+            /** @enum {string} */
+            type: "MailSettings";
+            id: string;
+            attributes: {
+                /**
+                 * @description `on`: emails are sent. `off`: no mail server is set (`CCMS_MAIL_URL`); what would be emailed is offered as a link to copy. `no-secret-key`: a server is set, but the instance has no secret key (`CCMS_SECRET_KEY`, or the key file), which seals what a queued email holds; emails are off until there is one.
+                 * @enum {string}
+                 */
+                state: "on" | "off" | "no-secret-key";
+                /** @description The mail server’s host; null while none is set. */
+                host: string | null;
+                /** @description Its port; null while none is set. */
+                port: number | null;
+                /**
+                 * @description How the connection is protected: `implicit` (`smtps://`, TLS from the start), `starttls` (`smtp://`, STARTTLS required: nothing is sent without it), `opportunistic` (`smtp://` with `CCMS_MAIL_REQUIRE_TLS=false`: STARTTLS when offered). The certificate is always verified. Null while no server is set.
+                 * @enum {string|null}
+                 */
+                tls: "implicit" | "starttls" | "opportunistic" | null;
+                /** @description Whether the server is signed in to (`CCMS_MAIL_USER`). Never the user or the password. */
+                authenticated: boolean;
+                /** @description The sender’s address (`CCMS_MAIL_FROM`); null while no server is set. */
+                from: string | null;
+                /** @description The sender’s name: the branding’s product name. */
+                senderName: string;
+                /**
+                 * @description The language of an email to someone whose language is not known (`CCMS_MAIL_LANGUAGE`).
+                 * @enum {string}
+                 */
+                language: "en" | "de";
+            };
+            meta: {
+                /** @description Emails the server gave up on after its retries (`mail.failed` in the audit log), never whom they went to or what they said. */
+                failures: {
+                    /** @description Emails that failed for good in the last 7 days. */
+                    count: number;
+                    /** @description The newest of them; null when none failed. */
+                    last: {
+                        /**
+                         * Format: date-time
+                         * @description When the newest of them failed.
+                         */
+                        at: string;
+                        /** @description What kind of email it was (`test`, `notification`, `notification-digest`, …). */
+                        template: string | null;
+                        /** @description Why: `rejected`, `unavailable`, `tls`, `auth`, `unreadable` or `off`. */
+                        reason: string | null;
+                    } | null;
+                };
+            };
+        };
+        SendTestMailDocument: {
+            data: {
+                /** @enum {string} */
+                type: "MailTest";
+                attributes?: {
+                    /**
+                     * @description The language to write it in (the editor’s); left out, the installation’s.
+                     * @enum {string}
+                     */
+                    language?: "en" | "de";
+                };
+            };
+        };
+        MailMessageDocument: {
+            data: components["schemas"]["MailMessageResource"];
+        };
+        /** @description `id` is the message’s ID (a UUID), as the audit log names it. */
+        MailMessageResource: {
+            /** @enum {string} */
+            type: "MailMessage";
+            id: string;
+            attributes: {
+                /**
+                 * @description What kind of email it is.
+                 * @enum {string}
+                 */
+                template: "test";
+                /** @description The address it goes to: the administrator’s own. */
+                to: string;
+                /**
+                 * @description The language it is written in.
+                 * @enum {string}
+                 */
+                language: "en" | "de";
+                /**
+                 * @description Queued: it is sent in the background, retried for about half an hour; a failure for good is in the audit log (`mail.failed`).
+                 * @enum {string}
+                 */
+                status: "queued";
             };
         };
         RefPageDocument: {
             data: components["schemas"]["RefResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -6313,6 +6944,13 @@ export interface components {
                 page: components["schemas"]["PageMeta"];
                 /** @description The ref’s first-parent line goes on past the 1,000 newest commits looked at: older versions are not listed, and, when the module existed before them, versions carry no revision number. */
                 truncated: boolean;
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -6428,6 +7066,13 @@ export interface components {
             meta: {
                 page: components["schemas"]["PageMeta"];
                 counts: components["schemas"]["ChangeSetStateCounts"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -6496,6 +7141,15 @@ export interface components {
         };
         ChangeSetDocument: {
             data: components["schemas"]["ChangeSetResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         ChangeSetChangePageDocument: {
             data: components["schemas"]["ChangeSetChangeResource"][];
@@ -8495,6 +9149,13 @@ export interface components {
             data: components["schemas"]["ChangeSetResource"];
             meta: {
                 review: components["schemas"]["ReviewMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
         };
         ReviewMeta: {
@@ -8560,6 +9221,13 @@ export interface components {
                     commit: string;
                     fastForward: boolean;
                 };
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
         };
         RefreshChangeSetDocument: {
@@ -8585,6 +9253,13 @@ export interface components {
                     /** @description The save point that committed the kept subjects’ working copies first; null when there was none. */
                     savePoint: string | null;
                 };
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
         };
         RefreshConflictPageDocument: {
@@ -8638,6 +9313,13 @@ export interface components {
                     /** @description Conflicts in all. */
                     total: number;
                 };
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
         };
         CarryConflict: {
@@ -8664,6 +9346,13 @@ export interface components {
                     /** @description Conflicts in all. */
                     total: number;
                 };
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
         };
         ManualPageDocument: {
@@ -8965,6 +9654,13 @@ export interface components {
                 page: components["schemas"]["PageMeta"];
                 /** @description The ref’s first-parent line goes on past the 1,000 newest commits looked at: older versions are not listed, and, when the manual existed before them, versions carry no revision number. */
                 truncated: boolean;
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -9317,6 +10013,13 @@ export interface components {
             data: components["schemas"]["ReleaseDetailResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -9417,6 +10120,15 @@ export interface components {
         };
         ReleaseDetailDocument: {
             data: components["schemas"]["ReleaseDetailResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         CreateReleaseDocument: {
             data: {
@@ -9442,6 +10154,15 @@ export interface components {
         };
         ReleaseDocument: {
             data: components["schemas"]["ReleaseResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         ReleaseResource: {
             /** @enum {string} */
@@ -9510,6 +10231,13 @@ export interface components {
                 page: components["schemas"]["PageMeta"];
                 /** @description Filtered by manual or language, only the newest releases matching the other filters are looked through; true when there were more. */
                 truncated: boolean;
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -9669,6 +10397,13 @@ export interface components {
             data: components["schemas"]["MaintenanceLineResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -9727,11 +10462,27 @@ export interface components {
         };
         MaintenanceLineDocument: {
             data: components["schemas"]["MaintenanceLineResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         ReleasePageDocument: {
             data: components["schemas"]["ReleaseResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -9771,7 +10522,7 @@ export interface components {
             attributes: {
                 name: string;
                 description: string | null;
-                permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups")[];
+                permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision")[];
                 scope: components["schemas"]["Scope"];
             };
             meta: {
@@ -9794,7 +10545,7 @@ export interface components {
                     /** @description What the role is for, 1 to 500 characters; null for none. */
                     description?: string | null;
                     /** @description At least one, each once. */
-                    permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups")[];
+                    permissions: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision")[];
                     /** @description Where the permissions apply; left out (or `{}`): everywhere. `admin.roles`, `admin.branding` and `webhook.manage` apply everywhere whatever it says. */
                     scope?: {
                         languages?: string[];
@@ -9820,7 +10571,7 @@ export interface components {
                     /** @description What the role is for, 1 to 500 characters; null for none. */
                     description?: string | null;
                     /** @description At least one, each once. */
-                    permissions?: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups")[];
+                    permissions?: ("content.read" | "content.read.draft" | "content.edit" | "content.review" | "content.approve" | "release.publish" | "translation.manage" | "webhook.manage" | "admin.roles" | "admin.branding" | "admin.backups" | "scim.provision")[];
                     /** @description Where the permissions apply; left out (or `{}`): everywhere. `admin.roles`, `admin.branding` and `webhook.manage` apply everywhere whatever it says. */
                     scope?: {
                         languages?: string[];
@@ -10151,7 +10902,7 @@ export interface components {
             type: "SignInOptions";
             id: string;
             attributes: {
-                /** @description Whether people sign in with an email address and a password (`CCMS_PASSWORD_SIGN_IN`; never in demo mode). */
+                /** @description Whether people sign in with an email address and a password (`CCMS_PASSWORD_SIGN_IN`; never in demo mode, nor with single sign-on required). */
                 password: boolean;
                 /** @description “Forgot password” is offered: password sign-in is on, and email (`CCMS_MAIL_URL`, `CCMS_PUBLIC_URL`) can carry the link. */
                 passwordReset: boolean;
@@ -10159,6 +10910,10 @@ export interface components {
                 emailCode: boolean;
                 /** @description How many identity providers are offered (`GET /auth/providers`). */
                 providers: number;
+                /** @description Single sign-on is required (#378): `password`, `passwordReset` and `emailCode` are false. */
+                singleSignOn: boolean;
+                /** @description With single sign-on required, whether there is a break-glass account to sign in to with its password (`POST /auth/password/sign-in`). Never whose. */
+                emergencySignIn: boolean;
             };
         };
         PasswordSignInDocument: {
@@ -10173,8 +10928,13 @@ export interface components {
         };
         SignedInDocument: {
             meta: {
-                /** @description Who is signed in now. */
-                userId: string;
+                /** @description Who is signed in now (the session cookie carries it); null with a second step to take first. */
+                userId: string | null;
+                /**
+                 * @description Null: signed in. `verify`: a code of the person’s authenticator app (or a recovery code) first, `POST /auth/second-factor/verify`. `set-up`: the installation requires two-factor sign-in and they have none yet, `POST /auth/second-factor/set-up`. Until then there is no session: only the cookie `__Host-openfolia-second-factor`, for ten minutes.
+                 * @enum {string|null}
+                 */
+                secondFactor: "verify" | "set-up" | null;
             };
         };
         ForgotPasswordDocument: {
@@ -10290,81 +11050,114 @@ export interface components {
                 };
             };
         };
-        MailSettingsDocument: {
-            data: components["schemas"]["MailSettingsResource"];
+        SecondFactorDocument: {
+            data: components["schemas"]["SecondFactorResource"];
         };
-        /** @description `id` is always `instance`. Read-only: the settings are in the environment. */
-        MailSettingsResource: {
+        /** @description Your own second factor. `id` is always `own`. */
+        SecondFactorResource: {
             /** @enum {string} */
-            type: "MailSettings";
+            type: "SecondFactor";
             id: string;
             attributes: {
                 /**
-                 * @description `on`: emails are sent. `off`: no mail server is set (`CCMS_MAIL_URL`); what would be emailed is offered as a link to copy. `no-secret-key`: a server is set, but the instance has no secret key (`CCMS_SECRET_KEY`, or the key file), which seals what a queued email holds; emails are off until there is one.
-                 * @enum {string}
+                 * Format: date-time
+                 * @description Since when it is on; null: off.
                  */
-                state: "on" | "off" | "no-secret-key";
-                /** @description The mail server’s host; null while none is set. */
-                host: string | null;
-                /** @description Its port; null while none is set. */
-                port: number | null;
-                /**
-                 * @description How the connection is protected: `implicit` (`smtps://`, TLS from the start), `starttls` (`smtp://`, STARTTLS required: nothing is sent without it), `opportunistic` (`smtp://` with `CCMS_MAIL_REQUIRE_TLS=false`: STARTTLS when offered). The certificate is always verified. Null while no server is set.
-                 * @enum {string|null}
-                 */
-                tls: "implicit" | "starttls" | "opportunistic" | null;
-                /** @description Whether the server is signed in to (`CCMS_MAIL_USER`). Never the user or the password. */
-                authenticated: boolean;
-                /** @description The sender’s address (`CCMS_MAIL_FROM`); null while no server is set. */
-                from: string | null;
-                /** @description The sender’s name: the branding’s product name. */
-                senderName: string;
-                /**
-                 * @description The language of an email to someone whose language is not known (`CCMS_MAIL_LANGUAGE`).
-                 * @enum {string}
-                 */
-                language: "en" | "de";
+                enabledAt: string | null;
+            };
+            meta: {
+                /** @description Recovery codes not used. */
+                recoveryCodesLeft: number;
+                /** @description The installation requires it of you (`GET /settings`). */
+                required: boolean;
+                /** @description It can be set up: the server has an instance secret key to seal the secret with. */
+                available: boolean;
+                /** @description You have a password: setting it up asks for it, and it proves you for a change. */
+                hasPassword: boolean;
             };
         };
-        SendTestMailDocument: {
+        BeginSecondFactorDocument: {
             data: {
                 /** @enum {string} */
-                type: "MailTest";
-                attributes?: {
-                    /**
-                     * @description The language to write it in (the editor’s); left out, the installation’s.
-                     * @enum {string}
-                     */
-                    language?: "en" | "de";
+                type: "SecondFactorSetUp";
+                attributes: {
+                    /** @description Your password; needed when you have one. */
+                    password?: string;
                 };
             };
         };
-        MailMessageDocument: {
-            data: components["schemas"]["MailMessageResource"];
+        SecondFactorSetUpDocument: {
+            meta: {
+                /** @description The secret in base32, to type into an app that cannot scan. Shown only now. */
+                secret: string;
+                /** @description The same as the QR code holds (`otpauth://totp/…`), to open an app on this device. */
+                otpauthUrl: string;
+                /** @description The QR code as an SVG, black on white with its quiet zone. */
+                qrCode: string;
+                /** @description The account as the app lists it. */
+                account: string;
+            };
         };
-        /** @description `id` is the message’s ID (a UUID), as the audit log names it. */
-        MailMessageResource: {
-            /** @enum {string} */
-            type: "MailMessage";
-            id: string;
-            attributes: {
+        SecondFactorCodeDocument: {
+            data: {
+                /** @enum {string} */
+                type: "SecondFactorCode";
+                attributes: {
+                    /** @description The six digits the authenticator app shows, or a recovery code; spaces and dashes are left out. */
+                    code: string;
+                };
+            };
+        };
+        SecondFactorOnDocument: {
+            meta: {
+                /** @description Ten recovery codes, each for one sign-in without the app. Shown only now: only hashes are kept. */
+                recoveryCodes: string[];
+                /** @description Your other sessions that ended (this one goes on). */
+                sessionsEnded: number;
+            };
+        };
+        SecondFactorProofDocument: {
+            data: {
+                /** @enum {string} */
+                type: "SecondFactorProof";
+                attributes: {
+                    password?: string;
+                    /** @description The six digits the authenticator app shows, or a recovery code; spaces and dashes are left out. */
+                    code?: string;
+                };
+            };
+        };
+        RecoveryCodesDocument: {
+            meta: {
+                /** @description Ten recovery codes, each for one sign-in without the app. Shown only now: only hashes are kept. */
+                recoveryCodes: string[];
+            };
+        };
+        SecondStepDocument: {
+            meta: {
                 /**
-                 * @description What kind of email it is.
+                 * @description `verify`: a code for a second factor that is on; `set-up`: turn one on first, the installation requires it.
                  * @enum {string}
                  */
-                template: "test";
-                /** @description The address it goes to: the administrator’s own. */
-                to: string;
-                /**
-                 * @description The language it is written in.
-                 * @enum {string}
-                 */
-                language: "en" | "de";
-                /**
-                 * @description Queued: it is sent in the background, retried for about half an hour; a failure for good is in the audit log (`mail.failed`).
-                 * @enum {string}
-                 */
-                status: "queued";
+                secondFactor: "verify" | "set-up";
+                /** @description Whose sign-in it is. */
+                email: string | null;
+                /** Format: date-time */
+                expiresAt: string;
+            };
+        };
+        SecondStepDoneDocument: {
+            meta: {
+                /** @description Who is signed in now. */
+                userId: string;
+            };
+        };
+        SecondStepSetUpDoneDocument: {
+            meta: {
+                /** @description Who is signed in now. */
+                userId: string;
+                /** @description Ten recovery codes, each for one sign-in without the app. Shown only now: only hashes are kept. */
+                recoveryCodes: string[];
             };
         };
         CommentPageDocument: {
@@ -10373,6 +11166,13 @@ export interface components {
                 page: components["schemas"]["PageMeta"];
                 /** @description The change set’s head `meta.orphaned` was worked out against: the review head once submitted, else the branch’s head. */
                 head: string;
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -10447,6 +11247,15 @@ export interface components {
         };
         CommentDocument: {
             data: components["schemas"]["CommentResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         CreateCommentDocument: {
             data: {
@@ -10777,6 +11586,15 @@ export interface components {
         };
         TranslationJobDocument: {
             data: components["schemas"]["TranslationJobResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         TranslationJobResource: {
             /** @enum {string} */
@@ -10836,6 +11654,13 @@ export interface components {
             data: components["schemas"]["TranslationJobResource"][];
             meta: {
                 page: components["schemas"]["PageMeta"];
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -11851,6 +12676,13 @@ export interface components {
                 page: components["schemas"]["PageMeta"];
                 /** @description How many of your notifications are unread, whatever the filter. */
                 unreadCount: number;
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
             };
             links: components["schemas"]["PageLinks"];
         };
@@ -11865,11 +12697,11 @@ export interface components {
              * @description What happened: the event’s topic. `change-set.submit` (a change set to review), `change-set.return`, `change-set.approve`, `change-set.sign-off`, `change-set.merge` (your change set), `lock.break` (your locks were broken), `translation.imported`, `translation.import-failed` (your import), `release.output-failed`, `release.output-recovered` (a file told failed is ready after all), `release.published` (a major release of a manual you read).
              * @enum {string}
              */
-            kind: "change-set.submit" | "change-set.return" | "change-set.approve" | "change-set.sign-off" | "change-set.merge" | "lock.break" | "translation.imported" | "translation.import-failed" | "release.published" | "release.output-failed" | "release.output-recovered" | "backup.failed" | "backup.overdue";
+            kind: "change-set.submit" | "change-set.return" | "change-set.approve" | "change-set.sign-off" | "change-set.merge" | "lock.break" | "translation.imported" | "translation.import-failed" | "release.published" | "release.output-failed" | "release.output-recovered" | "backup.failed" | "backup.overdue" | "sign-in.break-glass";
             /** @description What it opens: `{ type: "change-set" | "release" | "import", id }`. */
             subject: {
                 /** @enum {string} */
-                type: "change-set" | "release" | "import" | "backup";
+                type: "change-set" | "release" | "import" | "backup" | "user";
                 id: string;
             };
             /** @description What a client builds its sentence from, by kind: IDs, a change set’s `title`, `by` (who did it: `{ kind, id }`), `state` (where a change set went), `reason`, `count` and `subjects` (broken locks), `manualIds`, `level`. Never text written for people on the server. */
@@ -11897,6 +12729,15 @@ export interface components {
         };
         NotificationDocument: {
             data: components["schemas"]["NotificationResource"];
+            meta: {
+                /** @description The users this document names (as `{ kind: "user", id }`), each once, by ID, and whether they are deactivated. Derived, never stored. */
+                people: {
+                    /** @description The user’s ID. */
+                    id: string;
+                    /** @description Whether the user is deactivated now; false for an ID no user has. */
+                    deactivated: boolean;
+                }[];
+            };
         };
         MarkReadDocument: {
             meta: {
@@ -11916,6 +12757,14 @@ export interface components {
                 marked: number;
                 /** @description How many of your notifications are unread, whatever the filter. */
                 unreadCount: number;
+            };
+        };
+        UnsubscribedDocument: {
+            meta: {
+                /** @description Of the kinds the link is for (the email’s), those that send you no email now. */
+                kinds: ("change-set.submit" | "change-set.return" | "change-set.approve" | "change-set.sign-off" | "change-set.merge" | "lock.break" | "translation.imported" | "translation.import-failed" | "release.published" | "release.output-failed" | "release.output-recovered" | "backup.failed" | "backup.overdue")[];
+                /** @description Of those, the ones whose email this turned off (they come in the app only now); empty when none came by email any more. */
+                changed: ("change-set.submit" | "change-set.return" | "change-set.approve" | "change-set.sign-off" | "change-set.merge" | "lock.break" | "translation.imported" | "translation.import-failed" | "release.published" | "release.output-failed" | "release.output-recovered" | "backup.failed" | "backup.overdue")[];
             };
         };
         OutboxStatusDocument: {
@@ -11941,7 +12790,7 @@ export interface components {
         PreferencesDocument: {
             data: components["schemas"]["PreferencesResource"];
         };
-        /** @description Your own preferences: the editor’s tips and first-run tour. `id` is your user ID (`service` for a service, which has the defaults and changes none). */
+        /** @description Your own preferences: the editor’s tips and first-run tour, and your notifications. `id` is your user ID (`service` for a service, which has the defaults and changes none). */
         PreferencesResource: {
             /** @enum {string} */
             type: "Preferences";
@@ -11953,6 +12802,51 @@ export interface components {
                 dismissedTips: string[];
                 /** @description Whether you finished or skipped the first-run tour; `false` brings it back. `false` by default. */
                 tourDone: boolean;
+                /** @description Which notifications reach you, and how (#884). */
+                notifications: {
+                    /** @description How each kind of notification reaches you: `off` (neither the bell nor email), `app` (the bell only), `email` (the bell and an email at once), `digest` (the bell and the daily summary email). Defaults: review requests and decisions on your changes `email`; a broken lock `app`; releases and translations `digest`; a release file that failed, a failed or overdue backup `email`. Nothing is chosen about the use of the emergency account (`sign-in.break-glass`): administrators are always told, in the bell and by email. */
+                    choices: {
+                        /** @enum {string} */
+                        "change-set.submit": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "change-set.return": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "change-set.approve": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "change-set.sign-off": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "change-set.merge": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "lock.break": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "translation.imported": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "translation.import-failed": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "release.published": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "release.output-failed": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "release.output-recovered": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "backup.failed": "off" | "app" | "email" | "digest";
+                        /** @enum {string} */
+                        "backup.overdue": "off" | "app" | "email" | "digest";
+                    };
+                    /** @description "Pause all email": every kind that would email stays in the app only, but a use of the emergency account. `false` by default. */
+                    emailPaused: boolean;
+                    /** @description "Turn off all notifications": nothing reaches you, neither the bell nor email, but a use of the emergency account. `false` by default. */
+                    allOff: boolean;
+                    /** @description The hour (0 to 23, in `timeZone`) the daily summary goes out; null: the installation’s (`meta.notifications.defaultDigestHour`). */
+                    digestHour: number | null;
+                    /** @description Your time zone (IANA, `Europe/Vienna`); null: UTC. The editor sets it from your browser. */
+                    timeZone: string | null;
+                    /**
+                     * @description The language of your email (`en`, `de`); null: the installation’s. The editor sets it to your interface language.
+                     * @enum {string|null}
+                     */
+                    language: "en" | "de" | null;
+                };
             };
             meta: {
                 /**
@@ -11960,6 +12854,15 @@ export interface components {
                  * @description When they last changed; null: never (the defaults).
                  */
                 updatedAt: string | null;
+                notifications: {
+                    /**
+                     * @description Why no notification email can reach you: the installation sends no email (`off`), has no secret key (`no-secret-key`) or no public address to link to (`no-public-url`), or you have no email address (`no-address`); null when it can. Nothing is emailed meanwhile.
+                     * @enum {string|null}
+                     */
+                    emailUnavailable: "off" | "no-secret-key" | "no-public-url" | "no-address" | null;
+                    /** @description The summary’s hour for someone who chose none (`CCMS_NOTIFICATIONS_DIGEST_HOUR`). */
+                    defaultDigestHour: number;
+                };
             };
         };
         UpdatePreferencesDocument: {
@@ -11976,6 +12879,51 @@ export interface components {
                     dismissedTips?: string[];
                     /** @description Whether you finished or skipped the first-run tour; `false` brings it back. `false` by default. */
                     tourDone?: boolean;
+                    /** @description The notification settings to change; left out stays. */
+                    notifications?: {
+                        /** @description How each kind of notification reaches you: `off` (neither the bell nor email), `app` (the bell only), `email` (the bell and an email at once), `digest` (the bell and the daily summary email). Defaults: review requests and decisions on your changes `email`; a broken lock `app`; releases and translations `digest`; a release file that failed, a failed or overdue backup `email`. Nothing is chosen about the use of the emergency account (`sign-in.break-glass`): administrators are always told, in the bell and by email. Only the kinds given change. */
+                        choices?: {
+                            /** @enum {string} */
+                            "change-set.submit"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "change-set.return"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "change-set.approve"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "change-set.sign-off"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "change-set.merge"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "lock.break"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "translation.imported"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "translation.import-failed"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "release.published"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "release.output-failed"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "release.output-recovered"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "backup.failed"?: "off" | "app" | "email" | "digest";
+                            /** @enum {string} */
+                            "backup.overdue"?: "off" | "app" | "email" | "digest";
+                        };
+                        /** @description "Pause all email": every kind that would email stays in the app only, but a use of the emergency account. `false` by default. */
+                        emailPaused?: boolean;
+                        /** @description "Turn off all notifications": nothing reaches you, neither the bell nor email, but a use of the emergency account. `false` by default. */
+                        allOff?: boolean;
+                        /** @description The hour (0 to 23, in `timeZone`) the daily summary goes out; null: the installation’s (`meta.notifications.defaultDigestHour`). */
+                        digestHour?: number | null;
+                        /** @description Your time zone (IANA, `Europe/Vienna`); null: UTC. The editor sets it from your browser. */
+                        timeZone?: string | null;
+                        /**
+                         * @description The language of your email (`en`, `de`); null: the installation’s. The editor sets it to your interface language.
+                         * @enum {string|null}
+                         */
+                        language?: "en" | "de" | null;
+                    };
                 };
             };
         };
@@ -12797,6 +13745,13 @@ export interface components {
             path: string;
             /** @description The absolute URL readers open (`CCMS_PUBLIC_URL` and `path`), what the QR code holds; null while `CCMS_PUBLIC_URL` is not set. */
             url: string | null;
+        };
+        /** @description SCIM’s error: `status` as a string, `scimType` for the 400s and 409s the standard names. */
+        ScimError: {
+            schemas: string[];
+            status: string;
+            scimType?: string;
+            detail: string;
         };
     };
     responses: never;
@@ -14034,6 +14989,8 @@ export interface operations {
     Access_demoUsers: {
         parameters: {
             query?: {
+                /** @description `active` (the default): those to act as; `deactivated`: the others, so that a client can name whose work it shows. */
+                "filter[status]"?: "active" | "deactivated";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
                 /** @description Resources per page. Default: 50, at most 200. */
@@ -14074,7 +15031,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description Demo mode: `X-Ccms-User` names no user. */
+            /** @description `forbidden`: `filter[status]=deactivated` with a service account’s token. Or: Demo mode: `X-Ccms-User` names no user. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15330,7 +16287,172 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
+            /** @description `second-factor-unavailable`: requiring a second factor needs the instance secret key. `second-factor-own-first`: turn on your own first (when you sign in with a password or a code by email), so nobody is locked out. `single-sign-on-unavailable`: no identity provider answers now. `single-sign-on-own-first`: your own session would end; sign in with the identity provider, or as the break-glass account, first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `break-glass-not-usable` (`meta.problem`): the account could not be signed in to. `session-limits-crossed`: the idle limit is longer than a session lasts. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
             /** @description `database-timeout`: the change waited too long for another. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Mail_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["MailSettingsDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `admin.roles` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Mail_test: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SendTestMailDocument"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["MailMessageDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `admin.roles` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `not-configured`: email is off; `meta.reason` is `off` (no mail server, `CCMS_MAIL_URL`) or `no-secret-key` (no instance secret key). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `no-email-address`: the signed-in actor has no email address (a service account, a user without one). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long; nothing was queued. `Retry-After` says when to try again. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -19248,7 +20370,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `merge-conflict` (`meta.conflicts`: `{ path, kinds }`, at most 100; `meta.total`), `invalid-state`, `not-approved` (`meta.pending`), `approval-lapsed` (an approval it needs no longer holds: its approver lost the role or scope it took; `meta.pending`, `meta.lapsed`: `{ requirement, approver }`), `base-moved` (try again), `base-missing`, `base-rewritten` (the base no longer holds the change set’s base commit), `head-moved`: its branch moved after it was submitted (pushed to outside the API), so no approval holds; it has been returned to draft (`meta.reviewHead`, `meta.head`). */
+            /** @description `merge-conflict` (`meta.conflicts`: `{ path, kinds }`, at most 100; `meta.total`), `invalid-state`, `not-approved` (`meta.pending`), `approval-lapsed` (an approval it needs no longer holds: its approver lost the role or scope it took, or was deactivated; `meta.pending`, `meta.lapsed`: `{ requirement, approver }`), `base-moved` (try again), `base-missing`, `base-rewritten` (the base no longer holds the change set’s base commit), `head-moved`: its branch moved after it was submitted (pushed to outside the API), so no approval holds; it has been returned to draft (`meta.reviewHead`, `meta.head`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -19758,7 +20880,7 @@ export interface operations {
     Manuals_read: {
         parameters: {
             query?: {
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -20336,7 +21458,7 @@ export interface operations {
     ManualPdf_pdf: {
         parameters: {
             query?: {
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -20453,7 +21575,7 @@ export interface operations {
                 width?: string;
                 /** @description For the design screen: lay the manual out with this page design (`design/<id>.yaml`, read at `ref`, and its working copy with `workingCopy=true`) in place of the manual's own; `builtin` for the built-in design. A design that is not there gives the built-in design, as for a manual naming one. Default: the manual's own (its manifest's `design`, else `pdf.design`). */
                 design?: "builtin" | string;
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -20568,7 +21690,7 @@ export interface operations {
             query?: {
                 /** @description For the design screen: lay the manual out with this page design (`design/<id>.yaml`, read at `ref`, and its working copy with `workingCopy=true`) in place of the manual's own; `builtin` for the built-in design. A design that is not there gives the built-in design, as for a manual naming one. Default: the manual's own (its manifest's `design`, else `pdf.design`). */
                 design?: "builtin" | string;
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
@@ -20677,7 +21799,7 @@ export interface operations {
                 variant?: string;
                 /** @description Colour scheme. `auto` (default) follows the viewer’s `prefers-color-scheme`; `light` and `dark` force one. */
                 theme?: "auto" | "light" | "dark";
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -20785,7 +21907,7 @@ export interface operations {
                 theme?: "auto" | "light" | "dark";
                 /** @description `reader` (default): the HTML readers get. `editor`: the editor’s preview of it, which also shows each page break as a marker labelled “Page break (PDF)”. */
                 view?: "reader" | "editor";
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -21027,7 +22149,7 @@ export interface operations {
             query?: {
                 /** @description The variant, as for the module’s preview (`model=large,software=2.3`). Default: none set, so every variant block whose condition tests an attribute is hidden. */
                 variant?: string;
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
@@ -21130,7 +22252,7 @@ export interface operations {
     ManualHiddenContent_hidden: {
         parameters: {
             query?: {
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
@@ -25197,6 +26319,46 @@ export interface operations {
             };
         };
     };
+    SignIn_postedCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To the editor, signed in; or to its sign-in page, with `?error=`. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SignIn_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metadata (XML). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     Password_options: {
         parameters: {
             query?: never;
@@ -25273,7 +26435,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `user-deactivated` or `sign-in-not-allowed` (the session policy), said only with the right password; `cross-origin-request`: not from the editor’s origin. */
+            /** @description `user-deactivated`, said only with the right password; `cross-origin-request`: not from the editor’s origin. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -25495,7 +26657,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `sign-in-not-allowed` (the session policy); `cross-origin-request`: not from the editor’s origin. */
+            /** @description `cross-origin-request`: not from the editor’s origin. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -25726,7 +26888,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `user-deactivated`: reactivate them first. `password-sign-in-off`: signing in with a password is off (`CCMS_PASSWORD_SIGN_IN=off`, or demo mode). */
+            /** @description `user-deactivated`: reactivate them first. `single-sign-on-required`: the installation requires single sign-on, so nobody could sign in with the password. `password-sign-in-off`: signing in with a password is off (`CCMS_PASSWORD_SIGN_IN=off`, or demo mode). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -25901,7 +27063,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `user-deactivated`: reactivate them first. `password-sign-in-off`: signing in with a password is off (`CCMS_PASSWORD_SIGN_IN=off`, or demo mode). */
+            /** @description `user-deactivated`: reactivate them first. `single-sign-on-required`: the installation requires single sign-on, so nobody could sign in with the password. `password-sign-in-off`: signing in with a password is off (`CCMS_PASSWORD_SIGN_IN=off`, or demo mode). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -25978,7 +27140,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). */
+            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). `single-sign-on-required`: the installation requires single sign-on, for every address alike. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -26055,7 +27217,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). */
+            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). `single-sign-on-required`: the installation requires single sign-on, for every address alike. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -26141,7 +27303,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). */
+            /** @description `email-code-sign-in-off`: signing in with a code by email is off (`CCMS_EMAIL_CODE_SIGN_IN=off`, no email, or demo mode). `single-sign-on-required`: the installation requires single sign-on, for every address alike. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -26170,7 +27332,7 @@ export interface operations {
             };
         };
     };
-    Mail_get: {
+    SecondFactor_read: {
         parameters: {
             query?: never;
             header?: {
@@ -26187,7 +27349,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/vnd.api+json": components["schemas"]["MailSettingsDocument"];
+                    "application/vnd.api+json": components["schemas"]["SecondFactorDocument"];
                 };
             };
             /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
@@ -26208,7 +27370,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `forbidden`: the actor lacks the `admin.roles` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            /** @description `forbidden`: a service account has none. Or: Demo mode: `X-Ccms-User` names no user. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -26226,9 +27388,18 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
+            /** @description `second-factor-not-applicable`: your session did not begin with a password or a code by email (single sign-on is the provider’s to secure). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
         };
     };
-    Mail_test: {
+    SecondFactor_begin: {
         parameters: {
             query?: never;
             header?: {
@@ -26240,17 +27411,370 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/vnd.api+json": components["schemas"]["SendTestMailDocument"];
+                "application/vnd.api+json": components["schemas"]["BeginSecondFactorDocument"];
             };
         };
         responses: {
-            202: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/vnd.api+json": components["schemas"]["MailMessageDocument"];
+                    "application/vnd.api+json": components["schemas"]["SecondFactorSetUpDocument"];
                 };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-password`, `wrong-code`: what you gave is not right; `forbidden`: a service account has no second factor. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-on`: it is on already. `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. `second-factor-not-applicable`: your session did not begin with a password or a code by email (single sign-on is the provider’s to secure). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_confirm: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SecondFactorCodeDocument"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SecondFactorOnDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-password`, `wrong-code`: what you gave is not right; `forbidden`: a service account has no second factor. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-on`: it is on already. `second-factor-not-begun`: no set-up is open (any more). `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. `second-factor-not-applicable`: your session did not begin with a password or a code by email (single sign-on is the provider’s to secure). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_recoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SecondFactorProofDocument"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["RecoveryCodesDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-password`, `wrong-code`: what you gave is not right; `forbidden`: a service account has no second factor. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-off`: it is not on. `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. `second-factor-not-applicable`: your session did not begin with a password or a code by email (single sign-on is the provider’s to secure). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_turnOff: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SecondFactorProofDocument"];
+            };
+        };
+        responses: {
+            /** @description It is off. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-password`, `wrong-code`: what you gave is not right; `forbidden`: a service account has no second factor. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-off`: it is not on. `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. `second-factor-not-applicable`: your session did not begin with a password or a code by email (single sign-on is the provider’s to secure). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_reset: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The user’s ID. One that names no user is 404. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reset. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description A query parameter the route does not support, or a malformed one. Or: `X-Ccms-User` sent while demo mode is off. */
             400: {
@@ -26279,7 +27803,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `not-configured`: email is off; `meta.reason` is `off` (no mail server, `CCMS_MAIL_URL`) or `no-secret-key` (no instance secret key). */
+            /** @description `not-found`: no such user, or none on. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -26297,8 +27821,8 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `no-email-address`: the signed-in actor has no email address (a service account, a user without one). */
-            422: {
+            /** @description `second-factor-own`: turn off your own in the account menu, with your password or a code. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26306,13 +27830,1776 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `database-timeout`: the transaction waited too long; nothing was queued. `Retry-After` says when to try again. */
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_step: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SecondStepDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `user-deactivated`, `sign-in-not-allowed`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-expired`: no second step of this kind is open in this browser (it ran out, was used, or ended with a change of the account): sign in again. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SecondFactorCodeDocument"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SecondStepDoneDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-code`: not the code of now, or used before; the step stays open. `user-deactivated`, `sign-in-not-allowed` (the session policy). `cross-origin-request`: not from the editor’s origin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-expired`: no second step of this kind is open in this browser (it ran out, was used, or ended with a change of the account): sign in again. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_stepSetUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SecondFactorSetUpDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-code`: not the code of now, or used before; the step stays open. `user-deactivated`, `sign-in-not-allowed` (the session policy). `cross-origin-request`: not from the editor’s origin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-on`: it is on already. `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-expired`: no second step of this kind is open in this browser (it ran out, was used, or ended with a change of the account): sign in again. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    SecondFactor_stepConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/vnd.api+json": components["schemas"]["SecondFactorCodeDocument"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["SecondStepSetUpDoneDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `wrong-code`: not the code of now, or used before; the step stays open. `user-deactivated`, `sign-in-not-allowed` (the session policy). `cross-origin-request`: not from the editor’s origin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-on`: it is on already. `second-factor-not-begun`: no set-up is open (any more). `second-factor-unavailable`: the server has no instance secret key, or the stored secret cannot be opened. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `second-factor-expired`: no second step of this kind is open in this browser (it ran out, was used, or ended with a change of the account): sign in again. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `too-many-failed-attempts`: too many wrong codes or passwords from this address or for this account; `Retry-After` says when to try again. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `database-timeout`: the transaction waited too long for a row held elsewhere; nothing of it was written. `sign-in-busy`: too many passwords are being checked at once. `Retry-After` says when to try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_config: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_types: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+                        totalResults: number;
+                        startIndex: number;
+                        itemsPerPage: number;
+                        Resources: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_type: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description `User` or `Group`. */
+                resourceTypeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_schemas: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+                        totalResults: number;
+                        startIndex: number;
+                        itemsPerPage: number;
+                        Resources: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_schema: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The schema’s URN. */
+                schemaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_users: {
+        parameters: {
+            query?: {
+                /** @description Without these attributes (comma-separated), e.g. `members`. */
+                excludedAttributes?: string;
+                /** @description Only these attributes (comma-separated attribute paths), with `id` and `schemas`. */
+                attributes?: string;
+                /** @description Results per page. Default: 100, at most 200 (more is cut to it). */
+                count?: number;
+                /** @description The first result, from 1. Default: 1. */
+                startIndex?: number;
+                /** @description A SCIM filter (RFC 7644, section 3.4.2.2): `userName eq "jane@example.org"`, `externalId eq "…"`, `emails[type eq "work" and value co "@example.org"]`, with `and`, `or`, `not` and every operator of the standard. 400 `invalidFilter` for one that does not parse. */
+                filter?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+                        totalResults: number;
+                        startIndex: number;
+                        itemsPerPage: number;
+                        Resources: ({
+                            schemas: string[];
+                            /** @description The user’s ID, as everywhere in the API. */
+                            id: string;
+                            externalId?: string;
+                            userName?: string;
+                            active?: boolean;
+                            groups?: {
+                                value: string;
+                                display: string;
+                                type: string;
+                            }[];
+                            meta?: {
+                                resourceType: string;
+                                created?: string;
+                                lastModified?: string;
+                                location: string;
+                            };
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_addUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A SCIM User resource. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    /** @description The new user. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description The user’s ID, as everywhere in the API. */
+                        id: string;
+                        externalId?: string;
+                        userName?: string;
+                        active?: boolean;
+                        groups?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `uniqueness`: another provisioned user has the `userName`, or another user the email address (one not linked by the link-by-email setting). Or (no `scimType`): the user was linked rather than made by the directory, has signed in, or holds a permission beyond reading and writing content, so only the editor changes their address (`scim-address-locked`); or the change would leave no active user holding `admin.roles` (`last-admin`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_user: {
+        parameters: {
+            query?: {
+                /** @description Without these attributes (comma-separated), e.g. `members`. */
+                excludedAttributes?: string;
+                /** @description Only these attributes (comma-separated attribute paths), with `id` and `schemas`. */
+                attributes?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The user’s ID. One no directory provisioned is 404. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description The user’s ID, as everywhere in the API. */
+                        id: string;
+                        externalId?: string;
+                        userName?: string;
+                        active?: boolean;
+                        groups?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_putUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The user’s ID. One no directory provisioned is 404. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM User resource. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description The user’s ID, as everywhere in the API. */
+                        id: string;
+                        externalId?: string;
+                        userName?: string;
+                        active?: boolean;
+                        groups?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `uniqueness`: another provisioned user has the `userName`, or another user the email address (one not linked by the link-by-email setting). Or (no `scimType`): the user was linked rather than made by the directory, has signed in, or holds a permission beyond reading and writing content, so only the editor changes their address (`scim-address-locked`); or the change would leave no active user holding `admin.roles` (`last-admin`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_removeUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The user’s ID. One no directory provisioned is 404. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Let go. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `last-admin`: it is the last active user holding `admin.roles`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_changeUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The user’s ID. One no directory provisioned is 404. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM PatchOp. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description The user’s ID, as everywhere in the API. */
+                        id: string;
+                        externalId?: string;
+                        userName?: string;
+                        active?: boolean;
+                        groups?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `uniqueness`: another provisioned user has the `userName`, or another user the email address (one not linked by the link-by-email setting). Or (no `scimType`): the user was linked rather than made by the directory, has signed in, or holds a permission beyond reading and writing content, so only the editor changes their address (`scim-address-locked`); or the change would leave no active user holding `admin.roles` (`last-admin`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_groups: {
+        parameters: {
+            query?: {
+                /** @description Without these attributes (comma-separated), e.g. `members`. */
+                excludedAttributes?: string;
+                /** @description Only these attributes (comma-separated attribute paths), with `id` and `schemas`. */
+                attributes?: string;
+                /** @description Results per page. Default: 100, at most 200 (more is cut to it). */
+                count?: number;
+                /** @description The first result, from 1. Default: 1. */
+                startIndex?: number;
+                /** @description A SCIM filter (RFC 7644, section 3.4.2.2): `userName eq "jane@example.org"`, `externalId eq "…"`, `emails[type eq "work" and value co "@example.org"]`, with `and`, `or`, `not` and every operator of the standard. 400 `invalidFilter` for one that does not parse. */
+                filter?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: "urn:ietf:params:scim:api:messages:2.0:ListResponse"[];
+                        totalResults: number;
+                        startIndex: number;
+                        itemsPerPage: number;
+                        Resources: ({
+                            schemas: string[];
+                            /** @description A UUID. */
+                            id: string;
+                            externalId?: string;
+                            displayName?: string;
+                            members?: {
+                                value: string;
+                                display: string;
+                                type: string;
+                            }[];
+                            meta?: {
+                                resourceType: string;
+                                created?: string;
+                                lastModified?: string;
+                                location: string;
+                            };
+                        } & {
+                            [key: string]: unknown;
+                        })[];
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Scim_addGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A SCIM Group resource. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    /** @description The new group. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description A UUID. */
+                        id: string;
+                        externalId?: string;
+                        displayName?: string;
+                        members?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `uniqueness`: another provisioned group has the `displayName`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_group: {
+        parameters: {
+            query?: {
+                /** @description Without these attributes (comma-separated), e.g. `members`. */
+                excludedAttributes?: string;
+                /** @description Only these attributes (comma-separated attribute paths), with `id` and `schemas`. */
+                attributes?: string;
+            };
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The group’s ID (a UUID). One that names no provisioned group is 404. */
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description A UUID. */
+                        id: string;
+                        externalId?: string;
+                        displayName?: string;
+                        members?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_putGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The group’s ID (a UUID). One that names no provisioned group is 404. */
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM Group resource. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description A UUID. */
+                        id: string;
+                        externalId?: string;
+                        displayName?: string;
+                        members?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `uniqueness`: another group has the `displayName`. `last-admin`: it would leave no admin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_removeGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The group’s ID (a UUID). One that names no provisioned group is 404. */
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `last-admin`: it would leave no admin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    Scim_changeGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Demo mode only (`CCMS_AUTH_MODE=demo`): the user ID to act as. The bearer token is still required; without demo mode the header is refused (400). */
+                "X-Ccms-User"?: string;
+            };
+            path: {
+                /** @description The group’s ID (a UUID). One that names no provisioned group is 404. */
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        /** @description A SCIM PatchOp. */
+        requestBody: {
+            content: {
+                "application/scim+json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        /** @description A UUID. */
+                        id: string;
+                        externalId?: string;
+                        displayName?: string;
+                        members?: {
+                            value: string;
+                            display: string;
+                            type: string;
+                        }[];
+                        meta?: {
+                            resourceType: string;
+                            created?: string;
+                            lastModified?: string;
+                            location: string;
+                        };
+                    } & {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description The standard’s 400s, with their `scimType`: `invalidSyntax` (no resource or PatchOp), `invalidValue` (an attribute missing or out of range, a member that is no provisioned user), `invalidPath` and `noTarget` (a patch path), `mutability` (a read-only attribute), `invalidFilter`. Or a query parameter SCIM does not define. Or: `X-Ccms-User` sent while demo mode is off. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Missing or wrong API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimError"];
+                };
+            };
+            /** @description `forbidden`: the actor lacks the `scim.provision` permission. Or: Demo mode: `X-Ccms-User` names no user. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description No such resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description `uniqueness`: another group has the `displayName`. `last-admin`: it would leave no admin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        schemas: string[];
+                        status: string;
+                        scimType?: string;
+                        detail: string;
+                    };
                 };
             };
         };
@@ -28744,7 +32031,7 @@ export interface operations {
                     "application/vnd.api+json": components["schemas"]["ErrorDocument"];
                 };
             };
-            /** @description `invalid-state`: the change set is no draft. `locked`: another change set holds the module’s lock. `uncommitted-working-copies`: the change set has a working copy of the module; commit or discard it first. */
+            /** @description `invalid-state`: the change set is no draft. `locked`: another change set holds the module’s lock. `uncommitted-working-copies`: the change set has a working copy of the module; commit or discard it first. `stale-working-copy`: a save point changed the record (a design’s, manual’s or the configuration’s file) since the branch head was read (#957); mark it again. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -29647,7 +32934,7 @@ export interface operations {
     PageDesignTemplates_list: {
         parameters: {
             query?: {
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
@@ -29747,7 +33034,7 @@ export interface operations {
     PageDesignTemplates_files: {
         parameters: {
             query?: {
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Page to return, from 1. Default: 1. */
                 "page[number]"?: number;
@@ -29852,7 +33139,7 @@ export interface operations {
             query: {
                 /** @description The file’s path in the template’s folder. One that is no template text file’s (a name starting with `.`, a path leaving the folder, an image) is 404. */
                 path: string;
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -29955,7 +33242,7 @@ export interface operations {
                 width?: string;
                 /** @description The page design (`design/<id>.yaml` at `ref`, its working copy with `workingCopy=true`) whose settings lay the probe out; the template replaces its own. Default: the built-in design. */
                 design?: string;
-                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false. */
+                /** @description For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false. */
                 workingCopy?: "true" | "false";
                 /** @description Branch, tag or commit ID to read from. Default: the server's `CCMS_DEFAULT_REF`. */
                 ref?: string;
@@ -30682,6 +33969,57 @@ export interface operations {
             };
             /** @description `database-timeout`: the transaction waited too long for a row held elsewhere, or a statement ran too long; nothing was marked. `Retry-After` says when to try again. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+        };
+    };
+    Unsubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required (any non-empty value) with a body of type application/x-www-form-urlencoded or multipart/form-data or text/plain: a cross-site form cannot send it. Not needed with application/vnd.api+json. */
+                "X-Ccms-Request"?: string;
+            };
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["UnsubscribedDocument"];
+                };
+            };
+            /** @description A query parameter the route does not support, or a malformed one. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description `unsubscribe-link-invalid`: not a link this server made, or its person is gone. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["ErrorDocument"];
+                };
+            };
+            /** @description The `Accept` header rules out `application/vnd.api+json`. */
+            406: {
                 headers: {
                     [name: string]: unknown;
                 };

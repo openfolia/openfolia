@@ -137,6 +137,7 @@ describe('a secret key set by the operator', () => {
       { name: 'backup S3 secret', count: 0, unreadable: 0 },
       { name: 'backup key identity', count: 0, unreadable: 0 },
       { name: 'queued email params', count: 0, unreadable: 0 },
+      { name: 'two-factor secrets', count: 0, unreadable: 0 },
     ]);
     const [row] = await database.db.select().from(webhooks);
     expect(() =>

@@ -140,6 +140,24 @@ describe('OidcIdentityProvider against a local provider', () => {
     });
   });
 
+  it('asks the provider anew whether it answers now, whatever it keeps (#378)', async () => {
+    const oidc = provider();
+    await oidc.begin();
+    await oidc.answersNow();
+    const fetched = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('fetch failed'));
+    try {
+      await expect(oidc.answersNow()).rejects.toMatchObject({
+        reason: 'provider-unavailable',
+      });
+      // Sign-ins go on with what is kept.
+      await oidc.begin();
+    } finally {
+      fetched.mockRestore();
+    }
+  });
+
   it('builds the provider’s sign-out address', async () => {
     const url = await provider().signOutUrl('http://127.0.0.1:9/sign-in');
     expect(url).toMatch(new RegExp(`^${mock.issuer}/session/end\\?`));

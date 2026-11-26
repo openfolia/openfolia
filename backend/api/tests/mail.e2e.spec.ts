@@ -11,7 +11,7 @@ import {
 import { mailMessages } from '../src/mail/repos/mail.tables.js';
 import { createTestDatabase, type PgliteDatabase } from './database.js';
 import { actorWith } from './fakes/actors.js';
-import { startMailServer, type TestMailServer } from './mail-server.js';
+import { parts, startMailServer, type TestMailServer } from './mail-server.js';
 import { createTestApp, type TestApp } from './test-app.js';
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
@@ -40,38 +40,6 @@ const testMail = (language?: string) =>
 /** Runs the queued jobs (a failed attempt is retried later, not now) until none is due. */
 async function drain(): Promise<void> {
   for (let i = 0; i < 10; i++) if ((await t.runJobs()) === 0) return;
-}
-
-/** The MIME parts of a message: their headers and decoded bodies. */
-function parts(raw: string): { headers: string; body: string }[] {
-  const boundaries = [...raw.matchAll(/boundary="?([^";\r\n]+)"?/g)].map(
-    (m) => m[1]!,
-  );
-  let pieces = [raw];
-  for (const boundary of boundaries) {
-    pieces = pieces.flatMap((p) => p.split(`--${boundary}`));
-  }
-  return pieces
-    .map((piece) => {
-      const at = piece.search(/\r?\n\r?\n/);
-      if (at < 0) return undefined;
-      const headers = piece.slice(0, at);
-      let body = piece.slice(at).trim();
-      if (/Content-Transfer-Encoding: quoted-printable/i.test(headers)) {
-        body = body
-          .replace(/=\r?\n/g, '')
-          .replace(/=([0-9A-F]{2})/g, (_, hex: string) =>
-            String.fromCharCode(parseInt(hex, 16)),
-          );
-        body = Buffer.from(body, 'latin1').toString('utf8');
-      } else if (/Content-Transfer-Encoding: base64/i.test(headers)) {
-        body = Buffer.from(body.replace(/\s/g, ''), 'base64').toString(
-          /Content-Type: text/i.test(headers) ? 'utf8' : 'latin1',
-        );
-      }
-      return { headers, body: body.replace(/\r\n/g, '\n') };
-    })
-    .filter((p): p is { headers: string; body: string } => p !== undefined);
 }
 
 beforeAll(async () => {
@@ -131,6 +99,10 @@ describe('email through an SMTP server with STARTTLS', () => {
       from: 'docs@example.com',
       senderName: 'OpenFolia',
       language: 'de',
+    });
+    expect(MailSettingsDocument.parse(res.body).data.meta.failures).toEqual({
+      count: 0,
+      last: null,
     });
     expect(JSON.stringify(res.body)).not.toContain('mail-password-1');
     expect(JSON.stringify(res.body)).not.toContain('mailer');

@@ -34,6 +34,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
@@ -92,6 +93,7 @@ export class ReleasesController {
   ) {}
 
   @Get()
+  @NamesPeople()
   @Paged()
   @Filters(
     {
@@ -176,6 +178,7 @@ export class ReleasesController {
   }
 
   @Get(':releaseId')
+  @NamesPeople()
   @ApiOperation({
     summary: 'Read a release',
     description:
@@ -199,6 +202,7 @@ export class ReleasesController {
   }
 
   @Post()
+  @NamesPeople()
   @ApiOperation({
     summary: 'Cut a release',
     description: `Tags the commit \`main\` points to now (the whole repository) as \`revision\` of \`product\`, with an annotated tag named by \`CCMS_RELEASE_TAG\` (default \`release/{product}/{revision}\`; the publisher as tagger; the notes as the message’s body; trailers \`Product\`, \`Revision\` and \`Actor\`), then records the release and a \`release.publish\` audit event. A release is immutable: its tag is never moved or deleted, and its product and revision (or tag name) can never be used again. A request cut off before it was recorded (the server stopped, Git or the database failed) is finished by the next request for the same release once ${RESUME_AFTER_MS / 1000} s have passed, as first requested; until then that is 409 \`release-pending\` (\`meta.releaseId\`, \`meta.retryAfter\` in seconds): try again then. Needs the \`release.publish\` permission in a role whose scope covers the product in every language, module type and audience, and \`content.read\` (to read \`openfolia.yaml\` at \`main\`). With \`maintenanceLine\` (a maintenance line’s ID), the release is cut from the head of the line’s branch instead, of the line’s product (else 422 \`invalid-product\`), and listed under \`GET /maintenance-lines/{id}/releases\`; that head holds unreleased fixes, so it also needs \`content.read.draft\` (without it the branch is not there: 409 \`branch-missing\`).`,
@@ -289,6 +293,7 @@ export class ReleasesController {
   }
 
   @Post(':releaseId/withdraw')
+  @NamesPeople()
   @HttpCode(200)
   @ApiOperation({
     summary: 'Withdraw a release',

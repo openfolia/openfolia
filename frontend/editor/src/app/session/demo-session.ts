@@ -1,4 +1,11 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import {
+  computed,
+  effect,
+  inject,
+  Injectable,
+  signal,
+  untracked,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { ToastService, translated } from '@openfolia/ui/startup';
@@ -6,6 +13,7 @@ import { ToastService, translated } from '@openfolia/ui/startup';
 import {
   ApiClient,
   pageQuery,
+  PeopleStates,
   toApiError,
   type ApiError,
   type Item,
@@ -64,12 +72,17 @@ export class DemoSession {
   private readonly changeSets = inject(ChangeSetSession);
   private readonly toast = inject(ToastService);
   private readonly failureText = injectFailureText();
+  private readonly people = inject(PeopleStates);
 
   private readonly state = signal<DemoStatus>('checking');
   private readonly failed = signal<ApiError | null>(null);
   private readonly list = signal<readonly DemoUser[]>([]);
   private readonly current = signal<string | null>(readStored(STORAGE_KEY));
   private readonly busy = signal(false);
+  /** The names of deactivated users, read once one is named (they are nobody to act as). */
+  private readonly former = signal<ReadonlyMap<string, string>>(new Map());
+  /** The IDs `former` was read for, so an answer without one is not asked for again. */
+  private readonly askedFor = new Set<string>();
 
   readonly status = this.state.asReadonly();
   /** Why `status` is `failed`. */
@@ -87,6 +100,25 @@ export class DemoSession {
   readonly actingAs = computed(() =>
     this.state() === 'on' ? this.current() : null,
   );
+
+  constructor() {
+    effect(() => {
+      if (this.state() !== 'on') return;
+      const unnamed = [...this.people.deactivated()].filter(
+        (id) => this.nameOf(id) === undefined && !this.askedFor.has(id),
+      );
+      if (unnamed.length === 0) return;
+      for (const id of unnamed) this.askedFor.add(id);
+      untracked(() => void this.readFormer());
+    });
+  }
+
+  /** A demo user's name, a deactivated one's too; undefined for anyone else. */
+  nameOf(id: string): string | undefined {
+    return (
+      this.list().find((user) => user.id === id)?.name ?? this.former().get(id)
+    );
+  }
 
   /**
    * Start-up: asks whether this is demo mode, then reads who is acting and which change sets
@@ -210,12 +242,25 @@ export class DemoSession {
     writeStored(STORAGE_KEY, id);
   }
 
-  private async loadUsers(): Promise<DemoUser[]> {
+  /** A failure leaves their IDs, as outside demo mode. */
+  private async readFormer(): Promise<void> {
+    try {
+      const users = await this.loadUsers('deactivated');
+      this.former.set(new Map(users.map((user) => [user.id, user.name])));
+    } catch {
+      // Named by ID.
+    }
+  }
+
+  private async loadUsers(status?: 'deactivated'): Promise<DemoUser[]> {
     const users: DemoUser[] = [];
     for (let number = 1; number <= MAX_PAGES; number++) {
       const page = await firstValueFrom(
         this.api.get('/demo/users', {
-          query: pageQuery({ number, size: PAGE_SIZE }),
+          query: {
+            ...pageQuery({ number, size: PAGE_SIZE }),
+            ...(status && { 'filter[status]': status }),
+          },
         }),
       );
       users.push(...page.data.map(toUser));

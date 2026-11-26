@@ -429,6 +429,31 @@ describe('AcquireLockAction', () => {
     expect(s.locks.locks).toEqual([de.lock]);
   });
 
+  it('says it has changes when a save point lands while it looks (#935)', async () => {
+    const s = setUp();
+    await s.acquire.handle({
+      actor: author,
+      changeSetId: s.mine.id,
+      subject: charging,
+    });
+    // The copy is gone by the time it is read: the save point moved the branch before.
+    vi.spyOn(s.copies, 'find').mockImplementation(async () => {
+      await new Promise((resolve) => setImmediate(resolve));
+      s.branches.push(
+        s.mine.branch,
+        commitOf(s.mine, 'modules/en/battery-charging.adoc'),
+      );
+      return undefined;
+    });
+    await expect(
+      s.acquire.handle({
+        actor: other,
+        changeSetId: s.theirs.id,
+        subject: charging,
+      }),
+    ).rejects.toMatchObject({ code: 'locked', meta: { hasChanges: true } });
+  });
+
   it('says whether the holding change set has changes to the subject (#472)', async () => {
     const s = setUp();
     const { lock } = await s.acquire.handle({

@@ -9,6 +9,7 @@ import { Role, RoleId, UserEmail, UserId } from '../core/actor.js';
 import { GroupName } from '../core/group-mappings.js';
 import { addressReplaced, WaysIn } from '../core/ways-in.js';
 import { roleAssignments, roles, users } from './access.tables.js';
+import { DrizzlePendingSignIns } from './drizzle-second-factors.js';
 import { DrizzleEmailCodes } from './drizzle-email-codes.js';
 import { DrizzleSignInLinks } from './drizzle-passwords.js';
 import { applyGroupRolesIn, DrizzleSessionStore } from './drizzle-sign-in.js';
@@ -88,6 +89,7 @@ export async function seedAccess(
     new DrizzleSessionStore(database),
     new DrizzleSignInLinks(database),
     new DrizzleEmailCodes(database),
+    new DrizzlePendingSignIns(database),
   );
   await new DrizzleUnitOfWork(database).run(async (transaction) => {
     const tx = drizzleOf(transaction);

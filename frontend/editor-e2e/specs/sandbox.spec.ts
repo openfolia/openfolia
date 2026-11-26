@@ -177,11 +177,12 @@ test.describe('the public sandbox @area:shell @area:media @area:admin @api:sandb
     await expect(
       page.getByRole('button', { name: 'Edit' }).first(),
     ).toBeVisible();
+    await page.getByTestId('user-menu').first().click();
+    await expect(page.getByRole('menuitem').first()).toBeVisible();
     await expect(
-      page.getByRole('button', {
-        name: /^(Invite |Make a password reset link for )/,
-      }),
+      page.getByRole('menuitem', { name: /^(Invite|Reset link)$/ }),
     ).toHaveCount(0);
+    await page.keyboard.press('Escape');
 
     await page.goto('/admin/service-accounts');
     await expect(page.getByTestId('sandbox-off').first()).toContainText(

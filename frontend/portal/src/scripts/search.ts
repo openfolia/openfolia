@@ -66,13 +66,42 @@ export async function startSearch(doc: Document): Promise<void> {
   // The address's query and filters, before the index loads.
   const params = new URLSearchParams(location.search);
   input.value = params.get('q') ?? '';
+  // An older release's own index (#896), when the address names one the site built.
+  const scope = (
+    JSON.parse(root.dataset['releases'] ?? '[]') as {
+      key: string;
+      base: string;
+      index: string;
+      product: string;
+      revision: string;
+    }[]
+  ).find((s) => s.key === params.get('release'));
+  const scopeBar = root.querySelector<HTMLElement>('[data-search-scope]');
+  const latest = scopeBar?.querySelector<HTMLAnchorElement>(
+    '[data-search-latest]',
+  );
+  if (scope && scopeBar) {
+    scopeBar.querySelector('[data-search-scope-text]')!.textContent = (
+      scopeBar.dataset['text'] ?? ''
+    )
+      .replace('{release}', () => scope.revision)
+      .replace('{product}', () => scope.product);
+    scopeBar.hidden = false;
+    // One product's release: its product filter would only empty the results.
+    form
+      .querySelector(`select[name="${CSS.escape(productKey)}"]`)
+      ?.closest<HTMLElement>('.field')
+      ?.setAttribute('hidden', '');
+  }
   for (const select of form.querySelectorAll('select'))
     if ([...select.options].some((o) => o.value === params.get(select.name)))
       select.value = params.get(select.name) ?? '';
 
   let pagefind: Pagefind;
   try {
-    pagefind = await loadPagefind(base);
+    pagefind = scope
+      ? await loadPagefind(scope.base, scope.index)
+      : await loadPagefind(base);
   } catch {
     status.textContent = t.failed;
     return;
@@ -158,12 +187,18 @@ export async function startSearch(doc: Document): Promise<void> {
     const url = new URL(location.href);
     url.search = '';
     if (query !== '') url.searchParams.set('q', query);
+    if (scope) url.searchParams.set('release', scope.key);
     for (const [key, value] of data.entries())
-      if (key !== 'q' && value !== '') {
+      if (key !== 'q' && value !== '' && !(scope && key === productKey)) {
         chosen[key] = String(value);
         url.searchParams.set(key, String(value));
       }
     history.replaceState(history.state, '', url);
+    if (latest) {
+      const all = new URL(latest.href);
+      all.search = query === '' ? '' : `?q=${encodeURIComponent(query)}`;
+      latest.href = all.pathname + all.search;
+    }
     if (query === '') {
       searched = false;
       groups = [];

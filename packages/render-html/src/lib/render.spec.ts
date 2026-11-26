@@ -579,6 +579,49 @@ describe('renderManualHtml', () => {
     ).toThrow(HtmlRenderError);
   });
 
+  it('asks linkHref where a link leads, only for an address that may be linked', () => {
+    const asked: string[] = [];
+    const linked = structuredClone(manualOf());
+    const charging = linked.entries[1] as Extract<
+      ResolvedManual['entries'][number],
+      { kind: 'module' }
+    >;
+    charging.blocks.push({
+      type: 'paragraph',
+      id: 'charging--links',
+      content: ['own', 'none', 'bad', 'never'].map((name) => ({
+        type: 'text',
+        text: name,
+        marks: [
+          {
+            type: 'link',
+            href:
+              name === 'never' ? 'javascript:1' : `https://a.example/${name}`,
+          },
+        ],
+      })),
+    });
+    const { html } = renderManualHtml(linked, {
+      ...options,
+      linkHref: (href) => {
+        asked.push(href);
+        return href.endsWith('/own')
+          ? '/en/own/'
+          : href.endsWith('/bad')
+            ? 'javascript:1'
+            : undefined;
+      },
+    });
+    expect(html).toContain(
+      '<a class="of-link" href="/en/own/" rel="noopener noreferrer">own</a>',
+    );
+    for (const refused of ['none', 'bad', 'never'])
+      expect(html).toContain(
+        `<span class="of-link of-link--refused">${refused}</span>`,
+      );
+    expect(asked).not.toContain('javascript:1');
+  });
+
   it('asks xrefHref for links, and refuses unsafe ones', () => {
     const targets: unknown[] = [];
     const body = parse(
@@ -745,6 +788,17 @@ describe('renderModuleHtml', () => {
     ).toEqual(['Status lights', 'the basics']);
     expect(result.assets).toEqual([`sha256:${HASH}`]);
     expect(renderModuleHtml(manualOf(), 'nope', options)).toBeUndefined();
+  });
+
+  it('leaves the title out where the host shows it, the rest unchanged', () => {
+    const html = (title?: boolean) =>
+      renderModuleHtml(manualOf(), 'charging', {
+        ...options,
+        ...(title !== undefined && { title }),
+      })?.html ?? '';
+    const heading = $(parse(html()), 'h1.of-module__title').outerHTML;
+    expect(html(true)).toBe(html());
+    expect(html(false)).toBe(html().replace(heading, ''));
   });
 });
 

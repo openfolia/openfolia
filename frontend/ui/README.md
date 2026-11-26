@@ -328,6 +328,10 @@ manuals and modules (PDF labels follow the manual's language: `packages/render-t
   `<html lang>`. `of-language-choice` is the segmented picker (the showcase header); the
   account menu has the same choice under the theme. Tests: `provideI18nTesting({ en: { ui } })`,
   which every spec gets through the project's `providersFile` (`testing/test-providers.ts`).
+- **Tests share a window:** the builder runs Vitest without isolation, so a spec that leaves
+  `window.matchMedia` changed breaks the specs after it (#933). A spec stubs it with
+  `vi.stubGlobal` and unstubs it in `afterEach`; `testing/test-setup.ts` (`setupFiles`) fails
+  a test that does not, and puts it back.
 - **In templates:** `{{ 'ui.listFrame.next' | transloco }}`,
   `[attr.aria-label]="'ui.dialog.close' | transloco"`, parameters as
   `'ui.listFrame.pageOf' | transloco: { page, last, total }`. A component whose text an app may

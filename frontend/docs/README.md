@@ -21,15 +21,15 @@ The versions are pinned: Next 16.4.5, React 19.2.9, `fumadocs-core` and `fumadoc
 
 ## Layout
 
-| Path                                 | What                                                                                                               |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `content/docs/`                      | the hand-written pages, MDX: `page.mdx` in English, `page.de.mdx` in German; `meta.json` orders a folder           |
-| `generated/` (git-ignored)           | what `scripts/generate.mjs` makes: the API documents and the reference pages                                       |
-| `app/(en)/`, `app/de/`               | the two languages' routes, each a root layout with its `<html lang>`                                               |
-| `app/*.json`, `app/*.txt`, `app/md/` | files made at build time: the search index, `llms.txt`, `llms-full.txt`, `guide-index.json`, every page's Markdown |
-| `agents/`                            | the install guide for coding agents (`/agents`), a template the generator fills in with the release's values       |
-| `lib/`, `components/`                | the source (`lib/source.ts`), languages, the sidebar, the page                                                     |
-| `scripts/`                           | the generator, the stable-address check, and their libraries (`scripts/lib/`)                                      |
+| Path                                 | What                                                                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `content/docs/`                      | the hand-written pages, MDX: `page.mdx` in English, `page.de.mdx` in German; `meta.json` orders a folder             |
+| `generated/` (git-ignored)           | what `scripts/generate.mjs` makes: the API documents and the reference pages                                         |
+| `app/(en)/`, `app/de/`               | the two languages' routes, each a root layout with its `<html lang>`                                                 |
+| `app/*.json`, `app/*.txt`, `app/md/` | files made at build time: the search indexes, `llms.txt`, `llms-full.txt`, `guide-index.json`, every page's Markdown |
+| `agents/`                            | the install guide for coding agents (`/agents`), a template the generator fills in with the release's values         |
+| `lib/`, `components/`                | the source (`lib/source.ts`), languages, the sidebar, the page                                                       |
+| `scripts/`                           | the generator, the stable-address check, and their libraries (`scripts/lib/`)                                        |
 
 ## Languages
 
@@ -134,6 +134,12 @@ content model's tests too (`config.spec.ts`), before the docs are built.
 - **"Install with your coding agent"** (`<AgentInstall />`, `lang="de"` on a German page): the
   one line to paste, naming this site's `/agents`, with a copy button. On the home page, Getting
   started and Self-hosting.
+
+## Search
+
+The search runs in the browser (`components/search.tsx`). Each language has its own index, a Fumadocs export made at build time at `/search-en.json` and `/search-de.json` (`lib/search-index.ts`), and the dialog fetches only the reader's, as it opens (#949). Before, one `/search.json` held both languages, with sort tables and fields the search never used: 17 MB, 3.2 MB compressed. Now an index is about 5.4 MB, about 1 MB compressed. The docs have one version, so the language is the only split. The full text of about 470 pages is itself about 400 KB compressed, which is why the issue's 500 KB is not reached. The dialog shows a placeholder while the index loads and, if it fails, a message with "Try again" (the client caches a failed fetch by its address, so a retry changes the address).
+
+`scripts/check-search-budget.mjs` (run by `build`; `scripts/lib/search-budget.mjs` holds `SEARCH_BUDGET_BYTES`) fails the build when a language's index, gzipped, is over 1.2 MB. Trim the index before raising the number.
 
 ## Stable addresses
 

@@ -38,6 +38,7 @@ export const SANDBOX_PORTAL_URL = 'https://manuals.example.org/';
 export const SANDBOX_END_URL = '/_demo/api/end';
 const API_DIST = join(ROOT, 'backend/api/dist');
 const MOCK_OIDC = join(ROOT, 'backend/api/scripts/mock-oidc.ts');
+const MOCK_SAML = join(ROOT, 'backend/api/scripts/mock-saml.ts');
 const EDITOR_DIST = join(ROOT, 'frontend/editor/dist/browser');
 /** The person's own servers (the API, the editor, the docs site): never ours. */
 const RESERVED_PORTS = new Set([3100, 4310, 4320]);
@@ -79,6 +80,17 @@ export const OIDC_ACCOUNTS = {
     email: 'e2e-writer@example.org',
     groups: ['e2e-writers'],
   },
+  // Whose sessions `session-end.spec.ts` ends: one per flow, nobody else's.
+  'e2e-ended': {
+    name: 'E2E Ended',
+    email: 'e2e-ended@example.org',
+    groups: ['e2e-writers'],
+  },
+  'e2e-away': {
+    name: 'E2E Away',
+    email: 'e2e-away@example.org',
+    groups: ['e2e-writers'],
+  },
   'e2e-outsider': { name: 'E2E Outsider', groups: [] },
   // Made by an admin before their first sign-in: linked by the verified address.
   'e2e-lead': { name: 'E2E Lead', email: 'e2e-lead@example.org', groups: [] },
@@ -87,6 +99,18 @@ export const OIDC_ACCOUNTS = {
     name: 'E2E Password Admin',
     email: 'e2e-pw-admin@example.org',
     groups: [],
+  },
+} as const;
+
+/**
+ * The people the local SAML identity provider signs in (`specs/saml-sign-in.spec.ts`, #376), by
+ * login name: apart from the OpenID Connect ones, so each flow makes its own users.
+ */
+export const SAML_ACCOUNTS = {
+  'e2e-saml-writer': {
+    name: 'E2E SAML Writer',
+    email: 'e2e-saml-writer@example.org',
+    groups: ['e2e-writers'],
   },
 } as const;
 
@@ -415,6 +439,19 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
     apis[0]?.catch(() => undefined);
     let signInApiUrl = '';
     if (signIn) {
+      const saml = startNode(
+        MOCK_SAML,
+        {
+          ...base,
+          MOCK_SAML_ACS_URL: `${signInEditorUrl}/api/auth/saml/callback`,
+          MOCK_SAML_AUDIENCE: `${signInEditorUrl}/api/auth/saml/metadata`,
+          MOCK_SAML_ACCOUNTS: JSON.stringify(SAML_ACCOUNTS),
+        },
+        log('mock-saml'),
+      );
+      // Kept for `stop()` before the OpenID Connect provider starts, so a failure there ends it too.
+      const samlMock = await saml;
+      children.push(samlMock.child);
       const mock = await startNode(
         MOCK_OIDC,
         {
@@ -437,6 +474,10 @@ export async function startStack(options: StackOptions = {}): Promise<Stack> {
           CCMS_OIDC_CLIENT_ID: 'of-e2e',
           CCMS_OIDC_REDIRECT_URL: `${signInEditorUrl}/api/auth/oidc/callback`,
           CCMS_OIDC_NAME: 'Mock provider',
+          // SAML beside it (#376): its addresses are under the editor's.
+          CCMS_EDITOR_URL: `${signInEditorUrl}/`,
+          CCMS_SAML_IDP_METADATA_URL: `http://127.0.0.1:${samlMock.port}/metadata`,
+          CCMS_SAML_NAME: 'Mock SAML',
         }),
       );
     }

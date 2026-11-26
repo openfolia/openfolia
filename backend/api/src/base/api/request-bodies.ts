@@ -10,5 +10,10 @@ export const MAX_BODY = '1mb';
  * any other type on JSON:API routes. Call before `init()`/`listen()`.
  */
 export function setUpRequestBodies(app: NestExpressApplication): void {
-  app.useBodyParser('json', { type: JSON_API, limit: MAX_BODY });
+  // And SCIM's (#377), with the plain JSON some directories send: on SCIM's routes only, as
+  // `JsonApiInterceptor` refuses both on every other route (`ScimInterceptor`).
+  app.useBodyParser('json', {
+    type: [JSON_API, 'application/scim+json', 'application/json'],
+    limit: MAX_BODY,
+  });
 }

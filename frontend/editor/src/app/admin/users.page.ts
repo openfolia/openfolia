@@ -13,12 +13,24 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSearch, lucideUsers } from '@ng-icons/lucide';
+import {
+  lucideEllipsis,
+  lucideKeyRound,
+  lucideMail,
+  lucideMailX,
+  lucideSearch,
+  lucideShieldCheck,
+  lucideShieldOff,
+  lucideUserCheck,
+  lucideUsers,
+  lucideUserX,
+} from '@ng-icons/lucide';
 import { firstValueFrom } from 'rxjs';
 
 import { ZardAlertDialogService } from '@openfolia/ui/alert-dialog';
 import { ZardBadgeComponent } from '@openfolia/ui/badge';
 import { ZardButtonComponent } from '@openfolia/ui/button';
+import { ZardDropdownImports } from '@openfolia/ui/dropdown-menu';
 import { injectTranslate, translated } from '@openfolia/ui/i18n';
 import { ZardInputComponent } from '@openfolia/ui/input';
 import { ZardInputGroupImports } from '@openfolia/ui/input-group';
@@ -62,6 +74,7 @@ import {
 } from './admin-model';
 import { loadAllRoles } from './roles-source';
 import { UserDialogComponent } from './user-dialog.component';
+import { SecondFactorSession } from '../second-factor/second-factor-session';
 import { PasswordSession } from '../session/password-session';
 import {
   type ShownSignInLink,
@@ -77,12 +90,12 @@ const BELOW_FRAME_PX = 96;
 /**
  * The Users tab of Admin (#39): every person, deactivated ones too, with their email address,
  * roles and status; a search (ID, name, email) and a status filter. "New user" (the header's
- * action) and Edit open the user dialog; Deactivate asks first, then releases the user's locks;
+ * action) and Edit open the user dialog; a row's menu has the rest. Deactivate asks first, then releases the user's locks;
  * Reactivate lets a person act again. Search, status, page and size are in the address.
  * With password sign-in on (#610), a column says how each person signs in, and Invite or Reset
  * link makes a one-time link shown once (a new person gets their invite right away); an open
  * invite can be withdrawn. A role held through a sign-in group (#592) is marked apart from one
- * given directly.
+ * given directly. Who has two-factor sign-in on says so, and an admin can reset it (#611).
  */
 @Component({
   selector: 'of-users-page',
@@ -96,6 +109,7 @@ const BELOW_FRAME_PX = 96;
     KbdComponent,
     ZardBadgeComponent,
     ZardButtonComponent,
+    ZardDropdownImports,
     ZardInputComponent,
     ZardInputGroupImports,
     ZardTableImports,
@@ -103,7 +117,20 @@ const BELOW_FRAME_PX = 96;
     SignInLinkDialogComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ lucideSearch, lucideUsers })],
+  viewProviders: [
+    provideIcons({
+      lucideEllipsis,
+      lucideKeyRound,
+      lucideMail,
+      lucideMailX,
+      lucideSearch,
+      lucideShieldCheck,
+      lucideShieldOff,
+      lucideUserCheck,
+      lucideUsers,
+      lucideUserX,
+    }),
+  ],
   host: { class: 'flex min-w-0 flex-col gap-4' },
   template: `
     <div class="flex flex-wrap items-center gap-3">
@@ -186,7 +213,7 @@ const BELOW_FRAME_PX = 96;
                   {{ 'editor.admin.users.table.signIn' | transloco }}
                 </th>
               }
-              <th z-table-head class="w-44 xl:w-60">
+              <th z-table-head class="w-40">
                 <span class="sr-only">{{
                   'editor.admin.users.table.actions' | transloco
                 }}</span>
@@ -260,6 +287,19 @@ const BELOW_FRAME_PX = 96;
                       'editor.admin.users.status.active' | transloco
                     }}</z-badge>
                   }
+                  @if (secondFactorOn(user)) {
+                    <span
+                      class="text-muted-foreground mt-1.5 flex items-start gap-1 text-xs break-words whitespace-normal"
+                      data-slot="second-factor"
+                    >
+                      <ng-icon
+                        name="lucideShieldCheck"
+                        class="mt-px shrink-0"
+                        aria-hidden="true"
+                      />
+                      {{ 'editor.admin.users.secondFactor.on' | transloco }}
+                    </span>
+                  }
                 </td>
                 @if (passwordOn()) {
                   <td
@@ -272,71 +312,7 @@ const BELOW_FRAME_PX = 96;
                   </td>
                 }
                 <td z-table-cell class="text-end align-top">
-                  <!-- A label longer than the column wraps inside its button. -->
-                  <span
-                    class="inline-flex max-w-full flex-wrap justify-end gap-2 [&>button]:h-auto [&>button]:min-h-7 [&>button]:max-w-full [&>button]:py-1 [&>button]:whitespace-normal"
-                  >
-                    @if (passwordOn() && !user.attributes.deactivatedAt) {
-                      @if (signInOf(user) === 'invited') {
-                        <button
-                          z-button
-                          zType="ghost"
-                          zSize="sm"
-                          type="button"
-                          [zDisabled]="acting() !== null"
-                          [attr.aria-label]="
-                            'editor.admin.users.actions.withdrawLabel'
-                              | transloco: { name: user.attributes.name }
-                          "
-                          (click)="withdraw(user)"
-                        >
-                          {{
-                            'editor.admin.users.actions.withdraw' | transloco
-                          }}
-                        </button>
-                      }
-                      @if (!user.attributes.email || sandbox.on()) {
-                        <!-- No address to sign in with: no link to make (422 no-email-address);
-                             a public sandbox makes none at all (issue 826, the header says why). -->
-                      } @else if (
-                        signInOf(user) === 'password' ||
-                        signInOf(user) === 'both'
-                      ) {
-                        <button
-                          z-button
-                          zType="outline"
-                          zSize="sm"
-                          type="button"
-                          [zLoading]="linking() === user.id"
-                          [zDisabled]="acting() !== null || linking() !== null"
-                          [attr.aria-label]="
-                            'editor.admin.users.actions.resetLinkLabel'
-                              | transloco: { name: user.attributes.name }
-                          "
-                          (click)="makeLink(user, 'reset')"
-                        >
-                          {{
-                            'editor.admin.users.actions.resetLink' | transloco
-                          }}
-                        </button>
-                      } @else {
-                        <button
-                          z-button
-                          zType="outline"
-                          zSize="sm"
-                          type="button"
-                          [zLoading]="linking() === user.id"
-                          [zDisabled]="acting() !== null || linking() !== null"
-                          [attr.aria-label]="
-                            'editor.admin.users.actions.inviteLabel'
-                              | transloco: { name: user.attributes.name }
-                          "
-                          (click)="makeLink(user, 'invite')"
-                        >
-                          {{ 'editor.admin.users.actions.invite' | transloco }}
-                        </button>
-                      }
-                    }
+                  <span class="inline-flex items-center justify-end gap-1">
                     <button
                       z-button
                       zType="outline"
@@ -350,43 +326,101 @@ const BELOW_FRAME_PX = 96;
                     >
                       {{ 'editor.admin.users.actions.edit' | transloco }}
                     </button>
-                    @if (user.attributes.deactivatedAt) {
-                      <button
-                        z-button
-                        zType="outline"
-                        zSize="sm"
-                        type="button"
-                        [zLoading]="acting() === user.id"
-                        [zDisabled]="acting() !== null"
-                        [attr.aria-label]="
-                          'editor.admin.users.actions.reactivateLabel'
-                            | transloco: { name: user.attributes.name }
-                        "
-                        (click)="reactivate(user)"
-                      >
-                        {{
-                          'editor.admin.users.actions.reactivate' | transloco
-                        }}
-                      </button>
-                    } @else {
-                      <button
-                        z-button
-                        zType="outline"
-                        zSize="sm"
-                        type="button"
-                        [zLoading]="acting() === user.id"
-                        [zDisabled]="acting() !== null"
-                        [attr.aria-label]="
-                          'editor.admin.users.actions.deactivateLabel'
-                            | transloco: { name: user.attributes.name }
-                        "
-                        (click)="deactivate(user)"
-                      >
-                        {{
-                          'editor.admin.users.actions.deactivate' | transloco
-                        }}
-                      </button>
-                    }
+                    <button
+                      z-button
+                      zType="ghost"
+                      zSize="icon-sm"
+                      type="button"
+                      class="shrink-0"
+                      data-testid="user-menu"
+                      z-dropdown
+                      [zDropdownMenu]="menu"
+                      [zLoading]="acting() === user.id || linking() === user.id"
+                      [zDisabled]="acting() !== null || linking() !== null"
+                      [attr.aria-label]="
+                        'editor.admin.users.actions.menu'
+                          | transloco: { name: user.attributes.name }
+                      "
+                    >
+                      @if (acting() !== user.id && linking() !== user.id) {
+                        <ng-icon name="lucideEllipsis" aria-hidden="true" />
+                      }
+                    </button>
+                    <z-dropdown-menu-content #menu zAlign="end" class="w-60">
+                      @if (passwordOn() && !user.attributes.deactivatedAt) {
+                        @if (!user.attributes.email || sandbox.on()) {
+                          <!-- No address to sign in with: no link to make (422 no-email-address);
+                               a public sandbox makes none at all (issue 826, the header says why). -->
+                        } @else if (
+                          signInOf(user) === 'password' ||
+                          signInOf(user) === 'both'
+                        ) {
+                          <z-dropdown-menu-item
+                            data-action="reset-link"
+                            (click)="makeLink(user, 'reset')"
+                          >
+                            <ng-icon name="lucideKeyRound" aria-hidden="true" />
+                            {{
+                              'editor.admin.users.actions.resetLink' | transloco
+                            }}
+                          </z-dropdown-menu-item>
+                        } @else {
+                          <z-dropdown-menu-item
+                            data-action="invite"
+                            (click)="makeLink(user, 'invite')"
+                          >
+                            <ng-icon name="lucideMail" aria-hidden="true" />
+                            {{
+                              'editor.admin.users.actions.invite' | transloco
+                            }}
+                          </z-dropdown-menu-item>
+                        }
+                        @if (signInOf(user) === 'invited') {
+                          <z-dropdown-menu-item
+                            data-action="withdraw"
+                            (click)="afterMenu(() => withdraw(user))"
+                          >
+                            <ng-icon name="lucideMailX" aria-hidden="true" />
+                            {{
+                              'editor.admin.users.actions.withdraw' | transloco
+                            }}
+                          </z-dropdown-menu-item>
+                        }
+                      }
+                      @if (secondFactorOn(user) && user.id !== me.me().id) {
+                        <z-dropdown-menu-item
+                          data-action="reset-second-factor"
+                          (click)="afterMenu(() => resetSecondFactor(user))"
+                        >
+                          <ng-icon name="lucideShieldOff" aria-hidden="true" />
+                          {{
+                            'editor.admin.users.secondFactor.reset' | transloco
+                          }}
+                        </z-dropdown-menu-item>
+                      }
+                      @if (user.attributes.deactivatedAt) {
+                        <z-dropdown-menu-item
+                          data-action="reactivate"
+                          (click)="reactivate(user)"
+                        >
+                          <ng-icon name="lucideUserCheck" aria-hidden="true" />
+                          {{
+                            'editor.admin.users.actions.reactivate' | transloco
+                          }}
+                        </z-dropdown-menu-item>
+                      } @else {
+                        <z-dropdown-menu-item
+                          data-action="deactivate"
+                          variant="destructive"
+                          (click)="afterMenu(() => deactivate(user))"
+                        >
+                          <ng-icon name="lucideUserX" aria-hidden="true" />
+                          {{
+                            'editor.admin.users.actions.deactivate' | transloco
+                          }}
+                        </z-dropdown-menu-item>
+                      }
+                    </z-dropdown-menu-content>
                   </span>
                 </td>
               </tr>
@@ -424,7 +458,7 @@ const BELOW_FRAME_PX = 96;
 export class UsersPage {
   protected readonly sandbox = inject(SandboxSession);
   private readonly api = inject(ApiClient);
-  private readonly me = inject(MeService);
+  protected readonly me = inject(MeService);
   private readonly toast = inject(ToastService);
   private readonly dialogs = inject(ZardAlertDialogService);
   private readonly t = injectTranslate();
@@ -452,6 +486,7 @@ export class UsersPage {
   protected readonly acting = signal<string | null>(null);
   protected readonly offset = signal('20rem');
   private readonly passwords = inject(PasswordSession);
+  private readonly secondFactor = inject(SecondFactorSession);
   /** Password sign-in is on (#610): the sign-in column, invites and reset links. */
   protected readonly passwordOn = computed(
     () => this.passwords.options()?.password === true,
@@ -618,6 +653,43 @@ export class UsersPage {
     }
   }
 
+  protected secondFactorOn(user: UserItem): boolean {
+    const signIn = user.meta?.signIn;
+    return signIn ? signIn.secondFactor : false;
+  }
+
+  /** Removes a person's second factor (#611), once confirmed: for a lost phone. */
+  protected resetSecondFactor(user: UserItem): void {
+    const name = user.attributes.name;
+    this.dialogs.confirm({
+      zTitle: this.t('editor.admin.users.secondFactor.title', { name }),
+      zDescription: this.t('editor.admin.users.secondFactor.description', {
+        name,
+      }),
+      zOkText: this.t('editor.admin.users.secondFactor.reset'),
+      zCancelText: this.t('editor.admin.cancel'),
+      zOkDestructive: true,
+      zOnOk: () => void this.runResetSecondFactor(user),
+    });
+  }
+
+  private async runResetSecondFactor(user: UserItem): Promise<void> {
+    this.acting.set(user.id);
+    try {
+      await this.secondFactor.reset(user.id);
+      this.toast.success(
+        translated('editor.admin.users.secondFactor.done', {
+          name: user.attributes.name,
+        }),
+      );
+    } catch (error) {
+      this.toast.error(apiErrorText(toApiError(error)));
+    } finally {
+      this.acting.set(null);
+      this.reload();
+    }
+  }
+
   protected roleName(id: string): string {
     return this.roleNames().get(id) ?? id;
   }
@@ -710,6 +782,11 @@ export class UsersPage {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** A question opens once the menu has closed: the focus then goes back to its button. */
+  protected afterMenu(ask: () => void): void {
+    setTimeout(ask, 30);
   }
 
   protected deactivate(user: UserItem): void {

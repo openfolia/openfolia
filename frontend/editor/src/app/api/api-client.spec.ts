@@ -224,6 +224,46 @@ describe('ApiClient', () => {
     req.flush({});
   });
 
+  it('marks what the tab asks by itself, so a session nobody uses ends (#378)', () => {
+    vi.useFakeTimers();
+    try {
+      const { api, http } = setup();
+      const marked = () => {
+        void firstValueFrom(api.get('/me'));
+        return http
+          .expectOne('/api/me')
+          .request.headers.get('X-Ccms-Background');
+      };
+      // Just opened: the person is here.
+      expect(marked()).toBeNull();
+      vi.advanceTimersByTime(61_000);
+      expect(marked()).toBe('1');
+      // Scrolling and focus are the page's too; a key, a pointer or the wheel is a person.
+      document.dispatchEvent(new Event('scroll'));
+      window.dispatchEvent(new Event('focus'));
+      expect(marked()).toBe('1');
+      for (const type of ['keydown', 'pointermove', 'wheel']) {
+        const field = document.createElement('input');
+        document.body.append(field);
+        field.addEventListener(type, (event) => event.stopPropagation());
+        field.dispatchEvent(new Event(type, { bubbles: true }));
+        expect(marked()).toBeNull();
+        vi.advanceTimersByTime(61_000);
+        expect(marked()).toBe('1');
+        field.remove();
+      }
+      // Nothing but API calls is marked.
+      void firstValueFrom(TestBed.inject(HttpClient).get('/assets/x.json'));
+      expect(
+        http
+          .expectOne('/assets/x.json')
+          .request.headers.has('X-Ccms-Background'),
+      ).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('maps a JSON:API error document to an ApiError', async () => {
     const { api, http } = setup();
     const result = firstValueFrom(

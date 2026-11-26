@@ -135,15 +135,7 @@ async function makeFirstAdmin(
   const created = userId === undefined;
   if (userId === undefined) {
     const local = email.split('@')[0] ?? 'admin';
-    const base = userIdBase({
-      issuer: 'cli',
-      subject: email,
-      email,
-      emailVerified: true,
-      name: null,
-      username: null,
-      groups: [],
-    });
+    const base = userIdBase({ email, username: null });
     for (const candidate of userIdCandidates(base, 50)) {
       if (
         await admin.insertUser(tx, {

@@ -1,0 +1,113 @@
+---
+title: 'Notifications'
+description: 'Choose per kind of notification: off, in the app only, by email at once or in a daily summary. Pause email, unsubscribe, and why an email may not come.'
+articleId: 'guide.getting-started.notifications'
+---
+
+The bell beside the revision menu holds your notifications: revisions submitted to you, returned,
+approved or published, locks taken over, releases and translation imports. See
+[Find your way](/guide/getting-started/find-your-way#notifications).
+
+You choose which of them you get, and which also come by email.
+
+## Open your notification settings
+
+1. Choose your name at the bottom of the sidebar.
+2. Choose **Notifications**.
+
+The page lists every kind of notification, in groups. Your choices are yours: an administrator
+cannot change them for you.
+
+## Choose per kind
+
+For each kind, pick one of:
+
+- **Off**: not in the bell, not by email. What is in the bell already stays there.
+- **In the app only**: in the bell, no email.
+- **App + email at once**: in the bell, and an email when it happens.
+- **App + daily summary**: in the bell, and once a day one email with everything of that day.
+
+What each kind starts with:
+
+| Group               | Kind                                             | Starts with         |
+| ------------------- | ------------------------------------------------ | ------------------- |
+| Review and workflow | A revision is submitted to you for review        | App + email at once |
+| Review and workflow | Your revision is returned with changes requested | App + email at once |
+| Review and workflow | Your revision is approved                        | App + email at once |
+| Review and workflow | Your revision is signed off                      | App + email at once |
+| Review and workflow | Your revision is published                       | App + email at once |
+| Review and workflow | An administrator broke one of your locks         | In the app only     |
+| Releases            | A release is published                           | App + daily summary |
+| Releases            | A release’s file that failed is ready after all  | App + daily summary |
+| Translations        | Your translation import is done                  | App + daily summary |
+| Translations        | Your translation import failed                   | App + daily summary |
+| Admin alerts        | A release’s file failed to build                 | App + email at once |
+| Admin alerts        | A backup failed                                  | App + email at once |
+| Admin alerts        | No good backup for longer than expected          | App + email at once |
+
+**Admin alerts** reach only people whose role has the permission for them. You can turn one off,
+but the page then says what you will miss.
+
+One thing is not for choosing: when the
+[emergency account](/guide/admin/single-sign-on) is used, every administrator finds it in the bell
+and gets an email, whatever they set.
+
+## Pause or turn off everything
+
+Two switches at the top of the page:
+
+- **Pause all email**: the bell keeps everything, and no email is sent. Your choices per kind are
+  kept, so turning it back on restores them.
+- **Turn off all notifications**: nothing in the bell and nothing by email. It applies to you
+  only.
+
+Neither stops the notice of the emergency account's use (above).
+
+## The daily summary
+
+The kinds set to **App + daily summary** come together in one email a day.
+
+- It comes at the hour you pick, in your time zone. The time zone starts as your browser's, and
+  the hour as 08:00 unless your installation sets another.
+- On a day with nothing to report, nothing is sent.
+- It is written in your editor language, English or German, like every email.
+
+<ServerSetting>
+  The default hour and the most emails per hour are set as in
+  [Email](/guide/self-hosting/email#notification-emails).
+</ServerSetting>
+
+## What an email holds
+
+Each email has a clear subject, one button that opens the item in the editor, a line that says
+why you get it, and a link to unsubscribe.
+
+Several changes to the same item within about two minutes come as one email. At most 20 emails
+come at once in an hour (your installation may set another number); the rest wait for the daily
+summary.
+
+## Unsubscribe
+
+Choose **Unsubscribe** in your mail program, or the link at the end of the email. You need not
+sign in. The link opens a page that names the kinds and asks first: choose
+**Stop these emails**.
+
+Unsubscribing stops only the kinds that email was about, and only the way it came: the link in a
+daily summary stops the summary for them, the link in an email at once stops the email at once.
+Those kinds then come **In the app only**. Nothing else changes, and you can turn the email on
+again on the **Notifications** page.
+
+## When no email comes
+
+- **Email is off on the server.** The page says so and why. Your choices still apply to the
+  bell, and nothing waits to be emailed later.
+- **Your account has no email address.** The page says so too.
+- **You lost access.** Access is checked again when the email goes: if you can no longer read
+  that revision, you get no email about it.
+- **You reached the hourly limit.** The rest come in the daily summary.
+- **Email is paused**, or the kind is set to **In the app only** or **Off**.
+
+<ServerSetting>
+  Email is set up as in [Email](/guide/self-hosting/email). **Admin › System**
+  shows whether it is on and the latest emails that failed.
+</ServerSetting>

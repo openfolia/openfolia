@@ -177,11 +177,15 @@ export function transitionStates(
   }
 
   // A base rewritten past where it started (#471): what would be merged is not what was reviewed.
+  // Approved, but an approval it needs no longer holds (#950: its approver lost the role or was
+  // deactivated): the API refuses the merge until it is returned and approved again.
   const merge =
     state === 'approved' && can('release.publish')
       ? isRewritten(changeSet)
         ? blocked('editor.changeSet.rewritten.mergeBlocked')
-        : enabled
+        : pending.length > 0
+          ? blocked('editor.review.blocked.approvalMissing')
+          : enabled
       : hidden;
 
   return {

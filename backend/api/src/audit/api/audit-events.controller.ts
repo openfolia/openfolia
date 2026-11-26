@@ -11,6 +11,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { toPagedDocument } from '../../base/api/json-api.js';
 import type { AuditKind } from '../core/audit-event.js';
 import type { PageRequest } from '../../base/core/paging.js';
@@ -33,6 +34,7 @@ type Parsed<K extends keyof typeof auditFilters> = z.output<
 @ApiTags('audit')
 @Controller('audit-events')
 @JsonApi()
+@NamesPeople()
 export class AuditEventsController {
   constructor(private readonly listAuditEvents: ListAuditEventsAction) {}
 

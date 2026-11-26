@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { Activity } from '../api/activity';
 /** Where the page is scrolled to: a block's element (`id`) and how far below the top it sits. */
 export interface ScrollAnchor {
   readonly id: string;
@@ -122,6 +123,7 @@ export class PreviewFrameComponent {
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    const activity = inject(Activity);
     let detach: (() => void) | undefined;
     effect(() => {
       const frame = this.frame().nativeElement;
@@ -188,7 +190,9 @@ export class PreviewFrameComponent {
         for (const [target, type, listener] of listened) {
           EventTarget.prototype.addEventListener.call(target, type, listener);
         }
+        const unwatch = activity.watch(doc);
         detach = () => {
+          unwatch();
           sizes?.disconnect();
           EventTarget.prototype.removeEventListener.call(
             doc,

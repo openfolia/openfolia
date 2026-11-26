@@ -9,7 +9,7 @@ import {
   type MailRecipient,
   type RenderedMail,
 } from '../mail.js';
-import { LOGO_CID, renderHtml, renderText } from './layout.js';
+import { checkedLink, LOGO_CID, renderHtml, renderText } from './layout.js';
 import {
   footer,
   MAIL_TEMPLATES,
@@ -40,6 +40,8 @@ export function publicLink(
  * (`headerText`): one line, no control characters.
  */
 export function renderMail(input: {
+  /** The queued email's ID (its `Message-ID`); absent for a preview. */
+  id?: string;
   template: MailTemplateName;
   params: unknown;
   language: MailLanguage;
@@ -78,6 +80,10 @@ export function renderMail(input: {
     : [];
   const name = input.to.name ? headerText(input.to.name, MAX_SENDER_NAME) : '';
   return {
+    ...(input.id !== undefined && { id: input.id }),
+    ...(content.unsubscribe && {
+      listUnsubscribe: checkedLink(content.unsubscribe.oneClick),
+    }),
     from: { name: productName, address: input.from },
     to: { address: input.to.address, name: name || null },
     subject: content.subject,

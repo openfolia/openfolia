@@ -42,6 +42,8 @@ export interface UserSignIn {
   readonly provider: boolean;
   /** When an open invite link ends; null for none. */
   readonly inviteExpiresAt: Date | null;
+  /** Two-factor sign-in is on (#611). */
+  readonly secondFactor: boolean;
 }
 
 /** Which users to list; every field optional, missing meaning all. */

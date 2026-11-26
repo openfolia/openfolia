@@ -1,7 +1,7 @@
 schemaVersion: 1
 kind: update-guide
 title: { en: Software update guide, de: Software-Update-Leitfaden, fr: Guide de mise à jour du logiciel }
-audience: technician
+audience: owner
 variants:
   - { body: estate, drive: electric, market: eu }
 attributes:
@@ -33,14 +33,6 @@ guide:
     - module: update-wait-restart
       version: "3.0"
       phase: during
-    - module: update-diagnostic-tester
-      version: "3.0"
-      phase: during
-      level: technician
-    - module: update-calibrate-camera
-      version: "3.0"
-      phase: after
-      level: technician
     - module: update-free-storage
       version: "4.0"
       phase: before

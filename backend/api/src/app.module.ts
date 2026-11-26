@@ -6,6 +6,7 @@ import { AddressesModule } from './addresses/addresses.module.js';
 import { StableAddressSettingsModule } from './addresses/stable-address-settings.module.js';
 import { AccessAdminModule } from './access/access-admin.module.js';
 import { AccessModule } from './access/access.module.js';
+import { PeopleModule } from './access/people.module.js';
 import { AssetsModule } from './assets/assets.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { BlobsModule } from './blobs/blobs.module.js';
@@ -53,6 +54,7 @@ import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { MailModule } from './mail/mail.module.js';
 
 import { SandboxModule } from './sandbox/sandbox.module.js';
+import { ScimModule } from './scim/scim.module.js';
 /**
  * Components follow a hexagonal layout: `api/` (controllers, JSON:API
  * resources) calls `core/` (actions: one use case each; ports as abstract
@@ -81,6 +83,7 @@ import { SandboxModule } from './sandbox/sandbox.module.js';
     StorageUsageModule,
     BackupsModule,
     AccessModule,
+    PeopleModule,
     HealthModule,
     AboutModule,
     BrandingModule,
@@ -96,6 +99,7 @@ import { SandboxModule } from './sandbox/sandbox.module.js';
     AuditModule,
     ChangeSetsModule,
     AccessAdminModule,
+    ScimModule,
     WorkingCopyReadsModule,
     CommentsModule,
     ModuleRenamesModule,

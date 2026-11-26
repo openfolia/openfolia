@@ -136,6 +136,8 @@ describe('password sign-in (#610)', () => {
       passwordReset: true,
       emailCode: true,
       providers: 0,
+      singleSignOn: false,
+      emergencySignIn: false,
     });
   });
 

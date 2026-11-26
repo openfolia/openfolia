@@ -19,9 +19,10 @@ import { FadeInDirective } from '@openfolia/ui/smooth';
 import { toApiError } from '../api';
 import { apiErrorText } from '../i18n';
 import { MeService } from '../permissions/me';
+import type { SecondStepKind } from '../second-factor/second-factor-session';
 import { CODE_LINK_TOKEN, PasswordSession } from '../session/password-session';
 import { SignInFrameComponent } from './sign-in-frame.component';
-import { RETURN_PARAM, safeReturnUrl } from './sign-in.guards';
+import { afterSignIn, RETURN_PARAM, safeReturnUrl } from './sign-in.guards';
 
 /** Six digits, with spaces or dashes between them (the API reads them the same). */
 const CODE = /^[0-9]{6}$/;
@@ -353,8 +354,9 @@ export class EmailCodePage {
     this.busy.set(true);
     this.error.set('');
     try {
-      await this.session.signInWithCode(this.sentTo(), code);
-      await this.signedIn();
+      await this.signedIn(
+        await this.session.signInWithCode(this.sentTo(), code),
+      );
     } catch (error) {
       const text = apiErrorText(toApiError(error));
       this.error.set(this.t(text.key, text.params));
@@ -369,8 +371,7 @@ export class EmailCodePage {
     this.busy.set(true);
     this.error.set('');
     try {
-      await this.session.signInWithLink(this.linkToken);
-      await this.signedIn();
+      await this.signedIn(await this.session.signInWithLink(this.linkToken));
     } catch (error) {
       const failure = toApiError(error);
       if (failure.code === 'link-invalid') this.step.set('link-invalid');
@@ -400,9 +401,9 @@ export class EmailCodePage {
     }
   }
 
-  /** Signed in: who is acting now, then on to where they were going. */
-  private async signedIn(): Promise<void> {
-    await this.me.refresh(true).catch(() => false);
-    await this.router.navigateByUrl(this.returnUrl());
+  /** The code is right: the second step (#611), or who is acting now and on. */
+  private async signedIn(step: SecondStepKind): Promise<void> {
+    if (!step) await this.me.refresh(true).catch(() => false);
+    await afterSignIn(this.router, step, this.returnUrl());
   }
 }

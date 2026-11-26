@@ -215,10 +215,9 @@ services:
     environment:
       CCMS_MCP_API_URL: http://api:3000
       # Each caller sends a service account token of its own (#861), made in the editor: no
-      # token to set here. Deprecated, for one release (removed in v0.0.5): a shared
-      # CCMS_MCP_HTTP_TOKEN for every caller, who then read as CCMS_MCP_API_TOKEN. Leave both
-      # unset on a new install.
-      CCMS_MCP_API_TOKEN: ${CCMS_MCP_API_TOKEN:-}
+      # token to set here.
+      # Passed on only so that a leftover value makes the server refuse to start, with the message
+      # that the shared token is removed (#922); empty, it is ignored. Never set it.
       CCMS_MCP_HTTP_TOKEN: ${CCMS_MCP_HTTP_TOKEN:-}
       CCMS_MCP_HTTP_ALLOWED_ORIGINS: ${CCMS_MCP_HTTP_ALLOWED_ORIGINS:-}
       # Proxies to believe about the caller's address, for the lockout and the rate limit: 1, the
@@ -255,8 +254,12 @@ services:
       CCMS_PORTAL_AUDIENCE: ${CCMS_PORTAL_AUDIENCE:-}
       CCMS_PORTAL_LANGUAGES: ${CCMS_PORTAL_LANGUAGES:-}
       CCMS_PORTAL_RELEASES: ${CCMS_PORTAL_RELEASES:-}
+      CCMS_PORTAL_RELEASES_PER_PRODUCT: ${CCMS_PORTAL_RELEASES_PER_PRODUCT:-}
+      CCMS_PORTAL_OLDER_NOINDEX: ${CCMS_PORTAL_OLDER_NOINDEX:-}
       CCMS_PORTAL_BASE_PATH: ${CCMS_PORTAL_BASE_PATH:-}
       CCMS_PORTAL_BRANDING: ${CCMS_PORTAL_BRANDING:-}
+      CCMS_PORTAL_START: ${CCMS_PORTAL_START:-}
+      CCMS_PORTAL_URL: ${CCMS_PORTAL_URL:-}
       CCMS_PORTAL_REFRESH_SECONDS: ${CCMS_PORTAL_REFRESH_SECONDS:-}
     # `api` is a name of the stack's network only: no search domain of the host's, so while the API
     # is down the token never goes to a host of that name outside the stack.

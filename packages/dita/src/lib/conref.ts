@@ -259,6 +259,7 @@ export class Conrefs {
                 ? ([['id', attr(element, 'id') as string]] as const)
                 : []),
             ]),
+            declarations: new Map(),
             children: [],
             line: element.line,
           },
@@ -288,6 +289,7 @@ export class Conrefs {
               ? ([['id', attr(element, 'id') as string]] as const)
               : []),
           ]),
+          declarations: new Map(),
           children: [],
           line: element.line,
         },

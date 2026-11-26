@@ -21,6 +21,8 @@ const VALUES: Record<SandboxRefusedSetting, string> = {
   CCMS_OIDC_CLIENT_ID: 'openfolia',
   CCMS_OIDC_CLIENT_SECRET: 'secret',
   CCMS_OIDC_REDIRECT_URL: 'https://editor.example.com/api/auth/oidc/callback',
+  CCMS_SAML_IDP_METADATA_URL: 'https://id.example.com/saml/metadata',
+  CCMS_SAML_IDP_METADATA_FILE: '/run/secrets/idp-metadata.xml',
   CCMS_PASSWORD_SIGN_IN: 'on',
   CCMS_EMAIL_CODE_SIGN_IN: 'on',
   CCMS_FIRST_ADMIN_EMAIL: 'admin@example.com',

@@ -44,6 +44,23 @@ in the server's environment, so they are read-only here.
 When email is on, **Send a test email** sends one to you. It should arrive within a minute; a
 failure shows in the [audit log](/guide/admin/audit-log).
 
+The section also counts the emails that failed for good in the last 7 days, and shows the newest
+failure: when, which kind of email, and why. A failed email is first retried, at growing
+intervals. The reasons:
+
+- **rejected**: the mail server refused the email or the address.
+- **unavailable**: the mail server could not be reached, or did not answer.
+- **tls**: no secure connection could be made.
+- **auth**: the mail server refused the sign-in.
+- **unreadable**: the email could not be opened to send, for example after the secret key
+  changed.
+- **off**: email was turned off before the email went.
+
+Every notification email sent is in the [audit log](/guide/admin/audit-log) as `mail.sent`, and
+every email that failed for good as `mail.failed`, with its kind and the person it was for, never
+what it said. People choose which notifications they get by email in
+[Notifications](/guide/getting-started/notifications).
+
 ## Background work
 
 **Background work** shows the workers that make release files, run imports and deliver webhooks:

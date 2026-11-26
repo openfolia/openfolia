@@ -10,6 +10,7 @@ import { ZardAlertDialogService } from '@openfolia/ui/alert-dialog';
 import { provideZard } from '@openfolia/ui/core';
 import { ToastService } from '@openfolia/ui/toast';
 
+import { PeopleStates } from '../api';
 import { MeService } from '../permissions/me';
 import { DemoSession } from '../session/demo-session';
 import { ReviewPage } from './review.page';
@@ -172,6 +173,18 @@ async function openChangeSet(
   await t.settle();
 }
 
+/**
+ * The frame clock alone on fake time (#962), from before the page renders: the page counts the
+ * changes drawn in an animation frame. The specs share one window (`testing/test-setup.ts`), and
+ * jsdom's frame loop never runs again in it once a spec on fake timers made it start (a focused
+ * element removed, say): a real frame then never comes. A fake one comes when it is advanced to,
+ * however busy the machine; every other timer stays real.
+ */
+const fakeFrames = () =>
+  vi.useFakeTimers({
+    toFake: ['requestAnimationFrame', 'cancelAnimationFrame'],
+  });
+
 const button = (el: HTMLElement, text: string) =>
   [...el.querySelectorAll<HTMLButtonElement>('of-review-panel button')].find(
     (b) => b.textContent?.trim() === text,
@@ -256,10 +269,11 @@ describe('ReviewPage', () => {
   });
 
   it('moves through the changes with j and k, saying where it is', async () => {
+    fakeFrames();
     const t = await render();
     await openChangeSet(t);
     // Counted where they are drawn, once the page has looked.
-    await new Promise((r) => requestAnimationFrame(r));
+    vi.advanceTimersToNextFrame();
     await t.settle();
     expect(t.el.textContent).toContain('1 change');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }));
@@ -290,9 +304,10 @@ describe('ReviewPage', () => {
   });
 
   it('starts a thread on the change moved to with c', async () => {
+    fakeFrames();
     const t = await render();
     await openChangeSet(t);
-    await new Promise((r) => requestAnimationFrame(r));
+    vi.advanceTimersToNextFrame();
     await t.settle();
     // Nothing to comment on before a change is moved to.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }));
@@ -479,11 +494,111 @@ describe('ReviewPage', () => {
     };
     await openChangeSet(t, 'in-review', 'author', review([gone], [gone]));
     expect(t.el.textContent).toContain(
-      'Approved by former, which no longer counts',
+      'Approved by former, which no longer counts: they lost the role',
+    );
+    // A deactivated one is named so, and lost no role (#928).
+    TestBed.inject(PeopleStates).read([{ id: 'former', deactivated: true }]);
+    await t.settle();
+    expect(t.el.textContent).toMatch(
+      /Approved by former \(deactivated\), which no longer counts(?!:)/,
     );
     expect(button(t.el, 'Approve')?.getAttribute('aria-disabled')).not.toBe(
       'true',
     );
+  });
+
+  describe('an approved change set whose approval lapsed (#950)', () => {
+    const publisher = {
+      id: 'publisher',
+      permissions: [
+        'content.read',
+        'content.read.draft',
+        'content.review',
+        'release.publish',
+      ],
+    };
+    const approval = (requirement: string, id: string) => ({
+      requirement,
+      approver: { kind: 'user', id },
+      head: HEAD,
+      at: '2026-11-01T11:00:00Z',
+    });
+    const status = (el: HTMLElement, step: string) =>
+      el
+        .querySelector(`of-review-panel [data-step="${step}"]`)
+        ?.getAttribute('data-status');
+
+    const expectBlocked = (el: HTMLElement, open: string) => {
+      expect(status(el, open)).toBe('current');
+      expect(status(el, 'merge')).toBe('blocked');
+      expect(el.textContent).not.toContain('Ready to merge into main');
+      expect(
+        el.querySelector('of-review-panel [data-step="merge"]')?.textContent,
+      ).toContain(
+        'Blocked until every approval it needs holds. A reviewer sends it back with Request changes.',
+      );
+      const merge = button(el, 'Merge');
+      expect(merge?.getAttribute('aria-disabled')).toBe('true');
+      expect(merge?.getAttribute('aria-description')).toContain(
+        'A reviewer sends it back with Request changes',
+      );
+    };
+
+    it('blocks the merge and says why, when its approver lost the role', async () => {
+      const t = await render(publisher);
+      const gone = approval('review', 'former');
+      await openChangeSet(t, 'approved', 'author', review([gone], [gone]));
+      expectBlocked(t.el, 'review');
+      expect(t.el.textContent).toContain(
+        'Approved by former, which no longer counts: they lost the role',
+      );
+      button(t.el, 'Merge')?.click();
+      await t.settle();
+      t.http.expectNone(`/api/change-sets/${ID}/merge`);
+      // Request changes stays open: that is the way on.
+      expect(button(t.el, 'Request changes')).toBeDefined();
+    });
+
+    it('blocks the merge and says why, when its approver was deactivated', async () => {
+      const t = await render(publisher);
+      const gone = approval('review', 'former');
+      await openChangeSet(t, 'approved', 'author', review([gone], [gone]));
+      TestBed.inject(PeopleStates).read([{ id: 'former', deactivated: true }]);
+      await t.settle();
+      expectBlocked(t.el, 'review');
+      expect(t.el.textContent).toMatch(
+        /Approved by former \(deactivated\), which no longer counts(?!:)/,
+      );
+    });
+
+    it('names the open step when one of two approvals lapsed', async () => {
+      const t = await render(publisher);
+      const signOff = approval('sign-off/procedure', 'former');
+      await openChangeSet(t, 'approved', 'author', {
+        required: ['review', 'sign-off/procedure'],
+        granted: [],
+        pending: ['sign-off/procedure'],
+        approvals: [approval('review', 'reviewer'), signOff],
+        lapsed: [signOff],
+      });
+      expect(status(t.el, 'review')).toBe('done');
+      expectBlocked(t.el, 'sign-off/procedure');
+    });
+
+    it('offers the merge once nothing is pending', async () => {
+      const t = await render(publisher);
+      await openChangeSet(
+        t,
+        'approved',
+        'author',
+        review([approval('review', 'reviewer')]),
+      );
+      expect(status(t.el, 'merge')).toBe('current');
+      expect(t.el.textContent).toContain('Ready to merge into main');
+      expect(button(t.el, 'Merge')?.getAttribute('aria-disabled')).not.toBe(
+        'true',
+      );
+    });
   });
 
   it('never lets the author review their own change set, and asks for a comment to request changes', async () => {

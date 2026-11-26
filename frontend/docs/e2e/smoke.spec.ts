@@ -77,6 +77,69 @@ for (const { lang, path, other, search } of PAGES) {
       expect(errors).toEqual([]);
     });
 
+    test('fetches only its own language search index, behind a loading state', async ({
+      page,
+    }) => {
+      const errors = watchErrors(page);
+      const requested: string[] = [];
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      await page.route(/\/search-[a-z]+\.json/, async (route) => {
+        requested.push(new URL(route.request().url()).pathname);
+        await gate;
+        await route.continue();
+      });
+      await open(page, path);
+      // A closed dialog fetches nothing.
+      expect(requested).toEqual([]);
+      await page.keyboard.press('ControlOrMeta+KeyK');
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      // The index is fetched as the dialog opens, and the wait shows.
+      await expect(
+        dialog.getByRole('status').filter({ hasText: /\S/ }),
+      ).toBeVisible();
+      release();
+      await dialog.getByRole('combobox').fill(search);
+      await expect(
+        dialog
+          .getByRole('option')
+          .filter({ hasText: /error codes|fehlercodes/i })
+          .first(),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole('status').filter({ hasText: /\S/ }),
+      ).toBeHidden();
+      expect(requested).toEqual([`/search-${lang}.json`]);
+      expect(errors).toEqual([]);
+    });
+
+    test('says so when the search index fails to load, and tries again', async ({
+      page,
+    }) => {
+      const requested: string[] = [];
+      await open(page, path);
+      await page.route(/\/search-[a-z]+\.json/, (route) => {
+        requested.push(route.request().url());
+        return route.abort();
+      });
+      await page.keyboard.press('ControlOrMeta+KeyK');
+      const dialog = page.getByRole('dialog');
+      const failure = dialog.getByRole('alert');
+      await expect(failure).toBeVisible();
+      await page.unroute(/\/search-[a-z]+\.json/);
+      await failure.getByRole('button').click();
+      await expect(failure).toBeHidden();
+      await dialog.getByRole('combobox').fill(search);
+      await expect(
+        dialog
+          .getByRole('option')
+          .filter({ hasText: /error codes|fehlercodes/i })
+          .first(),
+      ).toBeVisible();
+      expect(requested).toHaveLength(1);
+    });
+
     test('collapses the sidebar and opens it again', async ({ page }) => {
       const errors = watchErrors(page);
       await open(page, path);

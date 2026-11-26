@@ -74,6 +74,12 @@ dessen Adresse der Anbieter als bestätigt meldet (`email_verified`):
 | `any`                | jedem Benutzer ohne Identität bei diesem Issuer. Nur für einen Anbieter, der bestätigte Adressen garantiert.        |
 | `off`                | niemandem: Jede erste Anmeldung legt einen neuen Benutzer an.                                                       |
 
+Bei jedem Wert wird eine erste Anmeldung mit einer bestätigten Adresse, die ein deaktivierter
+Benutzer hat, als deaktiviert abgelehnt, so bleibt eine Person draußen, wenn der Anbieter sie
+später anders nennt (dort neu angelegt, oder über einen anderen Anbieter); eine nicht bestätigte
+Adresse legt wie bisher einen neuen Benutzer an, also nehmen Sie die Person bei einem Anbieter, der die
+Adresse nicht bestätigt (kein oder ein falsches `email_verified`), auch dort heraus.
+
 Das Verknüpfen vertraut dem `email_verified` des Anbieters. Könnte jemand die Adresse einer anderen
 Person setzen und als bestätigt melden lassen, übernähme er deren Konto.
 
@@ -97,9 +103,10 @@ Admin seine Rolle nimmt. Geben Sie dem ersten Admin seine Rolle direkt, damit er
 ## Sitzungen
 
 Eine Sitzung endet nach 8 Stunden ohne Anfrage (`CCMS_SESSION_IDLE_MINUTES`, Standard 480) und
-spätestens 7 Tage nach der Anmeldung (`CCMS_SESSION_MAX_HOURS`, Standard 168). Eine geänderte
-Rolle, eine geänderte Gruppenzuordnung oder eine Deaktivierung gilt ab der nächsten Anfrage der
-Person.
+spätestens 7 Tage nach der Anmeldung (`CCMS_SESSION_MAX_HOURS`, Standard 168). Ein Admin kann für
+die Installation andere Grenzen festlegen und den Anbieter für alle vorschreiben: [Single Sign-on
+vorschreiben](/de/guide/admin/single-sign-on). Eine geänderte Rolle, eine geänderte Gruppenzuordnung
+oder eine Deaktivierung gilt ab der nächsten Anfrage der Person.
 
 ## Was nicht dazu passt
 

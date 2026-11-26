@@ -17,7 +17,9 @@ import {
   type ListFrameError,
 } from '@openfolia/ui/list-frame';
 
+import { PersonNameComponent } from '../session/person-name.component';
 import {
+  injectPersonText,
   revisionOf,
   type ModuleVersion,
   type ModuleVersionPage,
@@ -50,6 +52,7 @@ export type RowLink = (
     NgIcon,
     ListFrameComponent,
     ListRowDirective,
+    PersonNameComponent,
     RelativeTimePipe,
     ZardBadgeComponent,
   ],
@@ -120,7 +123,14 @@ export type RowLink = (
             }
           </div>
           <span class="text-muted-foreground text-xs leading-5 break-words">
-            {{ who(v) }} ·
+            @if (v.attributes.actor; as actor) {
+              <of-person-name
+                [who]="actor"
+                [name]="nameOf()(actor.kind, actor.id)"
+              />&nbsp;·
+            } @else {
+              —&nbsp;·
+            }
             <time [attr.datetime]="v.attributes.committedAt">{{
               v.attributes.committedAt | ofRelativeTime
             }}</time>
@@ -199,6 +209,7 @@ export class HistoryListComponent {
   readonly nameOf = input.required<(kind: string, id: string) => string>();
 
   protected readonly revision = revisionOf;
+  private readonly personText = injectPersonText();
 
   protected changeKey(v: ModuleVersion): string {
     return v.meta.change === 'added'
@@ -218,13 +229,10 @@ export class HistoryListComponent {
     return (page.currentPage - 1) * page.perPage + doc.data.indexOf(v);
   }
 
-  protected who(v: ModuleVersion): string {
-    const actor = v.attributes.actor;
-    return actor ? this.nameOf()(actor.kind, actor.id) : '—';
-  }
-
   protected approvers(v: ModuleVersion): string[] {
-    return v.attributes.approvedBy.map((a) => this.nameOf()(a.kind, a.id));
+    return v.attributes.approvedBy.map((a) =>
+      this.personText(a, this.nameOf()(a.kind, a.id)),
+    );
   }
 
   protected firstLine(v: ModuleVersion): string {

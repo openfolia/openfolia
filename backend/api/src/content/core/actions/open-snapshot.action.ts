@@ -38,6 +38,11 @@ export interface OpenSnapshotInput {
    * Never from a request.
    */
   readonly releasedOnce?: boolean;
+  /**
+   * Given by a reader that has read working copies first (#935): the ref as it is now or later,
+   * also when another process moved it, never from a ref listing begun before this call.
+   */
+  readonly fresh?: boolean;
 }
 
 /**
@@ -72,9 +77,11 @@ export class OpenSnapshotAction extends ActorAction<
     authored,
     authoredBase,
     releasedOnce,
+    fresh,
   }: OpenSnapshotInput): Promise<ReadableContent> {
     const notFound = () =>
       new NotFoundError(`No branch, tag or commit "${ref}".`);
+    if (fresh) this.content.forgetListings();
     const [snapshot, refs] = await Promise.all([
       this.content.at(ref),
       this.content.refs(),

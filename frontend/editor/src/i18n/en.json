@@ -84,7 +84,8 @@
       "webhookManage": "Manage webhook subscribers",
       "adminRoles": "Create roles, assign people",
       "adminBranding": "Set the product name, logos and colours",
-      "adminBackups": "Set up backups and hold the backup key"
+      "adminBackups": "Set up backups and hold the backup key",
+      "scimProvision": "Provision users and groups from a directory (SCIM)"
     },
     "roles": {
       "list": {
@@ -115,7 +116,7 @@
       },
       "scope": {
         "hint": "Where the permissions apply. Leave a line empty for all of it.",
-        "hintGlobal": "Where the permissions apply. Leave a line empty for all of it. admin.roles, admin.branding and webhook.manage always apply everywhere.",
+        "hintGlobal": "Where the permissions apply. Leave a line empty for all of it. admin.roles, admin.branding, webhook.manage and scim.provision always apply everywhere.",
         "all": "All",
         "moduleTypes": "Module types",
         "audience": "Audience levels",
@@ -218,15 +219,11 @@
         "edit": "Edit",
         "editLabel": "Edit {name}",
         "deactivate": "Deactivate",
-        "deactivateLabel": "Deactivate {name}",
         "reactivate": "Reactivate",
-        "reactivateLabel": "Reactivate {name}",
         "invite": "Invite",
-        "inviteLabel": "Invite {name}",
         "resetLink": "Reset link",
-        "resetLinkLabel": "Make a password reset link for {name}",
         "withdraw": "Withdraw invite",
-        "withdrawLabel": "Withdraw the invite of {name}"
+        "menu": "More actions for {name}"
       },
       "created": "{name} added.",
       "saved": "{name} saved.",
@@ -260,6 +257,13 @@
         "title": "Withdraw the invite of {name}?",
         "description": "The invite link stops working. You can invite {name} again later.",
         "done": "Invite of {name} withdrawn."
+      },
+      "secondFactor": {
+        "on": "Two-factor",
+        "reset": "Reset two-factor",
+        "title": "Reset two-factor sign-in of {name}?",
+        "description": "For a lost phone: {name} then signs in without a code, and sets it up again where it is required. Their running sessions go on. Make sure it is really {name} who asks.",
+        "done": "Two-factor sign-in of {name} reset."
       }
     },
     "groupMappings": {
@@ -446,6 +450,7 @@
         "savePointFailed": "The project settings could not be committed to the revision"
       },
       "sections": {
+        "singleSignOn": "Single sign-on and sessions",
         "languages": "Languages",
         "moduleTypes": "Module types",
         "audiences": "Audiences",
@@ -457,9 +462,11 @@
         "outputLabels": "Output labels",
         "headings": "Headings",
         "review": "Review",
-        "manufacturer": "Manufacturer"
+        "manufacturer": "Manufacturer",
+        "secondFactor": "Two-factor sign-in"
       },
       "hints": {
+        "singleSignOn": "Whether people must sign in with your identity provider, and how long a session lasts. Changes apply at once.",
         "languages": "The source language content is written in, and the languages it is translated into.",
         "moduleTypes": "What kinds of module there are. Restricted types need an extra approval to sign off; modules of a snippet type are reusable wording, suggested while writing; a derived manual such as a safety leaflet gathers the modules of the safety types unless its rule names others.",
         "audiences": "Who content is for, ordered from least to most restricted. A module without an audience gets the last one.",
@@ -471,7 +478,8 @@
         "outputLabels": "The fixed texts outputs print, per language. Empty fields use the built-in text shown in them.",
         "headings": "How deep headings may go in a module.",
         "review": "Whether authors may approve their own revisions. For a small team, or one person writing alone.",
-        "manufacturer": "Who makes the product and how to reach them. Page designs print it on the back page, and wherever a manufacturer placeholder stands."
+        "manufacturer": "Who makes the product and how to reach them. Page designs print it on the back page, and wherever a manufacturer placeholder stands.",
+        "secondFactor": "Who must sign in with a code from their phone, besides the password or the code by email."
       },
       "add": {
         "moduleType": "Add module type",
@@ -702,6 +710,62 @@
           "address": "The address has at most {lines} lines.",
           "website": "The website is a full address starting with https://, http:// or mailto:."
         }
+      },
+      "singleSignOn": {
+        "legend": "How people sign in",
+        "optional": "In any way the server offers",
+        "optionalHint": "With a password, a code by email or the identity provider. The default.",
+        "required": "Only with single sign-on",
+        "requiredHint": "With the identity provider, and nothing else but the emergency account’s password.",
+        "note": "Service accounts keep working with their tokens.",
+        "noProvider": "No identity provider is set up on this server, so single sign-on cannot be required.",
+        "confirm": {
+          "title": "Require single sign-on?",
+          "description": "Everyone who signed in another way is signed out at once. Open invitations, password links and codes by email end and do not come back.",
+          "descriptionNoAccount": "Everyone who signed in another way is signed out at once. Open invitations, password links and codes by email end and do not come back. There is no emergency account: while the provider is down, nobody can sign in.",
+          "ok": "Require single sign-on"
+        },
+        "account": {
+          "title": "Emergency account",
+          "hint": "The one person who may still sign in with their password while single sign-on is required: an active administrator of their own, not through a group. Every use is in the audit log, and every administrator is notified.",
+          "none": "No emergency account",
+          "noneHint": "While the provider is down, nobody can sign in.",
+          "choose": "Choose a person",
+          "change": "Change",
+          "remove": "Remove the emergency account",
+          "link": "New password link",
+          "search": "Search people",
+          "failed": "The people could not be loaded.",
+          "retry": "Try again",
+          "nobody": "Nobody found.",
+          "more": "More people than shown here: type to find one.",
+          "notAdmin": "Not an administrator",
+          "noPassword": "Has no password"
+        },
+        "problems": {
+          "deactivated": "This account is deactivated, so it is no way in. Choose another one.",
+          "noAdminRole": "This person holds no administrator role of their own (one held through a group does not count), so the account is no way in. Choose another one.",
+          "noPassword": "This person has no password, so the account is no way in, and gets no link for a new one while single sign-on is required. Choose another account.",
+          "passwordSignInOff": "Signing in with a password is off on this server, so the account is no way in."
+        },
+        "sessions": "How long a session lasts",
+        "idle": "End a session without activity after",
+        "idleHint": "What an open tab asks by itself does not count as activity.",
+        "max": "End every session after",
+        "maxHint": "Counted from signing in, however much it is used.",
+        "sessionsNote": "A change applies to running sessions from their next request. A longer limit brings no ended session back.",
+        "serverSetting": "The server’s setting ({span})"
+      },
+      "secondFactor": {
+        "legend": "Who must sign in with a second factor",
+        "optional": "Nobody: everyone decides for themselves",
+        "optionalHint": "People turn on two-factor sign-in in their account menu. The default.",
+        "admins": "Administrators",
+        "adminsHint": "Everyone who may manage roles and users. Others decide for themselves.",
+        "everyone": "Everyone",
+        "everyoneHint": "Everyone who signs in with a password or a code by email.",
+        "note": "A person without it sets it up at their next sign-in, before they can do anything else; running sessions go on. Single sign-on is not covered: your sign-in service asks for its own second factor.",
+        "setUpOwn": "Set up two-factor sign-in"
       }
     },
     "variants": {
@@ -830,6 +894,7 @@
         "backupKey": "Backup key",
         "backupRequest": "Backup request",
         "groupMapping": "Group mapping",
+        "scimGroup": "Directory group (SCIM)",
         "backupSettings": "Backup settings",
         "route": "API route"
       },
@@ -907,6 +972,9 @@
         "storageLimitChange": "Changed the storage limit",
         "storageUploadRefused": "Upload refused: storage limit reached",
         "settingsSelfApproval": "Self-approval changed",
+        "scimGroupCreate": "Directory group provisioned",
+        "scimGroupDelete": "Directory group removed",
+        "scimGroupUpdate": "Directory group changed",
         "backupKeyCreate": "Backup key created",
         "backupKeyRotate": "Backup key replaced",
         "backupSettingsUpdate": "Backup settings changed",
@@ -922,6 +990,7 @@
         "moduleRename": "Module ID changed",
         "userEmailCodeRequested": "Sign-in code requested",
         "userIdentityLink": "Sign-in account linked",
+        "userIdentityUnlink": "Sign-in account unlinked",
         "userInvite": "Invite link created",
         "userInviteWithdraw": "Invite withdrawn",
         "userPasswordChanged": "Password changed",
@@ -930,7 +999,19 @@
         "userSignIn": "Signed in",
         "userSignOut": "Signed out",
         "apiRead": "Read over the API",
-        "apiReadGap": "Reads not recorded one by one"
+        "apiReadGap": "Reads not recorded one by one",
+        "mailSent": "Notification email sent",
+        "notificationUnsubscribe": "Unsubscribed by email link",
+        "settingsSecondFactor": "Two-factor requirement changed",
+        "userSecondFactorOff": "Two-factor sign-in turned off",
+        "userSecondFactorOn": "Two-factor sign-in turned on",
+        "userSecondFactorRecoveryCodes": "New recovery codes made",
+        "userSecondFactorReset": "Two-factor sign-in reset",
+        "settingsSingleSignOn": "Single sign-on requirement changed",
+        "settingsBreakGlass": "Emergency account changed",
+        "settingsSessionLimits": "Session limits changed",
+        "settingsSignInsEnded": "Sessions and sign-ins no longer allowed ended",
+        "userBreakGlassSignIn": "Emergency sign-in"
       },
       "export": {
         "label": "Export",
@@ -1183,6 +1264,27 @@
           "title": "Email is off: it needs the instance secret key",
           "text": "A mail server is set ({host}), but the server has no secret key to seal what a queued email holds. Set CCMS_SECRET_KEY, or let the server make a key file (CCMS_SECRET_KEY_GENERATE=true), and restart it.",
           "link": "Where the secret key is set"
+        },
+        "failures": {
+          "none": "No email failed in the last 7 days.",
+          "some": "{count, plural, one {# email failed} other {# emails failed}} for good in the last 7 days, after every retry.",
+          "last": "The newest: {at}, {template}, {reason}.",
+          "templates": {
+            "test": "a test email",
+            "notification": "a notification",
+            "notification-digest": "a daily summary",
+            "other": "an email"
+          },
+          "reasons": {
+            "rejected": "refused by the mail server",
+            "unavailable": "the mail server could not be reached",
+            "tls": "no secure connection",
+            "auth": "sign-in to the mail server failed",
+            "unreadable": "it could not be opened (another secret key)",
+            "off": "email was turned off",
+            "other": "for another reason"
+          },
+          "audit": "See the audit log for each one."
         }
       },
       "jobs": {
@@ -2251,7 +2353,7 @@
       "already-approved": "You have approved what you may of this revision already.",
       "head-moved": "Its branch changed after it was submitted, so it went back to its author.",
       "not-approved": "It still needs approvals before it can be merged.",
-      "approval-lapsed": "An approval it needs no longer counts: its approver lost the role. Return it to be reviewed again.",
+      "approval-lapsed": "An approval it needs no longer counts: its approver lost the role or was deactivated. Return it to be reviewed again.",
       "merge-conflict": "It conflicts with its base in {total, plural, one {# file} other {# files}}. Its author resolves this.",
       "base-moved": "Its base kept changing meanwhile. Try again.",
       "base-missing": "Its base branch is gone.",
@@ -2411,7 +2513,22 @@
       "maintenance-line-exists": "This release has a maintenance line already.",
       "invalid-maintenance-branch": "The maintenance line's branch name cannot be made for this release. An administrator can change the pattern.",
       "sandbox-not-allowed": "{refused, select, uploads {Uploads are off in this sandbox.} imports {Imports are off in this sandbox.} templates {Templates cannot be changed in this sandbox.} users {Adding users is off in this sandbox: it is yours alone.} invitations {Invitation and reset links are off in this sandbox: it is yours alone.} serviceAccounts {Service accounts are off in this sandbox: nothing outside may reach it.} tokens {Issuing tokens is off in this sandbox: nothing outside may reach it.} webhooks {Webhooks are off in this sandbox: nothing leaves it.} mail {Email is off in this sandbox: nothing leaves it.} backups {Backups are off in this sandbox.} other {This is off in a public sandbox.}}",
-      "sandbox-limit-reached": "{limit, select, moduleBytes {This is larger than a sandbox saves. Make it shorter or split it.} commentLength {A comment in a sandbox has at most {max, number} characters.} changeSets {This sandbox has made as many revisions as it may ({max, number}).} modules {This sandbox has made as many modules as it may ({max, number}).} manuals {This sandbox has made as many manuals as it may ({max, number}).} releasesPerHour {This sandbox has cut as many releases this hour as it may ({max, number}). Try again later.} writeBytes {This sandbox has written as much as it may over its session.} other {This sandbox has reached one of its limits.}}"
+      "sandbox-limit-reached": "{limit, select, moduleBytes {This is larger than a sandbox saves. Make it shorter or split it.} commentLength {A comment in a sandbox has at most {max, number} characters.} changeSets {This sandbox has made as many revisions as it may ({max, number}).} modules {This sandbox has made as many modules as it may ({max, number}).} manuals {This sandbox has made as many manuals as it may ({max, number}).} releasesPerHour {This sandbox has cut as many releases this hour as it may ({max, number}). Try again later.} writeBytes {This sandbox has written as much as it may over its session.} other {This sandbox has reached one of its limits.}}",
+      "unsubscribe-link-invalid": "This unsubscribe link is not valid (any more).",
+      "wrong-code": "The code is not right, or was used before. Wait for the next one.",
+      "second-factor-expired": "This sign-in ran out. Sign in again.",
+      "second-factor-not-applicable": "You sign in with your organisation’s account: its own second factor protects it.",
+      "second-factor-not-begun": "This set-up ran out. Begin again.",
+      "second-factor-off": "Two-factor sign-in is off.",
+      "second-factor-on": "Two-factor sign-in is on already.",
+      "second-factor-own": "Turn off your own in the account menu.",
+      "single-sign-on-required": "This installation requires single sign-on.",
+      "single-sign-on-own-first": "Sign in with the identity provider first, or name the account you are signed in with as the emergency account, so you are not locked out.",
+      "single-sign-on-unavailable": "The identity provider does not answer, so single sign-on cannot be required now. Try again later.",
+      "break-glass-not-usable": "This account cannot be the emergency account: it must be an active administrator’s, with a password.",
+      "session-limits-crossed": "A session cannot go unused for longer than it lasts. Choose a shorter time without activity, or a longer lifetime.",
+      "second-factor-own-first": "Turn on your own two-factor sign-in first, so you are not locked out.",
+      "second-factor-unavailable": "Two-factor sign-in is not available: the server’s secret key (CCMS_SECRET_KEY) is missing, or cannot open what is stored. Ask your administrator."
     }
   },
   "theme": {
@@ -2895,6 +3012,9 @@
     "failure": "{what} {why}",
     "retry": "Retry"
   },
+  "person": {
+    "deactivated": "deactivated"
+  },
   "demo": {
     "label": "Switch user",
     "failed": "The demo users could not be loaded.",
@@ -2902,6 +3022,13 @@
     "switchFailed": "Could not switch to {name}."
   },
   "signIn": {
+    "sessionEnded": "Your session has ended. Sign in to go on.",
+    "emergency": {
+      "offer": "Emergency sign-in",
+      "back": "Back to single sign-on",
+      "intro": "For the emergency account only. Its use is recorded, and the administrators are told.",
+      "noWayIn": "Single sign-on is required, but no identity provider is set up. Ask whoever runs this server."
+    },
     "title": "Sign in",
     "failed": "Couldn't reach the server",
     "demo": {
@@ -2928,7 +3055,8 @@
       "intro": "Sign in with your organisation’s account. You come back here once you are signed in.",
       "label": "Sign-in options",
       "with": "Sign in with {name}",
-      "continue": "Continue to sign-in"
+      "continue": "Continue to sign-in",
+      "saml": "Sign in with single sign-on (SAML)"
     },
     "errors": {
       "provider-unavailable": "The sign-in service could not be reached. Try again in a moment.",
@@ -2936,7 +3064,8 @@
       "sign-in-failed": "Signing in did not work. Try again; if it keeps failing, ask your administrator.",
       "sign-in-expired": "That sign-in took too long or was started in another window. Sign in again.",
       "user-deactivated": "Your account is deactivated. Ask an administrator to reactivate it.",
-      "sign-in-not-allowed": "Your account may not sign in this way. Ask your administrator."
+      "sign-in-not-allowed": "Your account may not sign in this way. Ask your administrator.",
+      "too-many-failed-attempts": "Too many sign-ins from your network failed. Try again in a few minutes."
     },
     "password": {
       "intro": "Sign in with your email address and password.",
@@ -3395,6 +3524,7 @@
       "signOff": "Sign-off: {type}",
       "approvedBy": "Approved by {name}",
       "lapsed": "Approved by {name}, which no longer counts: they lost the role",
+      "lapsedDeactivated": "Approved by {name}, which no longer counts",
       "waitingReviewer": "Waiting for a reviewer",
       "waitingApprover": "Waiting for an approver of this type",
       "onceSubmitted": "Needed once it is submitted",
@@ -3402,6 +3532,7 @@
       "merge": "Merge",
       "merged": "Merged into {ref}",
       "readyToMerge": "Ready to merge into {ref}",
+      "mergeBlocked": "Blocked until every approval it needs holds. A reviewer sends it back with Request changes.",
       "mergeLater": "Into {ref} once approved",
       "afterTitle": "After approval",
       "afterMergeTitle": "Merged",
@@ -3432,7 +3563,8 @@
       "commentRequired": "Say in the review comment what should change.",
       "reviewed": "The review is given already.",
       "signedOff": "Every sign-off is given already.",
-      "ownSignOff": "You wrote this revision, or part of it: someone else signs it off."
+      "ownSignOff": "You wrote this revision, or part of it: someone else signs it off.",
+      "approvalMissing": "An approval it needs is missing or no longer counts. A reviewer sends it back with Request changes, to be approved again."
     },
     "done": {
       "submit": "Submitted “{title}” for review.",
@@ -5298,6 +5430,7 @@
     "markFailedOffline": "Couldn't mark the notification read: no connection.",
     "retry": "Try again",
     "someone": {
+      "emergency": "Someone",
       "author": "An author",
       "reviewer": "A reviewer",
       "publisher": "A publisher",
@@ -5321,7 +5454,8 @@
       "outputRecoveredUnnamed": "A PDF of a release that failed to build is ready after all",
       "other": "Something happened that concerns you",
       "backupFailed": "A backup failed",
-      "backupOverdue": "No good backup for more than {hours} hours"
+      "backupOverdue": "No good backup for more than {hours} hours",
+      "breakGlass": "{by} signed in with the emergency account"
     }
   },
   "suggestion": {
@@ -6434,5 +6568,221 @@
       "description": "It is deleted after the session, so there is nothing to keep."
     },
     "mailOff": "Email is off in this sandbox: every message is dropped, none is sent."
+  },
+  "notificationSettings": {
+    "menu": "Notifications",
+    "title": "Notifications",
+    "lead": "Choose how you hear of each kind of event: in the bell only, by email at once, or in a daily summary. Changes are saved as you make them.",
+    "loading": "Loading your notification settings…",
+    "loadFailed": "Your notification settings could not be loaded",
+    "notSaved": "the last change was undone",
+    "emailOff": {
+      "title": "Email is off for you",
+      "off": "This server sends no email (no mail server is set up). Your choices still apply to the bell; emails start once an administrator sets one up.",
+      "no-secret-key": "This server cannot send email yet: it has no secret key. Your choices still apply to the bell; emails start once an administrator adds one.",
+      "no-public-url": "This server cannot send email yet: it has no public address to link to. Your choices still apply to the bell.",
+      "no-address": "You have no email address, so nothing can be emailed to you. Ask an administrator to add one. Your choices still apply to the bell."
+    },
+    "everything": "All notifications",
+    "pauseEmail": {
+      "label": "Pause all email",
+      "text": "No emails, not even the summary. The bell still shows everything, and your choices below are kept. Administrators are still emailed when the emergency account is used."
+    },
+    "allOff": {
+      "label": "Turn off all notifications",
+      "text": "Nothing in the bell and no email, until you turn this off. Only for you. Administrators still hear when the emergency account is used.",
+      "note": "All your notifications are off. You will not hear of reviews, releases or alerts until you turn this off."
+    },
+    "groups": {
+      "review": {
+        "title": "Review and workflow",
+        "text": "Requests to review, and what happens to your revisions."
+      },
+      "releases": {
+        "title": "Releases",
+        "text": "New releases of the manuals you read."
+      },
+      "translations": {
+        "title": "Translations",
+        "text": "The translation imports you started."
+      },
+      "admin": {
+        "title": "Admin alerts",
+        "text": "Only for people who look after releases or backups. Administrators are always told when the emergency account is used."
+      }
+    },
+    "kinds": {
+      "changeSetSubmit": {
+        "label": "A revision is submitted to you for review",
+        "text": "Someone asks you to review their changes."
+      },
+      "changeSetReturn": {
+        "label": "Your revision is returned with changes requested",
+        "text": "A reviewer asks you for changes."
+      },
+      "changeSetApprove": {
+        "label": "Your revision is approved",
+        "text": "A reviewer approved what you changed."
+      },
+      "changeSetSignOff": {
+        "label": "Your revision is signed off",
+        "text": "The last approval is in: it can be published."
+      },
+      "changeSetMerge": {
+        "label": "Your revision is published",
+        "text": "Your changes are part of the content now."
+      },
+      "lockBreak": {
+        "label": "An administrator broke one of your locks",
+        "text": "Someone else may now edit what you held."
+      },
+      "releasePublished": {
+        "label": "A release is published",
+        "text": "A new release of manuals you read."
+      },
+      "releaseOutputRecovered": {
+        "label": "A release’s file that failed is ready after all",
+        "text": "A PDF that failed to build was built after all."
+      },
+      "translationImported": {
+        "label": "Your translation import is done",
+        "text": "The translations you imported are in a revision."
+      },
+      "translationImportFailed": {
+        "label": "Your translation import failed",
+        "text": "The file could not be read or applied."
+      },
+      "releaseOutputFailed": {
+        "label": "A release’s file failed to build",
+        "text": "A PDF of a release could not be built.",
+        "missed": "You will not hear when a release’s PDF fails to build."
+      },
+      "backupFailed": {
+        "label": "A backup failed",
+        "text": "The last backup run did not finish.",
+        "missed": "You will not hear when a backup fails."
+      },
+      "backupOverdue": {
+        "label": "No good backup for longer than expected",
+        "text": "No backup has succeeded within the expected time.",
+        "missed": "You will not hear when backups stop succeeding."
+      }
+    },
+    "choices": {
+      "off": "Off",
+      "app": "In the app only",
+      "email": "App + email at once",
+      "digest": "App + daily summary"
+    },
+    "adminMissed": {
+      "title": "You turned off an admin alert"
+    },
+    "digest": {
+      "title": "Daily summary",
+      "text": "Sent at {hour} ({zone}), only on days with something to report.",
+      "hour": "Time",
+      "zone": "Time zone"
+    }
+  },
+  "unsubscribe": {
+    "title": "Unsubscribe",
+    "heading": {
+      "ask": "Stop these emails?",
+      "working": "Unsubscribing…",
+      "done": "You are unsubscribed",
+      "nothing": "Nothing changed",
+      "invalid": "This link does not work",
+      "failed": "Something went wrong"
+    },
+    "working": "Changing your notification settings…",
+    "done": "You’ll get no more emails about:",
+    "stillInApp": "You still see these notifications in the bell. Nothing else changed.",
+    "toSettings": "Open your notification settings",
+    "invalid": "This unsubscribe link is not one this server made, or it is no longer valid. You can change your notifications in the editor.",
+    "ask": "You’ll get no more emails of this kind. You still see these notifications in the bell, and nothing else changes.",
+    "askInApp": "You still see these notifications in the bell, and nothing else changes.",
+    "confirm": "Stop these emails",
+    "nothing": "Your settings now send these emails another way than this link stops. You can change that in your notification settings."
+  },
+  "secondFactor": {
+    "menu": "Two-factor sign-in",
+    "locked": "Too many failed attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "code": {
+      "app": "Code from your authenticator app",
+      "appHint": "The six digits the app shows now. They change every 30 seconds.",
+      "appMissing": "Enter the six digits the app shows.",
+      "recovery": "Recovery code",
+      "recoveryHint": "One of the ten codes you saved when you turned on two-factor sign-in. Each works once.",
+      "recoveryMissing": "Enter one of your recovery codes.",
+      "recoveryWrong": "This recovery code is not right, or was used before."
+    },
+    "setUp": {
+      "scan": "Scan the code with an authenticator app",
+      "qrCode": "QR code for {account}",
+      "key": "Can’t scan it? Enter this key in the app instead:",
+      "keyLabel": "Key for the authenticator app",
+      "keyCopy": "Copy key",
+      "keyCopied": "Key copied",
+      "copyFailed": "Copying failed. Select the key and copy it.",
+      "openApp": "Open in an app",
+      "enter": "Enter the code the app shows"
+    },
+    "recovery": {
+      "title": "Save your recovery codes",
+      "intro": "Each code signs you in once without your phone. They are shown only now: keep them somewhere safe.",
+      "label": "Recovery codes",
+      "copy": "Copy codes",
+      "copied": "Codes copied",
+      "copyFailed": "Copying failed. Select the codes and copy them.",
+      "download": "Download",
+      "note": "Without your phone and these codes, only an administrator can let you back in.",
+      "continue": "I saved them, continue",
+      "fileTitle": "Recovery codes for {product} ({address})",
+      "fileName": "recovery-codes",
+      "leaveTitle": "Close without saving the codes?",
+      "leaveDescription": "They are not shown again. If you did not save them, you can only make new ones.",
+      "leave": "Close",
+      "stay": "Back to the codes"
+    },
+    "signIn": {
+      "title": "Two-factor sign-in",
+      "intro": "One more step to sign in as {email}.",
+      "useRecovery": "Use a recovery code",
+      "useApp": "Use a code from the app",
+      "setUpTitle": "Set up two-factor sign-in",
+      "setUpIntro": "It is required here. Set it up now to sign in: you need an authenticator app on your phone.",
+      "turnOn": "Turn on and sign in",
+      "expiredTitle": "Sign in again",
+      "expiredHint": "This sign-in ran out or was used already. Start again at the sign-in page.",
+      "lockedTitle": "Too many failed attempts",
+      "again": "Back to sign-in",
+      "lockedHint": "Wait {minutes, plural, one {# minute} other {# minutes}}, then sign in again."
+    },
+    "dialog": {
+      "description": "A code from your phone, besides the password or the code by email.",
+      "offDescription": "Protect your account with a code from an authenticator app on your phone, besides the password or the code by email.",
+      "setUp": "Set up",
+      "setUpTitle": "Set up two-factor sign-in",
+      "setUpDescription": "Your other sessions end when you turn it on; this one goes on.",
+      "turnOn": "Turn on",
+      "turnedOn": "Two-factor sign-in is on. {count, plural, =0 {No other sessions were running.} one {# other session ended.} other {# other sessions ended.}}",
+      "password": "Your password",
+      "passwordMissing": "Enter your password.",
+      "required": "It is required here: without it, you set it up at your next sign-in.",
+      "requiredOn": "It is required here. If you turn it off, you set it up again at your next sign-in.",
+      "since": "On since {date}",
+      "codesLeft": "{count, plural, =0 {No recovery codes left} one {# recovery code left} other {# recovery codes left}}",
+      "few": "Make new ones",
+      "newCodes": "New recovery codes",
+      "newCodesDescription": "Your earlier recovery codes stop working. Confirm that it is you.",
+      "turnOff": "Turn off",
+      "turnOffTitle": "Turn off two-factor sign-in",
+      "turnOffDescription": "You then sign in without a code, and your recovery codes stop working. Confirm that it is you.",
+      "turnOffRequiredDescription": "It is required here: you set it up again at your next sign-in. Your recovery codes stop working. Confirm that it is you.",
+      "turnedOff": "Two-factor sign-in is off.",
+      "useCode": "Use a code instead",
+      "usePassword": "Use your password instead",
+      "done": "I saved them"
+    }
   }
 }

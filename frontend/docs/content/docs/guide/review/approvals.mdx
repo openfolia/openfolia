@@ -26,6 +26,8 @@ A type restricted after the revision was submitted needs its sign-off too.
 - **Needed once it is submitted**: the revision is still a draft.
 - **Approved by Sample Reviewer**, with when.
 - **Into main once approved**, then **Ready to merge into main**.
+- **Blocked until every approval it needs holds**: approved, but an approval it needs no longer counts
+  ([below](#when-an-approver-loses-their-role)).
 
 ## Who may give what
 
@@ -39,10 +41,13 @@ A type restricted after the revision was submitted needs its sign-off too.
 
 An approval counts only while its approver still has the role that gave it. If an administrator
 takes the role away, or narrows it, the line says **Approved by Sample Reviewer, which no longer
-counts: they lost the role**, and the step waits again.
+counts: they lost the role**, and the step waits again. Deactivating the approver does the same: the
+line says **Approved by Sample Reviewer (deactivated), which no longer counts**.
 
-Someone else with the role can then give it. Until then **Merge** is refused: **An approval it needs
-no longer counts: its approver lost the role. Return it to be reviewed again.** A reviewer returns
-it with **Request changes**, and the author submits it again.
+While the revision is in review, someone else with the role can then give it. Once it is approved,
+nobody can: the step waits again, and the **Merge** step says **Blocked until every approval it
+needs holds. A reviewer sends it back with Request changes.** The **Merge** button is unavailable, and
+pointing at it or focusing it says why. A reviewer returns the revision with **Request changes**,
+the author submits it again, and it is reviewed afresh.
 
 [Roles](/guide/reference/roles) lists which role may review, approve and merge.

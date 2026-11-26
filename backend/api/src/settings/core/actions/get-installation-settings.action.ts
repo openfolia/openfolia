@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Actor } from '../../../access/core/actor.js';
 import { ActorAction } from '../../../access/core/policy.js';
-import type { StoredInstallationSettings } from '../installation-settings.js';
+import type { ShownInstallationSettings } from '../installation-settings.js';
 import { InstallationSettingsStore } from '../installation-settings-store.js';
+import { SignInStates } from '../sign-in-state.js';
 
 /**
  * The installation's settings (#588), for those who change them (`admin.roles`). The review
@@ -11,15 +12,18 @@ import { InstallationSettingsStore } from '../installation-settings-store.js';
 @Injectable()
 export class GetInstallationSettingsAction extends ActorAction<
   { readonly actor: Actor },
-  StoredInstallationSettings
+  ShownInstallationSettings
 > {
   readonly policy = 'admin.roles';
 
-  constructor(private readonly store: InstallationSettingsStore) {
+  constructor(
+    private readonly store: InstallationSettingsStore,
+    private readonly states: SignInStates,
+  ) {
     super();
   }
 
-  protected run(): Promise<StoredInstallationSettings> {
-    return this.store.read();
+  protected async run(): Promise<ShownInstallationSettings> {
+    return this.states.show(await this.store.read());
   }
 }

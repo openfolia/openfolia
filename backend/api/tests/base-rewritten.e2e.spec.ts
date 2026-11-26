@@ -113,11 +113,21 @@ async function commit(id: string) {
  * holding main's files, so no commit of its history before is in it; with
  * `charging`, that module then changed on top.
  */
+let rewrites = 0;
 async function rewriteMain(chargingAs?: string) {
   const tree = git('rev-parse', 'refs/heads/main^{tree}');
   const root = execFileSync(
     'git',
-    ['-C', dir(), 'commit-tree', tree, '-m', 'Restored from a backup'],
+    [
+      '-C',
+      dir(),
+      'commit-tree',
+      tree,
+      // Its own message each time: the same tree, message, author and second make the same
+      // commit, so nothing would be rewritten (#933).
+      '-m',
+      `Restored from a backup (${++rewrites})`,
+    ],
     {
       encoding: 'utf8',
       env: {

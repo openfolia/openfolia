@@ -118,6 +118,9 @@ const BackupOverdue = z.object({
   warnAfterHours: z.number().int().min(1),
 });
 
+/** `sign-in.break-glass` (#378): whose account was signed in to with its password. */
+const BreakGlassUsed = z.object({ userId: Id, admins: z.array(Id) });
+
 /** People, read once per pass and shared by the events of a batch. */
 export type People = () => Promise<readonly Actor[]>;
 
@@ -145,6 +148,8 @@ interface Addressed {
  *   of the manuals they read.
  * - `backup.failed`, `backup.overdue` (#529): the holders of
  *   `admin.backups`, once per incident (the backup process keys the row).
+ * - `sign-in.break-glass` (#378): who held `admin.roles` when it was used, the account's own
+ *   person too: whoever used it, they should hear of it.
  *
  * Never the actor who caused the event, and only people (users), never a
  * service. A row whose payload is not what its topic writes notifies
@@ -356,6 +361,18 @@ export class FanOut {
         );
         return {
           subject: { type: 'backup', id },
+          cause: undefined,
+          to: to.map((a) => ({ recipient: a.id, payload })),
+        };
+      }
+      case 'sign-in.break-glass': {
+        const parsed = BreakGlassUsed.safeParse(event.payload);
+        if (!parsed.success) return undefined;
+        const { userId, admins } = parsed.data;
+        const payload = { by: { kind: 'user', id: userId } };
+        const to = (await people()).filter((a) => admins.includes(a.id));
+        return {
+          subject: { type: 'user', id: userId },
           cause: undefined,
           to: to.map((a) => ({ recipient: a.id, payload })),
         };

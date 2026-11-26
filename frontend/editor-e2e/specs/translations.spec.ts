@@ -115,6 +115,14 @@ test.describe('translations @area:translations @api:translations', () => {
       await page.goto('/translations/jobs');
       const row = page.locator(`[data-slot="job-row"][data-row="${jobId}"]`);
       await expect(row).toBeVisible();
+      // On a tablet too, who exported it has room to be read.
+      const { width, height } = page.viewportSize()!;
+      await page.setViewportSize({ width: 768, height });
+      const exported = page.getByRole('columnheader', { name: 'Exported' });
+      await expect
+        .poll(async () => (await exported.boundingBox())?.width)
+        .toBeGreaterThan(100);
+      await page.setViewportSize({ width, height });
       const [download] = await Promise.all([
         page.waitForEvent('download'),
         row.getByRole('button', { name: /as a COTI package$/ }).click(),

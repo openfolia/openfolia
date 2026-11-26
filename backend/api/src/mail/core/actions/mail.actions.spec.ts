@@ -55,9 +55,10 @@ function setUp(sandbox: Sandbox = Sandbox.OFF) {
     mailer,
     fail,
     unit,
+    audit,
   );
   const sendTest = new SendTestMailAction(settings, outbox, users, audit, unit);
-  const getSettings = new GetMailSettingsAction(settings, brand);
+  const getSettings = new GetMailSettingsAction(settings, brand, audit);
   const queue = (language?: string | null, address = 'reader@example.com') =>
     unit.run((tx) =>
       outbox.queue(tx, {
@@ -457,6 +458,20 @@ describe('GetMailSettingsAction', () => {
       from: 'docs@example.com',
       senderName: 'Docs',
       language: 'en',
+      failures: { count: 0, last: null },
+    });
+  });
+
+  it('counts the emails that failed for good, and tells the newest (#884)', async () => {
+    const t = setUp();
+    for (const reason of ['auth', 'rejected'] as const) {
+      const { id } = (await t.queue('en'))!;
+      await t.fail.handle({ messageId: id, reason });
+    }
+    const { failures } = await t.getSettings.handle({ actor: ADMIN });
+    expect(failures).toEqual({
+      count: 2,
+      last: { at: expect.any(Date), template: 'test', reason: 'rejected' },
     });
   });
 });

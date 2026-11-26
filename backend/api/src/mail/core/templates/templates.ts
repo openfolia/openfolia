@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import type { MailLanguage } from '../mail.js';
 import type { MailContent } from './layout.js';
+import {
+  NOTIFICATION_DIGEST_MAIL,
+  NOTIFICATION_MAIL,
+} from './notification-templates.js';
 
 /** What a template's words are made from besides its params. */
 export interface TemplateContext {
@@ -196,12 +200,50 @@ export const EMAIL_CODE_MAIL = define({
   },
 });
 
-/** Every template, by name: a later issue adds its own (notifications). */
+/** The emergency account was used (#378): to every administrator, whatever they set. */
+export const EMERGENCY_SIGN_IN_MAIL = define({
+  name: 'emergency-sign-in',
+  params: z.strictObject({ by: z.string().min(1).max(200) }),
+  texts: {
+    en: ({ by }, { productName, link }) => {
+      const href = link('admin/audit?action=user.break-glass-sign-in');
+      return {
+        subject: `${by} signed in to ${productName} with the emergency account`,
+        heading: 'The emergency account was used',
+        paragraphs: [
+          `${by} signed in with the emergency account: it takes its password although single sign-on is required.`,
+          'Check that you knew of it. If not, choose another emergency account in the project settings, or give this one a new password.',
+        ],
+        action: href ? { label: 'Open the audit log', href } : null,
+        reason: `You get this email because you administer ${productName}. It cannot be turned off.`,
+      };
+    },
+    de: ({ by }, { productName, link }) => {
+      const href = link('admin/audit?action=user.break-glass-sign-in');
+      return {
+        subject: `${by} hat sich bei ${productName} mit dem Notfallkonto angemeldet`,
+        heading: 'Das Notfallkonto wurde verwendet',
+        paragraphs: [
+          `${by} hat sich mit dem Notfallkonto angemeldet: Es nimmt das Passwort an, obwohl Single Sign-on vorgeschrieben ist.`,
+          'Prüfen Sie, ob Sie davon wussten. Wenn nicht, wählen Sie in den Projekteinstellungen ein anderes Notfallkonto, oder geben Sie diesem ein neues Passwort.',
+        ],
+        action: href ? { label: 'Audit-Log öffnen', href } : null,
+        reason: `Sie erhalten diese E-Mail, weil Sie ${productName} administrieren. Sie lässt sich nicht abschalten.`,
+      };
+    },
+  },
+});
+
+/** Every template, by name. */
 export const MAIL_TEMPLATES = {
   test: TEST_MAIL,
   invite: INVITE_MAIL,
   'password-reset': PASSWORD_RESET_MAIL,
   'email-code': EMAIL_CODE_MAIL,
+  'emergency-sign-in': EMERGENCY_SIGN_IN_MAIL,
+  // #884: a notification at once, and the daily summary.
+  notification: NOTIFICATION_MAIL,
+  'notification-digest': NOTIFICATION_DIGEST_MAIL,
 } as const satisfies Record<
   string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

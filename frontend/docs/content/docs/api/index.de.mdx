@@ -53,6 +53,10 @@ Setzen Sie sie nach dem Import auf den Host Ihrer Instanz.
 - **JSON:API:** Antworten sind `application/vnd.api+json`-Dokumente. Ressourcen sind
   `{ type, id, attributes, relationships, meta }`; `attributes` enthalten gespeicherte Daten,
   `meta`, was der Server daraus ableitet.
+- **Deaktivierte Personen:** Wo die Referenz `meta.people` aufführt, sagt eine Antwort, die Personen
+  nennt (wer etwas geschrieben, freigegeben oder kommentiert hat), ob sie deaktiviert sind:
+  `[{ "id", "deactivated" }]`, nur für Benutzer. Es ist der Stand beim Erstellen der Antwort, auch
+  wenn Sie an einem Commit lesen.
 - **Listen sind seitenweise:** `page[number]` und `page[size]`, mit `meta.page` und `links`.
   Nicht dokumentierte Abfrageparameter werden mit 400 `unsupported-parameter` abgelehnt.
 - **Fehler** sind `{ errors: [{ status, title, detail, code, source?, meta? }] }` auf jeder Route,

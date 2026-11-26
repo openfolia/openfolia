@@ -34,7 +34,7 @@ approval-lapsed:
   status: 409
   when:
     'An approval the change set needs no longer holds: its approver lost the role or scope it
-    took. Return it to be reviewed again.'
+    took, or was deactivated. Return it to be reviewed again.'
 archive-failed:
   when: A backup run could not pack the database dump and the files into its archive. Reported on the backup run.
 asset-deleted:
@@ -104,6 +104,9 @@ branding-image-busy:
 branding-image-in-use:
   status: 409
   when: A field of the branding names this image; set the field to another image or null first.
+break-glass-not-usable:
+  status: 422
+  when: 'The account named as the break-glass account could not be signed in to (`meta.problem`): it must be an active administrator with a password.'
 change-set-branch-missing:
   status: 404
   when: The change set's branch is no longer in the repository.
@@ -674,9 +677,60 @@ sandbox-limit-reached:
 sandbox-not-allowed:
   status: 403
   when: 'A public sandbox never does this (`meta.refused`): add users, service accounts, tokens or invitations, take uploads or imports, change a template, or send webhooks, email or backups.'
+scim-address-locked:
+  status: 409
+  when: SCIM changes the email address only of a user it made who has never signed in and holds no permission beyond reading and writing content; change this one in the editor.
+scim-group-name-taken:
+  status: 409
+  when: 'Another provisioned group has this displayName (SCIM `scimType: uniqueness`).'
+scim-invalid-filter:
+  status: 400
+  when: 'The SCIM filter does not parse, or uses an operator or attribute it cannot (`scimType: invalidFilter`).'
+scim-invalid-path:
+  status: 400
+  when: 'A SCIM PATCH path does not parse (`scimType: invalidPath`).'
+scim-invalid-syntax:
+  status: 400
+  when: 'The SCIM request body is not a resource or PatchOp request (`scimType: invalidSyntax`).'
+scim-invalid-value:
+  status: 400
+  when: 'A SCIM attribute is missing or has a value it cannot have, or a member is no provisioned user (`scimType: invalidValue`).'
+scim-mutability:
+  status: 400
+  when: "The SCIM request changes a read-only attribute: id, meta or a user's groups (`scimType: mutability`)."
+scim-no-target:
+  status: 400
+  when: 'A SCIM PATCH path or value filter selects nothing to change, or a remove has no path (`scimType: noTarget`).'
+scim-user-name-taken:
+  status: 409
+  when: 'Another provisioned user has this userName, ignoring case (SCIM `scimType: uniqueness`).'
 search-busy:
   status: 503
   when: Too many searches at once on this server; try again.
+second-factor-expired:
+  status: 410
+  when: "The sign-in's second step ran out (ten minutes), was used or ended with a change of the account: sign in again."
+second-factor-not-applicable:
+  status: 409
+  when: "Your session did not begin with a password or a code by email: single sign-on is the provider's to secure."
+second-factor-not-begun:
+  status: 409
+  when: 'No set-up of two-factor sign-in is open (any more): begin it again.'
+second-factor-off:
+  status: 409
+  when: Two-factor sign-in is off.
+second-factor-on:
+  status: 409
+  when: Two-factor sign-in is on already.
+second-factor-own:
+  status: 409
+  when: An admin resets another person's second factor; one's own is turned off in the account menu, with a password or a code.
+second-factor-own-first:
+  status: 409
+  when: Requiring a second factor of others needs one's own turned on first, so nobody is locked out.
+second-factor-unavailable:
+  status: 409
+  when: The server has no instance secret key (`CCMS_SECRET_KEY`), which two-factor sign-in needs.
 secret-key-missing:
   status: 409
   when:
@@ -696,6 +750,9 @@ service-account-exists:
 session-expired:
   status: 401
   when: The session has ended; sign in again.
+session-limits-crossed:
+  status: 422
+  when: 'A session’s idle limit is longer than a session lasts.'
 shutting-down:
   status: 503
   when: The server is shutting down.
@@ -705,6 +762,15 @@ sign-in-busy:
 sign-in-not-allowed:
   status: 403
   when: The session policy does not let this person sign in this way.
+single-sign-on-own-first:
+  status: 409
+  when: 'Your own session would end with this change: sign in with the identity provider first, or name the account you are signed in with as the break-glass account.'
+single-sign-on-required:
+  status: 409
+  when: The installation requires single sign-on; people sign in with the identity provider.
+single-sign-on-unavailable:
+  status: 409
+  when: 'Single sign-on cannot be required: no identity provider is set up, or none answers now.'
 source-moved:
   status: 409
   when: The source module "…" is gone from the base; validate the import again.
@@ -874,6 +940,9 @@ unreadable-translation:
 unrelated-histories:
   status: 409
   when: The two branches share no history, so they cannot be merged.
+unsubscribe-link-invalid:
+  status: 404
+  when: The unsubscribe link is not one this server made, or the person it was for is gone.
 unsupported-attachment-type:
   status: 422
   when: A file of type … ….
@@ -919,10 +988,13 @@ version-conflict:
   when: The working copy was replaced meanwhile; read it again.
 working-copy-changed:
   status: 409
-  when: Working copies changed while committing; try again.
+  when: Working copies changed while committing, or were committed or discarded again and again while they were read; try again.
+wrong-code:
+  status: 403
+  when: The authenticator app's code or the recovery code is not right, or was used before.
 wrong-password:
   status: 403
-  when: The current password given to change one's password is not right.
+  when: The current password given again (to change it, or to prove yourself for two-factor sign-in) is not right.
 xliff-dtd-forbidden:
   status: 422
   when: 'The XLIFF file declares a DTD: refused, so no entity can expand.'

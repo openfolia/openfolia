@@ -21,7 +21,9 @@ import {
   type StoredRole,
 } from '../core/access-admin.js';
 import type { User } from '../core/user-directory.js';
+import { installationSettings } from '../../settings/repos/installation-settings.tables.js';
 import { roleAssignments, roles, users } from './access.tables.js';
+import { DrizzleRefusedSignIns } from './drizzle-refused-sign-ins.js';
 import { serviceAccountRoles } from './service-accounts.tables.js';
 import {
   findUserIn,
@@ -244,6 +246,32 @@ export class DrizzleAccessAdmin extends AccessAdmin {
       .innerJoin(roles, eq(roles.id, roleAssignments.roleId))
       .where(eq(roleAssignments.userId, userId));
     return new Set(rows.flatMap((r) => r.permissions));
+  }
+
+  async endLostBreakGlass(tx: Transaction): Promise<void> {
+    const db = drizzleOf(tx);
+    const [named] = await db
+      .select({ userId: installationSettings.breakGlassUserId })
+      .from(installationSettings)
+      .where(ne(installationSettings.singleSignOn, 'optional'));
+    if (!named || named.userId === null) return;
+    const refused = new DrizzleRefusedSignIns();
+    // Held before the roles are read: a sign-in under way holds them too, so it is either seen
+    // and ended, or reads the roles after this.
+    await refused.hold(tx, named.userId);
+    const [direct] = await db
+      .select({ id: roles.id })
+      .from(roleAssignments)
+      .innerJoin(roles, eq(roles.id, roleAssignments.roleId))
+      .where(
+        and(
+          eq(roleAssignments.userId, named.userId),
+          eq(roleAssignments.direct, true),
+          arrayContains(roles.permissions, ['admin.roles']),
+        ),
+      )
+      .limit(1);
+    if (!direct) await refused.endPasswordsOf(tx, named.userId);
   }
 
   async countActiveAdmins(tx: Transaction): Promise<number> {

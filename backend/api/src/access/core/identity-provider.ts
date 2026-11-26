@@ -70,11 +70,33 @@ export abstract class IdentityProvider {
   abstract readonly displayName: string | null;
 
   /**
+   * Whether the provider sends the browser back with a form posted from its own site (SAML's
+   * HTTP-POST binding, #376) rather than a redirect: its callback is a `POST`, and the cookie
+   * keeping the sign-in begun travels with a cross-site request (`SameSite=None`).
+   */
+  readonly answersByPost: boolean = false;
+
+  /**
+   * Whether the provider may sign someone in who began nowhere here (SAML's IdP-initiated
+   * sign-in, #376): a callback without a sign-in kept in the browser then reaches `complete`
+   * with an empty `pending`, instead of being refused as expired.
+   */
+  readonly acceptsUnsolicited: boolean = false;
+
+  /**
    * Begins a sign-in: the address to send the browser to, and what to
    * keep until it comes back. Rejects with `SignInFailedError`
    * (`provider-unavailable`) when the provider cannot be reached.
    */
   abstract begin(): Promise<BegunSignIn>;
+
+  /**
+   * Whether the provider answers now (`SignInFailedError` when not), asked before single sign-on
+   * is required (#378): never answered from what it said earlier, where it can be asked.
+   */
+  async answersNow(): Promise<void> {
+    await this.begin();
+  }
 
   /**
    * Finishes a sign-in from the provider's answer (`callback`: the query
@@ -92,6 +114,14 @@ export abstract class IdentityProvider {
    * cannot be reached: signing out here never waits for it).
    */
   abstract signOutUrl(returnTo: string): Promise<string | undefined>;
+
+  /**
+   * This server described for the provider's administrator (SAML's service provider metadata,
+   * #376), as a document to serve; undefined when the provider has none.
+   */
+  serviceMetadata(): string | undefined {
+    return undefined;
+  }
 }
 
 /**

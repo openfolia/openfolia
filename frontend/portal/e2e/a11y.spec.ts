@@ -65,8 +65,60 @@ for (const lang of ['en', 'de'])
       await expect(
         page.locator('[data-update-guide][data-ready]'),
       ).toBeAttached();
-      if (name.includes('ticked'))
+      if (name.includes('ticked')) {
         await page.locator('li.step:visible [data-step-check]').first().check();
+        // Ticking enables the reset button, which fades from the disabled button's 0.45 opacity
+        // to 1 (1 ms under reduced motion). Axe measures the colour as it is drawn: wait for the
+        // end of the fade, or it reads the in-between one (contrast 3.89, #933).
+        const reset = page.locator('[data-guide-reset]');
+        await expect(reset).toBeEnabled();
+        await expect
+          .poll(() => reset.evaluate((el) => getComputedStyle(el).opacity))
+          .toBe('1');
+      }
+      expect(await violations(page)).toEqual([]);
+    });
+
+// The internal site's start page (#897): more cards, an update guide's and an older release's
+// among them, under the brand's colours; and the default one, where none is authored.
+for (const [audience, path] of [
+  ['internal', 'en/'],
+  ['internal', 'de/'],
+  ['plain', 'en/'],
+] as const)
+  test(`the ${audience} start page (${path}) meets WCAG 2.1 AA`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(site(audience, path));
+    expect(await violations(page)).toEqual([]);
+  });
+
+// Older releases (#896, the internal site): an older page with its notice and the release
+// switch open, an older release's own page, and search within it.
+for (const lang of ['en', 'de'])
+  for (const [name, path, open] of [
+    [
+      'older release’s manual, its switch open',
+      'alpha/v/0.8/operating/model=large,power=battery/',
+      true,
+    ],
+    ['older release’s page', 'alpha/v/0.8/', false],
+    [
+      'search in an older release',
+      `search/?q=${PUBLIC_WORD}&release=alpha/0.8`,
+      false,
+    ],
+  ] as const)
+    test(`${name} (${lang}) meets WCAG 2.1 AA`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(site('internal', `${lang}/${path}`));
+      if (open) {
+        await page.locator('.masthead .relswitch summary').click();
+        await expect(page.locator('.relswitch__menu')).toBeVisible();
+      }
+      if (path.startsWith('search'))
+        await expect(page.locator('.result').first()).toBeVisible();
       expect(await violations(page)).toEqual([]);
     });
 

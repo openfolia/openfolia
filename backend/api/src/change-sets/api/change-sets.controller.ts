@@ -33,6 +33,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import { AbandonChangeSetAction } from '../core/actions/abandon-change-set.action.js';
@@ -95,6 +96,7 @@ export class ChangeSetsController {
   ) {}
 
   @Get()
+  @NamesPeople()
   @Paged()
   @Filters(
     {
@@ -140,6 +142,7 @@ export class ChangeSetsController {
   }
 
   @Get(':changeSetId')
+  @NamesPeople()
   @ApiOperation({
     summary: 'Read a change set',
     description: `Any change set for a holder of the \`${READ_CHANGE_SETS}\` permission, only the caller's own for anyone else: another author's change set is then 404, exactly like one that does not exist. \`meta.branchMissing\` says whether its branch is gone from the content repository (reads at it then answer 404 \`change-set-branch-missing\`); it is never recreated. \`meta.behind\`, for an open one, counts the commits its base branch has that its branch does not.`,
@@ -215,6 +218,7 @@ export class ChangeSetsController {
   }
 
   @Post()
+  @NamesPeople()
   @ApiOperation({
     summary: 'Start a change set',
     description:
@@ -259,6 +263,7 @@ export class ChangeSetsController {
   }
 
   @Patch(':changeSetId')
+  @NamesPeople()
   @ApiOperation({
     summary: 'Rename a change set',
     description:
@@ -295,6 +300,7 @@ export class ChangeSetsController {
   }
 
   @Post(':changeSetId/abandon')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Abandon a change set',

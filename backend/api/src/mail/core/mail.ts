@@ -68,6 +68,13 @@ export interface InlineImage {
 
 /** An email ready to send: what the `Mailer` gets. */
 export interface RenderedMail {
+  /** The queued email's ID: its `Message-ID`, the same on every attempt (its idempotency key). */
+  readonly id?: string;
+  /**
+   * The one-click unsubscribe (#884, RFC 8058): the `List-Unsubscribe` URL, which takes a
+   * `POST`; absent for an email nobody subscribed to.
+   */
+  readonly listUnsubscribe?: string;
   readonly from: { readonly name: string; readonly address: string };
   readonly to: MailRecipient;
   readonly subject: string;

@@ -40,6 +40,16 @@
           "build"
         ]
       },
+      "reset-second-factor": {
+        "dependsOn": [
+          "build"
+        ]
+      },
+      "allow-other-sign-ins": {
+        "dependsOn": [
+          "build"
+        ]
+      },
       "rotate-secret-key": {
         "dependsOn": [
           "build"
@@ -132,6 +142,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1160.0",
+    "@node-saml/node-saml": "5.2.0",
     "@openfolia/content-model": "workspace:*",
     "@openfolia/content-repo": "workspace:*",
     "@openfolia/dita": "workspace:*",
@@ -168,6 +179,8 @@
     "db-seed": "node --env-file-if-exists=../../.env.local dist/database/seed.main.js",
     "service-token": "node --env-file-if-exists=../../.env.local dist/database/service-token.main.js",
     "first-admin": "node --env-file-if-exists=../../.env.local dist/database/first-admin.main.js",
+    "reset-second-factor": "node --env-file-if-exists=../../.env.local dist/database/reset-second-factor.main.js",
+    "allow-other-sign-ins": "node --env-file-if-exists=../../.env.local dist/database/allow-other-sign-ins.main.js",
     "rotate-secret-key": "node --env-file-if-exists=../../.env.local dist/secrets/rotate-secret-key.main.js",
     "db-generate": "drizzle-kit generate",
     "blobs-import": "node --env-file-if-exists=../../.env.local dist/blobs/import-git-assets.main.js",
@@ -197,6 +210,7 @@
     "supertest": "7.3.1",
     "typescript": "^6.0.3",
     "unplugin-swc": "2.0.0",
+    "xml-crypto": "6.4.0",
     "yaml": "2.9.1"
   }
 }

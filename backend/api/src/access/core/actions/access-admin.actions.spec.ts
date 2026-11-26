@@ -1,3 +1,4 @@
+import { FakePendingSignIns } from '../../../../tests/fakes/fake-second-factors.js';
 import { FakeAccessAdmin } from '../../../../tests/fakes/fake-access-admin.js';
 import { FakeAuditLog } from '../../../../tests/fakes/fake-audit-log.js';
 import { FakeEmailCodes } from '../../../../tests/fakes/fake-email-codes.js';
@@ -67,7 +68,7 @@ function setUp() {
   const sessions = new FakeSessionStore();
   const links = new FakeSignInLinks();
   const codes = new FakeEmailCodes(admin);
-  const waysIn = new WaysIn(sessions, links, codes);
+  const waysIn = new WaysIn(sessions, links, codes, new FakePendingSignIns());
   /** An open code by email and an open link for `userId`, as "Email me a code" and an invite leave them. */
   const openWaysIn = async (userId: string) => {
     await unit.run(async (tx) => {
@@ -104,7 +105,12 @@ function setUp() {
     openWaysIn,
     mailedWaysIn,
     createRole: new CreateRoleAction(admin, audit, unit),
-    updateRole: new UpdateRoleAction(admin, audit, unit),
+    updateRole: new UpdateRoleAction(
+      admin,
+      audit,
+      unit,
+      new FakeGroupMappings(admin),
+    ),
     deleteRole: new DeleteRoleAction(
       admin,
       new FakeGroupMappings(admin),

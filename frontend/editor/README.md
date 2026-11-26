@@ -548,6 +548,27 @@ acting while in the shell (a refused identity), the shell goes to the sign-in pa
   `#`, taken out of the address at once; it signs in at a click (a mail scanner opening the link
   signs nobody in), and a used or replaced link offers a new code. Flow:
   `frontend/editor-e2e/specs/email-code-sign-in.spec.ts`.
+- **Two-factor sign-in** (#611, `second-factor/`, `sign-in/second-factor.page.ts`,
+  `/sign-in-two-factor`): each way to sign in here answers the second step left to do
+  (`SignedInDocument`'s `secondFactor`), and `afterSignIn` (`sign-in.guards.ts`) goes there with
+  `returnUrl`. The page has no guard: the API's HttpOnly cookie decides, so it asks
+  (`GET /auth/second-factor`). It takes a code or a recovery code, leads through a required set-up
+  and shows its recovery codes before going on; a step that is over, and the lockout, replace the
+  form. One's own sits in the account menu ("Two-factor sign-in", for `password` and `email-code`
+  sessions): `of-second-factor-dialog`, held by the shell. Passwords, secrets and codes live only
+  while the dialog or the page shows them; recovery codes not put away yet ask before the dialog or
+  the shell is left (`SecondFactorDialogState.leave`), and go to the person who asked alone. Admin › Users marks who has it on and resets it; Admin ›
+  Project settings › Installation › Two-factor sign-in says who must (`of-installation-choice`,
+  shared with Review).
+- **Single sign-on required** (#378): `GET /auth/options` says `singleSignOn`, and the page then
+  offers the providers alone; with `emergencySignIn` a quiet "Emergency sign-in" opens the password
+  form in their place (never whose account it is). The options are asked again each time the page
+  opens. A session that ended while the tab was open is said above them (`SignInSession.ended`, set
+  by the shell, in memory). Admin › Project settings › Installation › Single sign-on and sessions
+  (`single-sign-on-topic.component.ts`): requiring it asks first, the emergency account is found by
+  searching active people, and the session limits (`session-limits.ts`) are each saved at once; a
+  refusal that keeps the admin from locking themselves out is said where it happened. Flows:
+  `specs/enforced-sso.spec.ts`, `specs/session-end.spec.ts`.
 - **States:** placeholder rows while the API is asked, no demo users (with the seed command),
   failed with Retry (asks for demo mode and `/me` again), refused (no access). The theme and
   language choices sit under the card, as the account menu is not there.
@@ -682,7 +703,8 @@ Screen 19, over `GET /me/notifications` (`backend/api/README.md`, "Notifications
 - **A row** (`notification-model.ts`, `describe`): the kind's icon, a sentence built from the kind
   and the payload with translation keys (never text from the server), when it happened, and while
   unread a dot, a tint, a medium weight and the word "Unread" for screen readers. Who did it is
-  named when the editor knows them (the person, a demo user), else by role ("A reviewer"). A
+  named when the editor knows them (the person, a demo user; "(deactivated)" after it while they
+  are, #928), else by role ("A reviewer", never marked: nobody is named). A
   release is named by `GET /releases/:id` (its product and product version), read once per page. A click
   marks it read and opens its subject: a revision's review (`/review?cs=`, with `state=` when it
   went back to draft or was approved), the module of a single broken lock (in its revision),
@@ -1303,7 +1325,8 @@ applies at once, is written to the audit log by the API, and says so under the s
 - **Users** (`users.page.ts`, `user-dialog.component.ts`): every person, deactivated ones too,
   with email, roles and status; search (`?q=`, ID, name or email) and status (`?status=`) in the
   address, paged (`?page=`, `?size=`). The dialog adds a person (ID made from the email address,
-  editable) or changes name, email and roles. Deactivate asks first and then says how many of
+  editable) or changes name, email and roles. A row shows Edit; its menu has the rest (sign-in link, reset
+  two-factor, deactivate, …). Deactivate asks first and then says how many of
   the person's locks were released; Reactivate lets them act again.
 - The API keeps at least one active `admin.roles` holder: taking the last one's role, dropping
   `admin.roles` from the last admin role or deactivating the last admin is refused with
@@ -1722,6 +1745,13 @@ generated types and a few helpers; no runtime client dependency.
   the API's stable `code`, `message`, `parameter`, `retryAfter`). `api-error.ts` is the only place
   that reads the error document; shared states and toasts switch on `kind`.
 - Base URL: `API_BASE_URL` (default `/api`); override it with a provider.
+- People: `peopleInterceptor` reads `meta.people` of every answer into `PeopleStates` (#928): which
+  of the people named are deactivated, the last answer read counting. A screen that names someone
+  shows them with `of-person-name` (`src/app/session/person-name.component.ts`: the name, wrapping,
+  and a quiet "(deactivated)"), or, inside a sentence of the translations, with
+  `injectPersonText()` (`src/app/history/history-model.ts`). Only users are marked, never a service
+  account. Outside Admin, a deactivated demo user's name comes from
+  `GET /demo/users?filter[status]=deactivated`, read once someone is named who has none.
 - Identity: `API_DEMO_USER` is an optional signal; while it holds a name, `demoUserInterceptor`
   sends `X-Ccms-User`. `DemoSession` provides it, and only while the API is in demo mode.
 - Reads follow the chosen revision: `ReadRef` holds its branch, and `ApiClient.get` adds `?ref=`

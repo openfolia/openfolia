@@ -109,6 +109,29 @@ export class DrizzleOutboxFeed extends OutboxFeed {
     return moved.length > 0;
   }
 
+  async find(id: number): Promise<OutboxEvent | undefined> {
+    const [row] = await this.database.db
+      .select({
+        tx: sql<string>`${outbox.txId}::text`,
+        id: outbox.id,
+        topic: outbox.topic,
+        key: outbox.key,
+        payload: outbox.payload,
+        createdAt: outbox.createdAt,
+      })
+      .from(outbox)
+      .where(sql`${outbox.id} = ${id}`);
+    return row
+      ? {
+          position: { tx: row.tx, id: Number(row.id) },
+          topic: row.topic,
+          key: row.key,
+          payload: isObject(row.payload) ? row.payload : {},
+          createdAt: row.createdAt,
+        }
+      : undefined;
+  }
+
   async blocked(): Promise<string[]> {
     const rows = await this.database.db
       .select({ name: outboxConsumers.name })

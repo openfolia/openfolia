@@ -25,8 +25,6 @@ import {
 
 /** A caller's own service account token (#861), which the stub API takes. */
 const TOKEN = `ccms_sat_0123456789abcdef_${'6c1e9a40d7f25b83'.repeat(4)}`;
-/** The deprecated shared token (`CCMS_MCP_HTTP_TOKEN`). */
-const SHARED = '9d41f0c7a2e85b36d0c4f17e2a9b58c3';
 
 /**
  * Callers' contexts over stub APIs, one per token: `TOKEN` and those in
@@ -661,16 +659,6 @@ describe('per-caller tokens (#861)', () => {
       expect(answer.headers['Retry-After']).toBeDefined();
     }
     expect((await send('wrong')).status).toBe(401);
-  });
-
-  it('still serves the deprecated shared token, reading as the server’s own account, beside callers’ own', async () => {
-    const own = stubContext();
-    const { send } = handler({ shared: { token: SHARED, context: own } });
-    expect((await send(SHARED)).status).toBe(405);
-    expect((await send(TOKEN)).status).toBe(405);
-    expect((await send(SHARED.replace(/.$/, '0'))).status).toBe(401);
-    // Without it configured, the shared token is just a wrong one.
-    expect((await handler().send(SHARED)).status).toBe(401);
   });
 
   it('never shows one caller what another’s token reads: tag lists, releases, counts', async () => {

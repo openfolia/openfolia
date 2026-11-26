@@ -1732,6 +1732,7 @@ export class TopicConverter {
           {
             local: b.type,
             attributes: new Map(),
+            declarations: new Map(),
             children: [],
             ns: undefined,
             line: 0,

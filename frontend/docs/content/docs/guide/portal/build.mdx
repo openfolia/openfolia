@@ -35,16 +35,20 @@ CCMS_PORTAL_AUDIENCE=public \
 pnpm nx run portal:site
 ```
 
-| Setting                 | What                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------ |
-| `CCMS_PORTAL_API_URL`   | The API's address, `https://` (plain `http` only to this machine). Required.         |
-| `CCMS_PORTAL_TOKEN`     | The service account's token. Sent only in the `Authorization` header. Required.      |
-| `CCMS_PORTAL_AUDIENCE`  | The audience level. Required.                                                        |
-| `CCMS_PORTAL_LANGUAGES` | The languages, comma-separated (default: every configured language).                 |
-| `CCMS_PORTAL_RELEASES`  | Release IDs, comma-separated (default: each product's newest release not withdrawn). |
-| `CCMS_PORTAL_OUT_DIR`   | Where the sites are written (default: `frontend/portal/dist`).                       |
-| `CCMS_PORTAL_BASE_PATH` | The path the sites are served under, starting and ending with `/` (default: `/`).    |
-| `CCMS_PORTAL_BRANDING`  | `on` (default) or `off`: the organisation's branding, or OpenFolia's default look.   |
+| Setting                            | What                                                                                                                                                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CCMS_PORTAL_API_URL`              | The API's address, `https://` (plain `http` only to this machine). Required.                                                                                                                                           |
+| `CCMS_PORTAL_TOKEN`                | The service account's token. Sent only in the `Authorization` header. Required.                                                                                                                                        |
+| `CCMS_PORTAL_AUDIENCE`             | The audience level. Required.                                                                                                                                                                                          |
+| `CCMS_PORTAL_LANGUAGES`            | The languages, comma-separated (default: every configured language).                                                                                                                                                   |
+| `CCMS_PORTAL_RELEASES`             | Release IDs, comma-separated, several of one product allowed (default: see the next row).                                                                                                                              |
+| `CCMS_PORTAL_RELEASES_PER_PRODUCT` | How many of each product's newest releases not withdrawn, `1` to `20` (default: `1`). The newest is at the usual addresses, older ones under `v/<release>/`: [Reading an older release](/guide/portal/older-releases). |
+| `CCMS_PORTAL_OLDER_NOINDEX`        | `on` (default) or `off`: older releases' pages ask search engines not to index them.                                                                                                                                   |
+| `CCMS_PORTAL_OUT_DIR`              | Where the sites are written (default: `frontend/portal/dist`).                                                                                                                                                         |
+| `CCMS_PORTAL_BASE_PATH`            | The path the sites are served under, starting and ending with `/` (default: `/`).                                                                                                                                      |
+| `CCMS_PORTAL_BRANDING`             | `on` (default) or `off`: the organisation's branding, or OpenFolia's default look.                                                                                                                                     |
+| `CCMS_PORTAL_START`                | The manual that is the start page, by ID; several, comma-separated, are tried in order (default: none, the default start page): [Setting up the start page](/guide/portal/start-page).                                 |
+| `CCMS_PORTAL_URL`                  | The portal's own address, for example `https://docs.example.com`: a link on the start page to one of its pages is then checked, and opens in the reader's language.                                                    |
 
 The output holds a folder per language (`en/`, `de/`) and an `index.html` that sends readers to
 the first. It replaces the output folder only once every language is built. Before that, the build

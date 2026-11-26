@@ -1,3 +1,4 @@
+import { SecondFactorSealedSecretSource } from '../access/repos/drizzle-second-factors.js';
 import type { SealedSecretSource } from '../base/core/secret-sealer.js';
 import {
   BackupIdentitySealedSecretSource,
@@ -23,5 +24,6 @@ export function sealedSecretSources(): SealedSecretSource[] {
     new BackupS3SealedSecretSource(),
     new BackupIdentitySealedSecretSource(),
     new MailSealedSecretSource(),
+    new SecondFactorSealedSecretSource(),
   ];
 }

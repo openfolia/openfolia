@@ -124,6 +124,8 @@ describe('sign-in with a code by email alone (#639)', () => {
       passwordReset: false,
       emailCode: true,
       providers: 0,
+      singleSignOn: false,
+      emergencySignIn: false,
     });
   });
 

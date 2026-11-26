@@ -22,7 +22,14 @@ import {
   InvalidContentError,
   NotFoundError,
 } from '../../../base/core/errors.js';
-import { ReadableContent } from '../../../content/core/readable-content.js';
+import type {
+  OpenSnapshotAction,
+  OpenSnapshotInput,
+} from '../../../content/core/actions/open-snapshot.action.js';
+import {
+  ReadableContent,
+  type ReadPermission,
+} from '../../../content/core/readable-content.js';
 import {
   type ChangeSet,
   changeSetBranch,
@@ -33,6 +40,7 @@ import type { WorkingCopyContent } from '../working-copy.js';
 import {
   LIVE_PREVIEW_AUTHOR_ONLY,
   OpenWorkingCopiesAction,
+  WorkingCopyGoneError,
 } from './open-working-copies.action.js';
 
 const EDITING: Permission[] = [
@@ -94,11 +102,23 @@ function setUp(content: FakeContent = {}) {
   const copies = new FakeWorkingCopyStore();
   const uploads = new FakeAssetUploads();
   const unit = new FakeUnitOfWork();
+  /** Who opens the branch how, and what was done before each opening. */
+  const opened: OpenSnapshotInput[] = [];
+  let permission: ReadPermission = 'content.read.draft';
+  let opening = () => Promise.resolve();
+  const openSnapshot = {
+    handle: async (input: OpenSnapshotInput) => {
+      opened.push(input);
+      await opening();
+      return new ReadableContent(branch, input.actor, permission);
+    },
+  } as OpenSnapshotAction;
   const action = new OpenWorkingCopiesAction(
     new FakeChangeSetStore([mine]),
     copies,
     unit,
     uploads,
+    openSnapshot,
   );
   const save = (subject: LockSubject, saved: WorkingCopyContent) =>
     unit.run((tx) =>
@@ -114,17 +134,25 @@ function setUp(content: FakeContent = {}) {
         0,
       ),
     );
-  const open = (actor: Actor = author, permission = 'content.read.draft') =>
-    action.handle({
-      actor,
-      snapshot: new ReadableContent(
-        branch,
-        actor,
-        permission as 'content.read.draft',
-      ),
-      changeSetId: id,
-    });
-  return { mine, branch, copies, unit, uploads, save, open };
+  const open = (actor: Actor = author, as?: ReadPermission) => {
+    permission = as ?? 'content.read.draft';
+    return action.handle({ actor, changeSetId: id });
+  };
+  /** Runs `during` while the branch is being opened. */
+  const whileOpening = (during: () => Promise<void>) => {
+    opening = during;
+  };
+  return {
+    mine,
+    branch,
+    copies,
+    unit,
+    uploads,
+    save,
+    open,
+    opened,
+    whileOpening,
+  };
 }
 
 const moduleSubject = (moduleId: string, lang = 'en'): LockSubject => ({
@@ -134,6 +162,46 @@ const moduleSubject = (moduleId: string, lang = 'en'): LockSubject => ({
 });
 
 describe('OpenWorkingCopiesAction', () => {
+  it('opens the branch, afresh, once it has listed the working copies (#935)', async () => {
+    const t = setUp();
+    await t.save(moduleSubject('new'), withText('new', 'Typed.'));
+    await t.save({ type: 'manual', manualId: 'op' }, manifest('op', ['new']));
+    await t.save(
+      { type: 'design', designId: 'brand' },
+      PageDesign.parse({
+        schemaVersion: 1,
+        id: 'brand',
+        name: 'Typed',
+        preset: 'minimal',
+        colours: { primary: '#1f4e79', accent: '#b45309', text: '#1f2328' },
+      }),
+    );
+    await t.save(
+      { type: 'template', templateId: 'house', path: 'manual.typ' },
+      { schemaVersion: 1, text: 'x' },
+    );
+    // The save point that drops the copy: the branch holds it by then.
+    t.whileOpening(() =>
+      t.unit.run(async (tx) => {
+        await t.copies.removeAllOf(tx, t.mine.id);
+      }),
+    );
+    const { content } = await t.open();
+    expect(t.opened).toEqual([
+      { actor: author, ref: t.mine.branch, fresh: true },
+    ]);
+    // Listed, then gone: never the file as it was before it.
+    for (const read of [
+      () => content.module('new', 'en'),
+      () => content.resolve('op', { model: 'large' }, 'en'),
+      () => content.pageDesign('brand'),
+      () => content.designTemplateFile('house', 'manual.typ'),
+    ]) {
+      await expect(read()).rejects.toBeInstanceOf(WorkingCopyGoneError);
+    }
+    await expect(content.module('other', 'en')).resolves.toBeUndefined();
+  });
+
   it('reads a module’s working copy in place of its file, and the file where there is none', async () => {
     const t = setUp({
       modules: [withText('charging', 'Committed.'), withText('other', 'Kept.')],

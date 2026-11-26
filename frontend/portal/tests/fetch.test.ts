@@ -153,6 +153,7 @@ const run = (
     languages?: string[];
     log?: (line: string) => void;
     branding?: boolean;
+    start?: string[];
   } = {},
 ) => {
   asked = [];
@@ -166,6 +167,8 @@ const run = (
       releases: undefined,
       assetsDir,
       branding: over.branding ?? true,
+      start: over.start,
+      portalOrigin: 'https://docs.example.com',
       log: over.log ?? (() => undefined),
     },
   );
@@ -346,17 +349,17 @@ describe('the fetch step', () => {
     );
   });
 
-  it('refuses two releases of one product', async () => {
-    const release = (id: string) => ({
+  it('builds two releases of one product it was given: the newer at today’s addresses, the older under v/ (#896)', async () => {
+    const release = (id: string, revision: string, publishedAt: string) => ({
       data: {
         type: 'Release',
         id,
         attributes: {
           product: 'alpha',
           productFacet: 'product',
-          revision: id,
+          revision,
           tag: TAG,
-          publishedAt: '2026-11-01T00:00:00Z',
+          publishedAt,
           notes: null,
           notesByLanguage: {},
           withdrawal: null,
@@ -367,24 +370,97 @@ describe('the fetch step', () => {
       '0193a8d0-0000-7000-8000-000000000001',
       '0193a8d0-0000-7000-8000-000000000002',
     ];
-    const two = api(
-      Object.fromEntries(ids.map((id) => [`/releases/${id}`, release(id)])),
+    const two = api({
+      [`/releases/${ids[0]}`]: release(ids[0]!, '1.0', '2026-10-01T00:00:00Z'),
+      [`/releases/${ids[1]}`]: release(ids[1]!, '2.0', '2026-11-01T00:00:00Z'),
+    });
+    const [build] = await fetchSnapshots(
+      new ApiClient(new URL('https://api.example.com/api/'), TOKEN, {
+        fetch: two,
+      }),
+      {
+        audience: 'public',
+        languages: undefined,
+        releases: ids,
+        assetsDir,
+        branding: false,
+        log: () => undefined,
+      },
     );
-    await expect(
+    expect(build!.snapshot.releases.map((r) => r.revision)).toEqual(['2.0']);
+    expect(build!.snapshot.older.map((r) => [r.revision, r.segment])).toEqual([
+      ['1.0', '1.0'],
+    ]);
+    expect(build!.snapshot.olderNoindex).toBe(true);
+  });
+
+  it('builds each product’s newest releases up to the setting, never a withdrawn one (#896)', async () => {
+    const release = (
+      n: number,
+      product: string,
+      revision: string,
+      withdrawn = false,
+    ) => ({
+      type: 'Release',
+      id: `0193a8d0-0000-7000-8000-00000000000${n}`,
+      attributes: {
+        product,
+        productFacet: 'product',
+        revision,
+        tag: TAG,
+        publishedAt: `2026-11-0${n}T00:00:00Z`,
+        notes: null,
+        notesByLanguage: {},
+        withdrawal: withdrawn ? { at: '2026-11-09T00:00:00Z' } : null,
+      },
+    });
+    const releases = api({
+      '/releases': {
+        // Not in date order: the build sorts them, newest first.
+        data: [
+          release(2, 'alpha', 'B-2'),
+          release(5, 'alpha', '_5'),
+          release(6, 'alpha', '6', true),
+          release(4, 'alpha', 'b-2'),
+          release(1, 'alpha', '1'),
+          release(3, 'beta', '3'),
+        ],
+        meta: { page: { lastPage: 1 } },
+      },
+    });
+    const choose = (releasesPerProduct: number | undefined) =>
       fetchSnapshots(
         new ApiClient(new URL('https://api.example.com/api/'), TOKEN, {
-          fetch: two,
+          fetch: releases,
         }),
         {
           audience: 'public',
           languages: undefined,
-          releases: ids,
+          releases: undefined,
+          releasesPerProduct,
+          olderNoindex: false,
           assetsDir,
           branding: false,
           log: () => undefined,
         },
-      ),
-    ).rejects.toThrow('two releases of one product');
+      );
+    // The default: each product's newest that is not withdrawn, as before.
+    const [one] = await choose(undefined);
+    expect(one!.snapshot.releases.map((r) => r.revision)).toEqual(['_5', '3']);
+    expect(one!.snapshot.older).toEqual([]);
+
+    const [three] = await choose(3);
+    expect(three!.snapshot.releases.map((r) => r.revision)).toEqual([
+      '_5',
+      '3',
+    ]);
+    // In lowercase where that is a safe segment no other release of the product has taken
+    // (`B-2` after `b-2`), else the release's ID.
+    expect(three!.snapshot.older.map((r) => [r.revision, r.segment])).toEqual([
+      ['b-2', 'b-2'],
+      ['B-2', '0193a8d0-0000-7000-8000-000000000002'],
+    ]);
+    expect(three!.snapshot.olderNoindex).toBe(false);
   });
 
   it('refuses an ID it would write as a path', async () => {
@@ -664,6 +740,135 @@ describe('the fetch step', () => {
     await expect(run(viaSource, { languages: ['de'] })).rejects.toThrow(
       'module a for "internal"',
     );
+  });
+
+  describe('the authored start page (#897)', () => {
+    const variant = (id: string, module: string, blocks: unknown[] = []) => ({
+      data: {
+        type: 'ResolvedManual',
+        id: `${id}/all/en`,
+        attributes: {
+          title: id,
+          lang: 'en',
+          variant: {},
+          entries: [{ kind: 'module', module, title: id, lang: 'en', blocks }],
+          origins: {},
+          anchors: {},
+        },
+      },
+    });
+    const listed = (id: string, over: Record<string, unknown> = {}) => ({
+      type: 'Manual',
+      id,
+      attributes: { title: id, audience: 'public', ...over },
+      meta: { variants: [{ slug: 'all', label: 'All', values: {} }] },
+    });
+    const content = (
+      manuals: unknown[],
+      over: Record<string, unknown> = {},
+    ) => ({
+      '/manuals': { data: manuals, meta: { page: { lastPage: 1 } } },
+      '/manuals/home/variants/all/en': variant('home', 'a'),
+      ...over,
+    });
+    const logs = () => {
+      const lines: string[] = [];
+      return { lines, log: (line: string) => void lines.push(line) };
+    };
+
+    it('is taken out of the manuals, whole, and only when it is set', async () => {
+      const answer = api(content([listed('m'), listed('home')]));
+      const [set] = await run(answer, { start: ['home'] });
+      expect(set!.snapshot.start).toMatchObject({
+        manual: { id: 'home' },
+        origin: 'https://docs.example.com',
+        basePath: '/',
+      });
+      expect(set!.snapshot.releases[0]!.manuals.map((m) => m.id)).toEqual([
+        'm',
+      ]);
+      const [unset] = await run(answer);
+      expect(unset!.snapshot.start).toBeNull();
+      expect(unset!.snapshot.releases[0]!.manuals).toHaveLength(2);
+    });
+
+    it('is the first of several that there is, and none of them is listed', async () => {
+      const answer = api(
+        content([listed('m'), listed('home'), listed('away')], {
+          '/manuals/away/variants/all/en': variant('away', 'a'),
+        }),
+      );
+      const { lines, log } = logs();
+      const [built] = await run(answer, {
+        start: ['gone', 'away', 'home'],
+        log,
+      });
+      expect(built!.snapshot.start!.manual.id).toBe('away');
+      expect(built!.snapshot.releases[0]!.manuals.map((m) => m.id)).toEqual([
+        'm',
+      ]);
+      expect(lines).toContain('Start page en: manual away, 0 featured link(s)');
+    });
+
+    it('falls back to the default page when no release has it for this audience, and says so', async () => {
+      const { lines, log } = logs();
+      const [built] = await run(api({}), { start: ['home'], log });
+      expect(built!.snapshot.start).toBeNull();
+      expect(lines).toContainEqual(
+        expect.stringContaining('no released manual home for this audience'),
+      );
+    });
+
+    it('reports a featured link to a manual that is not there', async () => {
+      const { lines, log } = logs();
+      const item = (title: string, href: string, n: number) => ({
+        id: `a--l-${n}`,
+        content: [
+          { type: 'text', text: title, marks: [{ type: 'link', href }] },
+        ],
+        blocks: [],
+      });
+      await run(
+        api(
+          content([listed('m'), listed('home')], {
+            '/manuals/home/variants/all/en': variant('home', 'a', [
+              {
+                type: 'list',
+                id: 'a--l',
+                ordered: false,
+                items: [
+                  item('Kept', 'https://docs.example.com/en/alpha/m/', 0),
+                  item('Gone', 'https://docs.example.com/en/alpha/gone/', 1),
+                ],
+              },
+            ]),
+          }),
+        ),
+        { start: ['home'], log },
+      );
+      expect(lines).toContain('Start page en: manual home, 1 featured link(s)');
+      expect(lines.filter((l) => l.includes('left out'))).toEqual([
+        expect.stringContaining('“Gone” leads to'),
+      ]);
+    });
+
+    it('refuses the build when it, or a module in it, is above the audience', async () => {
+      await expect(
+        run(api(content([listed('home', { audience: 'internal' })])), {
+          start: ['home'],
+        }),
+      ).rejects.toThrow(AudienceError);
+      await expect(
+        run(
+          api(
+            content([listed('home')], {
+              '/manuals/home/variants/all/en': variant('home', 'b'),
+            }),
+          ),
+          { start: ['home'] },
+        ),
+      ).rejects.toThrow('holds module b for "internal"');
+    });
   });
 
   describe('update guides (#907)', () => {

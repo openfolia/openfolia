@@ -13,7 +13,6 @@ import { MailOutbox } from '../../../mail/core/mail-outbox.js';
 import { AccessAdmin } from '../access-admin.js';
 import { beginAccessChange } from '../access-changes.js';
 import { type Actor, UserEmail } from '../actor.js';
-import { beginSession } from '../begin-session.js';
 import {
   checkNewPassword,
   PASSWORD_PROVIDER,
@@ -23,7 +22,14 @@ import {
 } from '../passwords.js';
 import { ActorAction, type UnguardedAction } from '../policy.js';
 import { SessionPolicy } from '../session-policy.js';
-import { SessionStore } from '../sessions.js';
+import {
+  type BrowserTokens,
+  heldBefore,
+  SessionStart,
+  type StartedSignIn,
+} from '../session-start.js';
+import { SignInNotAllowedError } from '../sign-in-rules.js';
+import { singleSignOnRequired } from '../single-sign-on.js';
 import {
   hashSignInLinkToken,
   mintSignInLinkToken,
@@ -72,7 +78,8 @@ export interface MadeSignInLink {
  * in the transaction that makes it. Recorded as `user.invite` or
  * `user.password-reset-requested` (`data.via` `admin`), with `emailed` and `replaced`: IDs only,
  * never the link or its hash. 404 for no such user; 409 `user-deactivated`,
- * `password-sign-in-off`. Under the access lock, the admin checked again
+ * `password-sign-in-off`, and `single-sign-on-required` (#378) for a password nobody may sign in
+ * with (anyone's but the break-glass account's). Under the access lock, the admin checked again
  * (`beginAccessChange`).
  */
 @Injectable()
@@ -90,6 +97,7 @@ export class CreateSignInLinkAction extends ActorAction<
     private readonly mail: MailOutbox,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sessionPolicy: SessionPolicy,
     private readonly sandbox: Sandbox = Sandbox.OFF,
   ) {
     super();
@@ -110,6 +118,11 @@ export class CreateSignInLinkAction extends ActorAction<
       await beginAccessChange(this.admin, tx, actor);
       const user = await this.admin.findUser(tx, userId);
       if (!user) throw new NotFoundError(`No user "${userId}".`);
+      if (
+        !(await this.sessionPolicy.maySignIn(userId, PASSWORD_PROVIDER, tx))
+      ) {
+        throw singleSignOnRequired();
+      }
       if (user.deactivatedAt !== null) {
         throw new ConflictError(
           'user-deactivated',
@@ -249,7 +262,10 @@ export class WithdrawInviteAction extends ActorAction<
 
 /** Why a link opens nothing. */
 export type LinkRefusal =
-  /** Malformed, unknown, used, revoked, or its user deactivated. */
+  /**
+   * Malformed, unknown, used, revoked, its user deactivated, or its password one nobody may sign
+   * in with (#378).
+   */
   | 'link-invalid'
   /** Past its time. */
   | 'link-expired';
@@ -276,6 +292,7 @@ export class ReadSignInLinkAction implements UnguardedAction {
     private readonly links: SignInLinks,
     private readonly admin: AccessAdmin,
     private readonly unit: UnitOfWork,
+    private readonly sessionPolicy: SessionPolicy,
   ) {}
 
   async handle({
@@ -294,6 +311,9 @@ export class ReadSignInLinkAction implements UnguardedAction {
       this.admin.findUser(tx, link.userId),
     );
     if (!user || user.deactivatedAt !== null) {
+      return { refused: 'link-invalid' };
+    }
+    if (!(await this.sessionPolicy.maySignIn(user.id, PASSWORD_PROVIDER))) {
       return { refused: 'link-invalid' };
     }
     return {
@@ -325,20 +345,21 @@ export class SetPasswordWithLinkAction implements UnguardedAction {
     private readonly admin: AccessAdmin,
     private readonly passwords: PasswordStore,
     private readonly hasher: PasswordHasher,
-    private readonly sessions: SessionStore,
+    private readonly start: SessionStart,
     private readonly sessionPolicy: SessionPolicy,
     private readonly waysIn: WaysIn,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
   ) {}
 
-  async handle(input: {
-    readonly token: string;
-    readonly password: string;
-    readonly previousToken?: string | undefined;
-  }): Promise<
-    | { readonly userId: string; readonly token: string }
-    | { readonly refused: LinkRefusal | 'sign-in-not-allowed' }
+  async handle(
+    input: {
+      readonly token: string;
+      readonly password: string;
+    } & BrowserTokens,
+  ): Promise<
+    | ({ readonly userId: string } & StartedSignIn)
+    | { readonly refused: LinkRefusal }
   > {
     refuseWhenOff(this.settings);
     if (!SIGN_IN_LINK_PATTERN.test(input.token)) {
@@ -356,10 +377,10 @@ export class SetPasswordWithLinkAction implements UnguardedAction {
     if (!user || user.deactivatedAt !== null) {
       return { refused: 'link-invalid' };
     }
-    checkNewPassword(input.password, { email: user.email });
     if (!(await this.sessionPolicy.maySignIn(user.id, PASSWORD_PROVIDER))) {
-      return { refused: 'sign-in-not-allowed' };
+      return { refused: 'link-invalid' };
     }
+    checkNewPassword(input.password, { email: user.email });
     const passwordHash = await this.hasher.hash(input.password);
     try {
       return await this.unit.run(async (tx) => {
@@ -379,31 +400,33 @@ export class SetPasswordWithLinkAction implements UnguardedAction {
         await this.passwords.set(tx, taken.userId, passwordHash);
         // Every session, link and open code by email (#645), before this browser's session.
         const sessionsEnded = await this.waysIn.endAll(tx, taken.userId);
-        const token = await beginSession(
-          { sessions: this.sessions, policy: this.sessionPolicy },
-          tx,
-          {
-            userId: taken.userId,
-            provider: PASSWORD_PROVIDER,
-            previousToken: input.previousToken,
-            now: this.now(),
-          },
-        );
+        const started = await this.start.begin(tx, {
+          userId: taken.userId,
+          provider: PASSWORD_PROVIDER,
+          held: heldBefore(input),
+          now: this.now(),
+        });
         const self: Actor = { kind: 'user', id: taken.userId, roles: [] };
         await this.auditLog.record(tx, self, {
           action: 'user.password-set',
           subject: { type: 'user', id: taken.userId },
           data: { via: taken.kind, sessionsEnded },
         });
-        await this.auditLog.record(tx, self, {
-          action: 'user.sign-in',
-          subject: { type: 'user', id: taken.userId },
-          data: { method: 'password', provider: PASSWORD_PROVIDER },
-        });
-        return { userId: taken.userId, token };
+        // Not with a second step still to take (#611): that records the sign-in.
+        if ('token' in started) {
+          await this.auditLog.record(tx, self, {
+            action: 'user.sign-in',
+            subject: { type: 'user', id: taken.userId },
+            data: { method: 'password', provider: PASSWORD_PROVIDER },
+          });
+        }
+        return { userId: taken.userId, ...started };
       });
     } catch (error) {
-      if (error instanceof LinkGone) return { refused: 'link-invalid' };
+      // Rolled back, the password with it.
+      if (error instanceof LinkGone || error instanceof SignInNotAllowedError) {
+        return { refused: 'link-invalid' };
+      }
       throw error;
     }
   }
@@ -437,20 +460,31 @@ export class ForgotPasswordAction implements UnguardedAction {
     private readonly mail: MailOutbox,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly sessionPolicy: SessionPolicy,
   ) {}
 
-  /** Whether "Forgot password" is offered: password sign-in on, and email carrying links. */
-  get offered(): boolean {
-    return this.settings.enabled && this.mail.linksEnabled;
+  /**
+   * Whether "Forgot password" is offered: password sign-in on, email carrying links, and single
+   * sign-on not required (#378): then not for the break-glass account either, whose reset an
+   * admin makes.
+   */
+  async offered(): Promise<boolean> {
+    return (
+      this.settings.enabled &&
+      this.mail.linksEnabled &&
+      !(await this.sessionPolicy.requiresSingleSignOn())
+    );
   }
 
   async handle({ email }: { email: string }): Promise<void> {
-    if (!this.offered) return;
+    if (!(await this.offered())) return;
     const address = email.trim();
     if (!UserEmail.safeParse(address).success) return;
     await this.unit.run(async (tx) => {
       // One at a time: two asks at once make one link, not a clash on the person's one link.
       await this.admin.lock(tx);
+      // Again, held: single sign-on required meanwhile either waits and ends the link, or is seen.
+      if (await this.sessionPolicy.requiresSingleSignOn(tx)) return;
       const userId = await this.identities.userWithEmail(tx, address);
       if (userId === undefined) return;
       const user = await this.admin.findUser(tx, userId);

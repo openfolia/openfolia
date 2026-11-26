@@ -80,6 +80,42 @@ Ablehnung durch den Mailserver ist sofort endgültig. Eine E-Mail, die endgülti
 im [Audit-Log](/de/guide/admin/audit-log) als `mail.failed`, mit dem Grund, nie mit Adresse oder
 Inhalt.
 
+## Benachrichtigungs-E-Mails
+
+Jede Person wählt je Art von Benachrichtigung, ob sie auch per E-Mail kommt, sofort oder in einer
+täglichen Zusammenfassung ([Benachrichtigungen](/de/guide/getting-started/notifications)). Diese
+E-Mails brauchen neben dem Mailserver und dem [Instanzschlüssel](/de/guide/self-hosting/secret-key)
+`CCMS_PUBLIC_URL`: Die Schaltfläche in jeder E-Mail und der Link zum Abbestellen führen dorthin.
+Fehlt eines der drei, sagt die Seite **Benachrichtigungen**, dass E-Mail ausgeschaltet ist und
+warum; die Auswahl gilt weiter für die Glocke, und nichts wird zum Versand vorgemerkt.
+
+Zwei Einstellungen, beide optional:
+
+```sh
+CCMS_NOTIFICATIONS_DIGEST_HOUR=8          # Stunde der täglichen Zusammenfassung, 0–23, für Personen ohne eigene Wahl
+CCMS_NOTIFICATIONS_EMAILS_PER_HOUR=20     # höchstens so viele sofortige E-Mails pro Person und Stunde, 1–1000
+```
+
+- `CCMS_NOTIFICATIONS_DIGEST_HOUR` gilt in der Zeitzone jeder Person (UTC für Personen ohne
+  Zeitzone). Standard `8`, also 08:00 Uhr.
+- `CCMS_NOTIFICATIONS_EMAILS_PER_HOUR` ist ein Sicherheitsnetz: Darüber hinaus warten die E-Mails
+  einer Person auf ihre tägliche Zusammenfassung. Standard `20`.
+
+Jede Benachrichtigungs-E-Mail trägt die Kopfzeilen `List-Unsubscribe` und `List-Unsubscribe-Post`
+(RFC 8058), damit ein Mailprogramm das Abbestellen mit einem Klick anbieten kann. Beide führen zu
+`POST <öffentliche URL>/api/notifications/unsubscribe/<token>`. Das braucht keine Anmeldung und
+stellt nur die Arten, um die es in der E-Mail ging, für diese Person und auf dem Weg, auf dem sie
+kam (sofort oder in der Zusammenfassung), auf **Nur in der App**. Der Token ist mit dem geheimen
+Schlüssel der Instanz versiegelt. Der Link im Text der E-Mail öffnet eine Seite des Editors, die
+vor dem Absenden fragt. Ihr Reverse Proxy muss diesen Pfad
+wie den Rest von `/api` an die API weitergeben.
+
+Benachrichtigungs-E-Mails werden wie die anderen wiederholt. Jede gesendete steht im
+[Audit-Log](/de/guide/admin/audit-log) als `mail.sent`, jede endgültig gescheiterte als
+`mail.failed`, mit ihrer Art und der Person, für die sie war, nie mit ihrem Inhalt; ein
+Abbestellen steht dort als `notification.unsubscribe`. **Verwaltung › System** zählt die
+Fehlschläge der letzten 7 Tage und zeigt den jüngsten ([Die Seite System](/de/guide/admin/system#e-mail)).
+
 ## Was gespeichert bleibt
 
 Eine wartende E-Mail liegt versiegelt in der Datenbank, bis sie versendet ist oder endgültig

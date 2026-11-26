@@ -11,7 +11,13 @@ import {
   type RoleDefinition,
   type StoredRole,
 } from '../access-admin.js';
-import { beginAccessChange, keepAnAdmin } from '../access-changes.js';
+import {
+  applyGroupRolesOf,
+  beginAccessChange,
+  keepAnAdmin,
+} from '../access-changes.js';
+import { GroupMappings } from '../group-mappings.js';
+import { GLOBAL_PERMISSIONS } from '../permissions.js';
 import type { Actor } from '../actor.js';
 import { ActorAction } from '../policy.js';
 import { grantOf } from './create-role.action.js';
@@ -50,6 +56,7 @@ export class UpdateRoleAction extends ActorAction<
     private readonly admin: AccessAdmin,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
+    private readonly mappings: GroupMappings,
   ) {
     super();
   }
@@ -97,6 +104,32 @@ export class UpdateRoleAction extends ActorAction<
           subject: { type: 'role', id: roleId },
           data: { changed: [...changed], ...grantOf(after) },
         });
+        // Whether a SCIM group may give the role turns on its global permissions (#377): when
+        // they change, its members through such a group gain or lose it now, not at their next
+        // membership change.
+        const global = (permissions: readonly string[]) =>
+          [...GLOBAL_PERMISSIONS].filter((p) => permissions.includes(p)).join();
+        if (global(before.permissions) !== global(after.permissions)) {
+          const users = new Set<string>();
+          for (const group of await this.mappings.groupsForRole(tx, roleId)) {
+            for (const userId of await this.mappings.usersInGroup(tx, group)) {
+              users.add(userId);
+            }
+          }
+          let tookAdmin = false;
+          for (const userId of users) {
+            tookAdmin =
+              (await applyGroupRolesOf(
+                this.admin,
+                this.mappings,
+                this.auditLog,
+                tx,
+                actor,
+                userId,
+              )) || tookAdmin;
+          }
+          if (tookAdmin) await keepAnAdmin(this.admin, tx);
+        }
         return { ...after, holders };
       },
       BOUNDED,

@@ -174,4 +174,35 @@ describe('renderMail', () => {
     });
     expect(mail.to.name).toBe('Ann Bcc: b@example.com');
   });
+
+  it.each([
+    [
+      'en',
+      'Pat signed in to Docs with the emergency account',
+      'Open the audit log',
+    ],
+    [
+      'de',
+      'Pat hat sich bei Docs mit dem Notfallkonto angemeldet',
+      'Audit-Log öffnen',
+    ],
+  ] as const)(
+    'tells an administrator of a use of the emergency account (%s, #378)',
+    (language, subject, label) => {
+      const mail = renderMail({
+        template: 'emergency-sign-in',
+        params: { by: 'Pat' },
+        language,
+        to: { address: 'a@example.com' },
+        from: 'docs@example.com',
+        brand: { productName: 'Docs', primary: null, logo: null },
+        publicUrl: 'https://docs.example.org',
+      });
+      expect(mail.subject).toBe(subject);
+      expect(mail.html).toContain(label);
+      expect(mail.text).toContain(
+        'https://docs.example.org/admin/audit?action=user.break-glass-sign-in',
+      );
+    },
+  );
 });

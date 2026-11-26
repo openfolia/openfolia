@@ -1,0 +1,21 @@
+---
+import ManualView from '../../../../../../components/ManualView.astro';
+import { manualPages, snapshot, type ManualPage, type SnapshotOlderRelease } from '../../../../../../lib/site.ts';
+
+// A manual page of an older release (#896): `<product>/v/<release>/<manual>/<variant>/`.
+export function getStaticPaths() {
+  return manualPages(snapshot().older).map((page) => ({
+    params: {
+      product: page.release.product,
+      release: (page.release as SnapshotOlderRelease).segment,
+      manual: page.manual.id,
+      variant: page.variant.slug,
+    },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props as { page: ManualPage };
+---
+
+<ManualView page={page} />

@@ -24,10 +24,12 @@ interface Server {
   token: 'service' | 'session' | 401 | 'down';
   /** Every other call refused 401 too (a session that ended). */
   refuseAll?: boolean;
-  /** `GET /auth/providers` (#37): none unless set. */
-  providers?: readonly { id: string; name: string | null }[];
+  /** `GET /auth/providers` (#37): none unless set, or not reached. */
+  providers?: readonly { id: string; name: string | null }[] | 'down';
   /** `GET /auth/options` (#610): password sign-in on, with "Forgot password" or not. */
   password?: { reset: boolean };
+  /** `GET /auth/options` (#378): single sign-on required, with an emergency account or not. */
+  singleSignOn?: { emergency: boolean };
   /** `POST /auth/password/sign-in`: the password is right (then `/me` is the session) or not. */
   passwordRight?: boolean;
   /** `GET /auth/options` (#634): "Email me a code" offered. */
@@ -36,6 +38,12 @@ interface Server {
   codeRight?: boolean;
   /** The bodies the code routes got (#634). */
   codeRequests?: unknown[];
+  /** The second step the password leaves to do (#611); once it is done, nothing is open. */
+  secondFactor?: 'verify' | 'set-up';
+  /** How the next code is answered: right, wrong, or the step over or locked. */
+  secondCode?: 'right' | 'wrong-code' | 'second-factor-expired' | 'locked';
+  /** The codes the second step got. */
+  secondCodes?: string[];
 }
 
 const users = (ids: readonly string[]) => ({
@@ -87,6 +95,7 @@ function answer(request: TestRequest, server: Server): void {
     return request.flush(users(server.demo));
   }
   if (url === '/api/auth/providers') {
+    if (server.providers === 'down') return down();
     const items = server.providers ?? [];
     return request.flush({
       data: items.map(({ id, name }) => ({
@@ -103,7 +112,9 @@ function answer(request: TestRequest, server: Server): void {
   }
   if (
     url === '/api/auth/options' &&
-    (server.password || server.emailCode !== undefined)
+    (server.password ||
+      server.emailCode !== undefined ||
+      server.singleSignOn !== undefined)
   ) {
     return request.flush({
       data: {
@@ -114,6 +125,8 @@ function answer(request: TestRequest, server: Server): void {
           passwordReset: server.password?.reset ?? false,
           emailCode: server.emailCode ?? false,
           providers: server.providers?.length ?? 0,
+          singleSignOn: server.singleSignOn !== undefined,
+          emergencySignIn: server.singleSignOn?.emergency ?? false,
         },
       },
     });
@@ -143,7 +156,7 @@ function answer(request: TestRequest, server: Server): void {
       );
     }
     server.token = 'session';
-    return request.flush({ meta: { userId: 'pat' } });
+    return request.flush({ meta: { userId: 'pat', secondFactor: null } });
   }
   if (url === '/api/auth/password/sign-in') {
     if (!server.passwordRight) {
@@ -161,8 +174,68 @@ function answer(request: TestRequest, server: Server): void {
         { status: 401, statusText: 'x' },
       );
     }
+    if (server.secondFactor) {
+      return request.flush({
+        meta: { userId: null, secondFactor: server.secondFactor },
+      });
+    }
     server.token = 'session';
-    return request.flush({ meta: { userId: 'pat' } });
+    return request.flush({ meta: { userId: 'pat', secondFactor: null } });
+  }
+  if (url.startsWith('/api/auth/second-factor')) {
+    const refuse = (status: number, code: string) =>
+      request.flush(
+        {
+          errors: [
+            {
+              status: String(status),
+              title: 'x',
+              detail: 'x',
+              code,
+              ...(status === 429 && { meta: { retryAfter: 61 } }),
+            },
+          ],
+        },
+        { status, statusText: 'x' },
+      );
+    if (!server.secondFactor) return refuse(410, 'second-factor-expired');
+    if (url.endsWith('/set-up')) {
+      return request.flush({
+        meta: {
+          secret: 'JBSWY3DPEHPK3PXP',
+          otpauthUrl: 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP',
+          qrCode: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+          account: 'pat@example.org',
+        },
+      });
+    }
+    if (request.request.method === 'GET') {
+      return request.flush({
+        meta: {
+          secondFactor: server.secondFactor,
+          email: 'pat@example.org',
+          expiresAt: '2030-01-01T00:00:00Z',
+        },
+      });
+    }
+    server.secondCodes?.push(request.request.body.data.attributes.code);
+    switch (server.secondCode) {
+      case 'wrong-code':
+        return refuse(403, 'wrong-code');
+      case 'second-factor-expired':
+        return refuse(410, 'second-factor-expired');
+      case 'locked':
+        return refuse(429, 'too-many-failed-attempts');
+    }
+    server.token = 'session';
+    return request.flush({
+      meta: {
+        userId: 'pat',
+        ...(url.endsWith('/confirm') && {
+          recoveryCodes: ['AAAA-BBBB-CCCC-DDDD', 'EEEE-FFFF-GGGG-HHHH'],
+        }),
+      },
+    });
   }
   if (url === '/api/me') {
     const user = headers.get('X-Ccms-User');
@@ -437,6 +510,154 @@ describe('sign-in with an identity provider (#37)', () => {
     ).toBe('/forgot-password');
   });
 
+  const passwordStep = async (el: HTMLElement, settle: () => Promise<void>) => {
+    const type = (id: string, value: string) => {
+      const input = el.querySelector<HTMLInputElement>(`#${id}`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+    type('sign-in-email', 'pat@example.org');
+    type('sign-in-password', 'a long password here');
+    await settle();
+    el.querySelector<HTMLFormElement>(
+      '[data-testid="password-form"]',
+    )!.requestSubmit();
+    await settle();
+    await settle();
+    return type;
+  };
+  const stepView = (el: HTMLElement) =>
+    el
+      .querySelector('of-second-factor-page [data-view]')
+      ?.getAttribute('data-view');
+
+  it('asks for a code after the password, refuses a wrong one, and signs in with the right one (#611)', async () => {
+    const server: Server = {
+      demo: 'off',
+      token: 401,
+      password: { reset: false },
+      passwordRight: true,
+      secondFactor: 'verify',
+      secondCode: 'wrong-code',
+      secondCodes: [],
+    };
+    const { el, router, settle } = await boot(server, '/manuals');
+    const type = await passwordStep(el, settle);
+    expect(router.url).toBe('/sign-in-two-factor?returnUrl=%2Fmanuals');
+    expect(stepView(el)).toBe('verify');
+    const form = el.querySelector<HTMLFormElement>(
+      '[data-testid="second-factor-verify"]',
+    )!;
+    // Not six digits: said before anything is sent.
+    type('second-factor-code', '12');
+    form.requestSubmit();
+    await settle();
+    expect(server.secondCodes).toEqual([]);
+    const said = () =>
+      el.querySelector('[data-testid="second-factor-error"]')?.textContent;
+    expect(said()).toContain('Enter the six digits the app shows.');
+    // A code pasted with its space goes as six digits.
+    type('second-factor-code', '123 456');
+    form.requestSubmit();
+    await settle();
+    expect(server.secondCodes).toEqual(['123456']);
+    expect(said()).toContain('The code is not right, or was used before.');
+    expect(router.url).toBe('/sign-in-two-factor?returnUrl=%2Fmanuals');
+    // A recovery code instead.
+    el.querySelector<HTMLButtonElement>(
+      '[data-testid="second-factor-other-way"]',
+    )!.click();
+    await settle();
+    expect(said()).toBeUndefined();
+    server.secondCode = 'right';
+    type('second-factor-code', 'aaaa-bbbb-cccc-dddd');
+    form.requestSubmit();
+    await settle();
+    await settle();
+    expect(server.secondCodes?.at(-1)).toBe('aaaabbbbccccdddd');
+    expect(router.url).toBe('/manuals');
+  });
+
+  it.each([
+    ['second-factor-expired', 'expired'],
+    ['locked', 'locked'],
+  ] as const)('ends the second step on %s (#611)', async (answer, view) => {
+    const server: Server = {
+      demo: 'off',
+      token: 401,
+      password: { reset: false },
+      passwordRight: true,
+      secondFactor: 'verify',
+      secondCode: answer,
+    };
+    const { el, settle } = await boot(server, '/');
+    const type = await passwordStep(el, settle);
+    type('second-factor-code', '123456');
+    el.querySelector<HTMLFormElement>(
+      '[data-testid="second-factor-verify"]',
+    )!.requestSubmit();
+    await settle();
+    expect(stepView(el)).toBe(view);
+    expect(el.querySelector('[data-testid="second-factor-verify"]')).toBeNull();
+    expect(
+      el
+        .querySelector('[data-testid="second-factor-again"]')
+        ?.getAttribute('href'),
+    ).toBe('/sign-in');
+    if (view === 'locked') {
+      expect(el.textContent).toContain('Wait 2 minutes, then sign in again.');
+    }
+  });
+
+  it('opens nothing without a second step in this browser (#611)', async () => {
+    const { el } = await boot(
+      { demo: 'off', token: 401, password: { reset: false } },
+      '/sign-in-two-factor',
+    );
+    expect(stepView(el)).toBe('expired');
+  });
+
+  it('leads through a required set-up and shows the recovery codes before going on (#611)', async () => {
+    const server: Server = {
+      demo: 'off',
+      token: 401,
+      password: { reset: false },
+      passwordRight: true,
+      secondFactor: 'set-up',
+      secondCode: 'right',
+      secondCodes: [],
+    };
+    const { el, router, settle } = await boot(server, '/manuals');
+    const type = await passwordStep(el, settle);
+    expect(stepView(el)).toBe('set-up');
+    expect(
+      el
+        .querySelector('[data-testid="second-factor-secret"]')
+        ?.textContent?.trim(),
+    ).toBe('JBSW Y3DP EHPK 3PXP');
+    expect(
+      el.querySelector<HTMLImageElement>('[data-testid="second-factor-qr"]')
+        ?.src,
+    ).toContain('data:image/svg+xml');
+    type('second-factor-code', '123456');
+    el.querySelector<HTMLFormElement>(
+      '[data-testid="second-factor-set-up"]',
+    )!.requestSubmit();
+    await settle();
+    expect(stepView(el)).toBe('codes');
+    expect(el.querySelector('[data-testid="second-factor-secret"]')).toBeNull();
+    expect(
+      el.querySelectorAll('[data-testid="recovery-codes"] li'),
+    ).toHaveLength(2);
+    expect(router.url).toBe('/sign-in-two-factor?returnUrl=%2Fmanuals');
+    el.querySelector<HTMLButtonElement>(
+      '[data-testid="second-factor-continue"]',
+    )!.click();
+    await settle();
+    await settle();
+    expect(router.url).toBe('/manuals');
+  });
+
   it('offers "Email me a code" only when the API does (#634)', async () => {
     const off = await boot(
       { demo: 'off', token: 401, password: { reset: false }, emailCode: false },
@@ -544,6 +765,90 @@ describe('sign-in with an identity provider (#37)', () => {
     await settle();
     expect(router.url).toBe('/sign-in?returnUrl=%2Fmanuals');
     expect(view(el)).toBe('providers');
+    expect(
+      el.querySelector('[data-testid="session-ended"]')?.textContent,
+    ).toContain('Your session has ended. Sign in to go on.');
+  });
+
+  it('offers the providers alone where single sign-on is required, and quietly the emergency sign-in (#378)', async () => {
+    const server: Server = {
+      demo: 'off',
+      token: 401,
+      providers: [{ id: 'oidc', name: 'Example ID' }],
+      singleSignOn: { emergency: true },
+      passwordRight: true,
+    };
+    const { el, router, settle } = await boot(server, '/manuals');
+    const at = (selector: string) => el.querySelector<HTMLElement>(selector);
+    const form = '[data-testid="password-form"]';
+    const provider = 'button[data-provider="oidc"]';
+    const emergency = '[data-testid="emergency-sign-in"]';
+    expect(at(provider)).not.toBeNull();
+    expect(at(form)).toBeNull();
+    // Nobody's session ended here.
+    expect(at('[data-testid="session-ended"]')).toBeNull();
+    at(emergency)!.click();
+    await settle();
+    expect(at(provider)).toBeNull();
+    expect(document.activeElement?.id).toBe('sign-in-email');
+    expect(at('[data-testid="forgot-password"]')).toBeNull();
+    at(emergency)!.click();
+    await settle();
+    expect(at(form)).toBeNull();
+    at(emergency)!.click();
+    await settle();
+    for (const [id, value] of [
+      ['sign-in-email', 'rescue@example.org'],
+      ['sign-in-password', 'a long and quiet river'],
+    ] as const) {
+      const input = el.querySelector<HTMLInputElement>(`#${id}`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+    el.querySelector<HTMLFormElement>(form)!.requestSubmit();
+    await settle();
+    await settle();
+    expect(router.url).toBe('/manuals');
+  });
+
+  it('opens the emergency sign-in by itself where no provider is set up any more (#378)', async () => {
+    const { el } = await boot(
+      { demo: 'off', token: 401, singleSignOn: { emergency: true } },
+      '/manuals',
+    );
+    expect(el.querySelector('[data-testid="password-form"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="emergency-sign-in"]')).toBeNull();
+  });
+
+  it('offers a retry, not the emergency form, where the providers could not be asked (#378)', async () => {
+    const server: Server = {
+      demo: 'off',
+      token: 401,
+      singleSignOn: { emergency: true },
+      providers: 'down',
+    };
+    const { el, settle } = await boot(server, '/manuals');
+    expect(view(el)).toBe('failed');
+    expect(el.querySelector('[data-testid="password-form"]')).toBeNull();
+    server.providers = [{ id: 'oidc', name: 'Company login' }];
+    el.querySelector<HTMLButtonElement>('of-error-state button')!.click();
+    await settle();
+    await settle();
+    expect(view(el)).toBe('providers');
+    expect(el.querySelector('[data-testid="password-form"]')).toBeNull();
+    expect(
+      el.querySelector('[data-testid="emergency-sign-in"]'),
+    ).not.toBeNull();
+  });
+
+  it('says whom to ask when single sign-on is required and there is no way in (#378)', async () => {
+    const { el } = await boot(
+      { demo: 'off', token: 401, singleSignOn: { emergency: false } },
+      '/manuals',
+    );
+    expect(view(el)).toBe('providers');
+    expect(el.textContent).toContain('Ask whoever runs this server.');
+    expect(el.querySelector('[data-testid="emergency-sign-in"]')).toBeNull();
   });
 
   it('names an unnamed provider in its own words', async () => {
@@ -554,6 +859,26 @@ describe('sign-in with an identity provider (#37)', () => {
     expect(
       el.querySelector('button[data-provider="oidc"]')?.textContent,
     ).toContain('Continue to sign-in');
+  });
+
+  it('tells an unnamed SAML provider apart from OpenID Connect (#376)', async () => {
+    const { el } = await boot(
+      {
+        demo: 'off',
+        token: 401,
+        providers: [
+          { id: 'oidc', name: null },
+          { id: 'saml', name: null },
+        ],
+      },
+      '/sign-in',
+    );
+    expect(
+      el.querySelector('button[data-provider="oidc"]')?.textContent,
+    ).toContain('Continue to sign-in');
+    expect(
+      el.querySelector('button[data-provider="saml"]')?.textContent,
+    ).toContain('Sign in with single sign-on (SAML)');
   });
 
   it('says why a sign-in came back refused', async () => {

@@ -57,10 +57,16 @@ import { ChangeSetSession } from '../session/change-set-session';
 import { DemoSession } from '../session/demo-session';
 import { DemoUserSwitchComponent } from '../session/demo-user-switch.component';
 import { SignOutMenuItemComponent } from '../session/sign-out-menu-item.component';
+import { NotificationsMenuItemComponent } from '../notifications/notifications-menu-item.component';
+import { NotificationSettingsService } from '../notifications/notification-settings.service';
 import {
   ChangePasswordDialogComponent,
   ChangePasswordMenuItemComponent,
 } from '../session/change-password.component';
+import {
+  SecondFactorDialogComponent,
+  SecondFactorMenuItemComponent,
+} from '../second-factor/second-factor-dialog.component';
 import { ChangeSetBaseRewrittenComponent } from '../session/change-set-base-rewritten.component';
 import { CarryForwardConflictsComponent } from '../session/carry-forward-conflicts.component';
 import { ChangeSetConflictsComponent } from '../session/change-set-conflicts.component';
@@ -79,6 +85,7 @@ import { breadcrumbsOf, sidebarModeOf } from './breadcrumbs';
 import { ShellState } from './shell-state';
 import { SandboxBannerComponent } from '../sandbox/sandbox-banner.component';
 import { SandboxSession } from '../sandbox/sandbox-session';
+import { SignInSession } from '../session/sign-in-session';
 import { signInTree } from '../sign-in/sign-in.guards';
 
 /** Whether the active screen reads at the session's change set (`ShellLayout.readsChangeSet`). */
@@ -133,8 +140,11 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
     ChangeSetBaseRewrittenComponent,
     DemoUserSwitchComponent,
     SignOutMenuItemComponent,
+    NotificationsMenuItemComponent,
     ChangePasswordMenuItemComponent,
     ChangePasswordDialogComponent,
+    SecondFactorMenuItemComponent,
+    SecondFactorDialogComponent,
     AboutMenuItemsComponent,
     HelpMenuItemsComponent,
     ShortcutsOverlayComponent,
@@ -352,6 +362,10 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
               [role]="me().role"
               [collapsed]="iconOnly"
             >
+              <!-- How notifications reach the person (issue 884): a person's own, never the token's. -->
+              @if (me().kind === 'user') {
+                <of-notifications-menu-item />
+              }
               <!-- Help for the screen on show and the keyboard shortcuts (issue 221). -->
               <of-help-menu-items />
               <!-- The source code and the licence (AGPL-3.0 section 13); above the demo's
@@ -366,6 +380,13 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
                 <!-- Only for a session begun with a password (issue 610). -->
                 @if (session.provider === 'password') {
                   <of-change-password-menu-item />
+                }
+                <!-- Only for a session begun here (issue 611): single sign-on has its own. -->
+                @if (
+                  session.provider === 'password' ||
+                  session.provider === 'email-code'
+                ) {
+                  <of-second-factor-menu-item />
                 }
                 <of-sign-out-menu-item />
               }
@@ -488,6 +509,7 @@ const NAV_PLACEHOLDERS = [1, 2, 3, 4, 5];
         }
       </main>
       <of-change-password-dialog />
+      <of-second-factor-dialog />
       <of-toaster />
       <of-search-palette />
       <!-- The keyboard shortcuts, on ? or from the account menu (issue 221). -->
@@ -507,10 +529,13 @@ export class ShellLayout {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
+  private readonly signIn = inject(SignInSession);
   private readonly permissions = inject(PermissionService);
   private readonly meService = inject(MeService);
   /** Constructed with the shell: it offers the tips and the tour (#222). */
   private readonly tips = inject(TipsController);
+  /** Keeps the email's language and time zone to the person's (#884). */
+  private readonly notificationSettings = inject(NotificationSettingsService);
 
   protected readonly demo = inject(DemoSession);
   /** App links keep the change set (`?cs=`). */
@@ -578,12 +603,12 @@ export class ShellLayout {
     // Nobody acting any more (a refused identity, the token's service): the sign-in page.
     effect(() => {
       if (this.presence() !== 'nobody') return;
-      untracked(
-        () =>
-          void this.router.navigateByUrl(
-            signInTree(this.router, this.router.url),
-          ),
-      );
+      untracked(() => {
+        this.signIn.ended.set(true);
+        void this.router.navigateByUrl(
+          signInTree(this.router, this.router.url),
+        );
+      });
     });
     // The route default only matters until the person has chosen (ShellState); it is still
     // set per section, so it applies as soon as a stored choice is absent.

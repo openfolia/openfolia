@@ -374,69 +374,79 @@ echo '{"certificateAuthorities":[{"uri":"fulcio.githubapp.com"}]}'`,
     );
   });
 
-  it('refuses a tampered images.lock, and signs nothing', () => {
-    const other = `sha256:${'f'.repeat(64)}`;
-    const replace = (index: number, line: string) =>
-      lock.map((l, i) => (i === index ? line : l));
-    for (const [lines, registry, error] of [
-      // Another repository, though with a digest of its own the registry would answer.
-      [
-        replace(
-          0,
-          `ghcr.io/someone-else/openfolia/api:${tag}@${digestOf('api')}`,
-        ),
-        undefined,
-        /not this release's repository/,
-      ],
-      // A digest the build never pushed, which the registry names too (the tag moved).
-      [
-        replace(0, `${repository}/api:${tag}@${other}`),
-        {
-          ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
-          api: other,
-        },
-        /not the digest the build pushed for api/,
-      ],
-      // The build's digest, but the registry names another for the tag now.
-      [
-        lock,
-        {
-          ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
-          mcp: other,
-        },
-        /the registry names .* for mcp/,
-      ],
-      // The build's digest, the registry's too, but an image of one architecture alone.
-      [
-        lock,
-        {
-          ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
-          sandbox: `amd64-only:${digestOf('sandbox')}`,
-        },
-        /sandbox:v1.2.3 is no index of linux\/amd64 and linux\/arm64/,
-      ],
-      [
-        replace(0, `${repository}/evil:${tag}@${digestOf('api')}`),
-        undefined,
-        /not an image of the release/,
-      ],
-      [
-        replace(0, `${repository}/api:v9.9.9@${digestOf('api')}`),
-        undefined,
-        /not the tag v1.2.3/,
-      ],
-      [lock.slice(1), undefined, /images.lock names no api/],
-      [[...lock, lock[0]!], undefined, /api is named twice/],
-      [
-        replace(0, `${repository}/api@${digestOf('api')}`),
-        undefined,
-        /no image pinned by its digest/,
-      ],
-    ] as const) {
+  // One test per tampering: each runs the whole step in bash, so all of them in one test took
+  // longer than a test's limit when the machine was loaded (#933).
+  const other = `sha256:${'f'.repeat(64)}`;
+  const replace = (index: number, line: string) =>
+    lock.map((l, i) => (i === index ? line : l));
+  it.each([
+    // Another repository, though with a digest of its own the registry would answer.
+    [
+      'another repository',
+      replace(
+        0,
+        `ghcr.io/someone-else/openfolia/api:${tag}@${digestOf('api')}`,
+      ),
+      undefined,
+      /not this release's repository/,
+    ],
+    // A digest the build never pushed, which the registry names too (the tag moved).
+    [
+      'a digest the build never pushed',
+      replace(0, `${repository}/api:${tag}@${other}`),
+      {
+        ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
+        api: other,
+      },
+      /not the digest the build pushed for api/,
+    ],
+    // The build's digest, but the registry names another for the tag now.
+    [
+      'a tag the registry moved',
+      lock,
+      {
+        ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
+        mcp: other,
+      },
+      /the registry names .* for mcp/,
+    ],
+    // The build's digest, the registry's too, but an image of one architecture alone.
+    [
+      'one architecture alone',
+      lock,
+      {
+        ...Object.fromEntries(IMAGES.map((i) => [i, digestOf(i)])),
+        sandbox: `amd64-only:${digestOf('sandbox')}`,
+      },
+      /sandbox:v1.2.3 is no index of linux\/amd64 and linux\/arm64/,
+    ],
+    [
+      'an image that is no release image',
+      replace(0, `${repository}/evil:${tag}@${digestOf('api')}`),
+      undefined,
+      /not an image of the release/,
+    ],
+    [
+      'another tag',
+      replace(0, `${repository}/api:v9.9.9@${digestOf('api')}`),
+      undefined,
+      /not the tag v1.2.3/,
+    ],
+    ['a missing image', lock.slice(1), undefined, /images.lock names no api/],
+    ['an image twice', [...lock, lock[0]!], undefined, /api is named twice/],
+    [
+      'no digest',
+      replace(0, `${repository}/api@${digestOf('api')}`),
+      undefined,
+      /no image pinned by its digest/,
+    ],
+  ] as const)(
+    'refuses a tampered images.lock, and signs nothing (%s)',
+    (_name, lines, registry, error) => {
       const run = runStep([...lines], registry && { ...registry });
       expect(run.ok).toBe(false);
       expect(run.error).toMatch(error);
       expect(run.cosign).toEqual([]);
-    }
-  });
+    },
+  );
 });

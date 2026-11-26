@@ -1,0 +1,102 @@
+---
+title: 'Setting up the start page'
+description: 'Write the portal’s start page as a manual: a heading, a short introduction, a notice and featured links, released and translated like any other text.'
+articleId: 'guide.portal.start-page'
+---
+
+A portal's start page leads with a search field and lists each product's manuals. You can give it
+your own heading, a short introduction, a notice and featured links to the pages readers need most.
+
+You write it in OpenFolia, as a manual of its own. It is reviewed, released and translated like any
+other manual, and readers see a change only once it is released.
+
+![A portal's start page: its own heading and introduction over the search field, a note and three featured links under it](/images/guide/en/portal-start-page.webp)
+
+## Write the start page
+
+1. Start a revision ([Start a revision](/guide/change-sets/start-a-revision)).
+2. Create a manual: choose **New manual**, give it a **Title**, for example "Start page", and set the
+   **Audience** the portal is for. A manual without an audience is for the most restricted one only,
+   so it would not be on a public portal.
+3. Add a module with **New module…**. Its title is the start page's heading.
+4. Write its text:
+   - **The first paragraph** is the introduction. It stands between the heading and the search field.
+   - **A note** works well as a notice, for example about a new release. Any other block can stand
+     there too, under the search field.
+   - **A list whose items all start with a link** becomes the featured links.
+5. Add further modules for more groups of links. Each shows as a section with its title. The
+   manual's chapter titles are not shown.
+6. Have the revision reviewed and publish a release.
+
+Keep it short: the heading, two or three sentences and three to eight links are enough. The products'
+manuals follow below them.
+
+## Featured links
+
+Each item of such a list is one card: a link or a [cross-reference](/guide/writing/cross-references)
+first, then, after a colon, one line that says what it is for.
+
+> **Charge the vehicle**: At the dock or by hand.
+
+| To lead to            | Use                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| A section             | A **Cross-reference** to its module. The card opens the first manual of the newest releases that holds it, in that manual's first variant. |
+| A manual or a variant | A **Link** with the page's address, copied from the portal.                                                                                |
+| An update guide       | A **Link** with its address, with the versions when they are chosen (`?from=1.0&to=2.0`).                                                  |
+| A search              | A **Link** with the search page's address after you searched, for example `https://<team>.openfolia.com/en/search/?q=battery`.             |
+| An older release      | A **Link** with the address of its page or of a manual in it.                                                                              |
+| **All manuals**       | A **Link** with that page's address.                                                                                                       |
+| A page somewhere else | A **Link** with its address. The card names the website it opens.                                                                          |
+
+To add a link, type <kbd>/</kbd> and choose **Link**, then enter the **Address** and the **Text**.
+
+You may copy an address in any language: the link leads to the page in the language the reader reads.
+Only a search's filters work in the language they were copied in; its words work in every language.
+The start page itself cannot be a target, but a section of it can, by cross-reference.
+
+The checks warn that a cross-reference is a **Reference outside the manual**. That is expected here:
+the start page holds no module of another manual.
+
+## When a page is not there
+
+The portal never shows a featured link that leads nowhere. When the page is not in this portal, its
+card is left out and the portal's build reports it. That happens when a manual:
+
+- is not released yet, or was removed;
+- is for a more restricted audience than the portal;
+- is not published in that variant.
+
+A link in the text to such a page stays as plain text. The address of a section that is gone leads to
+its page's start.
+
+## Audiences
+
+A portal shows nothing above its own audience, on the start page too. Links to more restricted pages
+are left out of the more open portal, so one start page can serve both.
+
+A manual holds no module meant for a more restricted audience than its own. To show service staff
+more than customers, make a second manual with the audience **Internal** that uses the same modules
+and adds its own.
+
+## Languages
+
+Translate the start page's modules as any other ([Translations](/guide/translations)). A module that
+is not translated shows in the source language, as in a manual.
+
+## Remove it
+
+Delete the manual and publish a release of every product whose newest release still holds it, or have
+the setting cleared. The portal then shows its
+default start page again.
+
+## Turning it on
+
+<ServerSetting>
+  Name the manual's ID in `CCMS_PORTAL_START`, for example `portal-start`. For
+  several audiences name one per audience, separated by commas, the most
+  restricted first: each portal takes the first one it may show. None of them is
+  listed among the manuals. Set `CCMS_PORTAL_URL` to the portal's own address,
+  for example `https://docs.example.com`: without it, a link to one of its pages
+  is taken for a page somewhere else, and no check finds it missing. See [Build
+  and preview](/guide/portal/build). An update guide cannot be the start page.
+</ServerSetting>

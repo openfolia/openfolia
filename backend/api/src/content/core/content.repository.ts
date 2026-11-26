@@ -288,6 +288,14 @@ export abstract class ContentRepository {
   abstract refs(): Promise<{ branches: RefInfo[]; tags: RefInfo[] }>;
 
   /**
+   * What is asked from now on sees every ref as it is now or later, also one another process
+   * moved: an adapter that shares a ref listing in flight between callers no longer shares it.
+   */
+  forgetListings(): void {
+    // Nothing is shared unless an adapter does.
+  }
+
+  /**
    * `at` for each of several refs, in the order given (#764: a product's release tags). An
    * adapter that lists refs to resolve a name lists them once for all of them.
    */

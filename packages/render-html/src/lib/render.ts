@@ -55,6 +55,8 @@ export interface HtmlRenderOptions {
   headingLevel?: number;
   /** Whether a manual starts with a table of contents. Default true. */
   toc?: boolean;
+  /** Whether `renderModuleHtml` starts with the module's title (false: the host shows it). Default true. */
+  title?: boolean;
   /**
    * The link for a cross-reference, e.g. to another page of a portal.
    * `id` is the target's output ID when it is part of the manual, without
@@ -62,6 +64,13 @@ export interface HtmlRenderOptions {
    * target is part of what is rendered, else plain text.
    */
   xrefHref?: (target: XrefTarget) => string | undefined;
+  /**
+   * Where a link leads, given its address, e.g. to the portal's own page instead of the address
+   * it is published at. Return undefined to show the text without a link. Only an address that may
+   * be linked is asked for, the same one more than once: the answer must not change. Default: the
+   * address.
+   */
+  linkHref?: (href: string) => string | undefined;
   /**
    * The editor's preview, which shows what readers never see: a page break
    * as a marker ("Page break (PDF)"), and a text attribute the preview has
@@ -267,7 +276,13 @@ class Renderer {
 
   renderModule(entry: ModuleEntry): HtmlRenderResult {
     return this.result(
-      this.moduleSection(entry, this.level, 'article', 'of-content '),
+      this.moduleSection(
+        entry,
+        this.level,
+        'article',
+        'of-content ',
+        this.options.title ?? true,
+      ),
     );
   }
 
@@ -322,6 +337,7 @@ class Renderer {
     level: number,
     tag: 'section' | 'article',
     extraClass: string,
+    title = true,
   ): string {
     // A module listed twice gets its ID (the target of links to it) once.
     const id = this.moduleIds.has(entry.module)
@@ -337,7 +353,10 @@ class Renderer {
           ? ''
           : this.langAttr(entry.lang);
     const headingId = id === '' ? '' : this.idAttr(headingIdOf(entry.module));
-    const html = `<${tag} class="${extraClass}of-module"${id}${lang}>${heading(level, 'of-module__title', esc(entry.title), headingId)}${this.blocks(entry.blocks, level + 1, true)}</${tag}>`;
+    const titleHtml = title
+      ? heading(level, 'of-module__title', esc(entry.title), headingId)
+      : '';
+    const html = `<${tag} class="${extraClass}of-module"${id}${lang}>${titleHtml}${this.blocks(entry.blocks, level + 1, true)}</${tag}>`;
     this.contentLang = this.manual.lang;
     return html;
   }
@@ -655,10 +674,13 @@ class Renderer {
   ): string {
     let out = '';
     const stack: Mark[] = [];
+    const linkTo = (address: string) =>
+      linkHref(address, this.options.linkHref);
     const closeTo = (depth: number) => {
       while (stack.length > depth) {
         const mark = stack.pop() as Mark;
-        out += mark.type === 'term' ? this.closeTerm() : closeMark(mark);
+        out +=
+          mark.type === 'term' ? this.closeTerm() : closeMark(mark, linkTo);
       }
     };
     for (const node of nodes) {
@@ -682,7 +704,7 @@ class Renderer {
         out +=
           mark.type === 'term'
             ? this.openTerm(mark.termId)
-            : openMark(mark, this.ltrIsolate());
+            : openMark(mark, this.ltrIsolate(), linkTo);
         stack.push(mark);
       }
       out += this.inlineNode(node);
@@ -883,15 +905,22 @@ function heading(
  * https or mailto address), and only what `safeUrl` lets into an attribute. A resolved manual
  * may come from anywhere, so the renderer checks again.
  */
-function linkHref(href: string): string | undefined {
-  return isLinkHref(href) ? safeUrl(href) : undefined;
+function linkHref(
+  href: string,
+  own: HtmlRenderOptions['linkHref'],
+): string | undefined {
+  return isLinkHref(href) ? safeUrl(own ? (own(href) ?? '') : href) : undefined;
 }
 
 /** `ltr`: the ` dir="ltr"` code spans get in right-to-left text (or nothing). */
-function openMark(mark: Mark, ltr: string): string {
+function openMark(
+  mark: Mark,
+  ltr: string,
+  linkTo: (address: string) => string | undefined,
+): string {
   switch (mark.type) {
     case 'link': {
-      const href = linkHref(mark.href);
+      const href = linkTo(mark.href);
       // A refused URL keeps its text, without a link.
       return href === undefined
         ? '<span class="of-link of-link--refused">'
@@ -920,10 +949,13 @@ function openMark(mark: Mark, ltr: string): string {
   }
 }
 
-function closeMark(mark: Mark): string {
+function closeMark(
+  mark: Mark,
+  linkTo: (address: string) => string | undefined,
+): string {
   switch (mark.type) {
     case 'link':
-      return linkHref(mark.href) === undefined ? '</span>' : '</a>';
+      return linkTo(mark.href) === undefined ? '</span>' : '</a>';
     case 'ui':
       return '</span>';
     case 'strong':

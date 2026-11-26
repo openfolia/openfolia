@@ -35,6 +35,7 @@ describe('DrizzlePreferenceStore', () => {
       dismissedTips: ['content.new-module', 'shell.search'],
     });
     expect(second?.preferences).toEqual({
+      ...DEFAULT_PREFERENCES,
       showTips: false,
       dismissedTips: ['content.new-module', 'shell.search'],
       tourDone: true,
@@ -61,5 +62,42 @@ describe('DrizzlePreferenceStore', () => {
     await store.write('carol', { tourDone: true });
     await database.db.execute(sql`delete from users where id = 'carol'`);
     expect((await store.read('carol')).updatedAt).toBeNull();
+  });
+});
+
+describe('notification settings (#884)', () => {
+  it('merges choices kind by kind, keeps the rest, and reads several people at once', async () => {
+    const store = new DrizzlePreferenceStore(database);
+    await store.write('alice', {
+      notifications: {
+        choices: { 'release.published': 'off' },
+        timeZone: 'Europe/Vienna',
+        language: 'de',
+      },
+    });
+    const after = await store.write('alice', {
+      notifications: { choices: { 'backup.failed': 'app' }, allOff: true },
+    });
+    expect(after?.preferences.notifications).toEqual({
+      choices: { 'release.published': 'off', 'backup.failed': 'app' },
+      emailPaused: false,
+      allOff: true,
+      digestHour: null,
+      timeZone: 'Europe/Vienna',
+      language: 'de',
+    });
+    const both = await store.notificationSettings(['alice', 'bob']);
+    expect([...both.keys()]).toEqual(['alice']);
+    expect(both.get('alice')?.allOff).toBe(true);
+  });
+
+  it('leaves out a stored choice this server does not know', async () => {
+    const store = new DrizzlePreferenceStore(database);
+    await database.db.execute(
+      sql`insert into user_preferences (user_id, notification_choices) values ('bob', '{"no.such-kind":"email","backup.failed":"loud","lock.break":"email"}')`,
+    );
+    expect((await store.read('bob')).preferences.notifications.choices).toEqual(
+      { 'lock.break': 'email' },
+    );
   });
 });

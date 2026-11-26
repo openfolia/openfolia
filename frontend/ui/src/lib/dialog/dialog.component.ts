@@ -114,6 +114,12 @@ export class ZardDialogComponent extends ZardDialogHost {
   readonly zClosable = input(true, { transform: booleanAttribute });
   /** Whether a click on the mask closes the dialog. */
   readonly zMaskClosable = input(true, { transform: booleanAttribute });
+  /**
+   * Asked before the dialog closes itself (its X, Escape, the mask, a close button): `false`
+   * keeps it open, for a host that has a question first (a secret shown once). Such a host takes
+   * Back and Forward over too (`zCloseOnNavigation` off).
+   */
+  readonly zCanClose = input<() => boolean>(() => true);
   /** Explicit width; leave unset for the responsive default. */
   readonly zWidth = input<string | undefined>(undefined);
   /**
@@ -173,7 +179,7 @@ export class ZardDialogComponent extends ZardDialogHost {
   }
 
   requestClose(): void {
-    this.zVisible.set(false);
+    if (this.zCanClose()()) this.zVisible.set(false);
   }
 
   private open(): void {

@@ -136,6 +136,7 @@ export const ACTION_TEXTS: Readonly<Record<string, string>> = {
   'lock.break': 'editor.admin.audit.actions.lockBreak',
   'lock.release': 'editor.admin.audit.actions.lockRelease',
   'mail.failed': 'editor.admin.audit.actions.mailFailed',
+  'mail.sent': 'editor.admin.audit.actions.mailSent',
   'mail.test': 'editor.admin.audit.actions.mailTest',
   'maintenance-line.close': 'editor.admin.audit.actions.maintenanceLineClose',
   'maintenance-line.start': 'editor.admin.audit.actions.maintenanceLineStart',
@@ -145,6 +146,8 @@ export const ACTION_TEXTS: Readonly<Record<string, string>> = {
   'module.rename': 'editor.admin.audit.actions.moduleRename',
   'module.style-review': 'editor.admin.audit.actions.moduleStyleReview',
   'module.write': 'editor.admin.audit.actions.moduleWrite',
+  'notification.unsubscribe':
+    'editor.admin.audit.actions.notificationUnsubscribe',
   'release.output-retry': 'editor.admin.audit.actions.releaseOutputRetry',
   'release.outputs-plan': 'editor.admin.audit.actions.releaseOutputsPlan',
   'release.publish': 'editor.admin.audit.actions.releasePublish',
@@ -162,6 +165,10 @@ export const ACTION_TEXTS: Readonly<Record<string, string>> = {
   'service-account.update': 'editor.admin.audit.actions.serviceAccountUpdate',
   'service-token.issue': 'editor.admin.audit.actions.serviceTokenIssue',
   'service-token.revoke': 'editor.admin.audit.actions.serviceTokenRevoke',
+  'scim-group.create': 'editor.admin.audit.actions.scimGroupCreate',
+  'scim-group.delete': 'editor.admin.audit.actions.scimGroupDelete',
+  'scim-group.update': 'editor.admin.audit.actions.scimGroupUpdate',
+  'settings.second-factor': 'editor.admin.audit.actions.settingsSecondFactor',
   'settings.self-approval': 'editor.admin.audit.actions.settingsSelfApproval',
   'storage.limit-change': 'editor.admin.audit.actions.storageLimitChange',
   'storage.upload-refused': 'editor.admin.audit.actions.storageUploadRefused',
@@ -179,6 +186,7 @@ export const ACTION_TEXTS: Readonly<Record<string, string>> = {
   'user.email-code-requested':
     'editor.admin.audit.actions.userEmailCodeRequested',
   'user.identity-link': 'editor.admin.audit.actions.userIdentityLink',
+  'user.identity-unlink': 'editor.admin.audit.actions.userIdentityUnlink',
   'user.invite': 'editor.admin.audit.actions.userInvite',
   'user.invite-withdraw': 'editor.admin.audit.actions.userInviteWithdraw',
   'user.password-changed': 'editor.admin.audit.actions.userPasswordChanged',
@@ -186,6 +194,17 @@ export const ACTION_TEXTS: Readonly<Record<string, string>> = {
     'editor.admin.audit.actions.userPasswordResetRequested',
   'user.password-set': 'editor.admin.audit.actions.userPasswordSet',
   'user.reactivate': 'editor.admin.audit.actions.userReactivate',
+  'user.second-factor-off': 'editor.admin.audit.actions.userSecondFactorOff',
+  'user.second-factor-on': 'editor.admin.audit.actions.userSecondFactorOn',
+  'user.second-factor-recovery-codes':
+    'editor.admin.audit.actions.userSecondFactorRecoveryCodes',
+  'user.second-factor-reset':
+    'editor.admin.audit.actions.userSecondFactorReset',
+  'settings.single-sign-on': 'editor.admin.audit.actions.settingsSingleSignOn',
+  'settings.break-glass': 'editor.admin.audit.actions.settingsBreakGlass',
+  'settings.session-limits': 'editor.admin.audit.actions.settingsSessionLimits',
+  'settings.sign-ins-ended': 'editor.admin.audit.actions.settingsSignInsEnded',
+  'user.break-glass-sign-in': 'editor.admin.audit.actions.userBreakGlassSignIn',
   'user.sign-in': 'editor.admin.audit.actions.userSignIn',
   'user.sign-out': 'editor.admin.audit.actions.userSignOut',
   'user.update': 'editor.admin.audit.actions.userUpdate',
@@ -228,6 +247,7 @@ export const SUBJECT_TYPE_TEXTS: Readonly<Record<string, string>> = {
   'backup-request': 'editor.admin.audit.subjects.backupRequest',
   'backup-settings': 'editor.admin.audit.subjects.backupSettings',
   'group-mapping': 'editor.admin.audit.subjects.groupMapping',
+  'scim-group': 'editor.admin.audit.subjects.scimGroup',
   route: 'editor.admin.audit.subjects.route',
 };
 

@@ -1,3 +1,7 @@
+import {
+  FakePendingSignIns,
+  sessionStart,
+} from '../../../../tests/fakes/fake-second-factors.js';
 import { FakeAccessAdmin } from '../../../../tests/fakes/fake-access-admin.js';
 import { FakeAuditLog } from '../../../../tests/fakes/fake-audit-log.js';
 import { FakeEmailCodes } from '../../../../tests/fakes/fake-email-codes.js';
@@ -17,6 +21,7 @@ import {
   FakeSessionPolicy,
   FakeSessionStore,
   FakeUserIdentities,
+  FakeSignInEvents,
 } from '../../../../tests/fakes/fake-sign-in.js';
 import { FakeUnitOfWork } from '../../../../tests/fakes/fake-unit-of-work.js';
 import {
@@ -85,14 +90,25 @@ function setUp() {
   const mail = new MailOutbox(mailSettings, mailStore, fakeSealer(1), jobs);
   const codes = new FakeEmailCodes(admin);
   codes.now = clock;
-  const waysIn = new WaysIn(sessions, links, codes);
+  const waysIn = new WaysIn(sessions, links, codes, new FakePendingSignIns());
+  const events = new FakeSignInEvents();
+  const start = sessionStart({
+    sessions,
+    policy,
+    admin,
+    codes,
+    auditLog: audit,
+    events,
+  });
 
   const signIn = new PasswordSignInAction(
     settings,
     passwords,
     hasher,
-    sessions,
+    start,
     policy,
+    admin,
+    waysIn,
     audit,
     unit,
   );
@@ -113,9 +129,16 @@ function setUp() {
     mail,
     audit,
     unit,
+    policy,
   );
   makeLink.now = clock;
-  const readLink = new ReadSignInLinkAction(settings, links, admin, unit);
+  const readLink = new ReadSignInLinkAction(
+    settings,
+    links,
+    admin,
+    unit,
+    policy,
+  );
   readLink.now = clock;
   const setWithLink = new SetPasswordWithLinkAction(
     settings,
@@ -123,7 +146,7 @@ function setUp() {
     admin,
     passwords,
     hasher,
-    sessions,
+    start,
     policy,
     waysIn,
     audit,
@@ -139,6 +162,7 @@ function setUp() {
     mail,
     audit,
     unit,
+    policy,
   );
   forgot.now = clock;
   const withdraw = new WithdrawInviteAction(admin, links, audit, unit);
@@ -179,6 +203,7 @@ function setUp() {
     (await codes.findByLink(hashEmailCodeLink(linkToken))) !== undefined ||
     (await codes.claim(email, new Date(clock()))) !== undefined;
   return {
+    events,
     admin,
     audit,
     codes,
@@ -288,8 +313,51 @@ describe('PasswordSignInAction', () => {
     t.policy.refuse.add('pat');
     expect(
       await t.signIn.handle({ email: 'pat@example.org', password: GOOD }),
-    ).toEqual({ refused: 'sign-in-not-allowed' });
+    ).toEqual({ refused: 'invalid-credentials' });
     expect(t.sessions.sessions.size).toBe(0);
+  });
+
+  it('answers whom the policy refuses as a wrong password, after the same work', async () => {
+    const s = setUp();
+    await s.withPassword();
+    s.policy.refuse.add('pat');
+    const verify = vi.spyOn(s.hasher, 'verify');
+    s.admin.putUser({
+      id: 'pat',
+      name: 'Pat',
+      email: 'pat@example.org',
+      deactivatedAt: new Date(0),
+    });
+    expect(
+      await s.signIn.handle({ email: 'pat@example.org', password: GOOD }),
+    ).toEqual({ refused: 'invalid-credentials' });
+    expect(verify).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers the same when the policy changes between the check and the session', async () => {
+    const s = setUp();
+    await s.withPassword();
+    const asked = vi
+      .spyOn(s.policy, 'maySignIn')
+      .mockResolvedValueOnce(true)
+      .mockResolvedValue(false);
+    expect(
+      await s.signIn.handle({ email: 'pat@example.org', password: GOOD }),
+    ).toEqual({ refused: 'invalid-credentials' });
+    expect(asked).toHaveBeenCalledTimes(2);
+    expect(s.sessions.sessions.size).toBe(0);
+    expect(s.audit.events).toEqual([]);
+  });
+
+  it('records each use of the break-glass account, and tells of it (#378)', async () => {
+    const s = setUp();
+    await s.withPassword();
+    s.policy.required = true;
+    await s.signIn.handle({ email: 'pat@example.org', password: GOOD });
+    expect(s.audit.events.map((e) => e.action)).toEqual(
+      expect.arrayContaining(['user.break-glass-sign-in', 'user.sign-in']),
+    );
+    expect(s.events.used).toEqual(['pat']);
   });
 
   it('rehashes a password made with other parameters, once', async () => {
@@ -626,10 +694,30 @@ describe('ForgotPasswordAction', () => {
     ).toBe(false);
   });
 
+  it('makes no link when single sign-on is required while it runs (#378)', async () => {
+    const s = setUp();
+    await s.withPassword();
+    vi.spyOn(s.policy, 'requiresSingleSignOn').mockImplementation(
+      async (tx?: unknown) => tx !== undefined,
+    );
+    await s.forgot.handle({ email: 'pat@example.org' });
+    expect(s.links.links.size).toBe(0);
+  });
+
+  it('is not offered, and does nothing, with single sign-on required (#378)', async () => {
+    const s = setUp();
+    await s.withPassword();
+    expect(await s.forgot.offered()).toBe(true);
+    s.policy.required = true;
+    expect(await s.forgot.offered()).toBe(false);
+    await s.forgot.handle({ email: 'pat@example.org' });
+    expect(s.audit.events).toEqual([]);
+  });
+
   it('is not offered, and does nothing, while email cannot carry links', async () => {
     const s = setUp();
     s.mailSettings.publicUrl = null;
-    expect(s.forgot.offered).toBe(false);
+    expect(await s.forgot.offered()).toBe(false);
     await s.forgot.handle({ email: 'pat@example.org' });
     expect(s.links.links.size).toBe(0);
   });

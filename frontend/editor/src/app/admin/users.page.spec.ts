@@ -116,6 +116,40 @@ const usersRequest = (http: HttpTestingController) =>
 const rolesRequest = (http: HttpTestingController) =>
   http.expectOne((r) => r.url === '/api/roles');
 
+const menuItems = () => [
+  ...document.querySelectorAll<HTMLElement>(
+    '.cdk-overlay-container [data-action]',
+  ),
+];
+
+/** Opens the menu of a person's row; its actions. */
+async function menuOf(
+  el: HTMLElement,
+  name: string,
+  settle: () => Promise<void>,
+) {
+  el.querySelector<HTMLButtonElement>(
+    `button[aria-label="More actions for ${name}"]`,
+  )!.click();
+  await settle();
+  return menuItems().map((item) => item.dataset['action']);
+}
+
+async function choose(
+  el: HTMLElement,
+  name: string,
+  action: string,
+  settle: () => Promise<void>,
+) {
+  await menuOf(el, name, settle);
+  menuItems()
+    .find((item) => item.dataset['action'] === action)!
+    .click();
+  // The menu closes first (`afterMenu`).
+  await new Promise((r) => setTimeout(r, 50));
+  await settle();
+}
+
 describe('UsersPage', () => {
   it('marks a role held through a sign-in group apart from one given directly (#592)', async () => {
     const { http, settle, el } = await render();
@@ -191,14 +225,9 @@ describe('UsersPage', () => {
         'Jane Doejane.doe.with.a.long.address@example.orgjane',
         'Administrator',
         'Active',
-        'Edit Deactivate',
+        'Edit',
       ],
-      [
-        'Max MusterNo email addressmax',
-        'No roles',
-        'Deactivated',
-        'Edit Reactivate',
-      ],
+      ['Max MusterNo email addressmax', 'No roles', 'Deactivated', 'Edit'],
     ]);
     http.verify();
   });
@@ -246,17 +275,14 @@ describe('UsersPage', () => {
       'Invited, not yet signed in',
       'Provider',
     ]);
-    expect(
-      el().querySelector(
-        'button[aria-label="Withdraw the invite of Lee Invited"]',
-      ),
-    ).not.toBeNull();
-
-    el()
-      .querySelector<HTMLButtonElement>(
-        'button[aria-label="Make a password reset link for Jane Doe"]',
-      )
-      ?.click();
+    expect(await menuOf(el(), 'Lee Invited', settle)).toEqual([
+      'invite',
+      'withdraw',
+      'deactivate',
+    ]);
+    // Somebody without an address gets no link.
+    expect(await menuOf(el(), 'Sam Provider', settle)).toEqual(['deactivate']);
+    await choose(el(), 'Jane Doe', 'reset-link', settle);
     const req = http.expectOne('/api/users/jane/password-reset');
     expect(req.request.method).toBe('POST');
     req.flush({
@@ -275,6 +301,50 @@ describe('UsersPage', () => {
     usersRequest(http).flush(users);
   });
 
+  it('resets another person’s second factor after asking, never one’s own (#611)', async () => {
+    const { http, settle, el } = await render();
+    rolesRequest(http).flush(roles);
+    const withFactor = (id: string, name: string) => ({
+      ...user(id, name, null, []),
+      meta: {
+        signIn: {
+          password: true,
+          provider: false,
+          inviteExpiresAt: null,
+          secondFactor: true,
+        },
+      },
+    });
+    usersRequest(http).flush({
+      ...users,
+      data: [withFactor('jane', 'Jane Doe'), withFactor('lee', 'Lee')],
+    });
+    await settle();
+    expect(el().querySelectorAll('[data-slot="second-factor"]')).toHaveLength(
+      2,
+    );
+    expect(await menuOf(el(), 'Jane Doe', settle)).not.toContain(
+      'reset-second-factor',
+    );
+    vi.spyOn(
+      TestBed.inject(ZardAlertDialogService),
+      'confirm',
+    ).mockImplementation((config) => {
+      (config.zOnOk as () => void)();
+      return undefined as never;
+    });
+    await choose(el(), 'Lee', 'reset-second-factor', settle);
+    const req = http.expectOne('/api/users/lee/second-factor');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+    await settle();
+    expect(TestBed.inject(ToastService).toasts()[0]).toMatchObject({
+      kind: 'success',
+      message: { key: 'editor.admin.users.secondFactor.done' },
+    });
+    usersRequest(http).flush(users);
+  });
+
   it('deactivates after asking, and says how many locks were released', async () => {
     const { http, settle, el } = await render();
     rolesRequest(http).flush(roles);
@@ -288,10 +358,7 @@ describe('UsersPage', () => {
         (config.zOnOk as () => void)();
         return undefined as never;
       });
-    const button = el().querySelector<HTMLButtonElement>(
-      'button[aria-label="Deactivate Jane Doe"]',
-    );
-    button?.click();
+    await choose(el(), 'Jane Doe', 'deactivate', settle);
     expect(confirm).toHaveBeenCalledOnce();
     const req = http.expectOne('/api/users/jane/deactivate');
     expect(req.request.method).toBe('POST');
@@ -323,11 +390,7 @@ describe('UsersPage', () => {
       (config.zOnOk as () => void)();
       return undefined as never;
     });
-    el()
-      .querySelector<HTMLButtonElement>(
-        'button[aria-label="Deactivate Jane Doe"]',
-      )
-      ?.click();
+    await choose(el(), 'Jane Doe', 'deactivate', settle);
     http.expectOne('/api/users/jane/deactivate').flush(
       {
         errors: [

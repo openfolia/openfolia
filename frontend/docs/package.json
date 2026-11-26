@@ -159,7 +159,8 @@
             "next build",
             "node scripts/markdown-pages.mjs",
             "node scripts/redirect-pages.mjs",
-            "node scripts/check-stable-paths.mjs"
+            "node scripts/check-stable-paths.mjs",
+            "node scripts/check-search-budget.mjs"
           ],
           "parallel": false
         }

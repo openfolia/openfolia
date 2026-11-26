@@ -40,6 +40,9 @@ export const PUBLIC_ROUTES = [
   'GET /auth/providers',
   'GET /auth/:provider/sign-in',
   'GET /auth/:provider/callback',
+  // SAML (#376): the identity provider posts its answer from its own site; its metadata.
+  'POST /auth/:provider/callback',
+  'GET /auth/:provider/metadata',
   'POST /auth/sign-out',
   // Password sign-in (#610): before anyone acts.
   'GET /auth/options',
@@ -51,6 +54,11 @@ export const PUBLIC_ROUTES = [
   'POST /auth/email-code/request',
   'POST /auth/email-code/sign-in',
   'POST /auth/email-code/link',
+  // The second step of a sign-in (#611): no session yet, only its cookie.
+  'GET /auth/second-factor',
+  'POST /auth/second-factor/verify',
+  'POST /auth/second-factor/set-up',
+  'POST /auth/second-factor/confirm',
   // The API reference (Swagger UI and the document).
   'GET /docs',
   'GET /docs/',
@@ -69,6 +77,8 @@ export const PUBLIC_ROUTES = [
   'GET /docs/delivery/swagger-ui-init.js',
   'GET /openapi/delivery.json',
   'GET /openapi/delivery.yaml',
+  // An email's unsubscribe link (#884): the sealed token is the authority, nobody signs in.
+  'POST /notifications/unsubscribe/:token',
 ];
 
 /**
@@ -80,6 +90,12 @@ export const PUBLIC_ROUTES = [
 export const ANY_ACTOR_ROUTES = [
   'GET /me',
   'POST /me/password',
+  // One's own second factor (#611).
+  'GET /me/second-factor',
+  'POST /me/second-factor/set-up',
+  'POST /me/second-factor/confirm',
+  'POST /me/second-factor/recovery-codes',
+  'POST /me/second-factor/turn-off',
   'GET /demo/users',
   // Authors always see their own change sets and locks (#126); what an
   // actor without `content.read.draft` gets is only their own.
@@ -184,9 +200,30 @@ export const ACTION_ANSWERS: Record<string, readonly number[]> = {
   'POST /group-mappings': [422],
   // Password sign-in is off in the test app (#610).
   'POST /me/password': [409],
+  // The route walk's actors have no session begun here (#611).
+  'GET /me/second-factor': [409],
+  'POST /me/second-factor/set-up': [409],
+  'POST /me/second-factor/confirm': [409],
+  'POST /me/second-factor/recovery-codes': [409],
+  'POST /me/second-factor/turn-off': [409],
   'POST /users/:userId/invite': [409],
   'POST /users/:userId/password-reset': [409],
+  // SCIM's writes check, in the database, that the actor is an active service account whose
+  // role holds scim.provision (#377): the route walk's actor is none (tests/scim.e2e.spec.ts
+  // provisions with a real one).
+  'POST /scim/v2/Users': [403],
+  'PUT /scim/v2/Users/:userId': [403],
+  'PATCH /scim/v2/Users/:userId': [403],
+  'DELETE /scim/v2/Users/:userId': [403],
+  'POST /scim/v2/Groups': [403],
+  'PUT /scim/v2/Groups/:groupId': [403],
+  'PATCH /scim/v2/Groups/:groupId': [403],
+  'DELETE /scim/v2/Groups/:groupId': [403],
 };
+
+/** A SCIM route (#377): `application/scim+json`, errors in SCIM's shape, a service account only. */
+export const isScimRoute = (route: string) =>
+  (route.split(' ')[1] ?? '').startsWith('/scim/');
 
 /** The OpenAPI path of an Express route: `/a/:b` is `/a/{b}`. */
 export const openApiPath = (path: string) => path.replace(/:(\w+)/g, '{$1}');
@@ -217,6 +254,7 @@ const VALID_PARAMETERS: Record<string, string> = {
   templateId: 'nope',
   roleId: 'nope',
   mappingId: '00000000-0000-4000-8000-000000000000',
+  provider: 'saml',
   userId: 'nope',
   serviceAccountId: 'nope',
   attributeId: 'model',
@@ -224,10 +262,14 @@ const VALID_PARAMETERS: Record<string, string> = {
   webhookId: '00000000-0000-7000-8000-000000000000',
   deliveryId: '00000000-0000-7000-8000-000000000000',
   requestId: '00000000-0000-4000-8000-000000000000',
+  groupId: '00000000-0000-4000-8000-000000000000',
+  resourceTypeId: 'User',
+  schemaId: 'nope',
   page: '1',
   product: 'north',
   manual: 'nope',
   name: 'nope',
+  token: 'n'.repeat(40),
 };
 
 /**
@@ -263,6 +305,16 @@ export const VALID_QUERIES: Record<string, string> = {
  * request reaches the action. A new route with a body is added here.
  */
 export const VALID_BODIES: Record<string, unknown> = {
+  'POST /scim/v2/Users': { userName: 'route-walk' },
+  'PUT /scim/v2/Users/:userId': { userName: 'route-walk' },
+  'PATCH /scim/v2/Users/:userId': {
+    Operations: [{ op: 'replace', path: 'active', value: false }],
+  },
+  'POST /scim/v2/Groups': { displayName: 'Route walk' },
+  'PUT /scim/v2/Groups/:groupId': { displayName: 'Route walk' },
+  'PATCH /scim/v2/Groups/:groupId': {
+    Operations: [{ op: 'replace', path: 'displayName', value: 'Walked' }],
+  },
   'PATCH /backup-settings': {
     data: {
       type: 'BackupSettings',
@@ -320,6 +372,18 @@ export const VALID_BODIES: Record<string, unknown> = {
   'POST /me/notifications/read': { meta: { all: true } },
   // Changes nothing: the route walk's actors need no stored preferences.
   'PATCH /me/preferences': { data: { type: 'Preferences', attributes: {} } },
+  'POST /me/second-factor/set-up': {
+    data: { type: 'SecondFactorSetUp', attributes: {} },
+  },
+  'POST /me/second-factor/confirm': {
+    data: { type: 'SecondFactorCode', attributes: { code: '123456' } },
+  },
+  'POST /me/second-factor/recovery-codes': {
+    data: { type: 'SecondFactorProof', attributes: { code: '123456' } },
+  },
+  'POST /me/second-factor/turn-off': {
+    data: { type: 'SecondFactorProof', attributes: { code: '123456' } },
+  },
   'POST /me/password': {
     data: {
       type: 'PasswordChange',
@@ -597,7 +661,12 @@ export function send(
   }
   const body = VALID_BODIES[route];
   if (body !== undefined) {
-    return req.set('Content-Type', JSON_API).send(JSON.stringify(body));
+    return req
+      .set(
+        'Content-Type',
+        isScimRoute(route) ? 'application/scim+json' : JSON_API,
+      )
+      .send(JSON.stringify(body));
   }
   return method === 'get' ? req : req.set('Content-Type', JSON_API);
 }

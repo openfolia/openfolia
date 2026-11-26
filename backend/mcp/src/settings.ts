@@ -1,31 +1,12 @@
 import { z } from 'zod';
 import { proxyEntryProblem } from './proxies.js';
 
-/**
- * The least length of the deprecated shared `CCMS_MCP_HTTP_TOKEN` (#861) and of different characters in
- * it, and no repeated pattern. These refuse the obvious non-random tokens
- * (`aaaa…`, a word repeated, `0123…0123`) but cannot tell a typed passphrase
- * from a random one: the token must come from a random generator
- * (`openssl rand -hex 32`, 256 bits), as the HTTP transport's lockout does
- * not slow guessing down and the token's entropy is the defence.
- */
-export const MIN_HTTP_TOKEN_LENGTH = 32;
-export const MIN_HTTP_TOKEN_DISTINCT = 12;
-
-/** Whether `token` is a shorter string repeated (wholly or with a partial end). */
-export function isPeriodic(token: string): boolean {
-  for (let p = 1; p <= token.length / 2; p++) {
-    let periodic = true;
-    for (let i = p; i < token.length && periodic; i++) {
-      periodic = token[i] === token[i - p];
-    }
-    if (periodic) return true;
-  }
-  return false;
-}
-
 /** The most hops `CCMS_MCP_HTTP_TRUST_PROXY` may name. */
 export const MAX_TRUST_PROXY_HOPS = 10;
+
+/** The start-up refusal of the shared token removed in v0.0.5 (#922), naming no value. */
+export const REMOVED_SHARED_TOKEN =
+  'CCMS_MCP_HTTP_TOKEN (or CCMS_MCP_HTTP_TOKEN_FILE) is removed (v0.0.5, #922): the MCP server no longer takes one token for every caller. Unset it and give each caller a service account token of its own: see /guides/mcp on the docs site.';
 
 const ApiUrl = z
   .url({
@@ -42,29 +23,13 @@ const Common = z.object({
   CCMS_MCP_API_TOKEN: ApiToken,
 });
 
-// Over HTTP, callers bring their own service account tokens (#861); the server's own
-// (`CCMS_MCP_API_TOKEN`) is read only with the deprecated shared `CCMS_MCP_HTTP_TOKEN`.
+// Over HTTP, callers bring their own service account tokens (#861); the server has none of its own.
 const Http = z
   .object({
     CCMS_MCP_API_URL: ApiUrl,
     CCMS_MCP_API_TOKEN: ApiToken.optional(),
     CCMS_MCP_HTTP_HOST: z.string().min(1).default('127.0.0.1'),
     CCMS_MCP_HTTP_PORT: z.coerce.number().int().min(0).max(65535).default(3200),
-    CCMS_MCP_HTTP_TOKEN: z
-      .string()
-      .min(
-        MIN_HTTP_TOKEN_LENGTH,
-        `at least ${MIN_HTTP_TOKEN_LENGTH} characters (e.g. \`openssl rand -hex 32\`)`,
-      )
-      .refine(
-        (token) => new Set(token).size >= MIN_HTTP_TOKEN_DISTINCT,
-        `at least ${MIN_HTTP_TOKEN_DISTINCT} different characters: a random token (e.g. \`openssl rand -hex 32\`)`,
-      )
-      .refine(
-        (token) => !isPeriodic(token),
-        'no repeated pattern: a random token (e.g. `openssl rand -hex 32`)',
-      )
-      .optional(),
     CCMS_MCP_HTTP_ALLOWED_ORIGINS: z
       .string()
       .default('')
@@ -107,17 +72,6 @@ const Http = z
   })
   .superRefine((settings, ctx) => {
     if (
-      settings.CCMS_MCP_HTTP_TOKEN !== undefined &&
-      settings.CCMS_MCP_API_TOKEN === undefined
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['CCMS_MCP_API_TOKEN'],
-        message:
-          'required with CCMS_MCP_HTTP_TOKEN: the service account the shared token reads as',
-      });
-    }
-    if (
       settings.CCMS_MCP_HTTP_TRUST_PROXY > 0 &&
       settings.CCMS_MCP_HTTP_PROXY_ADDRESSES.length === 0
     ) {
@@ -151,21 +105,17 @@ export function loadSettings(
       ([name, value]) => name.startsWith('CCMS_MCP_') && value !== '',
     ),
   );
+  if (
+    set.CCMS_MCP_HTTP_TOKEN !== undefined ||
+    set.CCMS_MCP_HTTP_TOKEN_FILE !== undefined
+  )
+    throw new Error(REMOVED_SHARED_TOKEN);
   const parsed = (transport === 'http' ? Http : Common).safeParse(set);
   if (!parsed.success) {
     const problems = parsed.error.issues.map(
       (issue) => `${issue.path.join('.')}: ${issue.message}`,
     );
     throw new Error(`Invalid settings:\n  ${problems.join('\n  ')}`);
-  }
-  const shared =
-    transport === 'http'
-      ? (parsed.data as HttpSettings).CCMS_MCP_HTTP_TOKEN
-      : undefined;
-  if (shared !== undefined && shared === parsed.data.CCMS_MCP_API_TOKEN) {
-    throw new Error(
-      'Invalid settings:\n  CCMS_MCP_HTTP_TOKEN: must differ from CCMS_MCP_API_TOKEN',
-    );
   }
   return parsed.data;
 }

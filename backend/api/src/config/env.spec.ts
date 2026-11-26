@@ -1,5 +1,6 @@
 import { validateEnv } from './env.js';
 import { packageSendSettings } from './package-send-env.js';
+import { samlAddresses } from './saml-env.js';
 import { emailCodeSignInOn, passwordSignInOn } from './sign-in-env.js';
 
 const base = {
@@ -52,6 +53,8 @@ describe('settings', () => {
         PORT: 8080,
         CCMS_PDF_QUEUE: 0,
         CCMS_MAX_UPLOAD_BYTES: 10 * 1024 * 1024,
+        CCMS_NOTIFICATIONS_DIGEST_HOUR: 8,
+        CCMS_NOTIFICATIONS_EMAILS_PER_HOUR: 20,
         CCMS_NOTIFICATIONS_KEEP_DAYS: 90,
         CCMS_NOTIFICATIONS_POLL_MS: 3000,
         CCMS_AUTH_FAILURES_MAX: 20,
@@ -108,6 +111,12 @@ describe('settings', () => {
         CCMS_SESSION_MAX_HOURS: 168,
         CCMS_INVITE_DAYS: 7,
         CCMS_EMAIL_CODE_MINUTES: 10,
+        CCMS_SAML_NAME_ID_FORMAT: 'persistent',
+        CCMS_SAML_EMAIL_ATTRIBUTE: 'email',
+        CCMS_SAML_NAME_ATTRIBUTE: 'name',
+        CCMS_SAML_GROUPS_ATTRIBUTE: 'groups',
+        CCMS_SAML_EMAIL_VERIFIED: false,
+        CCMS_SAML_IDP_INITIATED: false,
         CCMS_AUDIT_SINK_POLL_MS: 3_000,
         CCMS_AUDIT_SINK_TIMEOUT_MS: 10_000,
         CCMS_AUDIT_READ_KEEP_DAYS: 90,
@@ -1006,6 +1015,84 @@ describe('search and the embedder (#54)', () => {
         CCMS_EMBEDDER_URL: 'https://user:pw@embeddings.example/v1',
       }),
     ).toThrow(/CCMS_EMBEDDER_URL/);
+  });
+});
+
+describe('SAML sign-in settings (#376)', () => {
+  const { CCMS_API_TOKEN: _token, ...tokenless } = base;
+  const saml = {
+    ...tokenless,
+    CCMS_SAML_IDP_METADATA_URL: 'https://idp.example.org/saml/metadata',
+    CCMS_EDITOR_URL: 'https://docs.example.org/',
+  };
+
+  it('takes the metadata from an https address or a file, and derives the addresses', () => {
+    expect(validateEnv(saml)).toMatchObject({
+      CCMS_SAML_IDP_METADATA_URL: 'https://idp.example.org/saml/metadata',
+      CCMS_SAML_IDP_INITIATED: false,
+    });
+    expect(
+      samlAddresses('https://docs.example.org/editor/', undefined),
+    ).toEqual({
+      acsUrl: 'https://docs.example.org/editor/api/auth/saml/callback',
+      metadataUrl: 'https://docs.example.org/editor/api/auth/saml/metadata',
+      entityId: 'https://docs.example.org/editor/api/auth/saml/metadata',
+    });
+    expect(
+      samlAddresses('https://docs.example.org/', 'urn:example:docs').entityId,
+    ).toBe('urn:example:docs');
+    expect(() =>
+      validateEnv({
+        ...saml,
+        CCMS_SAML_IDP_METADATA_URL: 'http://idp.example.org/metadata',
+      }),
+    ).toThrow(/CCMS_SAML_IDP_METADATA_URL/);
+    expect(() =>
+      validateEnv({ ...saml, CCMS_SAML_IDP_METADATA_FILE: '/etc/idp.xml' }),
+    ).toThrow(/name the metadata one way/);
+  });
+
+  it('needs the editor’s address, never demo mode, nor the shared token', () => {
+    expect(() => validateEnv({ ...saml, CCMS_EDITOR_URL: '' })).toThrow(
+      /required with SAML[\s\S]*CCMS_EDITOR_URL/,
+    );
+    expect(() =>
+      validateEnv({
+        ...saml,
+        CCMS_AUTH_MODE: 'demo',
+        CCMS_API_TOKEN: 'x'.repeat(32),
+      }),
+    ).toThrow(/SAML and demo mode/);
+    expect(() =>
+      validateEnv({ ...saml, CCMS_API_TOKEN: 'x'.repeat(32) }),
+    ).toThrow(/CCMS_API_TOKEN/);
+    // A loopback identity provider (local runs, tests) may sit beside the token.
+    expect(() =>
+      validateEnv({
+        ...saml,
+        CCMS_API_TOKEN: 'x'.repeat(32),
+        CCMS_SAML_IDP_METADATA_URL: 'http://127.0.0.1:9000/metadata',
+      }),
+    ).not.toThrow();
+  });
+
+  it('expects one name ID Format, never transient (#946)', () => {
+    for (const format of ['persistent', 'emailAddress', 'unspecified']) {
+      expect(
+        validateEnv({ ...saml, CCMS_SAML_NAME_ID_FORMAT: format }),
+      ).toMatchObject({ CCMS_SAML_NAME_ID_FORMAT: format });
+    }
+    for (const format of ['transient', 'email', 'persistent,unspecified']) {
+      expect(() =>
+        validateEnv({ ...saml, CCMS_SAML_NAME_ID_FORMAT: format }),
+      ).toThrow(/CCMS_SAML_NAME_ID_FORMAT/);
+    }
+  });
+
+  it('refuses its other settings without metadata', () => {
+    expect(() => validateEnv({ ...base, CCMS_SAML_NAME: 'Company' })).toThrow(
+      /needs CCMS_SAML_IDP_METADATA_URL/,
+    );
   });
 });
 

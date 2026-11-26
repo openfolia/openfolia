@@ -213,6 +213,10 @@ export class OidcIdentityProvider extends IdentityProvider {
     }
   }
 
+  override async answersNow(): Promise<void> {
+    this.configuration = Promise.resolve(await this.discover());
+  }
+
   /** The provider's metadata, read once (again after a failure, at most every few seconds). */
   private config(): Promise<client.Configuration> {
     if (this.configuration) return this.configuration;
@@ -224,8 +228,18 @@ export class OidcIdentityProvider extends IdentityProvider {
         ),
       );
     }
+    const discovered = this.discover().catch((error: unknown) => {
+      this.configuration = undefined;
+      this.failedAt = Date.now();
+      throw error;
+    });
+    this.configuration = discovered;
+    return discovered;
+  }
+
+  private discover(): Promise<client.Configuration> {
     const issuer = new URL(this.settings.issuer);
-    const discovered = client
+    return client
       .discovery(
         issuer,
         this.settings.clientId,
@@ -242,8 +256,6 @@ export class OidcIdentityProvider extends IdentityProvider {
         },
       )
       .catch((error: unknown) => {
-        this.configuration = undefined;
-        this.failedAt = Date.now();
         this.log.warn(
           `The identity provider's metadata could not be read from ${this.settings.issuer}: ${describe(error)}`,
         );
@@ -252,8 +264,6 @@ export class OidcIdentityProvider extends IdentityProvider {
           'The identity provider could not be reached.',
         );
       });
-    this.configuration = discovered;
-    return discovered;
   }
 }
 

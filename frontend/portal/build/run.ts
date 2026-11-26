@@ -15,7 +15,12 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ApiClient } from './api-client.ts';
 import { fetchSnapshots, writeSnapshot } from './fetch.ts';
-import { linkedFiles } from '../src/lib/snapshot.ts';
+import {
+  linkedFiles,
+  OLDER_INDEX,
+  OLDER_SEGMENT,
+  type Snapshot,
+} from '../src/lib/snapshot.ts';
 
 /** The portal project's folder. */
 export const PORTAL_ROOT = resolve(import.meta.dirname, '..');
@@ -26,10 +31,18 @@ export interface BuildOptions {
   readonly audience: string;
   readonly languages: readonly string[] | undefined;
   readonly releases: readonly string[] | undefined;
+  /** How many of each product's newest releases to build when `releases` is unset (default 1). */
+  readonly releasesPerProduct?: number;
+  /** Whether the older releases' pages carry `noindex` (default true). */
+  readonly olderNoindex?: boolean;
   readonly outDir: string;
   readonly basePath: string;
   /** The organisation's branding on the site (default true); false: the default look. */
   readonly branding?: boolean;
+  /** The manuals that may be the start page (#897), by ID: the first there is; undefined: the default one. */
+  readonly start?: readonly string[] | undefined;
+  /** The portal's own address (an origin), for the start page's links to its pages. */
+  readonly portalOrigin?: string | undefined;
   readonly log?: (line: string) => void;
 }
 
@@ -50,7 +63,12 @@ export async function buildPortal(options: BuildOptions): Promise<void> {
       audience: options.audience,
       languages: options.languages,
       releases: options.releases,
+      releasesPerProduct: options.releasesPerProduct,
+      olderNoindex: options.olderNoindex,
       branding: options.branding ?? true,
+      start: options.start,
+      portalOrigin: options.portalOrigin,
+      basePath: options.basePath,
       assetsDir,
       log,
     });
@@ -69,7 +87,7 @@ export async function buildPortal(options: BuildOptions): Promise<void> {
       mkdirSync(join(site, 'assets'), { recursive: true });
       for (const file of linkedFiles(build.snapshot))
         copyFileSync(join(assetsDir, file), join(site, 'assets', file));
-      await pagefindIndex(site, build.lang);
+      await indexSite(site, build.lang, build.snapshot);
       log(`${build.lang}: built`);
     }
     writeFileSync(
@@ -159,7 +177,45 @@ function astroBuild(site: {
   });
 }
 
-async function pagefindIndex(site: string, lang: string): Promise<void> {
+/**
+ * The language's search: the newest releases' pages in `pagefind/`, as always, and each older
+ * release's in an index of its own (`<product>/v/<release>/_pagefind/`; no manual ID starts with
+ * `_`), so a search stays within the release the reader is in (#896). The older releases' folders
+ * are moved beside the site while the main index is made, so it never holds their pages.
+ */
+async function indexSite(
+  site: string,
+  lang: string,
+  snapshot: Snapshot,
+): Promise<void> {
+  const products = [...new Set(snapshot.older.map((r) => r.product))];
+  const parked = `${site}.older`;
+  // Only what was moved is moved back. All of it is inside the build's own folder, which a
+  // failed build discards.
+  const moved: string[] = [];
+  try {
+    if (products.length > 0) mkdirSync(parked, { recursive: true });
+    for (const product of products) {
+      renameSync(join(site, product, OLDER_SEGMENT), join(parked, product));
+      moved.push(product);
+    }
+    await pagefindIndex(site, lang, join(site, 'pagefind'));
+  } finally {
+    for (const product of moved)
+      renameSync(join(parked, product), join(site, product, OLDER_SEGMENT));
+  }
+  rmSync(parked, { recursive: true, force: true });
+  for (const release of snapshot.older) {
+    const dir = join(site, release.product, OLDER_SEGMENT, release.segment);
+    await pagefindIndex(dir, lang, join(dir, OLDER_INDEX));
+  }
+}
+
+async function pagefindIndex(
+  site: string,
+  lang: string,
+  outputPath: string,
+): Promise<void> {
   const pagefind = await import('pagefind');
   try {
     const { index, errors } = await pagefind.createIndex({
@@ -169,9 +225,7 @@ async function pagefindIndex(site: string, lang: string): Promise<void> {
     const added = await index.addDirectory({ path: site });
     if (added.errors.length > 0)
       throw new Error(`pagefind: ${added.errors.join('; ')}`);
-    const written = await index.writeFiles({
-      outputPath: join(site, 'pagefind'),
-    });
+    const written = await index.writeFiles({ outputPath });
     if (written.errors.length > 0)
       throw new Error(`pagefind: ${written.errors.join('; ')}`);
   } finally {

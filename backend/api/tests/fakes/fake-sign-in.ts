@@ -1,4 +1,15 @@
 import {
+  type EndedSignIns,
+  RefusedSignIns,
+} from '../../src/access/core/refused-sign-ins.js';
+import { SignInEvents } from '../../src/access/core/sign-in-events.js';
+import {
+  DEFAULT_SIGN_IN_RULE,
+  type SignInRule,
+  SignInRules,
+  SignInSetup,
+} from '../../src/access/core/sign-in-rules.js';
+import {
   type GroupMapping,
   type GroupMappingFilter,
   GroupMappings,
@@ -20,6 +31,7 @@ import {
   SessionStore,
   type StoredSession,
 } from '../../src/access/core/sessions.js';
+import { GLOBAL_PERMISSIONS } from '../../src/access/core/permissions.js';
 import { UserIdentities } from '../../src/access/core/user-identities.js';
 import {
   paginate,
@@ -120,9 +132,22 @@ function apply(state: FakeState, userId: string): GroupRoleChange {
       .filter((i) => i.userId === userId)
       .flatMap((i) => i.groups),
   );
+  // And its SCIM groups (#377), by name, for roles holding no global permission.
+  const scimGroups = new Set(
+    [...state.scimGroups.values()]
+      .filter((g) => g.members.has(userId))
+      .map((g) => g.displayName),
+  );
+  const global = (roleId: string) =>
+    (state.roles.get(roleId)?.permissions ?? []).some((p) =>
+      GLOBAL_PERMISSIONS.has(p),
+    );
   const want = new Set(
     [...state.mappings.values()]
-      .filter((m) => groups.has(m.group))
+      .filter(
+        (m) =>
+          groups.has(m.group) || (scimGroups.has(m.group) && !global(m.roleId)),
+      )
       .map((m) => m.roleId),
   );
   const assigned = [...want].filter((id) => !user.groupRoleIds.has(id)).sort();
@@ -199,16 +224,30 @@ export class FakeGroupMappings extends GroupMappings {
     ).length;
   }
 
+  async groupsForRole(
+    tx: Transaction,
+    roleId: string,
+  ): Promise<readonly string[]> {
+    return [...this.admin.in(tx).mappings.values()]
+      .filter((m) => m.roleId === roleId)
+      .map((m) => m.group)
+      .sort();
+  }
+
   async usersInGroup(
     tx: Transaction,
     group: string,
   ): Promise<readonly string[]> {
+    const state = this.admin.in(tx);
     return [
-      ...new Set(
-        [...this.admin.in(tx).identities.values()]
+      ...new Set([
+        ...[...state.identities.values()]
           .filter((i) => i.groups.includes(group))
           .map((i) => i.userId),
-      ),
+        ...[...state.scimGroups.values()]
+          .filter((g) => g.displayName === group)
+          .flatMap((g) => [...g.members]),
+      ]),
     ].sort();
   }
 
@@ -296,6 +335,8 @@ export class FakeSessionStore extends SessionStore {
 /** A session policy with fixed limits, refusing whom `refuse` names. */
 export class FakeSessionPolicy extends SessionPolicy {
   refuse = new Set<string>();
+  /** Single sign-on is required (#378): `refuse` says of whom. */
+  required = false;
   linking: LinkByEmail = 'pending';
 
   constructor(
@@ -304,7 +345,7 @@ export class FakeSessionPolicy extends SessionPolicy {
     super();
   }
 
-  limits(): SessionLimits {
+  async limits(): Promise<SessionLimits> {
     return this.fixed;
   }
 
@@ -312,8 +353,79 @@ export class FakeSessionPolicy extends SessionPolicy {
     return !this.refuse.has(userId);
   }
 
+  async requiresSingleSignOn(): Promise<boolean> {
+    return this.required;
+  }
+
   linkByEmail(): LinkByEmail {
     return this.linking;
+  }
+}
+
+/** `SignInEvents` in memory: who used the break-glass account. */
+export class FakeSignInEvents extends SignInEvents {
+  readonly used: string[] = [];
+
+  async breakGlassUsed(_tx: Transaction, userId: string): Promise<void> {
+    this.used.push(userId);
+  }
+}
+
+/** The rule about signing in (#378), as a test sets it. */
+export class FakeSignInRules extends SignInRules {
+  rule: SignInRule = DEFAULT_SIGN_IN_RULE;
+  /** Why a user could not be the break-glass account; anyone not named could. */
+  readonly problems = new Map<
+    string,
+    Awaited<ReturnType<SignInRules['breakGlassProblem']>>
+  >();
+
+  async read(): Promise<SignInRule> {
+    return this.rule;
+  }
+
+  readFor(): Promise<SignInRule> {
+    return this.read();
+  }
+
+  async breakGlassProblem(userId: string) {
+    return this.problems.get(userId) ?? null;
+  }
+}
+
+/** A server set up with one provider and the default session limits. */
+export class FakeSignInSetup extends SignInSetup {
+  sessionIdleMinutes = 480;
+  sessionMaxHours = 168;
+  offered: readonly string[] = ['oidc'];
+}
+
+/** `RefusedSignIns` that only records what it was asked to end. */
+export class FakeRefusedSignIns extends RefusedSignIns {
+  readonly asked: Parameters<RefusedSignIns['end']>[1][] = [];
+  next: EndedSignIns = { sessions: 0, secondSteps: 0, links: 0, emailCodes: 0 };
+  /** Thrown from the call with this index on. */
+  failFrom = Number.POSITIVE_INFINITY;
+
+  async end(
+    _tx: Transaction,
+    refused: Parameters<RefusedSignIns['end']>[1],
+  ): Promise<EndedSignIns> {
+    if (this.asked.length >= this.failFrom) throw new Error('interrupted');
+    this.asked.push(refused);
+    return this.next;
+  }
+
+  /** Whose password ways in were ended, and the session kept. */
+  readonly passwordsOf: (readonly [string, string | undefined])[] = [];
+
+  async hold(): Promise<void> {
+    // One transaction at a time here.
+  }
+
+  async endPasswordsOf(_tx: Transaction, userId: string, keep?: string) {
+    this.passwordsOf.push([userId, keep]);
+    return { sessions: 0, secondSteps: 0, links: 0, emailCodes: 0 };
   }
 }
 

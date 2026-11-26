@@ -59,9 +59,13 @@ export class GetWorkingCopyAction extends ActorAction<
       actor,
       changeSetId,
     );
+    // The working copy first, then the branch: a save point moves the branch before it drops the
+    // copies it committed, so what is gone here is on the branch opened after it (#935).
+    const saved = await this.workingCopies.find(changeSetId, subject);
     const snapshot = await this.openSnapshot.handle({
       actor,
       ref: changeSet.branch,
+      fresh: true,
     });
     const config = await snapshot.config();
     const notFound = () =>
@@ -69,7 +73,6 @@ export class GetWorkingCopyAction extends ActorAction<
         `No ${subject.type} "${subjectIdForMessage(subject)}" in change set ${changeSetId}.`,
       );
     const kind = kindOf(subject);
-    const saved = await this.workingCopies.find(changeSetId, subject);
     if (saved) {
       const permission = draftReadPermission(actor);
       if (!kind.showsCopy(actor, permission, saved.content, config)) {

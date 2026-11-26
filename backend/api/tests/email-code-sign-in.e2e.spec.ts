@@ -148,6 +148,8 @@ describe('sign-in with a code by email (#634)', () => {
       passwordReset: true,
       emailCode: true,
       providers: 0,
+      singleSignOn: false,
+      emergencySignIn: false,
     });
   });
 

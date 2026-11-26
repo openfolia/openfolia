@@ -134,6 +134,13 @@ export abstract class AccessAdmin {
    */
   abstract countActiveAdmins(tx: Transaction): Promise<number>;
 
+  /**
+   * When single sign-on is required (#378) and the account named break-glass holds `admin.roles`
+   * directly no more: ends its password sessions, open second steps and links, so they do not come
+   * back with the role. Does nothing otherwise.
+   */
+  abstract endLostBreakGlass(tx: Transaction): Promise<void>;
+
   /** How many service accounts hold the role `roleId`, read inside `tx`. */
   abstract serviceAccountHolders(
     tx: Transaction,

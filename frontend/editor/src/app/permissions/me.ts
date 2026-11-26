@@ -85,6 +85,7 @@ export const ALL_PERMISSIONS = [
   'admin.roles',
   'admin.branding',
   'admin.backups',
+  'scim.provision',
 ] as const satisfies readonly ApiPermission[];
 
 /** Nobody: what the shell holds until `GET /me` answers, and when it cannot. Grants nothing. */

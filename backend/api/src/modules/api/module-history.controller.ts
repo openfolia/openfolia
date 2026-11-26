@@ -22,6 +22,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { params } from '../../base/api/schemas.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
@@ -53,6 +54,7 @@ export const LooseLang = z.string().min(1).max(64);
 @ApiTags('modules')
 @Controller('modules')
 @JsonApi()
+@NamesPeople()
 @ReadsContent()
 export class ModuleHistoryController {
   constructor(private readonly getHistory: GetModuleHistoryAction) {}

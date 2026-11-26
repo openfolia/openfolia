@@ -180,7 +180,21 @@ describe('the installation settings', () => {
     expect(InstallationSettingsDocument.parse(res.body).data).toEqual({
       type: 'InstallationSettings',
       id: 'installation',
-      attributes: { selfApproval: 'never', updatedAt: null },
+      attributes: {
+        selfApproval: 'never',
+        secondFactor: 'optional',
+        singleSignOn: 'optional',
+        sessionIdleMinutes: null,
+        sessionMaxHours: null,
+        updatedAt: null,
+      },
+      relationships: { breakGlassAccount: { data: null } },
+      meta: {
+        singleSignOnAvailable: false,
+        breakGlassProblem: null,
+        serverSessionIdleMinutes: 480,
+        serverSessionMaxHours: 168,
+      },
     });
   });
 

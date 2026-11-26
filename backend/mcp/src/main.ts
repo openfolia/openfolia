@@ -25,25 +25,9 @@ async function main(argv: string[]): Promise<void> {
     // One limiter for every caller: the bound on calls at once is the process's.
     const limiter = new Limiter();
     const apiUrl = settings.CCMS_MCP_API_URL;
-    const sharedToken = settings.CCMS_MCP_HTTP_TOKEN;
-    const apiToken = settings.CCMS_MCP_API_TOKEN;
-    const shared =
-      sharedToken !== undefined && apiToken !== undefined
-        ? {
-            token: sharedToken,
-            context: createContext(
-              new HttpContentApi(apiUrl, apiToken),
-              limiter,
-            ),
-          }
-        : undefined;
-    if (shared) {
+    if (settings.CCMS_MCP_API_TOKEN !== undefined) {
       console.error(
-        'Warning: CCMS_MCP_HTTP_TOKEN is deprecated (#861) and will be removed in v0.0.5: every caller sending it reads as CCMS_MCP_API_TOKEN. Give each caller a service account token of its own and unset both.',
-      );
-    } else if (apiToken !== undefined) {
-      console.error(
-        'Note: CCMS_MCP_API_TOKEN is not used over HTTP without CCMS_MCP_HTTP_TOKEN: each caller sends its own service account token.',
+        'Note: CCMS_MCP_API_TOKEN is not used over HTTP: each caller sends its own service account token.',
       );
     }
     const proxies = new ProxyAddresses(settings.CCMS_MCP_HTTP_PROXY_ADDRESSES);
@@ -53,7 +37,6 @@ async function main(argv: string[]): Promise<void> {
       port: settings.CCMS_MCP_HTTP_PORT,
       callerContext: (token) =>
         createContext(new HttpContentApi(apiUrl, token), limiter),
-      ...(shared && { shared }),
       allowedOrigins: settings.CCMS_MCP_HTTP_ALLOWED_ORIGINS,
       trustProxy: { hops: settings.CCMS_MCP_HTTP_TRUST_PROXY, proxies },
     });

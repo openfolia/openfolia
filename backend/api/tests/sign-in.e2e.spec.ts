@@ -19,6 +19,7 @@ import { AuditEventPageDocument } from '../src/audit/api/audit-event.resources.j
 import { ErrorDocument, JSON_API } from '../src/base/api/json-api.js';
 import { startMockProvider, type MockProvider } from './oidc/mock-provider.js';
 import { signInThroughMock } from './oidc/sign-in-driver.js';
+import { usersAndIdentities } from './stored-sign-ins.js';
 import { createTestApp, TOKEN, type TestApp } from './test-app.js';
 
 /**
@@ -313,6 +314,36 @@ describe('sign-in with OpenID Connect', () => {
     expect(again.cookie).not.toContain(SESSION_COOKIE);
   });
 
+  it('refuses a deactivated person the provider names differently now, making no user, until reactivated (#943)', async () => {
+    mock.accounts['kim'] = { name: 'Kim', email: 'kim@example.org' };
+    await signIn('kim');
+    const { cookie: rootCookie } = await signIn('root');
+    const admin = (action: string) =>
+      t
+        .anonymous()
+        .post(`/users/kim/${action}`)
+        .set('Cookie', rootCookie)
+        .set('Content-Type', JSON_API)
+        .set('Origin', base)
+        .expect(200);
+    await admin('deactivate');
+    // Made again at the provider: another subject, the address it vouches for the same.
+    mock.accounts['kim.again'] = { name: 'Kim', email: 'kim@example.org' };
+    const before = await usersAndIdentities(t.database);
+    const again = await signIn('kim.again');
+    expect(again.finalUrl).toBe(`${base}/sign-in?error=user-deactivated`);
+    expect(again.cookie).not.toContain(SESSION_COOKIE);
+    expect(await usersAndIdentities(t.database)).toEqual(before);
+
+    // Reactivated: as before, a user of its own (`kim` signed in already), without the address.
+    await admin('reactivate');
+    const back = await signIn('kim.again');
+    const actor = ActorDocument.parse(
+      (await me(back.cookie).expect(200)).body,
+    ).data;
+    expect(actor.id).toBe('kim.again');
+  });
+
   it('refuses a callback without the sign-in it answers', async () => {
     const res = await t
       .anonymous()
@@ -376,6 +407,18 @@ describe('sign-in with OpenID Connect', () => {
       );
     expect(ended.status).toBe(anonymous.status);
     expect(ended.body).toEqual(anonymous.body);
+  });
+
+  it('takes no posted answer, and clears the sign-in cookie even so (#934)', async () => {
+    const res = await t
+      .anonymous()
+      .post('/auth/oidc/callback')
+      .type('form')
+      .send({ SAMLResponse: 'x' })
+      .expect(404);
+    expect(res.headers['set-cookie']).toEqual([
+      `${SIGN_IN_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=None; Max-Age=0`,
+    ]);
   });
 
   it('says 404 for a provider that is not offered', async () => {

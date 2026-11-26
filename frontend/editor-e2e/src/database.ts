@@ -384,3 +384,21 @@ export async function releaseOutboxConsumer(name: string): Promise<void> {
     await client.end();
   }
 }
+
+/**
+ * Makes every session of `userId` one nobody has used for a month: past its idle time at its next
+ * request (#378), which no flow can wait for.
+ */
+export async function idleOutSessions(userId: string): Promise<void> {
+  const client = newClient();
+  await client.connect();
+  try {
+    await client.query(
+      `update sessions set created_at = now() - interval '31 days',
+         last_seen_at = now() - interval '30 days' where user_id = $1`,
+      [userId],
+    );
+  } finally {
+    await client.end();
+  }
+}

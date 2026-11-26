@@ -12,15 +12,22 @@ offers. Your admin decides which ones there are.
 Use the way your page shows:
 
 - **With your organisation's account:** choose **Sign in with …** (the name of your organisation's
-  sign-in service). Sign in there. You come back to the editor.
+  sign-in service), or **Sign in with single sign-on (SAML)**. Sign in there. You come back to the
+  editor.
 - **With a password:** enter your **Email address** and **Password**, then choose **Sign in**.
   Forgot it? Choose **Forgot password?** and follow the link in the email. The link works once,
   for one hour.
 - **With a code by email:** choose **Email me a code** and enter your email address. Type the
   six-digit code from the email, or open its link. The code works once, for a few minutes (10 unless your admin set another time).
   Some installations sign in only this way: the page then shows **Email me a code** alone.
+- **Emergency sign-in** (only where your organisation requires single sign-on): for one account named
+  by the admins, with its password, for the day the sign-in service does not work. See
+  [Require single sign-on](/guide/admin/single-sign-on).
 - **As a demo user** (demo installations only): choose a person under **Demo users**. Each one has
   other roles, so you can try what an author, a reviewer or an admin sees.
+
+With [two-factor sign-in](/guide/getting-started/two-factor) on, the next page asks for a code from
+your authenticator app.
 
 After signing in you see **Content**, or the page you asked for.
 
@@ -54,7 +61,14 @@ Your other sessions end; this one goes on.
 
 A demo installation has no **Sign out**. Use **Switch user** in the account menu instead.
 
+## When your session ends
+
+A session ends after a time without activity, and at the latest some days after you signed in. The
+sign-in page then says that your session has ended. Sign in again: you come back to the page you were
+on. Text typed in a module that was not saved yet is kept in your browser and offered again.
+
 ## When you cannot sign in
 
 Ask your admin. They can send you a new invitation or a link to set a new password, or reactivate
-your account.
+your account. If you lost your phone, they can reset your
+[two-factor sign-in](/guide/getting-started/two-factor).

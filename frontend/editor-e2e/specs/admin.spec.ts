@@ -35,6 +35,57 @@ test.describe('admin @area:admin @api:access @api:storage-usage @api:jobs', () =
     );
   });
 
+  test('makes the role a directory provisions with, and gives it to a service account (#377)', async ({
+    page,
+    api,
+  }) => {
+    const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const name = unique('E2E directory');
+    const accountName = unique('E2E SCIM client');
+    const admin = await api(USERS.admin);
+    await admin.json(
+      admin.send('POST', '/service-accounts', {
+        data: {
+          type: 'ServiceAccount',
+          id: `e2e-scim-${suffix}`,
+          attributes: { name: accountName },
+        },
+      }),
+      201,
+    );
+    await signIn(page, USERS.admin);
+    await page.goto('/admin/roles');
+    await page.getByRole('button', { name: 'New role' }).click();
+    await page.getByRole('textbox', { name: 'Role name' }).fill(name);
+    const permissions = page.getByRole('group', { name: 'Permissions' });
+    await expect(
+      permissions.getByText(
+        'Provision users and groups from a directory (SCIM)',
+      ),
+    ).toBeVisible();
+    await permissions
+      .getByRole('checkbox', { name: 'scim.provision', exact: true })
+      .click();
+    // A global permission: no scope applies to it, and the page says so.
+    await expect(
+      page.getByText(/scim\.provision always apply everywhere/),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Create role' }).click();
+    await expect(
+      page.getByRole('region', { name: 'Roles' }).getByText(name).first(),
+    ).toBeVisible();
+
+    await page
+      .getByRole('combobox', { name: /^Add person or service account/ })
+      .click();
+    await page
+      .getByRole('option', { name: `${accountName} (service account)` })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Delete role' }),
+    ).toBeDisabled();
+  });
+
   test('starts a new role at once: a name typed right after "New role" never meets a discard prompt', async ({
     page,
   }) => {

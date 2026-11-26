@@ -32,6 +32,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
@@ -75,6 +76,7 @@ const TIMEOUT = {
 @ApiTags('maintenance-lines')
 @Controller('maintenance-lines')
 @JsonApi()
+@NamesPeople()
 export class MaintenanceLinesController {
   constructor(
     private readonly listLines: ListMaintenanceLinesAction,

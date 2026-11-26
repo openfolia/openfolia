@@ -22,6 +22,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { params } from '../../base/api/schemas.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
@@ -44,6 +45,7 @@ import {
 @ApiTags('manuals')
 @Controller('manuals')
 @JsonApi()
+@NamesPeople()
 @ReadsContent()
 export class ManualHistoryController {
   constructor(private readonly getHistory: GetManualHistoryAction) {}

@@ -4,7 +4,7 @@ import {
   REQUEST_HEADER,
 } from '../src/base/api/json-api.js';
 import { actorWith } from './fakes/actors.js';
-import { fill, fillValid, routesOf } from './routes.js';
+import { fill, fillValid, isScimRoute, routesOf } from './routes.js';
 import { createTestApp, TOKEN, type TestApp } from './test-app.js';
 
 /**
@@ -27,14 +27,31 @@ const GUARD_CODES = [
   'request-header-required',
 ];
 
-/** The routes that may change state: every method but GET (Express adds HEAD to GET). */
+/**
+ * Routes that carry their own authority (`@CarriesOwnAuthority`): the one-click unsubscribe
+ * (#884), a sealed token in the path that a mail client posts as a form, with no session.
+ */
+const OWN_AUTHORITY_ROUTES = ['POST /notifications/unsubscribe/:token'];
+
+/**
+ * The routes that may change state: every method but GET (Express adds HEAD to GET). But SCIM's
+ * (#377): a bearer token alone authenticates them (`@TokenOnly()`), which a cross-site request
+ * cannot send, so the guard lets them through (below), and those carrying their own authority.
+ */
 const stateChanging = () =>
   routesOf(t.app)
-    .filter((route) => !route.startsWith('GET '))
+    .filter((route) => !route.startsWith('GET ') && !isScimRoute(route))
+    .filter((route) => !OWN_AUTHORITY_ROUTES.includes(route))
     .map((route) => {
       const [method = '', path = ''] = route.split(' ');
       return { route, method: method.toLowerCase() as 'post', path };
     });
+
+/**
+ * The routes a form from another site is posted to by design (`@AcceptsCrossSiteForm`, SAML's
+ * answer, #376): a plain form passes the guard, and the route itself checks what it holds.
+ */
+const CROSS_SITE_FORM_ROUTES = ['POST /auth/:provider/callback'];
 
 /** What the sending route takes besides JSON:API (`@AcceptsBodyOf`). */
 const MULTIPART_ROUTES = [
@@ -90,6 +107,16 @@ describe('every state-changing route', () => {
           .set('Accept', '*/*')
           .set('Content-Type', type)
           .send(body);
+        if (
+          CROSS_SITE_FORM_ROUTES.includes(route) &&
+          type === 'application/x-www-form-urlencoded'
+        ) {
+          expect([route, GUARD_CODES.includes(codeOf(res.body))]).toEqual([
+            route,
+            false,
+          ]);
+          continue;
+        }
         const expected =
           MULTIPART_ROUTES.includes(route) && type.startsWith('multipart/')
             ? [403, 'request-header-required']
@@ -138,6 +165,24 @@ describe('every state-changing route', () => {
     }
   });
 
+  it('lets a token-only route through: a forged request carries no credential it reads (#377)', async () => {
+    const scim = routesOf(t.app).filter(
+      (route) => !route.startsWith('GET ') && isScimRoute(route),
+    );
+    expect(scim.length).toBeGreaterThan(5);
+    for (const route of scim) {
+      const [method = '', path = ''] = route.split(' ');
+      const res = await t
+        .anonymous()
+        [method.toLowerCase() as 'post'](fillValid(path))
+        .set('Cookie', 'ccms_session=forged')
+        .set('Content-Type', 'text/plain')
+        .send('a=b');
+      // Not the guard's 415: no token, so 401, whatever the cookie.
+      expect([route, res.status]).toEqual([route, 401]);
+    }
+  });
+
   it('lets a body-less request through with the JSON:API media type', async () => {
     t.actAs(actorWith(['content.edit', 'content.read.draft']));
     for (const { route, method, path } of stateChanging()) {
@@ -167,6 +212,29 @@ describe('every state-changing route', () => {
         route,
         false,
       ]);
+    }
+  });
+});
+
+describe('a route carrying its own authority', () => {
+  it('exists, and takes the form a mail client posts: past the guard', async () => {
+    expect(routesOf(t.app)).toEqual(
+      expect.arrayContaining(OWN_AUTHORITY_ROUTES),
+    );
+    for (const route of OWN_AUTHORITY_ROUTES) {
+      const [method = '', path = ''] = route.split(' ');
+      const res = await t
+        .anonymous()
+        [method.toLowerCase() as 'post'](fillValid(path))
+        .set('Accept', '*/*')
+        .set('Content-Type', 'application/x-www-form-urlencoded')
+        .send('List-Unsubscribe=One-Click');
+      // A token this server did not seal: the action answers, not the guard.
+      expect([route, GUARD_CODES.includes(codeOf(res.body))]).toEqual([
+        route,
+        false,
+      ]);
+      expect(res.status).toBe(404);
     }
   });
 });

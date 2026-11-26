@@ -14,6 +14,8 @@ export interface XmlElement {
    * `local` for one without a namespace, `{uri}local` for one with.
    */
   readonly attributes: ReadonlyMap<string, string>;
+  /** The namespaces it declares, by prefix (`''` for the default namespace, `xmlns`). */
+  readonly declarations: ReadonlyMap<string, string>;
   /** Elements and text, in document order; neighbouring text joined. */
   readonly children: readonly XmlNode[];
   /** The line it starts on, for messages. */
@@ -93,6 +95,7 @@ export interface XmlReadOptions {
 export const MAX_PREFIXES = 16;
 
 const NO_PREFIXES: ReadonlyMap<string, string> = new Map();
+const NO_DECLARATIONS: ReadonlyMap<string, string> = new Map();
 
 const PREDEFINED: Readonly<Record<string, string>> = {
   lt: '<',
@@ -113,6 +116,7 @@ interface Open {
   readonly defaultNs: string | undefined;
   readonly line: number;
   readonly rawAttributes: readonly (readonly [string, string])[];
+  readonly declarations: ReadonlyMap<string, string>;
   readonly children: XmlNode[];
 }
 
@@ -493,7 +497,11 @@ export function readXml(
     let prefixes: ReadonlyMap<string, string> = parent?.prefixes ?? NO_PREFIXES;
     let own: Map<string, string> | undefined;
     let defaultNs = parent?.defaultNs;
+    let declarations: Map<string, string> | undefined;
     for (const [attribute, value] of raw) {
+      if (attribute === 'xmlns' || attribute.startsWith('xmlns:')) {
+        (declarations ??= new Map()).set(attribute.slice(6), value);
+      }
       if (attribute === 'xmlns') {
         defaultNs = value === '' ? undefined : value;
       } else if (attribute.startsWith('xmlns:')) {
@@ -521,6 +529,7 @@ export function readXml(
       defaultNs,
       line: tagLine,
       rawAttributes: raw,
+      declarations: declarations ?? NO_DECLARATIONS,
       children: [],
     };
     if (empty) {
@@ -558,6 +567,7 @@ export function readXml(
       ns,
       local,
       attributes,
+      declarations: open.declarations,
       children: open.children,
       line: open.line,
     };

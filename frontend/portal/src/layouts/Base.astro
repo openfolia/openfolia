@@ -5,7 +5,8 @@ import markDark from '@openfolia/theme/brand/openfolia-mark-color-dark.svg?url';
 import portalCss from '../styles/portal.css?url';
 import { PAGE_CSP } from '../lib/csp.ts';
 import { languageName, textsFor, typeaheadConfig } from '../lib/i18n.ts';
-import { href, languageRoot, siteBrand, snapshot } from '../lib/site.ts';
+import { href, languageRoot, siteBrand, snapshot, type OlderPage } from '../lib/site.ts';
+import OlderNotice from '../components/OlderNotice.astro';
 
 interface Props {
   title: string;
@@ -16,9 +17,11 @@ interface Props {
   guide?: readonly [string, string];
   /** The product the page belongs to: its tab in the thumb index is the current one. */
   product?: string;
+  /** A page of an older release (#896): its notice, canonical address, noindex and own search. */
+  older?: OlderPage | undefined;
 }
 
-const { title, path = '', current, guide, product } = Astro.props;
+const { title, path = '', current, guide, product, older } = Astro.props;
 const s = snapshot();
 const t = textsFor(s.lang);
 const brand = siteBrand();
@@ -29,6 +32,9 @@ const thumbs = products.length > 1;
 // The running head's compact search: on every page but the two that lead with a search field.
 const compactSearch = current !== 'start' && current !== 'search' && current !== 'lost';
 const currentProduct = products.find((p) => p.id === product);
+// In an older release the running head searches that release only (#896).
+const scope = older?.search;
+const searchPage = scope ? href(`search/?release=${encodeURIComponent(scope.key)}`) : href('search/');
 ---
 
 <!doctype html>
@@ -48,6 +54,8 @@ const currentProduct = products.find((p) => p.id === product);
       first paint until they apply, without which Chrome aborts some page-to-page transitions.
     */}
     <script is:inline src={href('theme.js')}></script>
+    {older?.canonical && <link rel="canonical" href={older.canonical} />}
+    {older?.noindex && <meta name="robots" content="noindex" />}
     <slot name="head" />
   </head>
   <body class:list={{ 'has-thumbs': thumbs }} data-page={current ?? 'manual'}>
@@ -81,7 +89,8 @@ const currentProduct = products.find((p) => p.id === product);
       }
       {
         compactSearch && (
-          <form class="minisearch" action={href('search/')} method="get" role="search" data-typeahead={JSON.stringify(typeaheadConfig(t, s.lang, href()))}>
+          <form class="minisearch" action={href('search/')} method="get" role="search" data-typeahead={JSON.stringify(typeaheadConfig(t, s.lang, href(), scope))}>
+            {scope && <input type="hidden" name="release" value={scope.key} />}
             <label class="visually-hidden" for="head-q">{t.searchLabel}</label>
             <svg class="minisearch__icon" aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.75"></circle><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path></svg>
             <input id="head-q" name="q" type="search" placeholder={t.searchShort} autocomplete="off" enterkeyhint="search" />
@@ -90,7 +99,7 @@ const currentProduct = products.find((p) => p.id === product);
       }
       <nav class="runhead__nav" aria-label={t.mainNav}>
         <a href={href('manuals/')} aria-current={current === 'manuals' ? 'page' : undefined}>{t.manuals}</a>
-        <a class:list={['runhead__search-link', { 'is-redundant': compactSearch }]} href={href('search/')} aria-current={current === 'search' ? 'page' : undefined}>{t.search}</a>
+        <a class:list={['runhead__search-link', { 'is-redundant': compactSearch }]} href={searchPage} aria-current={current === 'search' ? 'page' : undefined}>{t.search}</a>
       </nav>
       <div class="runhead__tools">
         {
@@ -145,6 +154,7 @@ const currentProduct = products.find((p) => p.id === product);
       )
     }
     <main id="main" tabindex="-1">
+      {older && <OlderNotice older={older} />}
       <slot />
     </main>
     <script>

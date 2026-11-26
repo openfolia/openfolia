@@ -1,6 +1,11 @@
 import { Controller, Get, Header, Query, Req } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { z } from 'zod';
 import { ApiPermission } from './api-permission.decorator.js';
@@ -11,7 +16,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
-import { toPagedDocument } from '../../base/api/json-api.js';
+import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import type { Env } from '../../config/env.js';
 import { GetMeAction } from '../core/actions/get-me.action.js';
@@ -106,21 +111,34 @@ export class AccessController {
   @Get('demo/users')
   @Header('Cache-Control', 'no-store')
   @Paged()
+  @Filters({
+    name: 'status',
+    description:
+      '`active` (the default): those to act as; `deactivated`: the others, so that a client can name whose work it shows.',
+  })
   @ApiOperation({
     summary: 'Users to act as (demo mode)',
     description:
-      'Demo mode only (`CCMS_AUTH_MODE=demo`): the active users `X-Ccms-User` may name, for a user switcher, to any actor with the token (without email addresses). 404 `not-found` when demo mode is off, which is how a client learns it is.',
+      'Demo mode only (`CCMS_AUTH_MODE=demo`): the active users `X-Ccms-User` may name, for a user switcher (or, with `filter[status]=deactivated`, the deactivated ones), to any actor with the token (without email addresses). 404 `not-found` when demo mode is off, which is how a client learns it is.',
   })
   @ApiOkResponse({ standardSchema: UserPageDocument })
+  @ApiForbiddenResponse({
+    description:
+      '`forbidden`: `filter[status]=deactivated` with a service account’s token.',
+    standardSchema: ErrorDocument,
+  })
   async demoUsers(
     @Req() req: Request,
     @CurrentActor() actor: Actor,
     @PageParams() page: PageRequest,
+    @Query('filter[status]', { schema: userFilters.status.optional() })
+    status?: 'active' | 'deactivated',
   ): Promise<z.infer<typeof UserPageDocument>> {
     const result = await this.listDemoUsers.handle({
       actor,
       page,
       demo: this.config.get('CCMS_AUTH_MODE', { infer: true }) === 'demo',
+      active: status !== 'deactivated',
     });
     // Any token holder calls it: no email addresses.
     return toPagedDocument(req, page, result, (user) =>

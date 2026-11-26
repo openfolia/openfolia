@@ -19,7 +19,7 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 
 ## Packages
 
-732 packages.
+743 packages.
 
 | Package | Version | Licence | Homepage |
 | --- | --- | --- | --- |
@@ -141,6 +141,7 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 | @noble/curves | 2.0.1, 2.4.0 | MIT | <https://paulmillr.com/noble/> |
 | @noble/hashes | 2.0.1, 2.4.0 | MIT | <https://paulmillr.com/noble/> |
 | @noble/post-quantum | 0.5.4 | MIT | <https://paulmillr.com/noble/> |
+| @node-saml/node-saml | 5.2.0 | MIT | <https://github.com/node-saml/node-saml#readme> |
 | @opentelemetry/api | 1.10.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-js/tree/main/api> |
 | @oslojs/encoding | 1.1.0 | MIT | <https://github.com/oslo-project/encoding#readme> |
 | @oxc-parser/binding | 0.156.0 | MIT | <https://oxc.rs/docs/guide/usage/parser> |
@@ -225,10 +226,15 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 | @types/nlcst | 2.0.3 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/nlcst> |
 | @types/node | 22.20.5 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node> |
 | @types/pg | 8.23.1 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pg> |
+| @types/qs | 6.15.1 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/qs> |
 | @types/react | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react> |
 | @types/react-dom | 19.3.0 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom> |
 | @types/unist | 2.0.11, 3.0.3 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/unist> |
+| @types/xml-encryption | 1.2.4 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/xml-encryption> |
+| @types/xml2js | 0.4.14 | MIT | <https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/xml2js> |
 | @ungap/structured-clone | 1.4.0 | ISC | <https://github.com/ungap/structured-clone#readme> |
+| @xmldom/is-dom-node | 1.0.1 | MIT | <https://github.com/xmldom/is-dom-node#readme> |
+| @xmldom/xmldom | 0.8.15 | MIT | <https://github.com/xmldom/xmldom> |
 | @yuku-core/binding | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | @yuku-toolchain/types | 0.19.0 | MIT | <https://github.com/yuku-toolchain/yuku#readme> |
 | accepts | 2.0.0 | MIT | <https://github.com/jshttp/accepts#readme> |
@@ -741,6 +747,11 @@ writes the licence texts of what it bundles to `3rdpartylicenses.txt`.
 | web-namespaces | 2.0.1 | MIT | <https://github.com/wooorm/web-namespaces#readme> |
 | which | 2.0.2 | ISC | <https://github.com/isaacs/node-which#readme> |
 | wrappy | 1.0.2 | ISC | <https://github.com/npm/wrappy> |
+| xml-crypto | 6.4.0 | MIT | <https://github.com/node-saml/xml-crypto#readme> |
+| xml-encryption | 3.1.0 | MIT | <https://github.com/auth0/node-xml-encryption#readme> |
+| xml2js | 0.6.2 | MIT | <https://github.com/Leonidas-from-XIV/node-xml2js> |
+| xmlbuilder | 11.0.1, 15.1.1 | MIT | <http://github.com/oozcitak/xmlbuilder-js> |
+| xpath | 0.0.32, 0.0.33, 0.0.35 | MIT | <https://github.com/goto100/xpath#readme> |
 | xtend | 4.0.2 | MIT | <https://github.com/Raynos/xtend> |
 | xxhash-wasm | 1.1.0 | MIT | <https://github.com/jungomi/xxhash-wasm#readme> |
 | yallist | 3.1.1 | ISC | <https://github.com/isaacs/yallist#readme> |

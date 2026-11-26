@@ -37,19 +37,17 @@ function setup() {
 
 /** The device's reduced-motion setting, as `matchMedia` answers it. */
 function reducedMotion(reduce: boolean) {
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: (query: string) => ({
-      matches: reduce && query.includes('reduce'),
-      media: query,
-    }),
-  });
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: reduce && query.includes('reduce'),
+    media: query,
+  }));
 }
 
 const card = () => document.querySelector<HTMLElement>('[data-slot="tip"]');
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   document.body.innerHTML = '';
 });
 

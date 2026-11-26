@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { resourceObject, singleDocument } from '../../base/api/json-api.js';
+import { SECOND_STEPS } from '../core/pending-sign-ins.js';
 import { SIGN_IN_LINK_KINDS } from '../core/sign-in-links.js';
 
 /** A password as sent: the rules (`passwordProblem`) are the action's; this only bounds it. */
@@ -16,7 +17,7 @@ export const SignInOptionsResource = resourceObject('SignInOptions', {
     password: z
       .boolean()
       .describe(
-        'Whether people sign in with an email address and a password (`CCMS_PASSWORD_SIGN_IN`; never in demo mode).',
+        'Whether people sign in with an email address and a password (`CCMS_PASSWORD_SIGN_IN`; never in demo mode, nor with single sign-on required).',
       ),
     passwordReset: z
       .boolean()
@@ -33,6 +34,16 @@ export const SignInOptionsResource = resourceObject('SignInOptions', {
       .int()
       .describe(
         'How many identity providers are offered (`GET /auth/providers`).',
+      ),
+    singleSignOn: z
+      .boolean()
+      .describe(
+        'Single sign-on is required (#378): `password`, `passwordReset` and `emailCode` are false.',
+      ),
+    emergencySignIn: z
+      .boolean()
+      .describe(
+        'With single sign-on required, whether there is a break-glass account to sign in to with its password (`POST /auth/password/sign-in`). Never whose.',
       ),
   }),
 })
@@ -57,11 +68,22 @@ export const PasswordSignInDocument = z
   .meta({ id: 'PasswordSignInDocument' });
 export type PasswordSignInDocument = z.output<typeof PasswordSignInDocument>;
 
-/** The answer of a sign-in that started a session (the cookie carries it). */
+/** The answer of a right first factor: a session started, or a second step open (#611). */
 export const SignedInDocument = z
   .object({
     meta: z.object({
-      userId: z.string().describe('Who is signed in now.'),
+      userId: z
+        .string()
+        .nullable()
+        .describe(
+          'Who is signed in now (the session cookie carries it); null with a second step to take first.',
+        ),
+      secondFactor: z
+        .enum(SECOND_STEPS)
+        .nullable()
+        .describe(
+          'Null: signed in. `verify`: a code of the person’s authenticator app (or a recovery code) first, `POST /auth/second-factor/verify`. `set-up`: the installation requires two-factor sign-in and they have none yet, `POST /auth/second-factor/set-up`. Until then there is no session: only the cookie `__Host-openfolia-second-factor`, for ten minutes.',
+        ),
     }),
   })
   .meta({ id: 'SignedInDocument' });
@@ -188,6 +210,7 @@ export const UserSignInMeta = z
       .describe(
         'An open invite’s end (in the past: it ran out); null for none.',
       ),
+    secondFactor: z.boolean().describe('Two-factor sign-in is on (#611).'),
   })
   .describe(
     'How the person signs in (#610): with a password, a provider, both, or invited and not yet signed in.',

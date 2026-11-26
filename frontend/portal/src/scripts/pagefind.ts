@@ -88,21 +88,26 @@ export function passageScore(sub: SubResult): number {
 const indexes = new Map<string, Promise<Pagefind>>();
 
 /**
- * The index under `base` (the language's site), loaded once per page however many fields ask;
- * a load that failed is tried again on the next call.
+ * The index in `dir` under `base` (the language's site, or an older release's pages with its
+ * own index in `_pagefind/`, #896), loaded once per page however many fields ask; a load that
+ * failed is tried again on the next call. Its results' URLs are relative to `base`.
  */
-export function loadPagefind(base: string): Promise<Pagefind> {
-  let index = indexes.get(base);
+export function loadPagefind(
+  base: string,
+  dir = 'pagefind/',
+): Promise<Pagefind> {
+  const key = `${base}${dir}`;
+  let index = indexes.get(key);
   if (!index) {
     index = (async () => {
       const pagefind = (await import(
-        /* @vite-ignore */ `${base}pagefind/pagefind.js`
+        /* @vite-ignore */ `${key}pagefind.js`
       )) as Pagefind;
       await pagefind.options({ baseUrl: base });
       return pagefind;
     })();
-    index.catch(() => indexes.delete(base));
-    indexes.set(base, index);
+    index.catch(() => indexes.delete(key));
+    indexes.set(key, index);
   }
   return index;
 }

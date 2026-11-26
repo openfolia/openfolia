@@ -1,9 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
+  Injector,
   signal,
   untracked,
 } from '@angular/core';
@@ -37,15 +40,17 @@ import { AboutLinksComponent } from '../about/about-links.component';
 import { MeService } from '../permissions/me';
 import { DemoSession } from '../session/demo-session';
 import {
+  providerText,
   SIGN_IN_ERROR_TEXT,
   SignInSession,
   signInErrorOf,
 } from '../session/sign-in-session';
+import type { SecondStepKind } from '../second-factor/second-factor-session';
 import { PasswordSession } from '../session/password-session';
 import { SandboxBannerComponent } from '../sandbox/sandbox-banner.component';
 import { SandboxSession } from '../sandbox/sandbox-session';
 import { PasswordFormComponent } from './password-form.component';
-import { RETURN_PARAM, safeReturnUrl } from './sign-in.guards';
+import { afterSignIn, RETURN_PARAM, safeReturnUrl } from './sign-in.guards';
 
 /** What a local run needs for demo mode: shown as commands, never translated. */
 const DEMO_SETTING = 'CCMS_AUTH_MODE=demo';
@@ -73,7 +78,8 @@ type View =
  * With password sign-in on (#610, `GET /auth/options`), the email and password form comes
  * first, with "Forgot password?" when email can carry the link, the providers' buttons below.
  * With email set up (#634), "Email me a code" sits under the form (or alone, without passwords)
- * and opens `/sign-in-code`.
+ * and opens `/sign-in-code`. With single sign-on required (#378) it offers the providers alone,
+ * and where there is an emergency account, a quiet way to its password form.
  */
 @Component({
   selector: 'of-sign-in-page',
@@ -142,11 +148,17 @@ type View =
             @if (view() === 'providers') {
               <p class="text-muted-foreground m-0 text-sm break-words">
                 {{
-                  (passwordOffered()
-                    ? 'editor.signIn.password.intro'
-                    : emailCodeOffered() && oidc.providers().length === 0
-                      ? 'editor.signIn.emailCode.signInIntro'
-                      : 'editor.signIn.providers.intro'
+                  (singleSignOn()
+                    ? emergencyOpen()
+                      ? 'editor.signIn.emergency.intro'
+                      : oidc.providers().length === 0
+                        ? 'editor.signIn.emergency.noWayIn'
+                        : 'editor.signIn.providers.intro'
+                    : passwordOffered()
+                      ? 'editor.signIn.password.intro'
+                      : emailCodeOffered() && oidc.providers().length === 0
+                        ? 'editor.signIn.emailCode.signInIntro'
+                        : 'editor.signIn.providers.intro'
                   ) | transloco
                 }}
               </p>
@@ -163,17 +175,28 @@ type View =
             </p>
           }
 
+          @if (!signInError() && view() === 'providers' && oidc.ended()) {
+            <p
+              ofFadeIn
+              role="status"
+              data-testid="session-ended"
+              class="border-border bg-muted text-muted-foreground m-0 rounded-md border px-3 py-2 text-sm break-words"
+            >
+              {{ 'editor.signIn.sessionEnded' | transloco }}
+            </p>
+          }
+
           @switch (view()) {
             @case ('loading') {
               <!-- Delayed: a quick answer never flashes it. -->
               <of-skeleton-rows [count]="3" />
             }
             @case ('providers') {
-              @if (passwordOffered()) {
+              @if (passwordOffered() || emergencyOpen()) {
                 <of-password-form
                   ofFadeIn
                   [resetOffered]="passwords.options()?.passwordReset ?? false"
-                  (signedIn)="signedIn()"
+                  (signedIn)="signedIn($event)"
                 />
               }
               @if (emailCodeOffered()) {
@@ -210,7 +233,7 @@ type View =
                   <span class="bg-border h-px flex-1"></span>
                 </div>
               }
-              @if (oidc.providers().length > 0) {
+              @if (oidc.providers().length > 0 && !emergencyOpen()) {
                 <ul
                   ofFadeIn
                   class="m-0 flex list-none flex-col gap-2 p-0"
@@ -248,12 +271,27 @@ type View =
                           provider.name
                             ? ('editor.signIn.providers.with'
                               | transloco: { name: provider.name })
-                            : ('editor.signIn.providers.continue' | transloco)
+                            : (providerText(provider.id) | transloco)
                         }}</span>
                       </button>
                     </li>
                   }
                 </ul>
+              }
+              @if (emergencyOffered() && oidc.providers().length > 0) {
+                <button
+                  type="button"
+                  data-testid="emergency-sign-in"
+                  class="text-muted-foreground hover:text-foreground focus-visible:ring-ring w-fit cursor-pointer self-center rounded-sm text-xs underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
+                  (click)="toggleEmergency()"
+                >
+                  {{
+                    (emergency()
+                      ? 'editor.signIn.emergency.back'
+                      : 'editor.signIn.emergency.offer'
+                    ) | transloco
+                  }}
+                </button>
               }
             }
             @case ('users') {
@@ -393,6 +431,8 @@ export class SignInPage {
   protected readonly sandbox = inject(SandboxSession);
   protected readonly oidc = inject(SignInSession);
   protected readonly passwords = inject(PasswordSession);
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   /** Asked once, beside the providers: null until it answered (or when it could not). */
   private readonly optionsAsked = signal(false);
   protected readonly passwordOffered = computed(
@@ -402,7 +442,23 @@ export class SignInPage {
   protected readonly emailCodeOffered = computed(
     () => this.passwords.options()?.emailCode === true,
   );
+  /** Single sign-on is required (#378): the providers alone, and the emergency sign-in. */
+  protected readonly singleSignOn = computed(
+    () => this.passwords.options()?.singleSignOn === true,
+  );
+  protected readonly emergencyOffered = computed(
+    () => this.passwords.options()?.emergencySignIn === true,
+  );
+  protected readonly emergency = signal(false);
+  /** The emergency account's password form is open, in place of the providers (or without any). */
+  protected readonly emergencyOpen = computed(
+    () =>
+      this.emergencyOffered() &&
+      (this.emergency() ||
+        (this.oidc.status() === 'ready' && this.oidc.providers().length === 0)),
+  );
   protected readonly errorText = SIGN_IN_ERROR_TEXT;
+  protected readonly providerText = providerText;
   private readonly meService = inject(MeService);
   private readonly router = inject(Router);
 
@@ -451,10 +507,15 @@ export class SignInPage {
         if (this.oidc.status() === 'loading' || !this.optionsAsked()) {
           return 'loading';
         }
+        // Single sign-on required and its providers not known: nothing to offer but a retry.
+        if (this.singleSignOn() && this.oidc.status() === 'failed') {
+          return 'failed';
+        }
         if (
           this.oidc.providers().length > 0 ||
           this.passwordOffered() ||
-          this.emailCodeOffered()
+          this.emailCodeOffered() ||
+          this.singleSignOn()
         ) {
           return 'providers';
         }
@@ -472,15 +533,19 @@ export class SignInPage {
 
   constructor() {
     void this.oidc.load();
+    // Asked anew each time: what is offered may have changed since this tab began (#378).
     void this.passwords
-      .loadOptions()
+      .reloadOptions()
       .finally(() => this.optionsAsked.set(true));
     // Someone is acting (a retry answered, another tab signed in): on to where they were going.
     effect(() => {
       if (this.meService.presence() !== 'person' || this.picking() !== null) {
         return;
       }
-      untracked(() => void this.router.navigateByUrl(this.returnUrl()));
+      untracked(() => {
+        this.oidc.ended.set(false);
+        void this.router.navigateByUrl(this.returnUrl());
+      });
     });
   }
 
@@ -496,10 +561,23 @@ export class SignInPage {
     }
   }
 
-  /** Signed in with a password: who is acting now, then on to where they were going. */
-  protected async signedIn(): Promise<void> {
-    await this.meService.refresh(true).catch(() => false);
-    await this.router.navigateByUrl(this.returnUrl());
+  /** Opens or closes the emergency sign-in; its form is typed in at once. */
+  protected toggleEmergency(): void {
+    this.emergency.update((open) => !open);
+    if (!this.emergency()) return;
+    afterNextRender(
+      () =>
+        this.element.nativeElement
+          .querySelector<HTMLInputElement>('#sign-in-email')
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  /** The password is right: the second step (#611), or who is acting now and on. */
+  protected async signedIn(step: SecondStepKind): Promise<void> {
+    if (!step) await this.meService.refresh(true).catch(() => false);
+    await afterSignIn(this.router, step, this.returnUrl());
   }
 
   /** Asks again whether this is demo mode, then who is acting. */

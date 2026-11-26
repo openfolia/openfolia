@@ -47,6 +47,7 @@ export const SIGN_IN_ERRORS = [
   'sign-in-expired',
   'user-deactivated',
   'sign-in-not-allowed',
+  'too-many-failed-attempts',
 ] as const;
 export type SignInError = (typeof SIGN_IN_ERRORS)[number];
 
@@ -58,7 +59,20 @@ export const SIGN_IN_ERROR_TEXT: Record<SignInError, string> = {
   'sign-in-expired': 'editor.signIn.errors.sign-in-expired',
   'user-deactivated': 'editor.signIn.errors.user-deactivated',
   'sign-in-not-allowed': 'editor.signIn.errors.sign-in-not-allowed',
+  'too-many-failed-attempts': 'editor.signIn.errors.too-many-failed-attempts',
 };
+
+/**
+ * A provider button's wording when the API names no provider (`name` null), by the provider's ID:
+ * SAML (#376) has its own, so it is told apart from OpenID Connect's; any other, the default.
+ */
+const PROVIDER_TEXT: ReadonlyMap<string, string> = new Map([
+  ['saml', 'editor.signIn.providers.saml'],
+]);
+
+export function providerText(id: string): string {
+  return PROVIDER_TEXT.get(id) ?? 'editor.signIn.providers.continue';
+}
 
 export function signInErrorOf(raw: string | null): SignInError | null {
   if (raw === null || raw === '') return null;
@@ -78,6 +92,8 @@ export type ProvidersStatus = 'loading' | 'ready' | 'failed';
  */
 @Injectable({ providedIn: 'root' })
 export class SignInSession {
+  /** The session this tab had ended (not by signing out here): the sign-in page says so. */
+  readonly ended = signal(false);
   private readonly api = inject(ApiClient);
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);

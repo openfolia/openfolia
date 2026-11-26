@@ -12,6 +12,10 @@ const texts = {
     apiInEnglish: 'The operation pages are in English:',
     copyright: 'Licensed under the AGPL-3.0.',
     theme: 'Theme',
+    searchLoading: 'Loading the search index…',
+    searchFailed: 'The search could not be loaded',
+    searchFailedText: 'Check your connection and try again.',
+    searchRetry: 'Try again',
   },
   de: {
     displayName: 'Deutsch',
@@ -24,6 +28,10 @@ const texts = {
     apiInEnglish: 'Die Seiten der einzelnen Operationen sind auf Englisch:',
     copyright: 'Lizenziert unter der AGPL-3.0.',
     theme: 'Darstellung',
+    searchLoading: 'Suchindex wird geladen…',
+    searchFailed: 'Die Suche konnte nicht geladen werden',
+    searchFailedText: 'Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
+    searchRetry: 'Erneut versuchen',
   },
 } satisfies Record<Lang, Record<string, string>>;
 

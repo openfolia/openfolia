@@ -9,14 +9,24 @@ import {
   type NestInterceptor,
 } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
-import type { Request } from 'express';
-import type { Observable } from 'rxjs';
+import type { Request, Response } from 'express';
+import {
+  concatMap,
+  defer,
+  type Observable,
+  retry,
+  throwError,
+  timer,
+} from 'rxjs';
 import type { Actor } from '../../access/core/actor.js';
 import { AcceptsQuery } from '../../base/api/json-api.decorators.js';
 import { JsonApiException } from '../../base/api/json-api.exception.js';
 import { ReadsLive } from '../../content/api/read-content.js';
 import type { ReadableContent } from '../../content/core/readable-content.js';
-import { OpenWorkingCopiesAction } from '../core/actions/open-working-copies.action.js';
+import {
+  OpenWorkingCopiesAction,
+  WorkingCopyGoneError,
+} from '../core/actions/open-working-copies.action.js';
 import { isChangeSetId } from '../core/change-set.js';
 
 /** What a request reading working copies read them from. */
@@ -32,6 +42,12 @@ type LiveRequest = Request & {
 };
 
 const PARAMETER = 'workingCopy';
+
+/**
+ * How often a read is made again because a working copy was committed or discarded under it. Each
+ * time takes another save point or discard of the same author within the one read.
+ */
+const RETRIES = 3;
 const BRANCH = /^change-sets\/(.+)$/;
 
 /**
@@ -52,17 +68,20 @@ const invalid = (detail: string) =>
  * `@ReadsContent()` has opened `?ref=`, which must name the change set's
  * branch (`change-sets/<id>`); `OpenWorkingCopiesAction` decides who may
  * (its author: 403 for another reader of drafts, 404 for anyone else) and
- * replaces the request's content with the overlaid one.
+ * opens what replaces the request's content: the branch as it is once the
+ * working copies are known (so `X-Ccms-Commit` may name a newer commit
+ * than `?ref=` was first resolved to). When a working copy is gone by the
+ * time it is read (`WorkingCopyGoneError`: a save point committed it, #935),
+ * the read is made again from the start, on what there is then.
  */
 @Injectable()
 export class WorkingCopyInterceptor implements NestInterceptor {
   constructor(private readonly open: OpenWorkingCopiesAction) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<unknown>> {
-    const req = context.switchToHttp().getRequest<LiveRequest>();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const http = context.switchToHttp();
+    const req = http.getRequest<LiveRequest>();
+    const res = http.getResponse<Response>();
     const asked = req.query[PARAMETER];
     if (asked === undefined || asked === 'false') return next.handle();
     if (asked !== 'true') {
@@ -75,17 +94,28 @@ export class WorkingCopyInterceptor implements NestInterceptor {
         'workingCopy=true reads a change set’s working copies: give its branch as ref (change-sets/<id>).',
       );
     }
-    const snapshot = req.snapshot;
-    if (!snapshot) throw new Error('route is missing @ReadsContent()');
-    const opened = await this.open.handle({
-      // Set by `ActorGuard`, which runs before any interceptor.
-      actor: req.actor as Actor,
-      snapshot,
-      changeSetId: id,
-    });
-    req.snapshot = opened.content;
-    req.workingCopies = { changeSetId: id, uploaded: opened.uploaded };
-    return next.handle();
+    if (!req.snapshot) throw new Error('route is missing @ReadsContent()');
+    return defer(() =>
+      this.open.handle({
+        // Set by `ActorGuard`, which runs before any interceptor.
+        actor: req.actor as Actor,
+        changeSetId: id,
+      }),
+    ).pipe(
+      concatMap(({ content, uploaded }) => {
+        req.snapshot = content;
+        req.workingCopies = { changeSetId: id, uploaded };
+        res.setHeader('X-Ccms-Commit', content.commit);
+        return next.handle();
+      }),
+      retry({
+        count: RETRIES,
+        delay: (error: unknown) =>
+          error instanceof WorkingCopyGoneError
+            ? timer(0)
+            : throwError(() => error),
+      }),
+    );
   }
 }
 
@@ -103,7 +133,7 @@ export const ReadsWorkingCopies = () =>
       name: PARAMETER,
       required: false,
       description:
-        'For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. `private, no-cache`, without the commit’s ETag. Default: false.',
+        'For authors (left out of the delivery document): true reads the change set’s working copies (what its editor autosaved, not committed yet) in place of their files, modules and manuals alike; module references resolve to their own working copies where there are any; an image uploaded into the change set links to `GET /change-sets/{changeSetId}/assets/{hash}` in an HTML page, and the PDF shows it. Needs `ref` to name the change set’s branch (`change-sets/<id>`; else 400 `invalid-parameter`) and only for its author: 403 for anyone else who may read drafts, 404 for anyone who may not. A read overlapping a save point or a discard shows the state before or after it; when one after the other takes away what it reads, it is 409 `working-copy-changed` (read again). `private, no-cache`, without the commit’s ETag. Default: false.',
       schema: { type: 'string', enum: ['true', 'false'], default: 'false' },
     }),
   );

@@ -20,13 +20,17 @@ const sharedBlocks = (extra: readonly Block[] = []): Block[] => [
 
 /**
  * Inserts a module reference after `after` (`/module`) and opens the picker from its card,
- * then searches for `term` and chooses the one row it finds.
+ * then searches for `term` and chooses the row titled `chosen`. The search is fuzzy (it finds
+ * a word within a typo of the term), so another module whose title holds a word made at about
+ * the same moment (`unique()`, any flow that merged one into main) is a hit too: the row is
+ * found by its title, never by being the only one (#933).
  */
 async function openPicker(
   page: Page,
   title: string,
   after: string,
   term: string,
+  chosen: string,
 ) {
   await page
     .getByRole('textbox', { name: `Module ${title}` })
@@ -42,7 +46,7 @@ async function openPicker(
     .click();
   const dialog = page.getByRole('dialog', { name: 'Insert module reference' });
   await dialog.getByRole('searchbox', { name: 'Search modules' }).fill(term);
-  const row = dialog.locator('button[data-picker-row]');
+  const row = dialog.locator('button[data-picker-row]', { hasText: chosen });
   await expect(row).toHaveCount(1);
   await row.click();
   await expect(row).toHaveAttribute('aria-pressed', 'true');
@@ -70,6 +74,17 @@ test.describe('module references to one block @area:module-editor @area:doc-edit
       },
       { savePoint: false },
     );
+    // A module whose title holds a word one letter off: the picker's search finds it too.
+    await author.createModule(
+      changeSet,
+      {
+        lang: 'en',
+        moduleId: moduleId('decoy'),
+        title: `Battery safety ${word.slice(0, -1)}${word.endsWith('x') ? 'y' : 'x'}`,
+        blocks: [paragraph('d1', 'Another module.')],
+      },
+      { savePoint: false },
+    );
     await author.createModule(changeSet, {
       lang: 'en',
       moduleId: host,
@@ -85,6 +100,7 @@ test.describe('module references to one block @area:module-editor @area:doc-edit
       'Charging station',
       'Before charging, read this.',
       word,
+      `Battery safety ${word}`,
     );
 
     // "One block from it": the preview turns into a chooser of the module's blocks.
@@ -161,6 +177,7 @@ test.describe('module references to one block @area:module-editor @area:doc-edit
       'Charging station',
       'Before charging, read this.',
       word,
+      `Station overview ${word}`,
     );
     await dialog.getByRole('radio', { name: /One block from it/ }).click();
     await dialog

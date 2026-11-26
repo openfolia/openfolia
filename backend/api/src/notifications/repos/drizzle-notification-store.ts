@@ -192,7 +192,7 @@ export class DrizzleNotificationStore extends NotificationStore {
   }
 }
 
-function toNotification(row: Row): Notification {
+export function toNotification(row: Row): Notification {
   return {
     id: String(row.id),
     outboxId: Number(row.outboxId),

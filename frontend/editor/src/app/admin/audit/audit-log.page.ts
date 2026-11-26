@@ -47,6 +47,7 @@ import {
 } from '../../api';
 import { apiErrorText } from '../../i18n';
 import { saveResponse } from '../../reports/report-download';
+import { PersonNameComponent } from '../../session/person-name.component';
 import {
   idParam,
   injectQueryState,
@@ -106,6 +107,7 @@ interface Option {
 @Component({
   selector: 'of-audit-log-page',
   imports: [
+    PersonNameComponent,
     RouterLink,
     TranslocoPipe,
     NgIcon,
@@ -360,15 +362,22 @@ interface Option {
                 <td z-table-cell class="align-top whitespace-normal">
                   @let name = nameOf(a.actor);
                   @if (name) {
-                    <span class="block font-medium break-words">{{
-                      name
-                    }}</span>
+                    <of-person-name
+                      class="block font-medium"
+                      [who]="a.actor"
+                      [name]="name"
+                    />
+                    <span
+                      class="text-muted-foreground block font-mono text-xs [overflow-wrap:anywhere]"
+                      >{{ a.actor.id }}</span
+                    >
+                  } @else {
+                    <of-person-name
+                      class="block font-mono text-xs [overflow-wrap:anywhere]"
+                      [who]="a.actor"
+                      [name]="a.actor.id"
+                    />
                   }
-                  <span
-                    class="block font-mono text-xs [overflow-wrap:anywhere]"
-                    [class.text-muted-foreground]="name"
-                    >{{ a.actor.id }}</span
-                  >
                   @if (a.actor.kind === 'service') {
                     <z-badge zType="outline" class="mt-1 h-auto">{{
                       'editor.admin.audit.actor.service' | transloco

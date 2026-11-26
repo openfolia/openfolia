@@ -21,8 +21,8 @@ Audit-Log festgehalten.
 
 Die Liste zeigt E-Mail-Adresse und ID jeder Person unter ihrem Namen. Sie durchsucht Name, E-Mail
 und ID (drücken Sie <kbd>/</kbd>), **Alle**, **Aktiv** und **Deaktiviert** filtern sie.
-**Bearbeiten** und **Deaktivieren** stehen am Ende jeder Zeile; in einem schmalen Fenster scrollen Sie
-die Liste dafür seitwärts.
+Am Ende jeder Zeile stehen **Bearbeiten** und ein Menü mit allem Weiteren; in einem schmalen Fenster
+scrollen Sie die Liste dafür seitwärts.
 
 ## Wie sich eine Person anmeldet
 
@@ -35,12 +35,16 @@ eingeschaltet, zeigt die Seite Benutzer mehr:
   **Noch nicht**.
 - Eine neue Person bekommt sofort eine Einladung: einen Einmal-Link, einmal zum Kopieren
   angezeigt. Ist E-Mail eingerichtet, wird er ihr auch gesendet.
-- **Einladen** erstellt eine neue Einladung, **Einladung zurückziehen** beendet eine offene, und
+- Im Menü einer Zeile erstellt **Einladen** eine neue Einladung, **Einladung zurückziehen** beendet eine offene, und
   **Zurücksetzen-Link** erstellt einen Link zum Zurücksetzen des Passworts für jemanden mit
   Passwort. Jeder Link funktioniert einmal, für begrenzte Zeit, und ersetzt jeden früheren.
 
 Eine Person ohne E-Mail-Adresse bekommt keinen Link. Codes per E-Mail brauchen hier nichts: Die
 Person fordert einen auf der Anmeldeseite an.
+
+**Zwei-Faktor** in einer Zeile kennzeichnet eine Person mit eingeschalteter Zwei-Faktor-Anmeldung;
+**Zwei-Faktor zurücksetzen** im Menü der Zeile ist für ein verlorenes Telefon. Siehe [Zwei-Faktor-Anmeldung
+vorschreiben](/de/guide/admin/two-factor).
 
 <ServerSetting lang="de">
   Die Wege zur Anmeldung werden wie unter
@@ -58,7 +62,7 @@ Person fordert einen auf der Anmeldeseite an.
 
 ![Die Seite Rollen mit der Rolle Author, ihren Berechtigungen, ihrem Geltungsbereich und wer sie hat](/images/guide/de/admin-roles.webp)
 
-**admin.roles**, **admin.branding** und **webhook.manage** gelten immer überall. Unter **Wer sie
+**admin.roles**, **admin.branding**, **webhook.manage** und **scim.provision** gelten immer überall. Unter **Wer sie
 hat** fügen Sie Personen und Service-Accounts hinzu oder entfernen sie. Eine Rolle mit
 **admin.roles** kann kein Service-Account haben. **Rolle löschen** geht, sobald niemand sie hat.
 
@@ -66,8 +70,20 @@ hat** fügen Sie Personen und Service-Accounts hinzu oder entfernen sie. Eine Ro
 
 ## Eine Person deaktivieren
 
-1. Wählen Sie in **Benutzer** in der Zeile der Person **Deaktivieren** und bestätigen Sie.
+1. Öffnen Sie in **Benutzer** das Menü am Ende der Zeile der Person, wählen Sie **Deaktivieren** und
+   bestätigen Sie.
 2. Die Person kann nicht mehr handeln. Ihre Freigaben zählen nicht mehr, und alle ihre Sperren
-   werden aufgehoben. Ihre Rollen bleiben.
+   werden aufgehoben. Ihre Rollen bleiben. Sie bleibt auch draußen, wenn Ihr Identitätsanbieter
+   sie später anders nennt (dort neu angelegt, oder über Ihren anderen Anbieter angemeldet): Eine
+   erste Anmeldung mit einer vom Anbieter bestätigten Adresse, die ein deaktivierter Benutzer hat,
+   wird abgelehnt. Ein Anbieter, der keine Adresse bestätigt (bei SAML der Standard), lässt sich so
+   nicht halten: Nehmen Sie die Person auch dort heraus. Soll jemand anderes mit dieser Adresse
+   hinein, ändern oder entfernen Sie die Adresse des deaktivierten Benutzers.
 
-**Reaktivieren** holt sie zurück.
+Ihre Arbeit bleibt unter ihrem Namen. Solange die Person deaktiviert ist, setzt der Editor ein
+unauffälliges **(deaktiviert)** hinter den Namen, wo er sagt, wer etwas geschrieben, freigegeben
+oder veröffentlicht hat: im Verlauf von Modulen und Anleitungen, in der Prüfung (Liste, Freigaben
+und Kommentare), bei Veröffentlichungen und Wartungslinien, bei den Übersetzungsaufträgen, im
+Audit-Log und in einer Benachrichtigung, die die Person nennt. Eine E-Mail behält den Namen, mit dem sie gesendet wurde.
+
+**Reaktivieren** holt sie zurück, und der Hinweis verschwindet.

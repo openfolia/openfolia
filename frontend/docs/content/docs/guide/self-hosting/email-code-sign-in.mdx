@@ -76,6 +76,8 @@ A code asked for while the password is set or changed ends with it too.
 
 Setting `CCMS_EMAIL_CODE_SIGN_IN=off` refuses new codes and ends the sessions begun with a code.
 Sessions have the same limits as every other sign-in: 8 hours without a request
-(`CCMS_SESSION_IDLE_MINUTES`) and 7 days at most (`CCMS_SESSION_MAX_HOURS`).
+(`CCMS_SESSION_IDLE_MINUTES`) and 7 days at most (`CCMS_SESSION_MAX_HOURS`), unless an admin set
+others ([Require single sign-on](/guide/admin/single-sign-on)). Where single sign-on is required, no
+codes are sent or accepted.
 
 As with passwords, leave `CCMS_API_TOKEN` and `CCMS_EDITOR_API_TOKEN` unset where people sign in.

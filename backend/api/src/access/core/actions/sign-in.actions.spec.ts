@@ -1,3 +1,9 @@
+import type { HeldBefore } from '../begin-session.js';
+import { mintPendingSignIn } from '../pending-sign-ins.js';
+import {
+  FakePendingSignIns,
+  sessionStart,
+} from '../../../../tests/fakes/fake-second-factors.js';
 import { FakeAccessAdmin } from '../../../../tests/fakes/fake-access-admin.js';
 import { FakeAuditLog } from '../../../../tests/fakes/fake-audit-log.js';
 import { FakeEmailCodes } from '../../../../tests/fakes/fake-email-codes.js';
@@ -77,13 +83,14 @@ function setUp() {
   const providers = new StaticIdentityProviders([provider]);
   const links = new FakeSignInLinks();
   const codes = new FakeEmailCodes(admin);
-  const waysIn = new WaysIn(sessions, links, codes);
+  const pending = new FakePendingSignIns();
+  const waysIn = new WaysIn(sessions, links, codes, pending);
   const complete = new CompleteSignInAction(
     providers,
     admin,
     identities,
     mappings,
-    sessions,
+    sessionStart({ sessions, policy, admin, codes, pending }),
     policy,
     audit,
     unit,
@@ -109,6 +116,7 @@ function setUp() {
     audit,
     unit,
     links,
+    pending,
     codes,
     waysIn,
     identities,
@@ -399,6 +407,147 @@ describe('CompleteSignInAction', () => {
     expect(s.audit.events).toEqual([]);
   });
 
+  describe('an unknown subject with a verified address a deactivated user holds (#943)', () => {
+    /** Signs `who` in and expects the refusal, with nothing written. */
+    const refusedWithNothingWritten = async (
+      s: ReturnType<typeof setUp>,
+      who: ExternalIdentity,
+    ) => {
+      const users = [...s.admin.committed.users.keys()];
+      const identities = [...s.admin.committed.identities.keys()];
+      const sessions = s.sessions.sessions.size;
+      s.audit.events.length = 0;
+      expect(await s.signIn(who)).toEqual({ refused: 'user-deactivated' });
+      expect([...s.admin.committed.users.keys()]).toEqual(users);
+      expect([...s.admin.committed.identities.keys()]).toEqual(identities);
+      expect(s.sessions.sessions.size).toBe(sessions);
+      expect(s.audit.events).toEqual([]);
+    };
+
+    for (const mode of ['pending', 'any', 'off'] as const) {
+      it(`refuses as deactivated, and makes and links nothing, with linking ${mode}`, async () => {
+        const s = setUp();
+        s.policy.linking = mode;
+        await s.token(identity());
+        s.admin.committed.users.get('pat')!.deactivatedAt = new Date();
+        // The provider names them differently now (made again there, another format).
+        await refusedWithNothingWritten(
+          s,
+          identity({ subject: 'sub-new', username: 'pat.new' }),
+        );
+        // Through another provider, with the address in other letters.
+        await refusedWithNothingWritten(
+          s,
+          identity({
+            issuer: 'https://other.example.org',
+            subject: 'o-1',
+            email: 'PAT@example.org',
+          }),
+        );
+        // A user an admin made and deactivated before they ever signed in.
+        s.admin.putUser({
+          id: 'lee',
+          name: 'Lee',
+          email: 'lee@example.org',
+          roleIds: [],
+        });
+        s.admin.committed.users.get('lee')!.deactivatedAt = new Date();
+        await refusedWithNothingWritten(
+          s,
+          identity({ subject: 'sub-lee', email: 'lee@example.org' }),
+        );
+      });
+    }
+
+    it('refuses before the session policy, and with the address in other letters and spaces', async () => {
+      const s = setUp();
+      await s.token(identity());
+      s.admin.committed.users.get('pat')!.deactivatedAt = new Date();
+      s.policy.refuse.add('pat.new');
+      await refusedWithNothingWritten(
+        s,
+        identity({
+          subject: 'sub-new',
+          username: 'pat.new',
+          email: '  PAT@Example.ORG ',
+        }),
+      );
+    });
+
+    it('refuses their known subject when the provider brings an address nobody has, keeping theirs', async () => {
+      const s = setUp();
+      await s.token(identity());
+      s.admin.committed.users.get('pat')!.deactivatedAt = new Date();
+      await refusedWithNothingWritten(
+        s,
+        identity({ email: 'pat@new.example.org' }),
+      );
+      expect(s.admin.user('pat')?.email).toBe('pat@example.org');
+    });
+
+    it('signs in as before with an address the provider does not vouch for: says nothing about who it is', async () => {
+      const s = setUp();
+      await s.token(identity());
+      s.admin.committed.users.get('pat')!.deactivatedAt = new Date();
+      const outcome = await s.token(
+        identity({
+          subject: 'sub-new',
+          username: 'pat.new',
+          emailVerified: false,
+        }),
+      );
+      expect(outcome.userId).toBe('pat.new');
+      expect(s.admin.user('pat.new')?.email).toBeNull();
+    });
+
+    it('signs a reactivated user in again as before', async () => {
+      const s = setUp();
+      s.policy.linking = 'any';
+      await s.token(identity());
+      s.admin.committed.users.get('pat')!.deactivatedAt = new Date();
+      await refusedWithNothingWritten(
+        s,
+        identity({ issuer: 'https://other.example.org', subject: 'o-1' }),
+      );
+      s.admin.committed.users.get('pat')!.deactivatedAt = null;
+      // Linked where the setting allows it: no identity at that issuer yet.
+      const other = await s.token(
+        identity({ issuer: 'https://other.example.org', subject: 'o-1' }),
+      );
+      expect(other.userId).toBe('pat');
+      // Not at the same issuer: a user of its own, without the address.
+      const renamed = await s.token(
+        identity({ subject: 'sub-new', username: 'pat.new' }),
+      );
+      expect(renamed.userId).toBe('pat.new');
+      expect(s.admin.user('pat.new')?.email).toBeNull();
+    });
+  });
+
+  for (const mode of ['pending', 'any', 'off'] as const) {
+    it(`signs an unknown subject in as before with linking ${mode}: an address nobody holds, or an active user holds (#943)`, async () => {
+      const s = setUp();
+      s.policy.linking = mode;
+      const fresh = await s.token(identity());
+      expect(fresh.userId).toBe('pat');
+      expect(s.admin.user('pat')?.email).toBe('pat@example.org');
+      s.admin.putUser({
+        id: 'lee',
+        name: 'Lee',
+        email: 'lee@example.org',
+        roleIds: [],
+      });
+      const held = await s.token(
+        identity({
+          subject: 'sub-lee',
+          username: 'lee.new',
+          email: 'lee@example.org',
+        }),
+      );
+      expect(held.userId).toBe(mode === 'off' ? 'lee.new' : 'lee');
+    });
+  }
+
   it('refuses whom the session policy refuses', async () => {
     const s = setUp();
     s.policy.refuse.add('pat');
@@ -416,6 +565,64 @@ describe('CompleteSignInAction', () => {
     expect(
       s.sessions.sessions.get(hashSessionToken(first.token))?.revokedAt,
     ).not.toBeNull();
+  });
+
+  it('ends the session, and the open second step, kept since the sign-in began, only when the answer carries none (#934)', async () => {
+    const s = setUp();
+    const revoked = (token: string) =>
+      s.sessions.sessions.get(hashSessionToken(token))?.revokedAt;
+    const first = await s.token(identity());
+    const second = await s.token(identity());
+    const finish = (previous: {
+      previousToken?: string;
+      openStepToken?: string;
+      heldAtBegin?: HeldBefore;
+    }) =>
+      s.complete.handle({
+        providerId: 'oidc',
+        callback: new URLSearchParams({ state: 's1', code: 'c' }),
+        pending: { state: 's1' },
+        ...previous,
+      });
+    await finish({
+      previousToken: second.token,
+      heldAtBegin: { sessionHash: hashSessionToken(first.token) },
+    });
+    expect(revoked(second.token)).not.toBeNull();
+    expect(revoked(first.token)).toBeNull();
+    await finish({
+      heldAtBegin: { sessionHash: hashSessionToken(first.token) },
+    });
+    expect(revoked(first.token)).not.toBeNull();
+
+    // The second step the browser had open (#611), the same way.
+    const open = async () => {
+      const step = mintPendingSignIn();
+      await s.unit.run((tx) =>
+        s.pending.create(
+          tx,
+          {
+            hash: step.hash,
+            userId: 'root',
+            step: 'verify',
+            provider: 'password',
+            via: null,
+            expiresAt: new Date(Date.now() + 600_000),
+          },
+          new Date(),
+        ),
+      );
+      return step;
+    };
+    const [here, atBegin] = [await open(), await open()];
+    await finish({
+      openStepToken: here.token,
+      heldAtBegin: { stepHash: atBegin.hash },
+    });
+    expect(await s.pending.find(here.hash)).toBeUndefined();
+    expect(await s.pending.find(atBegin.hash)).toBeDefined();
+    await finish({ heldAtBegin: { stepHash: atBegin.hash } });
+    expect(await s.pending.find(atBegin.hash)).toBeUndefined();
   });
 
   it('passes the provider’s refusal on, and knows only its providers', async () => {
@@ -505,6 +712,64 @@ describe('AuthenticateSessionAction', () => {
         i < 5 ? expect.anything() : 'session-expired',
       );
     }
+  });
+
+  it('ends a session nobody uses, whatever its open tab asks by itself (#378)', async () => {
+    const s = authenticate();
+    let now = Date.parse('2026-11-20T10:00:00Z');
+    s.sessions.now = () => now;
+    s.auth.now = () => now;
+    s.policy.fixed = { idleMs: 10 * 60_000, maxMs: 24 * 60 * 60_000 };
+    const { token, userId } = await s.token(identity());
+    s.users.put({ kind: 'user', id: userId, roles: [] });
+    now += 5 * 60_000;
+    const used = await s.auth.handle({ token });
+    expect(used).toMatchObject({
+      session: { expiresAt: new Date(now + 10 * 60_000) },
+    });
+    // The tab's own questions are answered, and move nothing on.
+    now += 4 * 60_000;
+    expect(await s.auth.handle({ token, background: true })).toMatchObject({
+      session: { expiresAt: new Date(now + 6 * 60_000) },
+    });
+    now += 6 * 60_000;
+    expect(await s.auth.handle({ token, background: true })).toEqual({
+      refused: 'session-expired',
+    });
+    expect(await s.auth.handle({ token })).toEqual({
+      refused: 'invalid-session',
+    });
+  });
+
+  it('follows the limits as they are at each request (#378)', async () => {
+    const s = authenticate();
+    let now = Date.parse('2026-11-20T10:00:00Z');
+    s.sessions.now = () => now;
+    s.auth.now = () => now;
+    const { token, userId } = await s.token(identity());
+    s.users.put({ kind: 'user', id: userId, roles: [] });
+    now += 30 * 60_000;
+    expect(await s.auth.handle({ token })).toHaveProperty('actor');
+    // An administrator sets shorter ones: the very next request is past them.
+    s.policy.fixed = { idleMs: 3_600_000, maxMs: 20 * 60_000 };
+    expect(await s.auth.handle({ token })).toEqual({
+      refused: 'session-expired',
+    });
+  });
+
+  it('asks the store to write at most once a minute, however many requests', async () => {
+    const s = authenticate();
+    let now = Date.parse('2026-11-20T10:00:00Z');
+    s.sessions.now = () => now;
+    s.auth.now = () => now;
+    const { token, userId } = await s.token(identity());
+    s.users.put({ kind: 'user', id: userId, roles: [] });
+    const touch = vi.spyOn(s.sessions, 'touch');
+    for (let i = 0; i < 120; i++) {
+      now += 1_000;
+      await s.auth.handle({ token });
+    }
+    expect(touch).toHaveBeenCalledTimes(2);
   });
 
   it('says a deactivated user is deactivated', async () => {

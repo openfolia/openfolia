@@ -19,6 +19,7 @@ import {
 import { DEFAULT_DOCS_URL, docsUrl } from './docs-url.js';
 import { checkSecretKeyEnv, SecretKeyEnv } from './secret-key-env.js';
 import { checkSignInEnv, SignInEnv } from './sign-in-env.js';
+import { checkSamlEnv, SamlEnv } from './saml-env.js';
 import { publicUrl } from './public-url.js';
 import {
   DEFAULT_DELIVERY_PER_MINUTE,
@@ -271,6 +272,12 @@ export const Env = z
     CCMS_NOTIFICATIONS_POLL_MS: field(wholeNumber(0, 3_600_000).default(3_000)),
     /** How many days read notifications are kept (default 90). */
     CCMS_NOTIFICATIONS_KEEP_DAYS: field(wholeNumber(1, 36_500).default(90)),
+    /** The daily summary email's hour for people who chose none, in their time zone (#884; default 8, from 0 to 23). */
+    CCMS_NOTIFICATIONS_DIGEST_HOUR: field(wholeNumber(0, 23).default(8)),
+    /** The most notification emails at once one person gets per hour; more wait for the summary (#884; default 20, from 1 to 1,000). */
+    CCMS_NOTIFICATIONS_EMAILS_PER_HOUR: field(
+      wholeNumber(1, 1_000).default(20),
+    ),
     /** Hours after which the backup status warns that there is no good backup (#529; default 26, from 1 to 8,760). */
     CCMS_BACKUP_WARN_AFTER_HOURS: field(wholeNumber(1, 8_760).default(26)),
     /** Failed authentications one client address may make per window before it is refused (429; default 20; 0: no limit). */
@@ -362,6 +369,7 @@ export const Env = z
     ...MailEnv.shape,
     ...SecretKeyEnv.shape,
     ...SignInEnv.shape,
+    ...SamlEnv.shape,
     ...AuditEnv.shape,
     ...SandboxEnv.shape,
   })
@@ -370,6 +378,7 @@ export const Env = z
   .superRefine(checkSearchEnv)
   .superRefine(checkSecretKeyEnv)
   .superRefine(checkSignInEnv)
+  .superRefine(checkSamlEnv)
   .superRefine(checkMailEnv)
   .superRefine(checkAuditEnv)
   .superRefine(checkPackageSendEnv)

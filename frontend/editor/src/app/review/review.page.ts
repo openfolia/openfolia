@@ -62,6 +62,7 @@ import {
   type Response,
 } from '../api';
 import { languageName } from '../content/browser-model';
+import { injectPersonName } from '../history/history-model';
 import { apiErrorText } from '../i18n';
 import { contributesOnly } from '../permissions/permissions';
 import { GuardDirective } from '../permissions/guard.directive';
@@ -80,6 +81,7 @@ import {
 import { ChangeSetBaseRewrittenComponent } from '../session/change-set-base-rewritten.component';
 import { CarryForward } from '../session/carry-forward';
 import { LineBadgeComponent } from '../session/line-badge.component';
+import { PersonNameComponent } from '../session/person-name.component';
 import { MaintenanceLines } from '../session/maintenance-lines';
 import { ChangeSetMove } from '../session/change-set-move';
 import { ChangeSetUpdate } from '../session/change-set-update';
@@ -243,6 +245,7 @@ const isFilter = (value: unknown): value is ReviewFilter =>
 @Component({
   selector: 'of-review-page',
   imports: [
+    PersonNameComponent,
     FadeInDirective,
     RefreshingDirective,
     RouterLink,
@@ -360,7 +363,10 @@ const isFilter = (value: unknown): value is ReviewFilter =>
             <span
               class="text-muted-foreground text-xs leading-5 font-normal break-words"
             >
-              {{ authorOf(cs) }} ·
+              <of-person-name
+                [who]="cs.attributes.author"
+                [name]="authorOf(cs)"
+              />&nbsp;·
               {{ cs.attributes.updatedAt | ofRelativeTime }}
             </span>
             @if (byContributor(cs)) {
@@ -401,7 +407,10 @@ const isFilter = (value: unknown): value is ReviewFilter =>
                   <of-status-badge [status]="statusOf(cs)" />
                   <of-line-badge [baseRef]="cs.attributes.baseRef" />
                   <span class="break-words"
-                    >{{ authorOf(cs) }} ·
+                    ><of-person-name
+                      [who]="cs.attributes.author"
+                      [name]="authorOf(cs)"
+                    />&nbsp;·
                     {{ cs.attributes.updatedAt | ofRelativeTime }}</span
                   >
                   @if (byContributor(cs)) {
@@ -1046,11 +1055,7 @@ export class ReviewPage {
   /** Whoever is acting: lists and reviews are read again for another person. */
   private readonly who = computed(() => this.me.me().id);
 
-  protected readonly nameOf = (kind: string, id: string): string => {
-    const me = this.me.me();
-    if (kind === me.kind && id === me.id && me.name) return me.name;
-    return this.demo.users().find((u) => u.id === id)?.name ?? id;
-  };
+  protected readonly nameOf = injectPersonName();
 
   protected readonly typeLabel = (id: string): string =>
     this.typeLabels().get(id) ?? id;

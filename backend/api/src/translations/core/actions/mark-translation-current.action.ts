@@ -99,7 +99,9 @@ export interface MarkedCurrent {
  * module, then a save point (`CommitWorkingCopiesAction`) writing only the
  * record, with a `translation.mark-current` audit event in its write
  * transaction. The change set must be the actor's own draft and must hold
- * no working copy of that module (409 `uncommitted-working-copies`).
+ * no working copy of that module (409 `uncommitted-working-copies`). The record's write and the
+ * working copies below are based on the head read here (#957): a save point that changed the
+ * file since is 409 `stale-working-copy`, never overwritten.
  * Needs `translation.manage` on the module in `lang` (403 otherwise) and
  * `content.edit` (for the lock and the commit). A source module the actor
  * does not see is 404; `lang` that is no target language 422
@@ -224,7 +226,12 @@ export class MarkTranslationCurrentAction extends ActorAction<
       subjects: [],
       message: `Mark the ${lang} translation of ${moduleId} as current`,
       translationRecords: [
-        { subject, record: recordWith(record, head.commit, hashes) },
+        {
+          subject,
+          record: recordWith(record, head.commit, hashes),
+          // A record changed since it was read here is 409, never overwritten (#957).
+          baseCommit: head.commit,
+        },
       ],
       after: async (tx, { commit }) => {
         await this.auditLog.record(tx, actor, {
@@ -355,6 +362,9 @@ export class MarkTranslationCurrentAction extends ActorAction<
       subject,
       content,
       version: 0,
+      // The commit the content was read from (#957): a file a save point changed since is 409
+      // `stale-working-copy`, never overwritten with this older text.
+      baseCommit: head.commit,
     });
     const { id } = subjectKey(subject as LockSubject);
     // The save point refused (a blocking issue elsewhere, the branch moved): the record's working

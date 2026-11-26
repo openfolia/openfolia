@@ -68,6 +68,7 @@ export class FailMailAction implements UnguardedAction {
         action: 'mail.failed',
         subject: mailSubject(mail.id),
         data: {
+          ...mail.auditData,
           template: mail.template,
           reason: why,
           attempts: mail.attempts + (reason === 'rejected' ? 1 : 0),
@@ -83,7 +84,9 @@ export class FailMailAction implements UnguardedAction {
  * Gone already (sent by an earlier attempt): nothing. A failure the server gives as final (5xx),
  * params that do not open (another key) or a template this server does not know: failed for good
  * at once (`mail.failed`); any other failure throws, and the job tries again. Runs at least once:
- * an attempt cut off after the server took the email and before the row went sends it again.
+ * an attempt cut off after the server took the email and before the row went sends it again,
+ * under the same `Message-ID` (the email's ID), so a mail client shows it once. An email queued
+ * with audit data (#884) is recorded as `mail.sent` with it, never its address or what it said.
  */
 @Injectable()
 export class SendMailAction implements UnguardedAction {
@@ -99,6 +102,7 @@ export class SendMailAction implements UnguardedAction {
     private readonly mailer: Mailer,
     private readonly fail: FailMailAction,
     private readonly unit: UnitOfWork,
+    private readonly auditLog: AuditLog,
   ) {}
 
   async handle({
@@ -130,6 +134,7 @@ export class SendMailAction implements UnguardedAction {
       return 'failed';
     }
     const rendered = renderMail({
+      id: mail.id,
       template: mail.template,
       params,
       language: mail.language,
@@ -143,7 +148,16 @@ export class SendMailAction implements UnguardedAction {
     } catch (error) {
       return this.failed(mail, error);
     }
-    await this.unit.run((tx) => this.store.remove(tx, mail.id), BOUNDED);
+    await this.unit.run(async (tx) => {
+      // Only an email that asked to be recorded (#884: a notification's), once.
+      if ((await this.store.remove(tx, mail.id)) && mail.auditData) {
+        await this.auditLog.record(tx, MAIL_ACTOR, {
+          action: 'mail.sent',
+          subject: mailSubject(mail.id),
+          data: { ...mail.auditData, template: mail.template },
+        });
+      }
+    }, BOUNDED);
     await this.removeStale();
     return 'sent';
   }

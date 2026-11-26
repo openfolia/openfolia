@@ -52,15 +52,10 @@ import {
 import type { Actor } from '../core/actor.js';
 import { RequestEmailCodeAction } from '../core/actions/email-code.action.js';
 import { IdentityProviders } from '../core/identity-provider.js';
-import { hashSessionToken, SESSION_TOKEN_PATTERN } from '../core/sessions.js';
+import { hashSessionToken } from '../core/sessions.js';
 import type { SignInLinkKind } from '../core/sign-in-links.js';
-import { isSameOrigin } from './actor.guard.js';
 import { ApiPermission } from './api-permission.decorator.js';
-import {
-  type PasswordAttempt,
-  PasswordAttempts,
-} from '../core/password-attempts.js';
-import { accountKey, FailedAuthentications } from './failed-authentications.js';
+import { accountKey } from './failed-authentications.js';
 import {
   ChangePasswordDocument,
   ForgotPasswordAcceptedDocument,
@@ -74,7 +69,13 @@ import {
   SignInLinkQueryDocument,
   SignInOptionsDocument,
 } from './password.resources.js';
-import { cookieOf, SESSION_COOKIE, setCookie } from './session-cookies.js';
+import { requiresSingleSignOn, SignInRules } from '../core/sign-in-rules.js';
+import { SignInAnswer } from './sign-in-answer.js';
+import {
+  browserTokens,
+  sessionCookie,
+  SignInAttempts,
+} from './sign-in-attempts.js';
 import { SignInSettings } from './sign-in-settings.js';
 
 /** What "Forgot password" always answers. */
@@ -161,9 +162,10 @@ export class PasswordController implements OnApplicationShutdown {
     private readonly forgot: ForgotPasswordAction,
     private readonly providers: IdentityProviders,
     private readonly settings: SignInSettings,
-    private readonly failures: FailedAuthentications,
-    private readonly attempts: PasswordAttempts,
+    private readonly attempts: SignInAttempts,
+    private readonly answer: SignInAnswer,
     private readonly emailCode: RequestEmailCodeAction,
+    private readonly rules: SignInRules,
   ) {}
 
   async onApplicationShutdown(): Promise<void> {
@@ -176,19 +178,23 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiOperation({
     summary: 'Sign-in options',
     description:
-      'What the sign-in page offers: the email and password form, “Forgot password” (only when email can carry the link), “Email me a code” (#634, only when email is set up), and how many identity providers. Anyone may ask, before signing in.',
+      'What the sign-in page offers: the email and password form, “Forgot password” (only when email can carry the link), “Email me a code” (#634, only when email is set up), and how many identity providers; or, with single sign-on required, the providers alone and whether there is an emergency sign-in (never whose). Anyone may ask, before signing in.',
   })
   @ApiOkResponse({ standardSchema: SignInOptionsDocument })
-  options(): z.infer<typeof SignInOptionsDocument> {
+  async options(): Promise<z.infer<typeof SignInOptionsDocument>> {
+    const rule = await this.rules.read();
+    const required = requiresSingleSignOn(rule);
     return {
       data: {
         type: 'SignInOptions',
         id: 'sign-in',
         attributes: {
-          password: this.settings.password,
-          passwordReset: this.forgot.offered,
-          emailCode: this.emailCode.offered,
+          password: this.settings.password && !required,
+          passwordReset: await this.forgot.offered(),
+          emailCode: this.emailCode.offered && !required,
           providers: this.providers.list().length,
+          singleSignOn: required,
+          emergencySignIn: required && rule.breakGlass?.problem === null,
         },
       },
     };
@@ -201,7 +207,7 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiOperation({
     summary: 'Sign in with a password',
     description:
-      'Checks the email address and password and starts a session: the cookie `__Host-openfolia-session`, as a provider’s sign-in does, ending the browser’s previous session. An unknown address, a person without a password and a wrong password are all 401 `invalid-credentials`, in the same time. Recorded as `user.sign-in` (`data.method` `password`).',
+      'Checks the email address and password and starts a session: the cookie `__Host-openfolia-session`, as a provider’s sign-in does, ending the browser’s previous session; or, with a second factor on or required (`meta.secondFactor`), no session yet but the second step’s cookie (`POST /auth/second-factor/…`). An unknown address, a person without a password, a wrong password and, while single sign-on is required, anyone but the break-glass account are all 401 `invalid-credentials`, in the same time. Recorded as `user.sign-in` (`data.method` `password`).',
   })
   @ApiOkResponse({ standardSchema: SignedInDocument })
   @ApiUnauthorizedResponse({
@@ -211,7 +217,7 @@ export class PasswordController implements OnApplicationShutdown {
   })
   @ApiForbiddenResponse({
     description:
-      '`user-deactivated` or `sign-in-not-allowed` (the session policy), said only with the right password; `cross-origin-request`: not from the editor’s origin.',
+      '`user-deactivated`, said only with the right password; `cross-origin-request`: not from the editor’s origin.',
     ...ERROR,
   })
   @ApiConflictResponse(OFF)
@@ -222,9 +228,9 @@ export class PasswordController implements OnApplicationShutdown {
     @Res({ passthrough: true }) res: Response,
     @Body({ schema: PasswordSignInDocument }) body: PasswordSignInDocument,
   ): Promise<z.infer<typeof SignedInDocument>> {
-    this.fromEditor(req);
+    this.attempts.fromEditor(req);
     const { email, password } = body.data.attributes;
-    const attempt = await this.attempt(
+    const attempt = await this.attempts.attempt(
       res,
       clientAddress(req, 64),
       `sign-in:${accountKey(email)}`,
@@ -234,7 +240,7 @@ export class PasswordController implements OnApplicationShutdown {
       outcome = await this.signInAction.handle({
         email,
         password,
-        previousToken: sessionCookie(req),
+        ...browserTokens(req),
       });
     } catch (error) {
       attempt.forgive();
@@ -259,17 +265,9 @@ export class PasswordController implements OnApplicationShutdown {
               detail: 'This user is deactivated and cannot sign in.',
             },
           ]);
-        case 'sign-in-not-allowed':
-          throw new JsonApiException(HttpStatus.FORBIDDEN, [
-            {
-              code: 'sign-in-not-allowed',
-              detail: 'Signing in with a password is not allowed for you.',
-            },
-          ]);
       }
     }
-    setCookie(res, SESSION_COOKIE, outcome.token, this.settings.cookieSeconds);
-    return { meta: { userId: outcome.userId } };
+    return this.answer.started(res, outcome);
   }
 
   @Post('auth/password/forgot')
@@ -297,8 +295,8 @@ export class PasswordController implements OnApplicationShutdown {
     @Res({ passthrough: true }) res: Response,
     @Body({ schema: ForgotPasswordDocument }) body: ForgotPasswordDocument,
   ): Promise<z.infer<typeof ForgotPasswordAcceptedDocument>> {
-    this.fromEditor(req);
-    if (!this.forgot.offered) {
+    this.attempts.fromEditor(req);
+    if (!(await this.forgot.offered())) {
       throw new JsonApiException(HttpStatus.NOT_FOUND, [
         {
           code: 'not-configured',
@@ -311,7 +309,7 @@ export class PasswordController implements OnApplicationShutdown {
     // budget of its own: failed sign-ins never block a reset, nor resets a sign-in. Alike
     // whether anyone has the address.
     const client = `forgot:${clientAddress(req, 64)}`;
-    await this.countBoth(
+    await this.attempts.countBoth(
       res,
       client,
       `reset:${accountKey(body.data.attributes.email)}`,
@@ -351,7 +349,7 @@ export class PasswordController implements OnApplicationShutdown {
     @Req() req: Request,
     @Body({ schema: SignInLinkQueryDocument }) body: SignInLinkQueryDocument,
   ): Promise<z.infer<typeof SignInLinkDocument>> {
-    this.fromEditor(req);
+    this.attempts.fromEditor(req);
     const opened = await this.readLink.handle({
       token: body.data.attributes.token,
     });
@@ -373,7 +371,7 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiOperation({
     summary: 'Set a password with a one-time link',
     description:
-      'Sets the person’s password through their invite or reset link and signs them in (the session cookie). The link works once. **Every other session of the person ends.** Recorded as `user.password-set` (`data.via` `invite` or `reset`) and `user.sign-in`. A password the rules refuse leaves the link working.',
+      'Sets the person’s password through their invite or reset link and signs them in (the session cookie, or the second step’s first: `meta.secondFactor`). The link works once. **Every other session of the person ends.** Recorded as `user.password-set` (`data.via` `invite` or `reset`) and `user.sign-in`. A password the rules refuse leaves the link working.',
   })
   @ApiOkResponse({ standardSchema: SignedInDocument })
   @ApiNotFoundResponse(LINK_INVALID)
@@ -381,8 +379,7 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiUnprocessableEntityResponse(RULES)
   @ApiConflictResponse(OFF)
   @ApiForbiddenResponse({
-    description:
-      '`sign-in-not-allowed` (the session policy); `cross-origin-request`: not from the editor’s origin.',
+    description: '`cross-origin-request`: not from the editor’s origin.',
     ...ERROR,
   })
   @ApiServiceUnavailableResponse(TIMEOUT)
@@ -391,25 +388,16 @@ export class PasswordController implements OnApplicationShutdown {
     @Res({ passthrough: true }) res: Response,
     @Body({ schema: SetPasswordDocument }) body: SetPasswordDocument,
   ): Promise<z.infer<typeof SignedInDocument>> {
-    this.fromEditor(req);
+    this.attempts.fromEditor(req);
     const outcome = await this.setWithLink.handle({
       token: body.data.attributes.token,
       password: body.data.attributes.password,
-      previousToken: sessionCookie(req),
+      ...browserTokens(req),
     });
     if ('refused' in outcome) {
-      if (outcome.refused === 'sign-in-not-allowed') {
-        throw new JsonApiException(HttpStatus.FORBIDDEN, [
-          {
-            code: 'sign-in-not-allowed',
-            detail: 'Signing in with a password is not allowed for you.',
-          },
-        ]);
-      }
       throw linkRefusal(outcome.refused);
     }
-    setCookie(res, SESSION_COOKIE, outcome.token, this.settings.cookieSeconds);
-    return { meta: { userId: outcome.userId } };
+    return this.answer.started(res, outcome);
   }
 
   @Post('me/password')
@@ -439,7 +427,7 @@ export class PasswordController implements OnApplicationShutdown {
     @CurrentActor() actor: Actor,
     @Body({ schema: ChangePasswordDocument }) body: ChangePasswordDocument,
   ): Promise<z.infer<typeof PasswordChangedDocument>> {
-    const attempt = await this.attempt(
+    const attempt = await this.attempts.attempt(
       res,
       clientAddress(req, 64),
       `user:${actor.id}`,
@@ -482,7 +470,7 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiCreatedResponse({ standardSchema: SignInLinkMadeDocument })
   @ApiNotFoundResponse({ description: '`not-found`: no such user.', ...ERROR })
   @ApiConflictResponse({
-    description: `\`user-deactivated\`: reactivate them first. ${OFF.description}`,
+    description: `\`user-deactivated\`: reactivate them first. \`single-sign-on-required\`: the installation requires single sign-on, so nobody could sign in with the password. ${OFF.description}`,
     ...ERROR,
   })
   @ApiUnprocessableEntityResponse(NO_EMAIL)
@@ -507,7 +495,7 @@ export class PasswordController implements OnApplicationShutdown {
   @ApiCreatedResponse({ standardSchema: SignInLinkMadeDocument })
   @ApiNotFoundResponse({ description: '`not-found`: no such user.', ...ERROR })
   @ApiConflictResponse({
-    description: `\`user-deactivated\`: reactivate them first. ${OFF.description}`,
+    description: `\`user-deactivated\`: reactivate them first. \`single-sign-on-required\`: the installation requires single sign-on, so nobody could sign in with the password. ${OFF.description}`,
     ...ERROR,
   })
   @ApiUnprocessableEntityResponse(NO_EMAIL)
@@ -557,93 +545,6 @@ export class PasswordController implements OnApplicationShutdown {
       },
     };
   }
-
-  /** 403 `cross-origin-request` for a request not from the editor's origin. */
-  private fromEditor(req: Request): void {
-    if (isSameOrigin(req, this.settings.origins)) return;
-    throw new JsonApiException(HttpStatus.FORBIDDEN, [
-      {
-        code: 'cross-origin-request',
-        detail: "Signing in must happen on the editor's own origin.",
-      },
-    ]);
-  }
-
-  /**
-   * A password check from `client` for `account`: 429 while either is past its limit, else
-   * counted as failed at once (the account's in the same step as its test); `forgive` takes it
-   * back when the check did not fail.
-   */
-  private async attempt(
-    res: Response,
-    client: string,
-    account: string,
-  ): Promise<{ forgive: () => void }> {
-    const attempt = await this.countBoth(res, client, account);
-    return {
-      // Best effort, never the answer: a failure to take it back leaves one count too many.
-      forgive: () => {
-        this.failures.forgive(client);
-        this.attempts.forgive(attempt).catch((error: unknown) => {
-          this.log.warn(
-            `A password attempt could not be taken back: ${error instanceof Error ? error.name : 'unknown error'}`,
-          );
-        });
-      },
-    };
-  }
-
-  /**
-   * Counts a request against `client` (in memory) and toward `account`'s total (in the
-   * database): the client's count first, before anything is awaited, so requests at once from
-   * one address each see the others; taken back when the account refuses or cannot be counted.
-   */
-  private async countBoth(
-    res: Response,
-    client: string,
-    account: string,
-  ): Promise<PasswordAttempt> {
-    this.refuseWhileLimited(res, [client]);
-    this.failures.fail(client);
-    let counted: Awaited<ReturnType<PasswordAttempts['reserve']>>;
-    try {
-      counted = await this.attempts.reserve(account);
-    } catch (error) {
-      this.failures.forgive(client);
-      throw error;
-    }
-    if ('retryAfter' in counted) {
-      this.failures.forgive(client);
-      this.refuseFor(res, counted.retryAfter);
-    }
-    return counted.attempt;
-  }
-
-  /** 429 `too-many-failed-attempts` while any of the client `keys` is past its limit. */
-  private refuseWhileLimited(res: Response, keys: readonly string[]): void {
-    const wait = this.failures.retryAfterAny(keys);
-    if (wait !== undefined) this.refuseFor(res, wait);
-  }
-
-  /** 429 `too-many-failed-attempts`, to try again in `wait` seconds. */
-  private refuseFor(res: Response, wait: number): never {
-    res.setHeader('Retry-After', String(wait));
-    throw new JsonApiException(HttpStatus.TOO_MANY_REQUESTS, [
-      {
-        code: 'too-many-failed-attempts',
-        detail: 'Too many failed sign-ins; try again later.',
-        meta: { retryAfter: wait },
-      },
-    ]);
-  }
-}
-
-/** The browser's session token, when it holds a well-formed one. */
-export function sessionCookie(req: Request): string | undefined {
-  const token = cookieOf(req, SESSION_COOKIE);
-  return token !== undefined && SESSION_TOKEN_PATTERN.test(token)
-    ? token
-    : undefined;
 }
 
 function linkRefusal(

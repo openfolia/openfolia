@@ -74,6 +74,8 @@ export class PreferencesService {
   private readonly me = inject(MeService).me;
 
   private readonly state = signal<TipPreferences>(DEFAULTS);
+  /** The person's whole preferences as last read from the API (#884: the notifications too). */
+  private readonly read = signal<Schema<'PreferencesResource'> | null>(null);
   private readonly loadStatus = signal<PreferencesStatus>('pending');
   /** The person the state is for; a reply for another is dropped. */
   private person = '';
@@ -81,6 +83,8 @@ export class PreferencesService {
   private queue: Promise<unknown> = Promise.resolve();
 
   readonly preferences = this.state.asReadonly();
+  /** What `GET /me/preferences` last answered for this person; null until then, or when it failed. */
+  readonly document = this.read.asReadonly();
   readonly status = this.loadStatus.asReadonly();
   /** Read, from the API or this browser: the tips and the tour may be scheduled. */
   readonly ready = computed(() => this.loadStatus() !== 'pending');
@@ -101,11 +105,13 @@ export class PreferencesService {
   private async load(person: string): Promise<void> {
     this.loadStatus.set('pending');
     this.state.set(DEFAULTS);
+    this.read.set(null);
     if (!person) return;
     try {
       const doc = await firstValueFrom(this.api.get('/me/preferences'));
       if (person !== this.person) return;
       this.state.set(fromDocument(doc));
+      this.read.set(doc.data);
       this.loadStatus.set('ready');
       writeStored(storageKey(person), JSON.stringify(this.state()));
     } catch {

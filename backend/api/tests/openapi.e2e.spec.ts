@@ -42,8 +42,13 @@ describe('OpenAPI document', () => {
       '/auth/password/set',
       '/auth/password/sign-in',
       '/auth/providers',
+      '/auth/second-factor',
+      '/auth/second-factor/confirm',
+      '/auth/second-factor/set-up',
+      '/auth/second-factor/verify',
       '/auth/sign-out',
       '/auth/{provider}/callback',
+      '/auth/{provider}/metadata',
       '/auth/{provider}/sign-in',
       '/backup-keys',
       '/backup-requests',
@@ -145,6 +150,11 @@ describe('OpenAPI document', () => {
       '/me/notifications/{notificationId}',
       '/me/password',
       '/me/preferences',
+      '/me/second-factor',
+      '/me/second-factor/confirm',
+      '/me/second-factor/recovery-codes',
+      '/me/second-factor/set-up',
+      '/me/second-factor/turn-off',
       '/module-summaries',
       '/modules',
       '/modules/{lang}/{id}',
@@ -152,6 +162,7 @@ describe('OpenAPI document', () => {
       '/modules/{lang}/{id}/hidden-content',
       '/modules/{lang}/{id}/history',
       '/modules/{lang}/{id}/preview',
+      '/notifications/unsubscribe/{token}',
       '/outbox/status',
       '/page-design-template-example/files',
       '/page-design-templates',
@@ -185,6 +196,15 @@ describe('OpenAPI document', () => {
       '/roles',
       '/roles/{roleId}',
       '/sandbox',
+      '/scim/v2/Groups',
+      '/scim/v2/Groups/{groupId}',
+      '/scim/v2/ResourceTypes',
+      '/scim/v2/ResourceTypes/{resourceTypeId}',
+      '/scim/v2/Schemas',
+      '/scim/v2/Schemas/{schemaId}',
+      '/scim/v2/ServiceProviderConfig',
+      '/scim/v2/Users',
+      '/scim/v2/Users/{userId}',
       '/search',
       '/secret-key',
       '/service-accounts',
@@ -224,6 +244,7 @@ describe('OpenAPI document', () => {
       '/users/{userId}/password-reset',
       '/users/{userId}/reactivate',
       '/users/{userId}/relationships/roles',
+      '/users/{userId}/second-factor',
       '/variants',
       '/variants/matches',
       '/variants/{attributeId}/usages',
@@ -276,6 +297,9 @@ describe('OpenAPI document', () => {
       'get /auth/providers',
       'get /auth/{provider}/sign-in',
       'get /auth/{provider}/callback',
+      // SAML (#376): the identity provider's posted answer, and this server's metadata.
+      'post /auth/{provider}/callback',
+      'get /auth/{provider}/metadata',
       'post /auth/sign-out',
       // Password sign-in (#610): before anyone acts.
       'get /auth/options',
@@ -287,6 +311,13 @@ describe('OpenAPI document', () => {
       'post /auth/email-code/request',
       'post /auth/email-code/sign-in',
       'post /auth/email-code/link',
+      // The second step of a sign-in (#611): no session yet, only its cookie.
+      'get /auth/second-factor',
+      'post /auth/second-factor/verify',
+      'post /auth/second-factor/set-up',
+      'post /auth/second-factor/confirm',
+      // The one-click unsubscribe (#884): the sealed token in the path is the authority.
+      'post /notifications/unsubscribe/{token}',
     ];
     for (const [path, methods] of Object.entries(doc.paths)) {
       expect(Object.keys(methods).length).toBeGreaterThan(0);
@@ -367,14 +398,19 @@ describe('OpenAPI document', () => {
     expect(JSON.stringify(doc)).not.toContain('x-openfolia-');
   });
 
-  it('documents every error response, on every route, as JSON:API', () => {
-    for (const methods of Object.values(doc.paths)) {
+  it('documents every error response, on every route, as JSON:API (SCIM’s as SCIM’s)', () => {
+    for (const [path, methods] of Object.entries(doc.paths)) {
       for (const op of Object.values(methods)) {
         for (const [status, response] of Object.entries(op.responses)) {
           if (!/^[45]/.test(status)) continue;
           const { content } = response as { content?: object };
-          expect(Object.keys(content ?? {})).toEqual([
-            'application/vnd.api+json',
+          expect([path, Object.keys(content ?? {})]).toEqual([
+            path,
+            [
+              path.startsWith('/scim/')
+                ? 'application/scim+json'
+                : 'application/vnd.api+json',
+            ],
           ]);
         }
       }

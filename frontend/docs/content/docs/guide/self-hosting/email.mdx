@@ -79,6 +79,41 @@ mail server is final at once. An email that fails for good is recorded in the
 [audit log](/guide/admin/audit-log) as `mail.failed`, with the reason, never its address or
 content.
 
+## Notification emails
+
+People choose per kind of notification whether it also comes by email, at once or in a daily
+summary ([Notifications](/guide/getting-started/notifications)). These emails need, besides the
+mail server and the [instance secret key](/guide/self-hosting/secret-key), `CCMS_PUBLIC_URL`: the
+button in each email and the unsubscribe link go there. Without one of the three, the
+**Notifications** page says email is off and why, the choices still apply to the bell, and nothing
+is queued for email.
+
+Two settings, both optional:
+
+```sh
+CCMS_NOTIFICATIONS_DIGEST_HOUR=8          # the daily summary's hour, 0–23, for people who chose none
+CCMS_NOTIFICATIONS_EMAILS_PER_HOUR=20     # the most emails at once per person per hour, 1–1000
+```
+
+- `CCMS_NOTIFICATIONS_DIGEST_HOUR` is read in each person's own time zone (UTC for someone
+  without one). Default `8`, so 08:00.
+- `CCMS_NOTIFICATIONS_EMAILS_PER_HOUR` is a safety net: past it, a person's emails wait for their
+  daily summary. Default `20`.
+
+Every notification email carries the `List-Unsubscribe` and `List-Unsubscribe-Post` headers
+(RFC 8058), so a mail program can offer one-click unsubscribing. Both lead to
+`POST <public URL>/api/notifications/unsubscribe/<token>`, which needs no sign-in and moves only
+the kinds that email was about, for that person and the way it came (at once or in the summary),
+to **In the app only**. The token is sealed with the instance secret key. The link in the email's
+text opens a page of the editor that asks before it posts. Your reverse proxy must pass that path to the
+API like the rest of `/api`.
+
+Notification emails are retried like the others. Each one sent is recorded in the
+[audit log](/guide/admin/audit-log) as `mail.sent`, each one that failed for good as
+`mail.failed`, with its kind and the person it was for, never what it said; an unsubscribe is
+`notification.unsubscribe`. **Admin › System** counts the failures of the last 7 days and shows
+the newest ([The System page](/guide/admin/system#email)).
+
 ## What is kept
 
 A queued email waits in the database, sealed, until it is sent or has failed for good. Then it is

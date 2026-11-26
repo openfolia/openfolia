@@ -90,11 +90,31 @@ const CODES: Readonly<Record<string, string>> = {
   'password-too-long': 'editor.apiErrors.codes.password-too-long',
   'password-too-common': 'editor.apiErrors.codes.password-too-common',
   'link-invalid': 'editor.apiErrors.codes.link-invalid',
+  // A notification email's unsubscribe link (#884).
+  'unsubscribe-link-invalid': 'editor.apiErrors.codes.unsubscribe-link-invalid',
   'link-expired': 'editor.apiErrors.codes.link-expired',
   'password-sign-in-off': 'editor.apiErrors.codes.password-sign-in-off',
   // Sign-in by a code by email (#634).
   'invalid-code': 'editor.apiErrors.codes.invalid-code',
   'email-code-sign-in-off': 'editor.apiErrors.codes.email-code-sign-in-off',
+  // Two-factor sign-in (#611).
+  'wrong-code': 'editor.apiErrors.codes.wrong-code',
+  'second-factor-expired': 'editor.apiErrors.codes.second-factor-expired',
+  'second-factor-not-applicable':
+    'editor.apiErrors.codes.second-factor-not-applicable',
+  'second-factor-not-begun': 'editor.apiErrors.codes.second-factor-not-begun',
+  'second-factor-off': 'editor.apiErrors.codes.second-factor-off',
+  'second-factor-on': 'editor.apiErrors.codes.second-factor-on',
+  'second-factor-own': 'editor.apiErrors.codes.second-factor-own',
+  'second-factor-own-first': 'editor.apiErrors.codes.second-factor-own-first',
+  'break-glass-not-usable': 'editor.apiErrors.codes.break-glass-not-usable',
+  'session-limits-crossed': 'editor.apiErrors.codes.session-limits-crossed',
+  'single-sign-on-own-first': 'editor.apiErrors.codes.single-sign-on-own-first',
+  'single-sign-on-required': 'editor.apiErrors.codes.single-sign-on-required',
+  'single-sign-on-unavailable':
+    'editor.apiErrors.codes.single-sign-on-unavailable',
+  'second-factor-unavailable':
+    'editor.apiErrors.codes.second-factor-unavailable',
   'no-password': 'editor.apiErrors.codes.no-password',
   'sign-in-busy': 'editor.apiErrors.codes.sign-in-busy',
   'too-many-failed-attempts': 'editor.apiErrors.codes.too-many-failed-attempts',

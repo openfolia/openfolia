@@ -68,6 +68,11 @@ provider reports as verified (`email_verified`):
 | `any`               | any user without an identity at this issuer yet. Only for a provider that guarantees verified emails. |
 | `off`               | nobody: every first sign-in makes a new user.                                                         |
 
+Whatever the value, a first sign-in with a verified address that a deactivated user has is refused
+as deactivated, so a person stays out when the provider names them differently later (made again
+there, or through another provider); an address that is not verified makes a new user, as before,
+so where the provider does not vouch for the address (no `email_verified`, or false), take the person out at the provider too.
+
 Linking trusts the provider's `email_verified`. If people could set someone else's address and
 have it reported as verified, they would take over that account.
 
@@ -89,8 +94,10 @@ admin's role. Give the first admin their role directly to keep it.
 ## Sessions
 
 A session ends after 8 hours without a request (`CCMS_SESSION_IDLE_MINUTES`, default 480) and at
-the latest 7 days after signing in (`CCMS_SESSION_MAX_HOURS`, default 168). A role change, a group
-mapping change or a deactivation applies from the person's next request.
+the latest 7 days after signing in (`CCMS_SESSION_MAX_HOURS`, default 168). An admin can set other
+limits for the installation, and require the provider for everyone:
+[Require single sign-on](/guide/admin/single-sign-on). A role change, a group mapping change or a
+deactivation applies from the person's next request.
 
 ## What does not go with it
 

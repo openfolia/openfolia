@@ -70,7 +70,7 @@ const THEMES: readonly { value: ThemePreference; label: string }[] = [
       #menu
       zSide="top"
       zAlign="start"
-      class="w-64 max-w-[calc(100vw-2rem)]"
+      class="max-h-[34rem] w-64 max-w-[calc(100vw-2rem)]"
     >
       <div class="px-2 py-1.5" role="presentation">
         <p class="m-0 truncate text-sm font-medium">{{ name() }}</p>

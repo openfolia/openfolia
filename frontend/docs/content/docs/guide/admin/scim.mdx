@@ -1,0 +1,103 @@
+---
+title: 'Provisioning with SCIM'
+description: 'Let your directory create, change and deactivate users and groups, with SCIM 2.0.'
+articleId: 'guide.admin.scim'
+---
+
+Your directory (the identity provider that holds your staff) can keep the editor's users and
+groups up to date with SCIM 2.0. It creates a user when someone joins, changes their name and
+email, and deactivates them when they leave. Its groups give roles through [group
+mappings](/guide/admin/group-mappings).
+
+The SCIM address of a hosted OpenFolia is:
+
+```text
+https://<team>.openfolia.com/api/scim/v2
+```
+
+Elsewhere, it is your editor's address followed by `/api/scim/v2`.
+
+## Make a SCIM token
+
+The directory signs in with the token of a service account that may do nothing but provision.
+
+1. Open **Admin**, then **Roles**, and choose **New role**.
+2. Name it, for example "Directory", and tick only **scim.provision**. Choose **Create role**.
+3. Open **Service accounts** and choose **New service account**. Give it the "Directory" role and
+   choose **Add service account**.
+4. In its row, choose **Tokens**, then **Issue token**, and copy the token.
+5. In your directory's SCIM settings, enter the SCIM address above and the token as the bearer
+   token.
+
+Only a service account may provision: a person is refused, whatever roles they hold. Revoke the
+token, or deactivate the service account, to stop provisioning at once. Without a token, the SCIM
+address answers 401.
+
+## What the directory can do
+
+- **Users**: create, read, list, replace, change (PATCH) and delete. `userName` is required and
+  unique, ignoring case. The name shown in the editor is the `displayName`, else the `name`, else
+  the `userName`. The email is the primary one, else the work one, else the first.
+- **Groups**: create, read, list, replace, change and delete, with their members. Members must be
+  users the directory provisioned.
+- **Filters and paging**: `filter` (for example `userName eq "jane@example.org"`), `startIndex`
+  and `count` (at most 200), `attributes` and `excludedAttributes`.
+- **Discovery**: `ServiceProviderConfig`, `ResourceTypes` and `Schemas`.
+
+Sorting, bulk changes, ETags and passwords are not supported. Lists show only users and groups
+the directory provisioned.
+
+## When someone leaves
+
+When the directory sets a user to inactive, or deletes them, the user loses access at once:
+
+- every session ends, and their sign-in links and codes stop working;
+- every lock they hold is released;
+- their next request is refused.
+
+Their revisions, comments and approvals history stay. Deleting a user in the directory
+deactivates them in the editor and unlinks them from the directory; it never deletes them. Set
+them to active again to bring them back; an update that leaves `active` out changes nothing
+about it. An update that sets someone to inactive deactivates them whatever else in it is wrong;
+if it is wrong, the rest of it may be left out. When the directory provisions someone it deleted
+again with the same email address, the same user comes back, active, unless you reactivated or
+deactivated them in the editor since. Someone you deactivated in the editor stays deactivated,
+whatever the directory sends: reactivate them in **Users**.
+
+A change that would leave nobody who can manage roles is refused, even a deactivation.
+
+## Groups and roles
+
+A provisioned group gives roles like a sign-in group: add a group mapping with the group's
+`displayName` and a role. Members hold the role at once, and lose it when they leave the group,
+the group is deleted or the mapping is removed.
+
+A provisioned group never gives a role holding **admin.roles**, **admin.branding**,
+**admin.backups**, **webhook.manage** or **scim.provision**, even when a mapping names it: the
+SCIM token cannot make an admin. A role that gains one of those permissions is taken from the
+members of provisioned groups at once. Give such roles to people directly, or through a sign-in
+group.
+
+## Users who are already there
+
+When the directory creates a user whose email belongs to someone already in the editor, the
+existing user is linked instead of a new one, as your server's setting for linking sign-ins by
+email allows (`CCMS_OIDC_LINK_BY_EMAIL`: by default only someone who has never signed in). It
+never links someone who is deactivated, or who holds a permission beyond reading, writing and
+reviewing content (**content.read**, **content.read.draft**, **content.edit**,
+**content.review**).
+
+## Email addresses
+
+SCIM changes the email address only of users it created, only until they first sign in, and only
+while they hold no more than those permissions. After that, change the address in the editor,
+under **Users**. Otherwise whoever holds the SCIM token could move an account to an address of
+theirs and reset its password.
+
+When someone's address changes in your directory, the directory's update is refused until you
+have changed it in the editor too. Everything else goes through: other changes while the two
+addresses differ because you changed the editor's first, and deactivating someone (but for the
+last admin). An address you set in the editor stays until the directory's own changes.
+
+Every change the directory makes is in the [audit log](/guide/admin/audit-log), under the service
+account.

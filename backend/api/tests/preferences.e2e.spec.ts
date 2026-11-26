@@ -50,12 +50,16 @@ describe('/me/preferences', () => {
     const before = await t.get('/me/preferences');
     expect(before.status).toBe(200);
     expect(before.headers['cache-control']).toBe('private, no-store');
-    expect(PreferencesDocument.parse(before.body)).toEqual({
+    expect(PreferencesDocument.parse(before.body)).toMatchObject({
       data: {
         type: 'Preferences',
         id: 'pref-alice',
         attributes: { showTips: true, dismissedTips: [], tourDone: false },
-        meta: { updatedAt: null },
+        meta: {
+          updatedAt: null,
+          // No mail server in this app.
+          notifications: { emailUnavailable: 'off', defaultDigestHour: 8 },
+        },
       },
     });
 
@@ -65,7 +69,7 @@ describe('/me/preferences', () => {
     );
     expect(changed.status).toBe(200);
     const doc = PreferencesDocument.parse(changed.body);
-    expect(doc.data.attributes).toEqual({
+    expect(doc.data.attributes).toMatchObject({
       showTips: true,
       dismissedTips: ['content.new-module', 'shell.search'],
       tourDone: true,
@@ -74,7 +78,7 @@ describe('/me/preferences', () => {
 
     // Left out stays.
     const off = await patch({ showTips: false });
-    expect(PreferencesDocument.parse(off.body).data.attributes).toEqual({
+    expect(PreferencesDocument.parse(off.body).data.attributes).toMatchObject({
       showTips: false,
       dismissedTips: ['content.new-module', 'shell.search'],
       tourDone: true,
@@ -83,6 +87,37 @@ describe('/me/preferences', () => {
     expect(PreferencesDocument.parse(read.body).data.attributes.showTips).toBe(
       false,
     );
+  });
+
+  it('changes notification settings kind by kind, with the defaults filled in (#884)', async () => {
+    t.actAs(alice);
+    const first = await patch({
+      notifications: {
+        choices: { 'release.published': 'off' },
+        timeZone: 'Europe/Vienna',
+        language: 'de',
+      },
+    });
+    expect(first.status).toBe(200);
+    await patch({ notifications: { choices: { 'backup.failed': 'app' } } });
+    const read = PreferencesDocument.parse(
+      (await t.get('/me/preferences')).body,
+    ).data.attributes.notifications;
+    expect(read).toMatchObject({
+      emailPaused: false,
+      allOff: false,
+      digestHour: null,
+      timeZone: 'Europe/Vienna',
+      language: 'de',
+    });
+    expect(read.choices).toMatchObject({
+      'release.published': 'off',
+      'backup.failed': 'app',
+      // The defaults.
+      'change-set.submit': 'email',
+      'translation.imported': 'digest',
+      'lock.break': 'app',
+    });
   });
 
   it('keeps each person’s own', async () => {
@@ -107,6 +142,13 @@ describe('/me/preferences', () => {
       { dismissedTips: ['Not A Tip'] },
       { dismissedTips: Array.from({ length: 501 }, (_, i) => `tip-${i}`) },
       { showTips: 'yes' },
+      // #884: an unknown kind or choice, a made-up time zone, an hour out of range.
+      { notifications: { choices: { 'no.such-kind': 'email' } } },
+      { notifications: { choices: { 'backup.failed': 'loud' } } },
+      { notifications: { timeZone: 'Mars/Olympus' } },
+      { notifications: { digestHour: 24 } },
+      { notifications: { language: 'fr' } },
+      { notifications: { colour: 'red' } },
     ]) {
       const res = await patch(attributes);
       expect(res.status, JSON.stringify(attributes)).toBe(400);

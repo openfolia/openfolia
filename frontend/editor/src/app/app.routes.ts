@@ -15,11 +15,13 @@ import {
 import type { PermissionRule } from './permissions/permissions';
 import type { ChangeSetParamMode } from './session/change-set-url';
 
+import { recoveryCodesPutAway } from './second-factor/second-factor-dialog-state';
 import { REPORT_TABS } from './reports/report-tabs';
 import { ADMIN_TABS, NAV_ITEMS, tabRule } from './shell/nav';
 import {
   nobodyActing,
   personActing,
+  SECOND_STEP_PATH,
   SIGN_IN_PATH,
 } from './sign-in/sign-in.guards';
 
@@ -581,6 +583,22 @@ export const routes: Routes = [
       import('./sign-in/set-password.page').then((m) => m.SetPasswordPage),
   },
   {
+    // The second step of a sign-in (#611): the API's cookie decides, signed in or not.
+    path: SECOND_STEP_PATH,
+    data: { help: SIGN_IN_HELP },
+    title: 'editor.secondFactor.signIn.title',
+    loadComponent: () =>
+      import('./sign-in/second-factor.page').then((m) => m.SecondFactorPage),
+  },
+  {
+    // A notification email's unsubscribe link (#884): signed in or not, the link's token decides.
+    path: 'unsubscribe',
+    data: { help: 'guide.getting-started.notifications' },
+    title: 'editor.unsubscribe.title',
+    loadComponent: () =>
+      import('./notifications/unsubscribe.page').then((m) => m.UnsubscribePage),
+  },
+  {
     // Where nobody acting is sent (`personActing`); a person acting goes on past it.
     path: SIGN_IN_PATH,
     data: { help: SIGN_IN_HELP },
@@ -597,6 +615,8 @@ export const routes: Routes = [
     data: { changeSetParam: 'session' satisfies ChangeSetParamMode },
     loadComponent: () =>
       import('./shell/shell.layout').then((m) => m.ShellLayout),
+    canActivateChild: [recoveryCodesPutAway],
+    canDeactivate: [recoveryCodesPutAway],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'content' },
       ...sectionRoutes,
@@ -634,6 +654,20 @@ export const routes: Routes = [
         { permission: 'content.read' },
         'editor.preview.breadcrumb',
       ),
+      {
+        // Account menu › Notifications (#884): the person's own choices; reads no change set.
+        path: 'account/notifications',
+        title: 'editor.notificationSettings.title',
+        data: {
+          breadcrumb: 'editor.notificationSettings.title',
+          changeSetFree: true,
+          help: 'guide.getting-started.notifications',
+        },
+        loadComponent: () =>
+          import('./notifications/notification-settings.page').then(
+            (m) => m.NotificationSettingsPage,
+          ),
+      },
       {
         // An address no screen has: "Page not found" (not "No access", which `guarded` shows).
         path: '**',

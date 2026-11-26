@@ -1,5 +1,7 @@
 import { ActorDocument } from '../src/access/api/access.resources.js';
 import { ErrorDocument, JSON_API } from '../src/base/api/json-api.js';
+import type { Actor } from '../src/access/core/actor.js';
+import { ScimErrorDocument } from '../src/scim/api/scim.resources.js';
 import { PERMISSION_EXTENSION } from '../src/access/api/api-permission.decorator.js';
 import { seedAccess } from '../src/access/repos/seed.js';
 import { actorWith, NOBODY } from './fakes/actors.js';
@@ -9,6 +11,7 @@ import {
   DEMO_ONLY_ROUTES,
   fill,
   fillValid,
+  isScimRoute,
   ON_TOP_OF_DRAFT_READING,
   ON_TOP_OF_EDITING,
   ON_TOP_OF_READING,
@@ -30,6 +33,23 @@ beforeAll(async () => {
 afterAll(() => t?.close());
 
 const error = (body: unknown) => ErrorDocument.parse(body).errors[0];
+/**
+ * The error code `route` answered `res` with. A SCIM route's errors are SCIM's (#377), with a
+ * status and no code: there it is `expected` when the status is the one that code has.
+ */
+const codeOf = (
+  route: string,
+  res: { status: number; body: unknown },
+  expected: string,
+) =>
+  isScimRoute(route)
+    ? ScimErrorDocument.parse(res.body).status === String(res.status)
+      ? expected
+      : `SCIM error ${String(res.status)}`
+    : error(res.body)?.code;
+/** SCIM's routes are a service account's (#377): the same permissions, held by one. */
+const asRouteNeeds = (route: string, actor: Actor): Actor =>
+  isScimRoute(route) ? { ...actor, kind: 'service' } : actor;
 
 describe('every route', () => {
   it('is public or needs the token and resolves an actor', async () => {
@@ -57,7 +77,10 @@ describe('every route', () => {
         .set('Authorization', `Bearer ${TOKEN}`)
         .set('X-Ccms-User', 'sample-admin');
       expect([route, withHeader.status]).toEqual([route, 400]);
-      expect(error(withHeader.body)?.code).toBe('demo-mode-off');
+      expect([route, codeOf(route, withHeader, 'demo-mode-off')]).toEqual([
+        route,
+        'demo-mode-off',
+      ]);
     }
     for (const route of PUBLIC_ROUTES) {
       const res = await t.anonymous().get(route.split(' ')[1] ?? '');
@@ -98,7 +121,10 @@ describe('every guarded route', () => {
         continue;
       }
       expect([route, res.status]).toEqual([route, 403]);
-      expect([route, error(res.body)?.code]).toEqual([route, 'forbidden']);
+      expect([route, codeOf(route, res, 'forbidden')]).toEqual([
+        route,
+        'forbidden',
+      ]);
     }
   });
 
@@ -139,7 +165,7 @@ describe('every guarded route', () => {
       // validation: the action runs (found, or not found by it).
       if (ON_TOP_OF_READING.includes(route)) {
         // Reading alone is not enough: the documented permission is needed too.
-        t.actAs(actorWith(['content.read']));
+        t.actAs(asRouteNeeds(route, actorWith(['content.read'])));
         const reader = await send(t.anonymous(), route, fillValid(path))
           .set('Authorization', `Bearer ${TOKEN}`)
           .set('Accept', '*/*');
@@ -150,18 +176,21 @@ describe('every guarded route', () => {
         ]);
       }
       t.actAs(
-        actorWith([
-          permission as never,
-          ...(ON_TOP_OF_READING.includes(route)
-            ? ['content.read' as const]
-            : []),
-          ...(ON_TOP_OF_DRAFT_READING.includes(route)
-            ? ['content.read.draft' as const]
-            : []),
-          ...(ON_TOP_OF_EDITING.includes(route)
-            ? ['content.edit' as const, 'content.read' as const]
-            : []),
-        ]),
+        asRouteNeeds(
+          route,
+          actorWith([
+            permission as never,
+            ...(ON_TOP_OF_READING.includes(route)
+              ? ['content.read' as const]
+              : []),
+            ...(ON_TOP_OF_DRAFT_READING.includes(route)
+              ? ['content.read.draft' as const]
+              : []),
+            ...(ON_TOP_OF_EDITING.includes(route)
+              ? ['content.edit' as const, 'content.read' as const]
+              : []),
+          ]),
+        ),
       );
       const res = await send(t.anonymous(), route, fillValid(path))
         .set('Authorization', `Bearer ${TOKEN}`)
@@ -211,7 +240,7 @@ describe('content reads', () => {
         .get(fillValid(path))
         .set('Accept', '*/*')
         .set('If-None-Match', etag);
-      expect([route, res.status, error(res.body)?.code]).toEqual([
+      expect([route, res.status, codeOf(route, res, 'forbidden')]).toEqual([
         route,
         403,
         'forbidden',

@@ -3,7 +3,33 @@ import { DrizzlePasswordAttempts } from './repos/drizzle-password-attempts.js';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module.js';
 import { ChangeSetsModule } from '../change-sets/change-sets.module.js';
+import { BrandingModule } from '../branding/branding.module.js';
 import { MailModule } from '../mail/mail.module.js';
+import { SettingsModule } from '../settings/settings.module.js';
+import { SecondFactorController } from './api/second-factor.controller.js';
+import { SignInAnswer } from './api/sign-in-answer.js';
+import { SignInAttempts } from './api/sign-in-attempts.js';
+import {
+  BeginSetUpAction,
+  ConfirmSetUpAction,
+  GetSecondFactorAction,
+  NewRecoveryCodesAction,
+  OwnPassword,
+  ProvenChange,
+  ResetSecondFactorAction,
+  TurnOffSecondFactorAction,
+} from './core/actions/second-factor.action.js';
+import {
+  BeginRequiredSetUpAction,
+  ConfirmRequiredSetUpAction,
+  ReadSecondStepAction,
+  SecondSteps,
+  VerifySecondStepAction,
+} from './core/actions/second-factor-sign-in.action.js';
+import { PendingSignIns } from './core/pending-sign-ins.js';
+import { SecondFactorCodes } from './core/second-factor-codes.js';
+import { SessionStart } from './core/session-start.js';
+import { DrizzlePendingSignIns } from './repos/drizzle-second-factors.js';
 import { EmailCodeController } from './api/email-code.controller.js';
 import { PasswordController } from './api/password.controller.js';
 import {
@@ -83,7 +109,6 @@ import {
   RevokeServiceTokenAction,
 } from './core/actions/service-tokens.action.js';
 import { UpdateServiceAccountAction } from './core/actions/update-service-account.action.js';
-import { AccessAdmin } from './core/access-admin.js';
 import { CreateRoleAction } from './core/actions/create-role.action.js';
 import { CreateUserAction } from './core/actions/create-user.action.js';
 import {
@@ -99,17 +124,24 @@ import {
 import { UpdateRoleAction } from './core/actions/update-role.action.js';
 import { UpdateUserAction } from './core/actions/update-user.action.js';
 import { AccessModule } from './access.module.js';
-import { DrizzleAccessAdmin } from './repos/drizzle-access-admin.js';
 
 /**
  * Administering access (#39): roles, users and assignments, deactivation;
  * service accounts and their tokens (#38); signing in and out, and group
- * mappings (#37); passwords, invites and resets (#610); codes by email (#634).
+ * mappings (#37); passwords, invites and resets (#610); codes by email (#634);
+ * two-factor sign-in (#611).
  * Apart from `AccessModule` because deactivating a user releases its locks
  * (`LockStore` from `ChangeSetsModule`, which itself needs `AccessModule`).
  */
 @Module({
-  imports: [AccessModule, AuditModule, ChangeSetsModule, MailModule],
+  imports: [
+    AccessModule,
+    AuditModule,
+    BrandingModule,
+    ChangeSetsModule,
+    MailModule,
+    SettingsModule,
+  ],
   controllers: [
     AccessAdminController,
     ServiceAccountsController,
@@ -117,6 +149,7 @@ import { DrizzleAccessAdmin } from './repos/drizzle-access-admin.js';
     SignInController,
     PasswordController,
     EmailCodeController,
+    SecondFactorController,
   ],
   providers: [
     // Password sign-in, invites and resets (#610).
@@ -141,9 +174,27 @@ import { DrizzleAccessAdmin } from './repos/drizzle-access-admin.js';
     RequestEmailCodeAction,
     SignInWithEmailCodeAction,
     SignInWithEmailLinkAction,
+    // Two-factor sign-in (#611): the one way a sign-in here starts a session, and its second step.
+    { provide: PendingSignIns, useClass: DrizzlePendingSignIns },
+    SessionStart,
+    SecondFactorCodes,
+    SecondSteps,
+    OwnPassword,
+    ProvenChange,
+    GetSecondFactorAction,
+    BeginSetUpAction,
+    ConfirmSetUpAction,
+    NewRecoveryCodesAction,
+    TurnOffSecondFactorAction,
+    ResetSecondFactorAction,
+    ReadSecondStepAction,
+    VerifySecondStepAction,
+    BeginRequiredSetUpAction,
+    ConfirmRequiredSetUpAction,
+    SignInAttempts,
+    SignInAnswer,
     // Ends a person's sessions, links and codes when a credential changes (#645).
     WaysIn,
-    { provide: AccessAdmin, useClass: DrizzleAccessAdmin },
     { provide: UserIdentities, useClass: DrizzleUserIdentities },
     { provide: GroupMappings, useClass: DrizzleGroupMappings },
     ListIdentityProvidersAction,
@@ -174,5 +225,7 @@ import { DrizzleAccessAdmin } from './repos/drizzle-access-admin.js';
     IssueServiceTokenAction,
     RevokeServiceTokenAction,
   ],
+  // For provisioning over SCIM (#377, `ScimModule`): it changes users and their groups' roles.
+  exports: [GroupMappings, UserIdentities, WaysIn],
 })
 export class AccessAdminModule {}

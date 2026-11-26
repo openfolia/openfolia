@@ -159,6 +159,25 @@ describe('ListDemoUsersAction', () => {
     }
   });
 
+  it('lists the deactivated ones only when asked', async () => {
+    const users = directory();
+    users.deactivated.set('alice', new Date());
+    const list = new ListDemoUsersAction(users);
+    const asked = { actor: API_TOKEN_ACTOR, page, demo: true };
+    expect((await list.handle(asked)).items.map((u) => u.id)).toEqual(['root']);
+    expect(
+      (await list.handle({ ...asked, active: false })).items.map((u) => u.id),
+    ).toEqual(['alice']);
+    // A service account can act as nobody, so it sees no more than before.
+    const portal = { ...API_TOKEN_ACTOR, id: 'portal' };
+    expect(
+      (await list.handle({ ...asked, actor: portal })).items.map((u) => u.id),
+    ).toEqual(['root']);
+    await expect(
+      list.handle({ ...asked, actor: portal, active: false }),
+    ).rejects.toThrow('does not list deactivated users');
+  });
+
   it('is not found outside demo mode, before reading anything', async () => {
     const failing = directory();
     failing.fail = new Error('unused');

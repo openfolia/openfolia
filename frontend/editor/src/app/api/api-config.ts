@@ -31,6 +31,9 @@ export const API_UNAUTHORIZED = new InjectionToken<() => void>(
   'API_UNAUTHORIZED',
 );
 
+/** Sent with what the app asks while nobody uses the tab: it does not keep a session alive (#378). */
+export const BACKGROUND_HEADER = 'X-Ccms-Background';
+
 /** The JSON:API media type: `Accept` on every call, `Content-Type` on every state-changing one. */
 export const JSON_API = 'application/vnd.api+json';
 

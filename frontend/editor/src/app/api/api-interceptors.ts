@@ -1,18 +1,22 @@
 import {
   HttpErrorResponse,
   type HttpInterceptorFn,
+  HttpResponse,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, from, map, throwError, type Observable } from 'rxjs';
+import { catchError, from, map, tap, throwError, type Observable } from 'rxjs';
+import { Activity } from './activity';
 import {
   API_BASE_URL,
   API_DEMO_USER,
   API_UNAUTHORIZED,
+  BACKGROUND_HEADER,
   DEMO_USER_HEADER,
   JSON_API,
   REQUEST_HEADER,
 } from './api-config';
 import { ApiError, toApiError } from './api-error';
+import { PeopleStates } from './people-states';
 import { ReadRef } from './read-ref';
 
 const isApiCall = (url: string, base: string) =>
@@ -45,6 +49,16 @@ export const stateChangeInterceptor: HttpInterceptorFn = (req, next) => {
     ? next(req)
     : next(req.clone({ setHeaders: { 'Content-Type': JSON_API } }));
 };
+
+/**
+ * Marks an API call made while nobody uses the tab (a poll): the API answers it as ever, but it
+ * does not keep the session alive (#378). Every call goes through here, so a poll added later is
+ * marked too.
+ */
+export const backgroundInterceptor: HttpInterceptorFn = (req, next) =>
+  !isApiCall(req.url, inject(API_BASE_URL)) || inject(Activity).recent()
+    ? next(req)
+    : next(req.clone({ setHeaders: { [BACKGROUND_HEADER]: '1' } }));
 
 /**
  * A failed call that asked for a Blob (a file download) has its JSON:API error body as a Blob
@@ -115,6 +129,22 @@ export const missingBranchInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
       return throwError(() => error);
+    }),
+  );
+};
+
+/** Tells `PeopleStates` what an answer says of the people it names (`meta.people`, #928). */
+export const peopleInterceptor: HttpInterceptorFn = (req, next) => {
+  if (!isApiCall(req.url, inject(API_BASE_URL))) return next(req);
+  const states = inject(PeopleStates);
+  return next(req).pipe(
+    tap((event) => {
+      if (!(event instanceof HttpResponse)) return;
+      const body = event.body as {
+        meta?: { people?: Parameters<PeopleStates['read']>[0] };
+      } | null;
+      const people = body?.meta?.people;
+      if (Array.isArray(people)) states.read(people);
     }),
   );
 };

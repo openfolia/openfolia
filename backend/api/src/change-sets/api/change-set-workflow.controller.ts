@@ -28,6 +28,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import { ListRefreshConflictsAction } from '../core/actions/list-refresh-conflicts.action.js';
@@ -116,10 +117,11 @@ export class ChangeSetWorkflowController {
   ) {}
 
   @Get('review')
+  @NamesPeople()
   @ApiOperation({
     summary: 'Where a change set’s review stands',
     description:
-      'Read only: every approval it needs (`required`: the review, and a sign-off for each restricted module type it changes), the approvals of its review head (of its branch’s head while a draft) and what is still `pending`, and the approvals that `lapsed` (their approver lost the role or scope), all as approve, sign-off and merge judge them; `granted` is always empty. The change set is found as `GET /change-sets/{changeSetId}` finds it. Needs `content.read.draft`, as reviewing does.',
+      'Read only: every approval it needs (`required`: the review, and a sign-off for each restricted module type it changes), the approvals of its review head (of its branch’s head while a draft) and what is still `pending`, and the approvals that `lapsed` (their approver lost the role or scope, or was deactivated), all as approve, sign-off and merge judge them; `granted` is always empty. The change set is found as `GET /change-sets/{changeSetId}` finds it. Needs `content.read.draft`, as reviewing does.',
   })
   @ApiParam(ID_PARAMETER)
   @ApiOkResponse({ standardSchema: ReviewDocument })
@@ -142,6 +144,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('submit')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Submit a change set for review',
@@ -180,6 +183,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('return')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Return a change set to its author',
@@ -212,6 +216,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('approve')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Approve a change set in review',
@@ -246,6 +251,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('sign-off')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Sign off a change set’s restricted module types',
@@ -280,6 +286,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('merge')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Merge an approved change set into its base',
@@ -295,7 +302,7 @@ export class ChangeSetWorkflowController {
   })
   @ApiNotFoundResponse(NOT_FOUND)
   @ApiConflictResponse({
-    description: `\`merge-conflict\` (\`meta.conflicts\`: \`{ path, kinds }\`, at most 100; \`meta.total\`), \`invalid-state\`, \`not-approved\` (\`meta.pending\`), \`approval-lapsed\` (an approval it needs no longer holds: its approver lost the role or scope it took; \`meta.pending\`, \`meta.lapsed\`: \`{ requirement, approver }\`), \`base-moved\` (try again), \`base-missing\`, \`base-rewritten\` (the base no longer holds the change set’s base commit), ${HEAD_MOVED}`,
+    description: `\`merge-conflict\` (\`meta.conflicts\`: \`{ path, kinds }\`, at most 100; \`meta.total\`), \`invalid-state\`, \`not-approved\` (\`meta.pending\`), \`approval-lapsed\` (an approval it needs no longer holds: its approver lost the role or scope it took, or was deactivated; \`meta.pending\`, \`meta.lapsed\`: \`{ requirement, approver }\`), \`base-moved\` (try again), \`base-missing\`, \`base-rewritten\` (the base no longer holds the change set’s base commit), ${HEAD_MOVED}`,
     standardSchema: ErrorDocument,
   })
   @ApiServiceUnavailableResponse({
@@ -322,6 +329,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('refresh')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update a change set from its base',
@@ -397,6 +405,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('carry-forward')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Carry a fix forward to main',
@@ -441,6 +450,7 @@ export class ChangeSetWorkflowController {
   }
 
   @Post('rebase')
+  @NamesPeople()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Move a change set onto its rewritten base’s current head',

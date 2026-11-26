@@ -17,11 +17,9 @@ import {
 } from '../identity-provider.js';
 import type { UnguardedAction } from '../policy.js';
 import { SessionPolicy } from '../session-policy.js';
-import {
-  hashSessionToken,
-  mintSessionToken,
-  SessionStore,
-} from '../sessions.js';
+import { heldBefore, SessionStart } from '../session-start.js';
+import { SignInNotAllowedError } from '../sign-in-rules.js';
+import type { HeldBefore } from '../begin-session.js';
 import {
   displayNameOf,
   groupsOf,
@@ -44,6 +42,13 @@ export interface CompleteSignInInput {
   readonly pending: PendingSignIn;
   /** The session the browser held before, if any: ended, so a sign-in never adds to it. */
   readonly previousToken?: string;
+  /** The second step the browser had open (#611), if any: ended. */
+  readonly openStepToken?: string;
+  /**
+   * What the browser held when it began, for a provider whose answer comes without its cookies
+   * (#934); each ended when there is no token of it.
+   */
+  readonly heldAtBegin?: HeldBefore;
 }
 
 /** A sign-in's outcome: a new session, or why there is none. */
@@ -62,11 +67,7 @@ export type SignInOutcome =
     };
 
 /** Thrown inside the transaction to roll it back; answered as a refusal. */
-class Refused extends Error {
-  constructor(readonly reason: 'user-deactivated' | 'sign-in-not-allowed') {
-    super(reason);
-  }
-}
+class Deactivated extends Error {}
 
 /**
  * Finishes a sign-in (#37): the provider checks its answer and says who
@@ -75,8 +76,10 @@ class Refused extends Error {
  * lock, so two first sign-ins of one person make one user.
  *
  * - **Known identity** (issuer and subject linked before): that user.
- * - **First sign-in**: a user whose email address equals one the provider
- *   vouches for (`email_verified`) is linked when the session policy's
+ * - **First sign-in**: when a deactivated user has the email address the
+ *   provider vouches for (`email_verified`), refused as deactivated: the
+ *   provider names that person differently now (#943). Otherwise a user
+ *   with that address is linked when the session policy's
  *   `linkByEmail` allows it (by default only a user who has never signed in:
  *   one an admin made, or the seed's first admin), recorded as
  *   `user.identity-link`;
@@ -90,9 +93,9 @@ class Refused extends Error {
  *   assignments are kept. The provider's groups apply as they are, also
  *   when that takes `admin.roles` from the last admin (the provider decides
  *   group membership; give the first admin the role directly).
- * - A deactivated user, or one the session policy refuses, gets no session
- *   (and nothing is written). Otherwise the previous session (if any) ends
- *   and a new one starts, recorded as `user.sign-in`.
+ * - A deactivated user, or one the session policy refuses (`SessionStart`), gets no session
+ *   (and nothing is written). Otherwise the browser's previous session and the second step it
+ *   had open (if any) end and a new session starts, recorded as `user.sign-in`.
  *
  * Rejects with `SignInFailedError` when the provider does not accept the
  * answer, and `NotFoundError` for a provider that is not offered.
@@ -108,7 +111,7 @@ export class CompleteSignInAction implements UnguardedAction {
     private readonly admin: AccessAdmin,
     private readonly identities: UserIdentities,
     private readonly mappings: GroupMappings,
-    private readonly sessions: SessionStore,
+    private readonly start: SessionStart,
     private readonly sessionPolicy: SessionPolicy,
     private readonly auditLog: AuditLog,
     private readonly unit: UnitOfWork,
@@ -125,11 +128,18 @@ export class CompleteSignInAction implements UnguardedAction {
     try {
       return await runContended(
         this.unit,
-        (tx) => this.signIn(tx, provider.id, identity, input.previousToken),
+        (tx) =>
+          this.signIn(tx, provider.id, identity, {
+            ...input.heldAtBegin,
+            ...heldBefore(input),
+          }),
         BOUNDED,
       );
     } catch (error) {
-      if (error instanceof Refused) return { refused: error.reason };
+      if (error instanceof Deactivated) return { refused: 'user-deactivated' };
+      if (error instanceof SignInNotAllowedError) {
+        return { refused: 'sign-in-not-allowed' };
+      }
       throw error;
     }
   }
@@ -138,7 +148,7 @@ export class CompleteSignInAction implements UnguardedAction {
     tx: Transaction,
     providerId: string,
     identity: ExternalIdentity,
-    previousToken: string | undefined,
+    held: HeldBefore,
   ): Promise<SignInOutcome> {
     await this.admin.lock(tx);
     const groups = groupsOf(identity);
@@ -151,8 +161,20 @@ export class CompleteSignInAction implements UnguardedAction {
     let created = false;
     let linked = false;
     if (userId === undefined) {
-      const holder = await this.linkable(tx, providerId, identity, email);
-      if (holder !== undefined) {
+      const holder =
+        email === null
+          ? undefined
+          : await this.identities.userWithEmail(tx, email);
+      // The address the provider vouches for is a deactivated user's: it is them, named
+      // differently now (made again there, another provider), and they stay out (#943).
+      const holderUser =
+        holder === undefined
+          ? undefined
+          : await this.admin.findUser(tx, holder);
+      if (holderUser !== undefined && holderUser.deactivatedAt !== null) {
+        throw new Deactivated();
+      }
+      if (await this.linkable(tx, providerId, identity, holder)) {
         userId = holder;
         linked = true;
       }
@@ -209,10 +231,7 @@ export class CompleteSignInAction implements UnguardedAction {
 
     const user = await this.admin.findUser(tx, userId);
     if (!user) throw new NotFoundError(`No user "${userId}".`);
-    if (user.deactivatedAt !== null) throw new Refused('user-deactivated');
-    if (!(await this.sessionPolicy.maySignIn(userId, providerId))) {
-      throw new Refused('sign-in-not-allowed');
-    }
+    if (user.deactivatedAt !== null) throw new Deactivated();
 
     if (!created) {
       const name = displayNameOf(identity, user.name);
@@ -255,44 +274,35 @@ export class CompleteSignInAction implements UnguardedAction {
       }
     }
 
-    if (previousToken !== undefined) {
-      await this.sessions.revoke(hashSessionToken(previousToken), tx);
-    }
-    const limits = this.sessionPolicy.limits(userId, providerId);
-    const session = mintSessionToken();
-    await this.sessions.create(tx, {
-      hash: session.hash,
+    const token = await this.start.finish(tx, {
       userId,
       provider: providerId,
-      endedBefore: new Date(this.now() - limits.maxMs),
+      held,
+      now: this.now(),
     });
     await this.auditLog.record(tx, self, {
       action: 'user.sign-in',
       subject: { type: 'user', id: userId },
       data: { provider: providerId, created, linked },
     });
-    return { userId, token: session.token };
+    return { userId, token };
   }
 
   /**
-   * The existing user a first sign-in links to by the verified email address,
-   * as the session policy allows (`LinkByEmail`); undefined: a new user.
+   * Whether a first sign-in links to `holder`, the user with the verified email address, as the
+   * session policy allows (`LinkByEmail`); false: a new user.
    */
   private async linkable(
     tx: Transaction,
     providerId: string,
     identity: ExternalIdentity,
-    email: string | null,
-  ): Promise<string | undefined> {
+    holder: string | undefined,
+  ): Promise<boolean> {
     const mode = this.sessionPolicy.linkByEmail(providerId);
-    if (email === null || mode === 'off') return undefined;
-    const holder = await this.identities.userWithEmail(tx, email);
-    if (holder === undefined) return undefined;
-    const taken =
-      mode === 'pending'
-        ? await this.identities.hasAnyIdentity(tx, holder)
-        : await this.identities.hasIdentityAt(tx, holder, identity.issuer);
-    return taken ? undefined : holder;
+    if (holder === undefined || mode === 'off') return false;
+    return !(mode === 'pending'
+      ? await this.identities.hasAnyIdentity(tx, holder)
+      : await this.identities.hasIdentityAt(tx, holder, identity.issuer));
   }
 
   /** A new user for `identity`, with the first free ID of its candidates. */

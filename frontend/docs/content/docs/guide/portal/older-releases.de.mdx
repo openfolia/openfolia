@@ -1,0 +1,67 @@
+---
+title: 'Eine ältere Version lesen'
+description: 'Wie Leser eine Anleitung so öffnen, wie sie in einer früheren Version war, beim Wechseln ihre Stelle behalten und in dieser Version suchen.'
+articleId: 'guide.portal.older-releases'
+---
+
+Ein Portal zeigt die neueste Version jedes Produkts. Wird das Portal auch mit älteren
+Versionen erstellt, können Leser, deren Produkt noch mit einer früheren Version läuft, die
+Anleitungen so lesen, wie sie damals waren, und zwischen den Versionen wechseln, ohne ihre
+Stelle zu verlieren.
+
+## Wo die älteren Versionen liegen
+
+- Die neueste Version bleibt unter den gewohnten Adressen, zum Beispiel
+  `https://<team>.openfolia.com/de/<produkt>/<anleitung>/`.
+- Eine ältere Version liegt unter `v/<version>/`, zum Beispiel
+  `https://<team>.openfolia.com/de/<produkt>/v/2.0/<anleitung>/`. Die Adresse nennt ihre
+  Revision in Kleinbuchstaben. Bei einem Portal, das Sie selbst bereitstellen, liegen dieselben
+  Pfade unter Ihrer eigenen Adresse.
+- `https://<team>.openfolia.com/de/<produkt>/v/2.0/` ist die eigene Seite der Version:
+  ihr Datum, ihre Versionshinweise und ihre Anleitungen.
+- Die Startseite und **Alle Anleitungen** listen die neueste Version. Ein Produkt mit
+  älteren Versionen nennt sie auf der Startseite neben seinem Titel.
+
+## Die Version wechseln
+
+Eine Anleitungsseite nennt neben der Variante ihre Version und deren Datum, zum Beispiel
+**Version 2.0, 12. März 2026**. Enthält das Portal mehr als eine Version des
+Produkts, öffnet diese Zeile ein Menü der Versionen, die neueste zuerst und als
+**Aktuell** markiert.
+
+- Eine Version zu wählen öffnet dieselbe Anleitung in derselben Variante an dem
+  Abschnitt, den Sie gerade gelesen haben.
+- Hat diese Version den Abschnitt nicht, öffnet die Anleitung an ihrem Anfang, mit einem
+  kurzen Hinweis darauf. Hat sie die Variante nicht, nennt das Menü die, die stattdessen öffnet („nur als …“).
+- Hat diese Version die Anleitung gar nicht, sagt das Menü das, und der Link öffnet
+  stattdessen die Seite der Version.
+- Das Menü lässt sich mit der Tastatur bedienen: Eingabe oder Leertaste öffnet es, Tab geht durch
+  die Versionen, Escape schließt es.
+
+## Der Hinweis auf älteren Seiten
+
+Jede Seite einer älteren Version beginnt mit einem unaufdringlichen Hinweis: „Sie lesen
+Version 2.0. Die aktuelle ist Version 3.0.“, mit einem Link auf dieselbe Seite in der neuesten
+Version (oder deren nächstliegende Seite).
+
+Suchmaschinen werden auf die neueste Version verwiesen: Jede ältere Seite nennt die
+neueste Seite als ihre kanonische Adresse und bittet, sofern das Portal nicht anders eingestellt
+ist, nicht indexiert zu werden.
+
+## Suchen in einer älteren Version
+
+Die Suche auf den Seiten einer älteren Version findet nur diese Version. Die
+Suchseite sagt, welche Version sie durchsucht, und bietet **Stattdessen die aktuelle
+Version durchsuchen** mit denselben Wörtern an. Die Suche auf den Seiten der neuesten
+Version zeigt nie ältere Inhalte.
+
+## Einschalten
+
+<ServerSetting lang="de">
+  Das Portal erstellt nur die neueste Version jedes Produkts, sofern Sie nicht
+  mehr einstellen. Setzen Sie `CCMS_PORTAL_RELEASES_PER_PRODUCT` auf die Zahl
+  der Versionen je Produkt, zum Beispiel `3` (höchstens `20`), oder nennen Sie
+  sie in `CCMS_PORTAL_RELEASES`. Zurückgezogene Versionen werden nie erstellt.
+  `CCMS_PORTAL_OLDER_NOINDEX=off` lässt Suchmaschinen die älteren Seiten
+  indexieren. Siehe [Erstellen und Vorschau](/de/guide/portal/build).
+</ServerSetting>

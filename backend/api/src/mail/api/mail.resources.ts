@@ -48,6 +48,38 @@ export const MailSettingsResource = resourceObject('MailSettings', {
       'The language of an email to someone whose language is not known (`CCMS_MAIL_LANGUAGE`).',
     ),
   }),
+  meta: z.object({
+    failures: z
+      .object({
+        count: z
+          .number()
+          .int()
+          .describe('Emails that failed for good in the last 7 days.'),
+        last: z
+          .object({
+            at: z.iso
+              .datetime({ offset: true })
+              .describe('When the newest of them failed.'),
+            template: z
+              .string()
+              .nullable()
+              .describe(
+                'What kind of email it was (`test`, `notification`, `notification-digest`, …).',
+              ),
+            reason: z
+              .string()
+              .nullable()
+              .describe(
+                'Why: `rejected`, `unavailable`, `tls`, `auth`, `unreadable` or `off`.',
+              ),
+          })
+          .nullable()
+          .describe('The newest of them; null when none failed.'),
+      })
+      .describe(
+        'Emails the server gave up on after its retries (`mail.failed` in the audit log), never whom they went to or what they said.',
+      ),
+  }),
 })
   .describe(
     '`id` is always `instance`. Read-only: the settings are in the environment.',
@@ -74,6 +106,15 @@ export function toMailSettingsDocument(
         from: report.from,
         senderName: report.senderName,
         language: report.language,
+      },
+      meta: {
+        failures: {
+          count: report.failures.count,
+          last: report.failures.last && {
+            ...report.failures.last,
+            at: report.failures.last.at.toISOString(),
+          },
+        },
       },
     },
   };

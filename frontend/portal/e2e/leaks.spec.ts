@@ -1,11 +1,16 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { expect, test } from '@playwright/test';
 import {
+  DEAD_LINKS,
   INTERNAL_CANARY,
+  INTERNAL_LINKS,
+  OLDER_REVISIONS,
+  OLDER_WORD,
   PUBLIC_WORD,
   RESTRICTED_CANARY,
+  UNRELEASED_WORD,
 } from '../testing/fixture-repo.ts';
 import { FIXTURE_OUT } from './global-setup.ts';
 
@@ -63,6 +68,52 @@ test.describe('the built files', () => {
       true,
     );
     expect(holding(dir, RESTRICTED_CANARY)).toEqual([]);
+  });
+
+  test('each older release has its own search index, and the newest’s holds none of its text (#896)', () => {
+    const dir = join(FIXTURE_OUT, 'internal');
+    for (const lang of ['en', 'de']) {
+      expect(holding(join(dir, lang, 'pagefind'), OLDER_WORD)).toEqual([]);
+      for (const release of OLDER_REVISIONS)
+        expect(
+          holding(
+            join(dir, lang, 'alpha', 'v', release, '_pagefind'),
+            OLDER_WORD,
+          ).length,
+        ).toBeGreaterThan(0);
+    }
+    // The public site keeps the default: the newest releases only.
+    for (const lang of ['en', 'de'])
+      expect(existsSync(join(FIXTURE_OUT, 'public', lang, 'alpha', 'v'))).toBe(
+        false,
+      );
+  });
+
+  test('the start page’s links above the audience, or to nothing, are in no file; reported instead (#897)', () => {
+    const log = (audience: string) =>
+      readFileSync(join(FIXTURE_OUT, `${audience}.log`), 'utf8');
+    for (const title of [...INTERNAL_LINKS, ...DEAD_LINKS])
+      expect(holding(join(FIXTURE_OUT, 'public', 'en'), title)).toEqual([]);
+    // Nor any address of the internal manual, the guide or the manual that is not there.
+    for (const path of ['alpha/service/', 'software-update/', 'alpha/gone/'])
+      for (const lang of ['en', 'de'])
+        expect(holding(join(FIXTURE_OUT, 'public', lang), path)).toEqual([]);
+    for (const title of [...INTERNAL_LINKS, ...DEAD_LINKS])
+      expect(log('public')).toContain(`Start page en: the link “${title}”`);
+    for (const title of INTERNAL_LINKS) {
+      expect(holding(join(FIXTURE_OUT, 'internal', 'en'), title)).toEqual([
+        join('internal', 'en', 'index.html'),
+      ]);
+      expect(log('internal')).not.toContain(title);
+    }
+    for (const title of DEAD_LINKS) {
+      expect(holding(join(FIXTURE_OUT, 'internal', 'en'), title)).toEqual([]);
+      expect(log('internal')).toContain(title);
+    }
+  });
+
+  test('an edit of the start page that no release holds is in no file (#897)', () => {
+    expect(holding(FIXTURE_OUT, UNRELEASED_WORD)).toEqual([]);
   });
 
   test('no build holds a service token', () => {

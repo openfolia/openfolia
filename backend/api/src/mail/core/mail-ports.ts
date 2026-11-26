@@ -107,6 +107,11 @@ export interface StoredMail {
   /** The last failed attempt's error kind (`MailErrorKind`); null before one. */
   readonly lastError: string | null;
   readonly createdAt: Date;
+  /**
+   * What `mail.sent` and `mail.failed` record besides the template (#884); null: the email is
+   * not recorded when sent (sign-in links, codes, the test email).
+   */
+  readonly auditData: Readonly<Record<string, unknown>> | null;
 }
 
 /**

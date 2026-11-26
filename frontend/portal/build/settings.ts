@@ -12,17 +12,32 @@ export interface PortalSettings {
   readonly audience: string;
   /** The languages to build, one site each; undefined: every configured language. */
   readonly languages: readonly string[] | undefined;
-  /** Release IDs to build; undefined: each product's newest release that is not withdrawn. */
+  /**
+   * Release IDs to build; undefined: each product's `releasesPerProduct` newest releases that
+   * are not withdrawn. A product's newest built release is at today's addresses, its older ones
+   * under `<product>/v/<release>/` (#896).
+   */
   readonly releases: readonly string[] | undefined;
+  /** How many of each product's newest releases to build when `releases` is unset (default 1). */
+  readonly releasesPerProduct: number;
+  /** Older releases' pages ask search engines not to index them (default true). */
+  readonly olderNoindex: boolean;
   /** Where the sites go: `<outDir>/<lang>/`. */
   readonly outDir: string;
   /** The path the sites are served under (`/` or `/docs/`): each language at `<basePath><lang>/`. */
   readonly basePath: string;
   /** The organisation's branding (`GET /branding`) on the site; false: OpenFolia's default look. */
   readonly branding: boolean;
+  /** The manuals that may be the start page (#897), by ID: the first there is; undefined: the default one. */
+  readonly start: readonly string[] | undefined;
+  /** The portal's own address as an origin, for the start page's links to its pages; undefined: not set. */
+  readonly portalOrigin: string | undefined;
 }
 
 export class SettingsError extends Error {}
+
+/** The most releases per product a build takes (`CCMS_PORTAL_RELEASES_PER_PRODUCT`): each is a whole site's worth of pages. */
+export const MAX_RELEASES_PER_PRODUCT = 20;
 
 const ConfigKey = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const ReleaseId =
@@ -44,11 +59,17 @@ const Env = z.object({
     .regex(ConfigKey, 'an audience level ID, e.g. public'),
   CCMS_PORTAL_LANGUAGES: z.string().optional(),
   CCMS_PORTAL_RELEASES: z.string().optional(),
+  CCMS_PORTAL_RELEASES_PER_PRODUCT: z.string().optional(),
+  CCMS_PORTAL_OLDER_NOINDEX: z
+    .enum(['on', 'off'], { error: 'on or off' })
+    .optional(),
   CCMS_PORTAL_OUT_DIR: z.string().optional(),
   CCMS_PORTAL_BASE_PATH: z.string().optional(),
   CCMS_PORTAL_BRANDING: z
     .enum(['on', 'off'], { error: 'on or off' })
     .optional(),
+  CCMS_PORTAL_START: z.string().optional(),
+  CCMS_PORTAL_URL: z.string().optional(),
   CCMS_PORTAL_HTTP_HOSTS: z.string().optional(),
 });
 
@@ -135,11 +156,52 @@ export function readSettings(
     throw new SettingsError(
       'CCMS_PORTAL_RELEASES: comma-separated release IDs',
     );
+  const perProduct = e.CCMS_PORTAL_RELEASES_PER_PRODUCT?.trim();
+  if (
+    perProduct !== undefined &&
+    (!/^\d{1,2}$/.test(perProduct) ||
+      Number(perProduct) < 1 ||
+      Number(perProduct) > MAX_RELEASES_PER_PRODUCT)
+  )
+    throw new SettingsError(
+      `CCMS_PORTAL_RELEASES_PER_PRODUCT: a whole number from 1 to ${MAX_RELEASES_PER_PRODUCT}`,
+    );
+  if (perProduct !== undefined && releases !== undefined)
+    throw new SettingsError(
+      'CCMS_PORTAL_RELEASES_PER_PRODUCT: not with CCMS_PORTAL_RELEASES, which names the releases itself',
+    );
   const basePath = e.CCMS_PORTAL_BASE_PATH ?? '/';
   if (!/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(basePath))
     throw new SettingsError(
       'CCMS_PORTAL_BASE_PATH: a path starting and ending with "/", e.g. /docs/',
     );
+  const start = list(e.CCMS_PORTAL_START);
+  if (start?.some((id) => !ConfigKey.test(id)))
+    throw new SettingsError(
+      'CCMS_PORTAL_START: comma-separated manual IDs, e.g. portal-start',
+    );
+  let portalOrigin: string | undefined;
+  if (e.CCMS_PORTAL_URL !== undefined) {
+    const wrong = new SettingsError(
+      'CCMS_PORTAL_URL: the portal’s own address, e.g. https://docs.example.com, with no path but CCMS_PORTAL_BASE_PATH',
+    );
+    let url: URL;
+    try {
+      url = new URL(e.CCMS_PORTAL_URL);
+    } catch {
+      throw wrong;
+    }
+    if (
+      (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+      url.username !== '' ||
+      url.password !== '' ||
+      url.search !== '' ||
+      url.hash !== '' ||
+      !['/', basePath].includes(url.pathname.replace(/\/?$/, '/'))
+    )
+      throw wrong;
+    portalOrigin = url.origin;
+  }
   const outDir = resolve(cwd, e.CCMS_PORTAL_OUT_DIR ?? 'dist');
   // The folder is replaced as a whole: never the one the build runs in, or one holding it.
   // `cwd` relative to `outDir`: inside it unless that climbs out (`..` as a whole first segment, not a folder named `..x`).
@@ -158,8 +220,12 @@ export function readSettings(
     audience: e.CCMS_PORTAL_AUDIENCE,
     languages: languages && [...new Set(languages)],
     releases: releases && [...new Set(releases)],
+    releasesPerProduct: perProduct === undefined ? 1 : Number(perProduct),
+    olderNoindex: e.CCMS_PORTAL_OLDER_NOINDEX !== 'off',
     outDir,
     basePath,
     branding: e.CCMS_PORTAL_BRANDING !== 'off',
+    start,
+    portalOrigin,
   };
 }

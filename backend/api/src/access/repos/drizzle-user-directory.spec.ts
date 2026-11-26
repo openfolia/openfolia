@@ -6,6 +6,7 @@ import {
 import { RoleId, UserId } from '../core/actor.js';
 import { roleAssignments, roles, users } from './access.tables.js';
 import { signInLinks, userPasswords } from './passwords.tables.js';
+import { secondFactors } from './second-factors.tables.js';
 import { userIdentities } from './sign-in.tables.js';
 import {
   DrizzleUserDirectory,
@@ -30,7 +31,12 @@ const listed = (id: string, name: string, roleIds: string[] = []) => ({
   permissions: ['content.read', 'content.read.draft', 'content.edit'].filter(
     (p) => roleIds.some((r) => HELD[r]?.includes(p)),
   ),
-  signIn: { password: false, provider: false, inviteExpiresAt: null },
+  signIn: {
+    password: false,
+    provider: false,
+    inviteExpiresAt: null,
+    secondFactor: false,
+  },
 });
 
 describe('DrizzleUserDirectory', () => {
@@ -278,15 +284,29 @@ describe('DrizzleUserDirectory', () => {
       kind: 'invite',
       expiresAt,
     });
+    const at = new Date();
+    await database.db.insert(secondFactors).values([
+      {
+        userId: 'one',
+        sealedSecret: 'v1.x',
+        begunAt: at,
+        confirmedAt: at,
+        lastStep: 1,
+      },
+      { userId: 'none', sealedSecret: 'v1.x', begunAt: at },
+    ]);
     expect((await directory.findUser('one'))?.signIn).toEqual({
       password: true,
       provider: true,
       inviteExpiresAt: null,
+      secondFactor: true,
     });
     expect((await directory.findUser('none'))?.signIn).toEqual({
       password: false,
       provider: false,
       inviteExpiresAt: expiresAt,
+      // Begun is not on.
+      secondFactor: false,
     });
   });
 

@@ -28,7 +28,7 @@ type OnChangeType = (value: boolean) => void;
   imports: [TranslocoPipe, ZardIdDirective],
   template: `
     <span
-      class="flex items-center space-x-2"
+      class="flex items-center gap-2"
       zardId="switch"
       #z="zardId"
       [attr.data-checked]="zChecked() ? '' : null"
@@ -47,12 +47,12 @@ type OnChangeType = (value: boolean) => void;
         <span
           [attr.data-size]="zSize()"
           [attr.data-state]="status()"
-          class="bg-background dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground pointer-events-none block rounded-full ring-0 transition-transform data-[size=default]:size-4 data-[size=sm]:size-3 data-[state=unchecked]:translate-x-0 ltr:data-[state=checked]:translate-x-[calc(100%-2px)] rtl:data-[state=checked]:-translate-x-[calc(100%-2px)]"
+          class="bg-background dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground pointer-events-none block rounded-full ring-0 transition-transform data-[size=default]:size-[14px] data-[size=sm]:size-[10px] data-[state=unchecked]:translate-x-0 ltr:data-[state=checked]:translate-x-full rtl:data-[state=checked]:-translate-x-full"
         ></span>
       </button>
 
       <label
-        class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        class="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70 has-[>span:empty:only-child]:hidden"
         [for]="zId() || z.id()"
       >
         <ng-content

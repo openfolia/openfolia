@@ -82,7 +82,9 @@ damit.
 
 `CCMS_EMAIL_CODE_SIGN_IN=off` lehnt neue Codes ab und beendet die Sitzungen, die mit einem Code
 begonnen haben. Sitzungen haben dieselben Grenzen wie jede andere Anmeldung: 8 Stunden ohne Anfrage
-(`CCMS_SESSION_IDLE_MINUTES`) und höchstens 7 Tage (`CCMS_SESSION_MAX_HOURS`).
+(`CCMS_SESSION_IDLE_MINUTES`) und höchstens 7 Tage (`CCMS_SESSION_MAX_HOURS`). Ein Admin kann andere
+Grenzen festlegen ([Single Sign-on vorschreiben](/de/guide/admin/single-sign-on)). Wo Single Sign-on
+vorgeschrieben ist, werden keine Codes gesendet und keine angenommen.
 
 Wie bei Passwörtern lassen Sie `CCMS_API_TOKEN` und `CCMS_EDITOR_API_TOKEN` leer, wo sich Personen
 anmelden.

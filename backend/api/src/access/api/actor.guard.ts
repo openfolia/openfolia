@@ -13,6 +13,7 @@ import type { Request, Response } from 'express';
 import { clientAddress } from '../../base/api/client-address.js';
 import { JsonApiException } from '../../base/api/json-api.exception.js';
 import { IS_PUBLIC } from '../../base/api/public.decorator.js';
+import { TOKEN_ONLY } from '../../base/api/token-only.decorator.js';
 import type { Env } from '../../config/env.js';
 import { AuthenticateServiceTokenAction } from '../core/actions/authenticate-service-token.action.js';
 import { AuthenticateSessionAction } from '../core/actions/authenticate-session.action.js';
@@ -75,6 +76,13 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // Compatibility: keeps the working name from before the product was named OpenFolia, as every `X-Ccms-*` header
 // of the API: they are part of its contract with clients and webhook receivers.
 export const USER_HEADER = 'X-Ccms-User';
+
+/**
+ * Sent by the editor with what it asks by itself while nobody uses the tab (a poll): the session
+ * is checked as ever, but not kept alive by it (#378). It only ever shortens a session, so nothing
+ * about it needs to be trusted.
+ */
+export const BACKGROUND_HEADER = 'X-Ccms-Background';
 
 const digest = (value: string) => createHash('sha256').update(value).digest();
 
@@ -212,7 +220,13 @@ export class ActorGuard implements CanActivate {
     // route anyone may read (`@OptionalActor()`: the stable addresses) a valid session acts
     // as its person, so `signed-in` addresses open in the editor; one that cannot act is
     // ignored, so a browser holding an ended session still reads what anyone may.
-    const signInOn = this.signIn.signInOn(this.providers.list().length);
+    // A route a token alone authenticates (`@TokenOnly()`, #377) never reads a session.
+    const tokenOnly = this.reflector.getAllAndOverride<boolean>(TOKEN_ONLY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    const signInOn =
+      !tokenOnly && this.signIn.signInOn(this.providers.list().length);
     const session = signInOn ? cookieOf(req, SESSION_COOKIE) : undefined;
     // An answer to anyone there is the same with or without a cookie: only one a session
     // changed varies by it, so a shared cache keeps one copy of a public address.
@@ -355,7 +369,10 @@ export class ActorGuard implements CanActivate {
       ]);
     }
     // A failing store rejects here: a 5xx, never a refusal.
-    const found = await this.authenticateSession.handle({ token });
+    const found = await this.authenticateSession.handle({
+      token,
+      background: req.headers[BACKGROUND_HEADER.toLowerCase()] !== undefined,
+    });
     // A session counts only while the way in it began with is on: a password session ends when
     // password sign-in is turned off (#610: with a provider still on, that means "sign in with
     // the provider only"), and one from a provider no longer set up ends with it (#639: now that

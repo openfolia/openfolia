@@ -51,7 +51,8 @@ export const OPTION_TOPICS: Readonly<Record<string, OptionTopic>> = {
  * The topics in menu order: languages; the content model (module types, audiences, facets, variant
  * attributes, text attributes); the output (labels, headings, the manufacturer, safety symbols, code
  * languages); the
- * installation (review: who may approve their own change set, #588).
+ * installation (review: who may approve their own change set, #588; two-factor: who must sign in
+ * with a second factor, #611; single sign-on and how long sessions last, #378).
  * The variant attributes' page keeps its selection in `attribute`, `value`, `usage` and `page`
  * (#91's editor), the facets' in `facet`, the output labels' language in `labels`.
  */
@@ -139,6 +140,22 @@ export const SETTINGS_TOPICS: readonly SettingsTopic[] = [
     group: 'installation',
     title: 'editor.admin.settings.sections.review',
     hint: 'editor.admin.settings.hints.review',
+    installation: true,
+  },
+  {
+    path: 'two-factor',
+    help: 'guide.admin.two-factor',
+    group: 'installation',
+    title: 'editor.admin.settings.sections.secondFactor',
+    hint: 'editor.admin.settings.hints.secondFactor',
+    installation: true,
+  },
+  {
+    path: 'single-sign-on',
+    help: 'guide.admin.single-sign-on',
+    group: 'installation',
+    title: 'editor.admin.settings.sections.singleSignOn',
+    hint: 'editor.admin.settings.hints.singleSignOn',
     installation: true,
   },
 ];

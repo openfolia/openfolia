@@ -2,7 +2,12 @@ import { rmSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createFixtureRepo, FIXTURE_PRODUCTS } from './fixture-repo.ts';
+import {
+  createFixtureRepo,
+  FIXTURE_PRODUCTS,
+  NEWEST_REVISION,
+  OLDER_REVISIONS,
+} from './fixture-repo.ts';
 
 const API = join(import.meta.dirname, '..', '..', '..', 'backend', 'api');
 
@@ -30,7 +35,7 @@ export interface FixtureBranding {
 export interface FixtureApi {
   readonly url: URL;
   readonly tokens: FixtureTokens;
-  /** The release IDs, newest first. */
+  /** The release IDs, newest first: alpha's older ones (#896) last. */
   readonly releases: readonly string[];
   /** Sets the platform's branding (#784), as an administrator would; null: back to none. */
   brand(branding: FixtureBranding | null): Promise<void>;
@@ -43,7 +48,8 @@ const SHARED_TOKEN = 'portal-fixture-0123456789abcdef0123456789abcdef';
 /**
  * Runs `use` against the built API (`api:build`), booted in this process over the fixture
  * repository (`fixture-repo.ts`) and an in-memory database, listening on a loopback port the
- * system picks: a release per product, cut by an admin, and the service accounts and tokens of
+ * system picks: alpha's older releases and a newest release per product (#896), cut by an admin from
+ * older and newer content, and the service accounts and tokens of
  * `FixtureTokens`. No job runs (no PDF is rendered). Everything is removed afterwards.
  */
 export async function withFixtureApi<T>(
@@ -200,19 +206,27 @@ export async function withFixtureApi<T>(
             );
         };
         const releases: string[] = [];
-        for (const product of FIXTURE_PRODUCTS) {
-          const release = await post('/releases', {
-            data: {
-              type: 'Release',
-              attributes: {
-                product,
-                revision: '1.0',
-                notes: `First release of ${product}.`,
-              },
-            },
-          });
-          releases.unshift(release.data.id);
-        }
+        const cut = async (product: string, revision: string, notes: string) =>
+          releases.unshift(
+            (
+              await post('/releases', {
+                data: {
+                  type: 'Release',
+                  attributes: { product, revision, notes },
+                },
+              })
+            ).data.id,
+          );
+        for (const revision of OLDER_REVISIONS)
+          await cut('alpha', revision, `Release ${revision} of alpha.`);
+        repo.advance();
+        for (const product of FIXTURE_PRODUCTS)
+          await cut(
+            product,
+            NEWEST_REVISION,
+            `Release ${NEWEST_REVISION} of ${product}.`,
+          );
+        repo.edit();
         return await use({
           url,
           releases,
@@ -226,7 +240,7 @@ export async function withFixtureApi<T>(
         });
       },
       {
-        contentDir: repo,
+        contentDir: repo.dir,
         serve: true,
         env: {
           CCMS_AUTH_MODE: 'demo',
@@ -237,7 +251,7 @@ export async function withFixtureApi<T>(
       },
     );
   } finally {
-    rmSync(repo, { recursive: true, force: true });
+    rmSync(repo.dir, { recursive: true, force: true });
   }
 }
 

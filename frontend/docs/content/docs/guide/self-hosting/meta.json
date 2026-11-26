@@ -7,6 +7,7 @@
     "content-repository",
     "authentication",
     "oidc",
+    "saml",
     "password-sign-in",
     "email-code-sign-in",
     "reverse-proxy",

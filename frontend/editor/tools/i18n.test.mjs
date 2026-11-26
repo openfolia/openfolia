@@ -29,6 +29,8 @@ const IIRDS_REPORT =
   'a warning in an iiRDS package’s report, not an error response; no editor screen reads one';
 const IMPORTS =
   'the content import (`/imports`, `/importers`): no editor screen starts or reads one';
+const SCIM =
+  'a SCIM route (`/scim/v2`): a directory’s service account calls it, no editor screen does';
 /**
  * The error codes of the API's catalogue that need no text in the editor, each with why: no
  * screen of the editor can meet them. A new code needs a text or a line here.
@@ -69,6 +71,15 @@ const EXEMPT = {
   'invalid-options': IMPORTS,
   'unknown-importer': IMPORTS,
   'upload-missing': IMPORTS,
+  'scim-address-locked': SCIM,
+  'scim-group-name-taken': SCIM,
+  'scim-invalid-filter': SCIM,
+  'scim-invalid-path': SCIM,
+  'scim-invalid-syntax': SCIM,
+  'scim-invalid-value': SCIM,
+  'scim-mutability': SCIM,
+  'scim-no-target': SCIM,
+  'scim-user-name-taken': SCIM,
 };
 
 /**

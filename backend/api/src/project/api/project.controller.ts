@@ -11,6 +11,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import {
@@ -46,6 +47,7 @@ export class ProjectController {
   ) {}
 
   @Get('refs')
+  @NamesPeople()
   @DeliveryApi()
   @Paged()
   @ApiOperation({

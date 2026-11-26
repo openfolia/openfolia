@@ -8,6 +8,7 @@ import { ChangeSetDocument } from '../src/change-sets/api/change-set.resources.j
 import { LockDocument } from '../src/change-sets/api/lock.resources.js';
 import { ModuleWorkingCopyDocument } from '../src/change-sets/api/working-copy.resources.js';
 import { NotificationsConsumer } from '../src/notifications/api/notifications-consumer.js';
+import { notificationEmails } from '../src/notifications/repos/notification-emails.tables.js';
 import {
   MarkReadResultDocument,
   NotificationDocument,
@@ -151,6 +152,8 @@ describe('notifications', () => {
     });
     expect(ofChangeSet(await inbox(germanReviewer), id)).toEqual([]);
     expect(ofChangeSet(await inbox(author), id)).toEqual([]);
+    // Email is not set up here (no `CCMS_MAIL_URL`): nothing is queued to go by email (#884).
+    expect(await t.database.db.select().from(notificationEmails)).toEqual([]);
   });
 
   it('tell the author once of a return, even when the batch is read again', async () => {

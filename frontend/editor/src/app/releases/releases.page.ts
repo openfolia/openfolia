@@ -53,6 +53,7 @@ import {
   type Response,
 } from '../api';
 import { injectPersonName } from '../history/history-model';
+import { PersonNameComponent } from '../session/person-name.component';
 import { apiErrorText } from '../i18n';
 import { GuardDirective } from '../permissions/guard.directive';
 import { MeService } from '../permissions/me';
@@ -114,6 +115,7 @@ const PRODUCT = /^[a-z0-9][a-z0-9_-]{0,99}$/;
 @Component({
   selector: 'of-releases-page',
   imports: [
+    PersonNameComponent,
     TranslocoPipe,
     NgIcon,
     DatePipe,
@@ -381,9 +383,11 @@ const PRODUCT = /^[a-z0-9][a-z0-9_-]{0,99}$/;
                         "
                         >{{ r.attributes.publishedAt | ofRelativeTime }}</span
                       >
-                      <span class="block text-xs break-words">{{
-                        person(r.attributes.publishedBy)
-                      }}</span>
+                      <of-person-name
+                        class="block text-xs"
+                        [who]="r.attributes.publishedBy"
+                        [name]="person(r.attributes.publishedBy)"
+                      />
                     </td>
                   </tr>
                 }

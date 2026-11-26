@@ -13,7 +13,9 @@ import { provideZard } from '@openfolia/ui/core';
 import { ToasterComponent } from '@openfolia/ui/toast';
 
 import { apiErrorInterceptor } from '../api/api-interceptors';
+import { PeopleStates } from '../api';
 import { MeService } from '../permissions/me';
+import { DemoSession } from '../session/demo-session';
 import { NotificationBellComponent } from './notification-bell.component';
 import { NotificationCenter, POLL_MS } from './notification-center';
 import type { NotificationItem } from './notification-model';
@@ -194,6 +196,26 @@ describe('Notifications', () => {
   });
 
   describe('the sheet', () => {
+    it('marks whoever did it while they are deactivated, by the name they had (#928)', async () => {
+      const t = await render('/x?notifications=all');
+      vi.spyOn(TestBed.inject(DemoSession), 'nameOf').mockImplementation(
+        (id) => (id === 'u-r' ? 'Rita Reviewer' : undefined),
+      );
+      t.count(1);
+      const people = TestBed.inject(PeopleStates);
+      people.read([{ id: 'u-r', deactivated: true }]);
+      t.list().flush(pageOf([returned], 1));
+      await t.settle();
+      expect(t.sheet()?.textContent).toContain(
+        'Rita Reviewer (deactivated) returned “Battery charging”',
+      );
+      people.read([{ id: 'u-r', deactivated: false }]);
+      await t.settle();
+      expect(t.sheet()?.textContent).toContain(
+        'Rita Reviewer returned “Battery charging”',
+      );
+    });
+
     it('opens from the bell, in the address, grouped by Today and Earlier', async () => {
       const t = await render();
       t.count(1);

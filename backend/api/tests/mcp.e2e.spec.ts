@@ -29,9 +29,6 @@ let t: TestApp;
 let apiUrl: string;
 const servers: Server[] = [];
 let mcpUrl: URL;
-/** The deprecated shared token (`CCMS_MCP_HTTP_TOKEN`). */
-const HTTP_TOKEN = 'mcp-caller-token-0123456789abcdef0123';
-
 /** A service account with a role of `permissions`, and a token of it: `{ id, token }`. */
 async function serviceToken(
   account: string,
@@ -61,18 +58,12 @@ async function serviceToken(
   return { id: minted.id, token: minted.token };
 }
 
-/** An MCP server whose callers bring their own tokens, and optionally the deprecated shared one. */
-async function startMcp(shared?: string) {
+/** An MCP server whose callers bring their own tokens. */
+async function startMcp() {
   const server = await startHttpServer({
     host: '127.0.0.1',
     port: 0,
     callerContext: (token) => createContext(new HttpContentApi(apiUrl, token)),
-    ...(shared && {
-      shared: {
-        token: HTTP_TOKEN,
-        context: createContext(new HttpContentApi(apiUrl, shared)),
-      },
-    }),
     allowedOrigins: [],
   });
   servers.push(server);
@@ -430,13 +421,5 @@ describe('the MCP server against the API', () => {
     );
     expect(JSON.stringify(reads)).not.toContain(own.token);
     await caller.client.close();
-  });
-
-  it('still serves the deprecated shared token, reading as the server’s own account', async () => {
-    const url = await startMcp((await serviceToken('shared-agent')).token);
-    const shared = await connect(HTTP_TOKEN, url);
-    expect((await shared.call('list_manuals')).isError).toBe(false);
-    await shared.client.close();
-    await expect(connect(HTTP_TOKEN)).rejects.toThrow();
   });
 });

@@ -36,6 +36,7 @@ import {
   PageParams,
   Paged,
 } from '../../base/api/json-api.decorators.js';
+import { NamesPeople } from '../../base/api/people.js';
 import { ErrorDocument, toPagedDocument } from '../../base/api/json-api.js';
 import type { PageRequest } from '../../base/core/paging.js';
 import { CreateCommentAction } from '../core/actions/create-comment.action.js';
@@ -115,6 +116,7 @@ const TIMEOUT = {
 @ApiTags('comments')
 @Controller('change-sets/:changeSetId/comments')
 @JsonApi()
+@NamesPeople()
 export class CommentsController {
   constructor(
     private readonly listComments: ListCommentsAction,

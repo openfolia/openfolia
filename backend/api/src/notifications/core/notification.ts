@@ -18,7 +18,21 @@ export const NOTIFICATION_KINDS = [
   'release.output-recovered',
   'backup.failed',
   'backup.overdue',
+  'sign-in.break-glass',
 ] as const;
+/** The kinds nobody chooses about: their email goes out on its own (`OutboxSignInEvents`, #378). */
+const UNCHOSEN_KINDS = ['sign-in.break-glass'] as const;
+
+/** The kinds a person chooses how to hear of (#884). */
+export const CHOSEN_KINDS = NOTIFICATION_KINDS.filter(
+  (kind) => !(UNCHOSEN_KINDS as readonly string[]).includes(kind),
+) as Exclude<
+  (typeof NOTIFICATION_KINDS)[number],
+  (typeof UNCHOSEN_KINDS)[number]
+>[];
+export const ChosenKind = z.enum(CHOSEN_KINDS);
+export type ChosenKind = z.infer<typeof ChosenKind>;
+
 export const NotificationKind = z.enum(NOTIFICATION_KINDS);
 export type NotificationKind = z.infer<typeof NotificationKind>;
 
@@ -28,6 +42,7 @@ export const SUBJECT_TYPES = [
   'release',
   'import',
   'backup',
+  'user',
 ] as const;
 export const NotificationSubjectType = z.enum(SUBJECT_TYPES);
 export type NotificationSubjectType = z.infer<typeof NotificationSubjectType>;

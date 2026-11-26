@@ -46,10 +46,9 @@ export class LockHolding {
   ): Promise<HoldingChangeSet | undefined> {
     const changeSet = await this.changeSets.find(changeSetId);
     if (!changeSet) return undefined;
-    const [copy, committed] = await Promise.all([
-      this.workingCopies.find(changeSetId, subject),
-      this.committed(changeSet, subject),
-    ]);
+    // One after the other: a save point moves the branch before it drops the copy (#935).
+    const copy = await this.workingCopies.find(changeSetId, subject);
+    const committed = await this.committed(changeSet, subject);
     return {
       title: changeSet.title,
       state: changeSet.state,

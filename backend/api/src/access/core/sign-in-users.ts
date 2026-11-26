@@ -11,7 +11,9 @@ const ID_BASE_MAX = 56;
  * address, else `user`, in `UserId`'s format (lowercase letters, digits,
  * ".", "_" and "-"; anything else becomes "-").
  */
-export function userIdBase(identity: ExternalIdentity): string {
+export function userIdBase(
+  identity: Pick<ExternalIdentity, 'username' | 'email'>,
+): string {
   const from =
     identity.username ??
     (identity.email ? identity.email.split('@')[0] : undefined) ??

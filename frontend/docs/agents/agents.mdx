@@ -463,8 +463,8 @@ the MCP server, with a service account that may only read.
 
    The service account's token is valid for 90 days: make a new one the same way before then
    (replace `mcp-agent.token` and your configuration's header, after asking). An installation that
-   still has `CCMS_MCP_HTTP_TOKEN` and `CCMS_MCP_API_TOKEN` in `.env` (before v0.0.4) keeps
-   working for one release; to move off them, see [Moving from the shared
+   still has `CCMS_MCP_HTTP_TOKEN` in `.env` (before v0.0.4) must move off it, as the shared
+   token is removed: see [Moving from the shared
    token](%%SITE_URL%%/guides/mcp#moving-from-the-shared-token).
 
 3. **Start the MCP server:**

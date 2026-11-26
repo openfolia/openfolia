@@ -1,0 +1,46 @@
+---
+title: 'Require two-factor sign-in'
+description: 'Require a second factor of everyone or of admins, reset it for a lost phone, and what it covers.'
+articleId: 'guide.admin.two-factor'
+---
+
+People turn on [two-factor sign-in](/guide/getting-started/two-factor) themselves, in their account
+menu. You can also require it.
+
+## Require it
+
+1. Turn on your own two-factor sign-in first, if you sign in with a password or a code by email.
+   Without it, the setting is refused, so you cannot lock yourself out.
+2. Choose **Admin**, then **Project settings**.
+3. Under **Installation**, choose **Two-factor sign-in**.
+4. Under **Who must sign in with a second factor**, choose one:
+   - **Nobody: everyone decides for themselves**: the default.
+   - **Administrators**: everyone whose roles hold `admin.roles`.
+   - **Everyone**: everyone who signs in with a password or a code by email.
+
+The choice is saved at once and applies to the whole installation. Running sessions go on. A person
+who does not have it yet sets it up at their next sign-in and can do nothing else first.
+
+## What it covers
+
+| Way to sign in                               | Asks for the code                     |
+| -------------------------------------------- | ------------------------------------- |
+| Password                                     | Yes                                   |
+| Code by email, and the link in that email    | Yes                                   |
+| Invitation, and a link to set a new password | Yes, after the new password           |
+| Single sign-on (OpenID Connect, SAML)        | No: set it up at your sign-in service |
+| A service account's token                    | No: a token is not a person           |
+
+## Reset it for a lost phone
+
+Someone with neither their phone nor a recovery code cannot sign in.
+
+1. Make sure it is really that person who asks.
+2. Open **Admin**, then **Users**. People with two-factor sign-in on are marked **Two-factor**.
+3. Open the menu at the end of their row, choose **Reset two-factor** and confirm.
+
+They then sign in without a code, and set it up again where it is required. You cannot reset your
+own: turn it off in the account menu, or ask another admin.
+
+The [audit log](/guide/admin/audit-log) records turning it on and off, new recovery codes, a reset
+and a change of the setting. It never holds a secret or a code.

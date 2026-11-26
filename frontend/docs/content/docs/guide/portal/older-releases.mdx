@@ -1,0 +1,60 @@
+---
+title: 'Reading an older release'
+description: 'How readers open a manual as it was in an earlier release, keep their place when they switch, and search within that release.'
+articleId: 'guide.portal.older-releases'
+---
+
+A portal shows each product's newest release. When the portal is built with older releases too,
+readers whose product still runs an earlier version can read the manuals as they were then, and
+switch between releases without losing their place.
+
+## Where the older releases are
+
+- The newest release stays at the usual addresses, for example
+  `https://<team>.openfolia.com/en/<product>/<manual>/`.
+- An older release is under `v/<release>/`, for example
+  `https://<team>.openfolia.com/en/<product>/v/2.0/<manual>/`. The address names its revision,
+  in lower case. On a portal you host yourself, the same paths are under your own address.
+- `https://<team>.openfolia.com/en/<product>/v/2.0/` is the release's own page: its date, its
+  release notes and its manuals.
+- The start page and **All manuals** list the newest release. A product with older releases names
+  them beside its title on the start page.
+
+## Switching releases
+
+A manual page names its release and date beside the variant, for example
+**Release 2.0, 12 March 2026**. When the portal holds more than one release of the product, that
+line opens a menu of the releases, newest first, the newest marked **Latest**.
+
+- Picking a release opens the same manual, in the same variant, at the section you were reading.
+- When that release has no such section, the manual opens at its start, with a short note saying
+  so. When it does not have the variant, the menu names the one it opens instead ("only as …").
+- When that release does not have the manual at all, the menu says so, and the link opens the
+  release's own page instead.
+- The menu works with the keyboard: Enter or Space opens it, Tab moves through the releases,
+  Escape closes it.
+
+## The notice on older pages
+
+Every page of an older release starts with a quiet notice: "You are reading release 2.0. The
+latest is release 3.0.", with a link to the same page in the newest release (or its nearest page).
+
+Search engines are pointed to the newest release: each older page names the newest page as its
+canonical address and, unless the portal is set otherwise, asks not to be indexed.
+
+## Search in an older release
+
+Search on an older release's pages finds only that release. The search page says which release it
+searches and offers **Search the latest instead** with the same words. Search on the newest
+release's pages never shows older content.
+
+## Turning it on
+
+<ServerSetting>
+  The portal builds only the newest release of each product unless you set it to
+  build more. Set `CCMS_PORTAL_RELEASES_PER_PRODUCT` to how many releases of
+  each product to build, for example `3` (at most `20`), or name them in
+  `CCMS_PORTAL_RELEASES`. Withdrawn releases are never built.
+  `CCMS_PORTAL_OLDER_NOINDEX=off` lets search engines index the older pages. See
+  [Build and preview](/guide/portal/build).
+</ServerSetting>

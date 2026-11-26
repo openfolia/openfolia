@@ -47,9 +47,6 @@ test('the start page leads with search and lists each product’s manuals', asyn
   page,
 }) => {
   await page.goto(site('public', 'en/'));
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Documentation' }),
-  ).toBeVisible();
   for (const product of ['Alpha', 'Beta'])
     await expect(
       page.getByRole('heading', { level: 2, name: product }),
@@ -74,9 +71,7 @@ test('the internal site shows the organisation’s branding', async ({
     'href',
     /\/assets\/[0-9a-f]{64}\.png$/,
   );
-  await expect(
-    page.getByRole('heading', { level: 1, name: BRAND_NAME }),
-  ).toBeVisible();
+  await expect(page).toHaveTitle(BRAND_NAME);
   const dark = info.project.use.colorScheme === 'dark';
   const logo = page.locator(`.brand__logo--${dark ? 'dark' : 'light'}`);
   await expect(logo).toBeVisible();
