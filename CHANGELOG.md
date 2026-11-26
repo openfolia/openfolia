@@ -4,6 +4,28 @@ Every release, newest first: what is new, improved and fixed, the security fixes
 when you upgrade. `scripts/release.mjs` writes this file on each release tag, with the same notes
 as the release on GitHub (CONTRIBUTING.md, "Releases"); don't edit it by hand.
 
+<!-- release v0.0.6 2026-11-26 -->
+## [v0.0.6](https://github.com/openfolia/openfolia/releases/tag/v0.0.6) (2026-11-26)
+
+OpenFolia v0.0.6 is mostly refactoring inside the API, with no change to what people see or what the API answers, and one change to SAML sign-in: answers from many addresses at once can no longer crowd out everyone else's.
+
+- SAML sign-in: the answers from one network (an IPv4 /24, an IPv6 /48) are checked one at a time, so one network can never hold all the server's SAML checks and an answer from anywhere else is still checked within the time limit. At most 8 answers of one network, and 3 from one address, wait their turn; one beyond that is refused with "The sign-in service could not be reached", is not counted as a failed sign-in, and is logged once per network. Behind a reverse proxy, CCMS\_TRUST\_PROXY must be set as the guide says, or every answer seems to come from one network. The guide: [https://docs.openfolia.com/guide/self-hosting/saml](https://docs.openfolia.com/guide/self-hosting/saml)
+- Refactoring: each part of the API now registers its own permissions, webhook events (and how each event is built and who may see it), audit actions, notification kinds and settings, and the database schema is split into one file per part. Permission names, roles, webhook payloads, notification choices, settings, the API and its OpenAPI document are unchanged.
+- Database: a command writes a baseline migration for a chosen set of components into a folder of your choice, for a fresh database (`pnpm nx run api:db-baseline`, [backend/api/README.md](https://github.com/openfolia/openfolia/blob/v0.0.6/backend/api/README.md) "Database"). Existing migrations are unchanged, and no new one runs at start-up.
+
+Upgrading: nothing to do beyond the usual. Take a backup first and follow [deploy/README.md#upgrades](https://github.com/openfolia/openfolia/blob/v0.0.6/deploy/README.md#upgrades). If people sign in with SAML through a reverse proxy, check CCMS\_TRUST\_PROXY before upgrading.
+
+### Docs
+
+- The changelog of v0.0.5 ([#5](https://github.com/openfolia/openfolia/pull/5))
+
+### Upgrade notes
+
+From v0.0.5: take a backup first and follow [Upgrades](https://github.com/openfolia/openfolia/blob/v0.0.6/deploy/README.md#upgrades) in deploy/README.md.
+
+Nothing else to do: no migration, no changed setting.
+<!-- /release v0.0.6 -->
+
 <!-- release v0.0.5 2026-11-26 -->
 ## [v0.0.5](https://github.com/openfolia/openfolia/releases/tag/v0.0.5) (2026-11-26)
 
